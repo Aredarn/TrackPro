@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Display Speed -->
+    <TextView
+        android:id="@+id/tv_speed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Speed: 0 km/h"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Display Acceleration -->
+    <TextView
+        android:id="@+id/tv_acceleration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Acceleration: 0 m/s²"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Start Button -->
+    <Button
+        android:id="@+id/btn_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Start Tracking"
+        android:layout_marginTop="16dp"/>
+
+</LinearLayout>

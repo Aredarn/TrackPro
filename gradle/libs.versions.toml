@@ -1,0 +1,12 @@
+[versions]
+ktx = "2.5.1"
+kotlin = "2.0.0"
+
+
+[libraries]
+androidx-ktx = {group = "androidx.room", name = "room-ktx", version.ref = "ktx"}
+
+[plugins]
+org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
