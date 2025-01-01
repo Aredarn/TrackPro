@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
 
         // Explicitly start a session here
         CoroutineScope(Dispatchers.IO).launch {
-            sessionManager.startSession(eventType = "Test Event", description = "Test description")
+            //sessionManager.startSession(eventType = "Test Event", description = "Test description")
             Log.e("SessionManager", "Session started with ID: ${sessionManager.getCurrentSessionId()}")
         }
 
@@ -71,12 +71,22 @@ class MainActivity : ComponentActivity() {
                         MainScreen(
                             espManager = espManager,
                             onNavigateToGraph = { navController.navigate("graph") },
+                            onNavigateToDragRace = {navController.navigate("drag")},
                             database = database
                         )
                     }
                     composable("graph") {
                         espManager.disconnect() // Ensure the connection is closed when activity is destroyed
                         GraphScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable("drag")
+                    {
+                        espManager.disconnect();
+                        DragRaceScreen(
+                            espManager = espManager,
+                            database = database,
+                            onBack = {navController.popBackStack()}
+                        )
                     }
                 }
             }
@@ -91,7 +101,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit, database: ESPDatabase) {
+fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit, database: ESPDatabase) {
     val coroutineScope = rememberCoroutineScope()
     val sessionManager = SessionManager.getInstance(database)
 
@@ -261,6 +271,7 @@ fun MainScreenPreview() {
         MainScreen(
             espManager = mockESPManager,
             onNavigateToGraph = {},
+            onNavigateToDragRace = {},
             database = fakeDatabase
         )
     }

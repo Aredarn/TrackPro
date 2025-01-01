@@ -14,7 +14,6 @@ interface RawGPSDataDao {
     {
         Log.d("Database", "Inserted RawGPSData: $rawGPSData")
     }
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(data: List<RawGPSData>)
 
