@@ -100,6 +100,8 @@ class MainActivity : ComponentActivity() {
 }
 
 
+//
+
 @Composable
 fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit, database: ESPDatabase) {
     val coroutineScope = rememberCoroutineScope()
