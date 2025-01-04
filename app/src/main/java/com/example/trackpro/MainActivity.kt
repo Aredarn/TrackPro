@@ -226,6 +226,12 @@ fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigat
         ) {
             Text("View Graph")
         }
+        Button(
+            onClick = onNavigateToDragRace,
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text("Drag Screen")
+        }
     }
 }
 

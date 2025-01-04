@@ -104,40 +104,29 @@ fun DragRaceScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(onClick = onBack) {
-                Text("Back")
-            }
 
-            Button(
-                onClick = {
-                    isSessionActive = !isSessionActive
-                }
-            ) {
-                Text(if (isSessionActive) "Stop Session" else "Start Session")
-            }
-        }
+        Text(
+            text = "Make a drag time calculation here!",
+            style = MaterialTheme.typography.titleLarge
+
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "Speed: ${"%.2f".format(speed)} km/h",
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.titleMedium
         )
 
         Text(
             text = "Acceleration: ${"%.2f".format(acceleration)} m/s²",
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.titleMedium
         )
 
         zeroToHundredTime?.let {
             Text(
                 text = "0-100 km/h Time: ${"%.2f".format(it)} seconds",
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.titleMedium
             )
         }
 
@@ -147,7 +136,27 @@ fun DragRaceScreen(
             text = "Session Time: ${(currentTime - (sessionStartTime ?: currentTime)) / 1000} seconds",
             style = MaterialTheme.typography.bodySmall
         )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Absolute.Right,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Button(
+                onClick = {
+                    isSessionActive = !isSessionActive
+                    startSession(database)
+                }
+            ) {
+                Text(if (isSessionActive) "Stop Session" else "Start Session")
+            }
+        }
     }
+}
+
+private fun startSession(database: ESPDatabase)
+{
+    SessionManager.startSession(database,"drag","")
 }
 
 private fun calculateSpeed(gpsData: List<Pair<Double, Double>>): Double {
