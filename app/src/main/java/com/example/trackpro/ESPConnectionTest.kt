@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.ManagerClasses.ESP32Manager
+import com.example.trackpro.ManagerClasses.ESPWebSocketClient
 
 class ESPConnectionTest : ComponentActivity() {
 
@@ -40,11 +41,10 @@ class ESPConnectionTest : ComponentActivity() {
 
 @Composable
 fun ESPConnectionTestScreen() {
-    // Create an instance of ESP32Manager
-    val espManager = remember {
-        ESP32Manager(
+    val espWebSocketClient = remember {
+        ESPWebSocketClient(
             url = "ws://192.168.4.1:81", // WebSocket URL of ESP32
-            onDataReceived = { data ->
+            onMessageReceived = { data ->
                 // Handle incoming data from ESP32
                 println("Data received: $data")
             },
@@ -55,32 +55,29 @@ fun ESPConnectionTestScreen() {
         )
     }
 
-    // State to hold connection status and received data
     val connectionStatus = remember { mutableStateOf(false) }
     val receivedData = remember { mutableStateOf("") }
 
-    // Establish WebSocket connection when the Composable is first displayed
+    // Force the WebSocket to connect when the Composable is displayed
     LaunchedEffect(Unit) {
-        espManager.connect()
+        espWebSocketClient.connect() // Force the WebSocket to connect
     }
 
-    // Clean up WebSocket connection when leaving the Composable
+    // Clean up the WebSocket connection when leaving the Composable
     DisposableEffect(Unit) {
-        // Update the connection status and data when received
-        espManager.onConnectionStatusChanged = { isConnected ->
+        espWebSocketClient.onConnectionStatusChanged = { isConnected ->
             connectionStatus.value = isConnected
         }
-        espManager.onDataReceived = { data ->
+        espWebSocketClient.onMessageReceived = { data ->
             receivedData.value = data
         }
 
-        // Disconnect WebSocket when leaving this Composable
         onDispose {
-            espManager.disconnect()
+            espWebSocketClient.disconnect()
         }
     }
 
-    // UI Layout for the connection status and received data
+    // UI Layout for connection status and received data
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -106,6 +103,7 @@ fun ESPConnectionTestScreen() {
         )
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable

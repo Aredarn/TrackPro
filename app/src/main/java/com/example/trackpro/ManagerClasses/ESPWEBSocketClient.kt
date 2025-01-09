@@ -6,72 +6,83 @@ import java.util.concurrent.TimeUnit
 
 class ESPWebSocketClient(
     private val url: String,
-    private val onMessageReceived: (String) -> Unit, // Callback when data is received
-    private val onConnectionStatusChanged: (Boolean) -> Unit // Callback to notify connection status
+    var onMessageReceived: (String) -> Unit,
+    var onConnectionStatusChanged: (Boolean) -> Unit
 ) {
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .pingInterval(10, TimeUnit.SECONDS)  // Send pings every 10 seconds to keep connection alive
-        .retryOnConnectionFailure(true)      // Automatically retry connection on failure
+        .pingInterval(1, TimeUnit.SECONDS) // Keep the connection alive by sending pings
         .build()
 
     private var webSocket: WebSocket? = null
+    private var retryAttempts = 0
+    private val maxRetries = 5 // Maximum retry attempts
 
-    // Connect to the WebSocket server
+    // Function to connect to the WebSocket
     fun connect() {
         val request = Request.Builder()
-            .url(url)  // WebSocket URL (e.g., ws://192.168.4.1:81)
+            .url(url)
             .build()
 
-        // Create a WebSocket connection
+        // Establish a WebSocket connection
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                onConnectionStatusChanged(true) // Notify when the connection is open
-                println("WebSocket connected to ESP32!")
+                onConnectionStatusChanged(true)
+                retryAttempts = 0 // Reset retry attempts on success
+                println("WebSocket Connected")
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
-                onMessageReceived(text) // Pass received data to the callback
-                println("Received data: $text")
+                onMessageReceived(text) // Handle incoming messages
             }
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-                onMessageReceived(bytes.utf8()) // Pass received data to the callback
-                println("Received data (binary): ${bytes.utf8()}")
+                onMessageReceived(bytes.utf8()) // Handle binary messages
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 webSocket.close(1000, null)
-                onConnectionStatusChanged(false) // Notify when connection is closing
-                println("WebSocket closing: $reason")
+                onConnectionStatusChanged(false)
+                println("WebSocket Closing")
+                retryConnection() // Retry the connection after closing
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                onConnectionStatusChanged(false) // Notify when connection is closed
-                println("WebSocket closed: $reason")
+                onConnectionStatusChanged(false)
+                println("WebSocket Closed")
+                retryConnection() // Retry the connection after closing
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                onConnectionStatusChanged(false) // Notify on failure
+                onConnectionStatusChanged(false)
+                println("WebSocket Failure: ${t.message}")
+                retryConnection() // Retry the connection after failure
                 t.printStackTrace()
-                println("WebSocket failure: ${t.message}")
             }
         })
     }
 
-    // Send a message to the WebSocket server
+    // Retry connection with delay between attempts
+    private fun retryConnection() {
+        if (retryAttempts < maxRetries) {
+            retryAttempts++
+            println("Retrying connection attempt #$retryAttempts...")
+            // Retry after 3 seconds delay
+            Thread.sleep(3000)
+            connect() // Try reconnecting
+        } else {
+            println("Max retries reached. Could not establish WebSocket connection.")
+        }
+    }
+
+    // Function to send a message through the WebSocket
     fun sendMessage(message: String) {
         webSocket?.send(message)
     }
 
-    // Disconnect the WebSocket
+    // Function to disconnect the WebSocket
     fun disconnect() {
         webSocket?.close(1000, null)
         webSocket = null
-        println("WebSocket disconnected.")
-    }
-
-    // Optionally, trigger a ping manually if needed
-    fun sendPing() {
-        webSocket?.send("ping")
     }
 }
+
