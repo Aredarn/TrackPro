@@ -46,13 +46,22 @@ class DragScreen : ComponentActivity() {
         //Create session
         sessionId = StartSession(database);
 
-        espManager = ESP32Manager(
-            ip = "192.168.4.1", // Replace with ESP32's actual IP
-            port = 8080,       // Replace with ESP32's actual port
+        val espManager = ESP32Manager(
+            url = "ws://192.168.4.1:81", // WebSocket URL of ESP32
             onDataReceived = { data ->
-                println("Received data: $data") // You can handle raw data here
+                // Handle incoming data from ESP32
+                println("Data received: $data")
+            },
+            onConnectionStatusChanged = { isConnected ->
+                // Handle connection status changes
+                if (isConnected) {
+                    println("Connected to ESP32")
+                } else {
+                    println("Disconnected from ESP32")
+                }
             }
         )
+
         espManager.connect()
     }
 
@@ -84,7 +93,6 @@ fun DragRaceScreen(
             zeroToHundredTime = null
 
             while (isSessionActive) {
-                val newData = espManager.onDataReceived // Fetch GPS data from ESP32Manager
                 //gpsData.add(newData)
                 speed = calculateSpeed(gpsData) // Calculate speed from GPS data
                 acceleration = calculateAcceleration(gpsData) // Calculate acceleration
@@ -176,10 +184,21 @@ private fun calculateAcceleration(gpsData: List<Pair<Double, Double>>): Double {
 @Composable
 fun DragScreenPreview() {
     val mockESPManager = ESP32Manager(
-        ip = "mock", // Mock IP
-        port = 0,    // Mock Port
-        onDataReceived = {} // No-op for preview
+        url = "ws://192.168.4.1:81", // WebSocket URL of ESP32
+        onDataReceived = { data ->
+            // Handle incoming data from ESP32
+            println("Data received: $data")
+        },
+        onConnectionStatusChanged = { isConnected ->
+            // Handle connection status changes
+            if (isConnected) {
+                println("Connected to ESP32")
+            } else {
+                println("Disconnected from ESP32")
+            }
+        }
     )
+
 
     // Create a fake or mock database instance
     val fakeDatabase = Room.inMemoryDatabaseBuilder(

@@ -53,13 +53,22 @@ class MainActivity : ComponentActivity() {
         }
 
         // Initialize ESP32Manager with IP and port
-        espManager = ESP32Manager(
-            ip = "192.168.4.1", // Replace with ESP32's actual IP
-            port = 8080,       // Replace with ESP32's actual port
+        val espManager = ESP32Manager(
+            url = "ws://192.168.4.1:81", // WebSocket URL of ESP32
             onDataReceived = { data ->
-                println("Received data: $data") // You can handle raw data here
+                // Handle incoming data from ESP32
+                println("Data received: $data")
+            },
+            onConnectionStatusChanged = { isConnected ->
+                // Handle connection status changes
+                if (isConnected) {
+                    println("Connected to ESP32")
+                } else {
+                    println("Disconnected from ESP32")
+                }
             }
         )
+
         espManager.connect()
 
         setContent {
@@ -72,6 +81,7 @@ class MainActivity : ComponentActivity() {
                             espManager = espManager,
                             onNavigateToGraph = { navController.navigate("graph") },
                             onNavigateToDragRace = {navController.navigate("drag")},
+                            onNavigateToESPTestScreen = {navController.navigate("esptest")},
                             database = database
                         )
                     }
@@ -88,6 +98,11 @@ class MainActivity : ComponentActivity() {
                             onBack = {navController.popBackStack()}
                         )
                     }
+                    composable("esptest")
+                    {
+                        espManager.disconnect();
+                        ESPConnectionTestScreen()
+                    }
                 }
             }
         }
@@ -103,7 +118,7 @@ class MainActivity : ComponentActivity() {
 //
 
 @Composable
-fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit, database: ESPDatabase) {
+fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, database: ESPDatabase) {
     val coroutineScope = rememberCoroutineScope()
     val sessionManager = SessionManager.getInstance(database)
 
@@ -119,64 +134,6 @@ fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigat
     var elapsedTime: Float? by remember { mutableStateOf(null) }
 
     LaunchedEffect(Unit) {
-        espManager.connect()
-        espManager.onDataReceived = { data ->
-            rawData = data // Update raw data string
-            val parsed = parseData(data) // Parse the data if it's formatted as "speed,acceleration,timestamp"
-            if (parsed != null) {
-                speed = parsed.first
-                acceleration = parsed.second
-                timestamp = parsed.third
-
-                // If the speed is greater than 0 and the timer hasn't started, start tracking the time
-                if (speed > 0f && !isAccelerating) {
-                    startTime = timestamp // Use Arduino's timestamp as the start time
-                    accelerationStartTime = timestamp // Store the timestamp of the start of acceleration
-                    isAccelerating = true
-                }
-
-                // If the speed reaches 100 km/h and the timer is running, calculate the time taken
-                if (speed >= 100f && isAccelerating) {
-                    // Calculate elapsed time in seconds
-                    val elapsedMillis = timestamp!! - startTime!! // Time elapsed in milliseconds
-                    val elapsedSeconds = elapsedMillis / 1000f // Convert to seconds
-                    accToHundred = "Time: %.2f sec".format(elapsedSeconds)
-                    startTime = null // Reset the timer for the next acceleration cycle
-                    accelerationStartTime = null // Reset the acceleration start time
-                }
-
-                // Fetch the current session ID and insert the GPS data only if the session is active
-                val currentSessionId = sessionManager.getCurrentSessionId()
-
-                if (currentSessionId != null) {
-                    // Prepare the RawGPSData object with your data (e.g., speed, timestamp, etc.)
-                    val rawGPSData = RawGPSData(
-                        sessionid = currentSessionId,  // Use the session ID fetched
-                        latitude = 0.0,  // Replace with actual latitude
-                        longitude = 0.0, // Replace with actual longitude
-                        altitude = null, // Replace with actual altitude if available
-                        timestamp = timestamp!!, // Make sure to handle the nullability of timestamp
-                        speed = speed, // Use actual speed value
-                        fixQuality = null // Replace with actual fix quality if available
-                    )
-
-                    // Insert the RawGPSData into the database
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            database.rawGPSDataDao().insert(rawGPSData)
-                        } catch (e: Exception) {
-                            println("Error inserting data: ${e.message}")
-                        }
-                    }
-                } else {
-                    // Log that there is no active session
-                    Log.e("SessionManager", "No active session. Cannot insert data.")
-                }
-            } else {
-                // Handle parsing errors, e.g., log an error or display a message to the user
-                println("Error parsing data: $data")
-            }
-        }
     }
 
     // Composables displaying the data
@@ -232,6 +189,13 @@ fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigat
         ) {
             Text("Drag Screen")
         }
+        Button(
+            onClick = onNavigateToESPTestScreen,
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text("Drag Screen")
+        }
+
     }
 }
 
@@ -263,10 +227,21 @@ fun parseData(data: String): Triple<Float, Float, Long>? {
 fun MainScreenPreview() {
     // Create a mock ESP32Manager
     val mockESPManager = ESP32Manager(
-        ip = "mock", // Mock IP
-        port = 0,    // Mock Port
-        onDataReceived = {} // No-op for preview
+        url = "ws://192.168.4.1:81", // WebSocket URL of ESP32
+        onDataReceived = { data ->
+            // Handle incoming data from ESP32
+            println("Data received: $data")
+        },
+        onConnectionStatusChanged = { isConnected ->
+            // Handle connection status changes
+            if (isConnected) {
+                println("Connected to ESP32")
+            } else {
+                println("Disconnected from ESP32")
+            }
+        }
     )
+
 
     // Create a fake or mock database instance
     val fakeDatabase = Room.inMemoryDatabaseBuilder(
@@ -280,6 +255,7 @@ fun MainScreenPreview() {
             espManager = mockESPManager,
             onNavigateToGraph = {},
             onNavigateToDragRace = {},
+            onNavigateToESPTestScreen = {},
             database = fakeDatabase
         )
     }

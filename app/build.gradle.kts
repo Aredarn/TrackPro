@@ -73,6 +73,7 @@ dependencies {
     implementation("androidx.room:room-ktx:2.5.1") // Kotlin extensions
     implementation ("androidx.room:room-testing:2.5.1")
     implementation(libs.androidx.ktx)
+    implementation ("com.squareup.okhttp3:okhttp:4.11.0")
 
 }
 
