@@ -163,20 +163,6 @@ fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigat
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Show the 0-100 time
-        Text(
-            text = "0-100: $elapsedTime",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(6.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Show the 0-100 time
-        Text(
-            text = "0-100: $accToHundred",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(6.dp)
-        )
         Button(
             onClick = onNavigateToGraph,
             modifier = Modifier.padding(top = 16.dp)
@@ -187,13 +173,13 @@ fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigat
             onClick = onNavigateToDragRace,
             modifier = Modifier.padding(top = 16.dp)
         ) {
-            Text("Drag Screen")
+            Text("Drag times")
         }
         Button(
             onClick = onNavigateToESPTestScreen,
             modifier = Modifier.padding(top = 16.dp)
         ) {
-            Text("Drag Screen")
+            Text("ESP connection tester")
         }
 
     }

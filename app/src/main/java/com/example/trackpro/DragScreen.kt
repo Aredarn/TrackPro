@@ -232,7 +232,7 @@ fun addRawDataToSession(sessionId : Int)
 
 }
 
-fun EndSession()
+fun endSession()
 {
 
 }
