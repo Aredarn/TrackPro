@@ -1,8 +1,11 @@
 package com.example.trackpro.ManagerClasses
 
+import android.os.Handler
+import android.os.Looper
 import okhttp3.*
 import okio.ByteString
 import java.util.concurrent.TimeUnit
+import kotlin.math.pow
 
 class ESPWebSocketClient(
     private val url: String,
@@ -10,7 +13,7 @@ class ESPWebSocketClient(
     var onConnectionStatusChanged: (Boolean) -> Unit
 ) {
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .pingInterval(1, TimeUnit.SECONDS) // Keep the connection alive by sending pings
+        .pingInterval(10, TimeUnit.SECONDS) // Keep the connection alive by sending pings
         .build()
 
     private var webSocket: WebSocket? = null
@@ -19,6 +22,7 @@ class ESPWebSocketClient(
 
     // Function to connect to the WebSocket
     fun connect() {
+        disconnect() // Close any existing connection
         val request = Request.Builder()
             .url(url)
             .build()
@@ -64,15 +68,17 @@ class ESPWebSocketClient(
     // Retry connection with delay between attempts
     private fun retryConnection() {
         if (retryAttempts < maxRetries) {
+            val backoffDelay = (2.0.pow(retryAttempts.toDouble()) * 1000).toLong() // Exponential backoff
+            println("Retrying connection attempt #$retryAttempts after ${backoffDelay}ms...")
+            Thread.sleep(backoffDelay)
             retryAttempts++
-            println("Retrying connection attempt #$retryAttempts...")
-            // Retry after 3 seconds delay
-            Thread.sleep(3000)
             connect() // Try reconnecting
         } else {
             println("Max retries reached. Could not establish WebSocket connection.")
         }
     }
+
+
 
     // Function to send a message through the WebSocket
     fun sendMessage(message: String) {

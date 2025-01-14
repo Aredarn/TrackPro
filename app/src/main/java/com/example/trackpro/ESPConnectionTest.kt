@@ -11,17 +11,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.ManagerClasses.ESP32Manager
-import com.example.trackpro.ManagerClasses.ESPWebSocketClient
-
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
+import androidx.compose.runtime.*
+import com.example.trackpro.ManagerClasses.ESPTcpClient
+import com.example.trackpro.ManagerClasses.RawGPSData  // Make sure to use the correct package
 class ESPConnectionTest : ComponentActivity() {
 
     private lateinit var espManager: ESP32Manager // ESP32 Manager instance
@@ -39,70 +40,71 @@ class ESPConnectionTest : ComponentActivity() {
     }
 }
 
+data class RawGPSData(
+    val latitude: Double,
+    val longitude: Double,
+    val altitude: Double?,
+    val timestamp: Long,
+    val speed: Float?,
+    val satellites: Int?
+)
+
 @Composable
 fun ESPConnectionTestScreen() {
-    val espWebSocketClient = remember {
-        ESPWebSocketClient(
-            url = "ws://192.168.4.1:81", // WebSocket URL of ESP32
+    val isConnected = remember { mutableStateOf(false) }
+    val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
+    val rawJson = remember { mutableStateOf("") }
+
+    // Use LaunchedEffect to launch a side effect when the composable is first entered
+    LaunchedEffect(Unit) {
+        val espTcpClient = ESPTcpClient(
+            serverAddress = "192.168.4.1",  // Replace with your server's IP address
+            port = 4210,  // Replace with your server's port
             onMessageReceived = { data ->
-                // Handle incoming data from ESP32
-                println("Data received: $data")
+                println("Received data: $data")  // Log raw JSON
+                gpsData.value = try {
+                    Json.decodeFromString<RawGPSData>(data.toString())  // Parse into RawGPSData
+                } catch (e: Exception) {
+                    println("Error parsing data: ${e.message}")
+                    null
+                }
+                rawJson.value = data.toString()  // Store raw JSON for display
             },
-            onConnectionStatusChanged = { isConnected ->
-                // Handle connection status changes
-                println("Connection status: ${if (isConnected) "Connected" else "Disconnected"}")
+            onConnectionStatusChanged = { connected ->
+                isConnected.value = connected
+                println("Connection status: ${if (connected) "Connected" else "Disconnected"}")
             }
         )
+
+        espTcpClient.connect()  // Connect to the server
     }
 
-    val connectionStatus = remember { mutableStateOf(false) }
-    val receivedData = remember { mutableStateOf("") }
-
-    // Force the WebSocket to connect when the Composable is displayed
-    LaunchedEffect(Unit) {
-        espWebSocketClient.connect() // Force the WebSocket to connect
-    }
-
-    // Clean up the WebSocket connection when leaving the Composable
-    DisposableEffect(Unit) {
-        espWebSocketClient.onConnectionStatusChanged = { isConnected ->
-            connectionStatus.value = isConnected
-        }
-        espWebSocketClient.onMessageReceived = { data ->
-            receivedData.value = data
-        }
-
-        onDispose {
-            espWebSocketClient.disconnect()
-        }
-    }
-
-    // UI Layout for connection status and received data
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "ESP32 Connection Test",
-            style = MaterialTheme.typography.headlineMedium
-        )
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        // Display connection status
+        Text("Connection Status: ${if (isConnected.value) "Connected" else "Disconnected"}")
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Display connection status (Connected/Disconnected)
-        Text(
-            text = if (connectionStatus.value) "Connected" else "Disconnected",
-            color = if (connectionStatus.value) Color.Green else Color.Red
-        )
+        // Display the raw JSON data
+        Text("Raw JSON Data:")
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = rawJson.value, style = MaterialTheme.typography.bodySmall)
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Display the data received from ESP32
-        Text(
-            text = "Data: ${receivedData.value}",
-            style = MaterialTheme.typography.bodyLarge
-        )
+        // Display parsed GPS data
+        gpsData.value?.let { data ->
+            Text("Latitude: ${data.latitude}")
+            Text("Longitude: ${data.longitude}")
+            Text("Speed: ${data.speed}")
+            Text("Satellites: ${data.satellites}")
+            Text("Timestamp: ${data.timestamp}")
+        } ?: run {
+            // Show a loading or placeholder text while data is being fetched
+            Text("Waiting for GPS data...")
+        }
     }
 }
+
 
 
 @Preview(showBackground = true)

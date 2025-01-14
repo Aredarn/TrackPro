@@ -1,0 +1,82 @@
+package com.example.trackpro.ManagerClasses
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.Socket
+
+// Simple RawGPSData data class to store the received GPS data
+data class RawGPSData(
+    val latitude: Double,
+    val longitude: Double,
+    val altitude: Double?,
+    val speed: Float?,
+    val satellites: Int?,
+    val timestamp: String
+)
+
+class ESPTcpClient(
+    private val serverAddress: String,
+    private val port: Int,
+    private val onMessageReceived: (RawGPSData) -> Unit,  // Callback when new data is received
+    private val onConnectionStatusChanged: (Boolean) -> Unit  // Callback for connection status
+) {
+
+    private var socket: Socket? = null
+    private var reader: BufferedReader? = null
+
+    // Start the connection to the server
+    fun connect() {
+        Thread {
+            try {
+                socket = Socket(serverAddress, port)
+                reader = BufferedReader(InputStreamReader(socket?.getInputStream()))
+                onConnectionStatusChanged(true)  // Notify that the connection was successful
+
+                // Continuously read data from the server
+                while (true) {
+                    val message = reader?.readLine()  // Read message from the server
+                    if (message != null) {
+                        try {
+                            val gpsData = parseGpsData(message)
+                            onMessageReceived(gpsData)
+                        } catch (e: Exception) {
+                            e.printStackTrace()  // If parsing fails, just log the error
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onConnectionStatusChanged(false)  // Notify that the connection failed
+            }
+        }.start()
+    }
+
+    // Disconnect from the server
+    fun disconnect() {
+        try {
+            socket?.close()
+            reader?.close()
+            onConnectionStatusChanged(false)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    // Simple function to parse the incoming data (assumed to be JSON format)
+    private fun parseGpsData(data: String): RawGPSData {
+        val regex = Regex("\"latitude\": ([^,]+), \"longitude\": ([^,]+), \"altitude\": ([^,]+), \"speed\": ([^,]+), \"satellites\": ([^,]+), \"timestamp\": \"([^\"]+)\"")
+        val matchResult = regex.find(data)
+
+        return if (matchResult != null) {
+            RawGPSData(
+                latitude = matchResult.groupValues[1].toDouble(),
+                longitude = matchResult.groupValues[2].toDouble(),
+                altitude = matchResult.groupValues[3].toDoubleOrNull(),
+                speed = matchResult.groupValues[4].toFloatOrNull(),
+                satellites = matchResult.groupValues[5].toIntOrNull(),
+                timestamp = matchResult.groupValues[6]
+            )
+        } else {
+            throw IllegalArgumentException("Failed to parse GPS data")
+        }
+    }
+}

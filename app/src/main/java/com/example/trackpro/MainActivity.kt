@@ -193,7 +193,7 @@ fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigat
             onClick = onNavigateToESPTestScreen,
             modifier = Modifier.padding(top = 16.dp)
         ) {
-            Text("Drag Screen")
+            Text("ESP connection Screen")
         }
 
     }

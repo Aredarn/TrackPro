@@ -26,3 +26,4 @@ data class RawGPSData(
     val speed: Float?, // Optional: speed provided by GNSS (in m/s or km/h)
     val fixQuality: Int? // Optional: GNSS signal quality, e.g., number of satellites
 )
+
