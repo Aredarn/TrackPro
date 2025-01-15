@@ -1,9 +1,11 @@
 package com.example.trackpro.ManagerClasses
+import kotlinx.serialization.Serializable
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.Socket
 
 // Simple RawGPSData data class to store the received GPS data
+@Serializable
 data class RawGPSData(
     val latitude: Double,
     val longitude: Double,
@@ -63,20 +65,28 @@ class ESPTcpClient(
 
     // Simple function to parse the incoming data (assumed to be JSON format)
     private fun parseGpsData(data: String): RawGPSData {
-        val regex = Regex("\"latitude\": ([^,]+), \"longitude\": ([^,]+), \"altitude\": ([^,]+), \"speed\": ([^,]+), \"satellites\": ([^,]+), \"timestamp\": \"([^\"]+)\"")
+        // Improved regex to handle potential formatting issues
+        val regex = Regex(
+            "\\\"latitude\\\":\\s*([-+]?\\d*\\.\\d+|\\d+),\\s*\\\"longitude\\\":\\s*([-+]?\\d*\\.\\d+|\\d+),\\s*\\\"altitude\\\":\\s*(\\d+\\.?\\d*|null),\\s*\\\"speed\\\":\\s*(\\d+\\.?\\d*|null),\\s*\\\"satellites\\\":\\s*(\\d+|null),\\s*\\\"timestamp\\\":\\s*\\\"([^\"]+)\\\""
+        )
         val matchResult = regex.find(data)
 
-        return if (matchResult != null) {
-            RawGPSData(
-                latitude = matchResult.groupValues[1].toDouble(),
-                longitude = matchResult.groupValues[2].toDouble(),
-                altitude = matchResult.groupValues[3].toDoubleOrNull(),
-                speed = matchResult.groupValues[4].toFloatOrNull(),
-                satellites = matchResult.groupValues[5].toIntOrNull(),
-                timestamp = matchResult.groupValues[6]
-            )
+        if (matchResult != null) {
+            return try {
+                RawGPSData(
+                    latitude = matchResult.groupValues[1].toDouble(),
+                    longitude = matchResult.groupValues[2].toDouble(),
+                    altitude = matchResult.groupValues[3].toDoubleOrNull(),
+                    speed = matchResult.groupValues[4].toFloatOrNull(),
+                    satellites = matchResult.groupValues[5].toIntOrNull(),
+                    timestamp = matchResult.groupValues[6]
+                )
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Failed to parse GPS data due to conversion error: ${e.message}")
+            }
         } else {
-            throw IllegalArgumentException("Failed to parse GPS data")
+            throw IllegalArgumentException("Failed to parse GPS data: Invalid format")
         }
     }
+
 }

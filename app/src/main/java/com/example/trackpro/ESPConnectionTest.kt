@@ -3,6 +3,7 @@ package com.example.trackpro
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import com.example.trackpro.ManagerClasses.ESP32Manager
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Color
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.RawGPSData  // Make sure to use the correct package
 class ESPConnectionTest : ComponentActivity() {
@@ -40,22 +42,13 @@ class ESPConnectionTest : ComponentActivity() {
     }
 }
 
-data class RawGPSData(
-    val latitude: Double,
-    val longitude: Double,
-    val altitude: Double?,
-    val timestamp: Long,
-    val speed: Float?,
-    val satellites: Int?
-)
-
 @Composable
 fun ESPConnectionTestScreen() {
     val isConnected = remember { mutableStateOf(false) }
     val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
     val rawJson = remember { mutableStateOf("") }
 
-    // Use LaunchedEffect to launch a side effect when the composable is first entered
+    // Establish connection when the composable is entered
     LaunchedEffect(Unit) {
         val espTcpClient = ESPTcpClient(
             serverAddress = "192.168.4.1",  // Replace with your server's IP address
@@ -79,31 +72,53 @@ fun ESPConnectionTestScreen() {
         espTcpClient.connect()  // Connect to the server
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        // Display connection status
-        Text("Connection Status: ${if (isConnected.value) "Connected" else "Disconnected"}")
+    // UI Layout
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Connection Status: ${if (isConnected.value) "Connected" else "Disconnected"}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isConnected.value) Color.Green else Color.Red
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Display the raw JSON data
-        Text("Raw JSON Data:")
+        // Raw JSON Display
+        Text("Raw JSON Data:", style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = rawJson.value, style = MaterialTheme.typography.bodySmall)
+        Text(
+            text = rawJson.value.ifEmpty { "Waiting for data..." },
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier
+                .background(Color.LightGray.copy(alpha = 0.2f))
+                .padding(8.dp)
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Display parsed GPS data
+        // Parsed GPS Data Display
         gpsData.value?.let { data ->
+            Text("Parsed GPS Data:", style = MaterialTheme.typography.labelLarge)
+            Spacer(modifier = Modifier.height(8.dp))
             Text("Latitude: ${data.latitude}")
             Text("Longitude: ${data.longitude}")
-            Text("Speed: ${data.speed}")
-            Text("Satellites: ${data.satellites}")
+            Text("Altitude: ${data.altitude ?: "N/A"}")
+            Text("Speed: ${data.speed ?: "N/A"}")
+            Text("Satellites: ${data.satellites ?: "N/A"}")
             Text("Timestamp: ${data.timestamp}")
         } ?: run {
-            // Show a loading or placeholder text while data is being fetched
+            // Display a loading message while waiting for GPS data
             Text("Waiting for GPS data...")
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
     }
 }
+
 
 
 
