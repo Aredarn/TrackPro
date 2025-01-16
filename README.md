@@ -4,6 +4,8 @@ TrackPro is an open-source mobile app that grants automotive enthusiasts, race
 
 TrackPro, combined with any ESP32 or ESP8266 MCU and a GPS module, allows users to accurately measure and analyze their driving behavior.
 
+The app ia capable of testing the WebSocket communication between the app and the ESP.
+
 Key Features:
 - Lap Timing: Measures lap times for circuit racing, karting, or track days.
   
