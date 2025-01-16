@@ -55,12 +55,7 @@ fun ESPConnectionTestScreen() {
             port = 4210,  // Replace with your server's port
             onMessageReceived = { data ->
                 println("Received data: $data")  // Log raw JSON
-                gpsData.value = try {
-                    Json.decodeFromString<RawGPSData>(data.toString())  // Parse into RawGPSData
-                } catch (e: Exception) {
-                    println("Error parsing data: ${e.message}")
-                    null
-                }
+                gpsData.value = data // Directly assign the RawGPSData object
                 rawJson.value = data.toString()  // Store raw JSON for display
             },
             onConnectionStatusChanged = { connected ->
