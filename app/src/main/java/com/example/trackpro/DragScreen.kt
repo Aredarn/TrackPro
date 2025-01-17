@@ -3,7 +3,6 @@ package com.example.trackpro
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,21 +21,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.room.Room
-import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.ManagerClasses.ESP32Manager
 import com.example.trackpro.ManagerClasses.SessionManager
-import com.example.trackpro.ESPDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+import com.example.trackpro.DataClasses.RawGPSData
+import com.example.trackpro.ManagerClasses.ESPTcpClient
+import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 
 class DragScreen : ComponentActivity() {
 
-    private lateinit var espManager: ESP32Manager // ESP32 Manager instance
     private lateinit var database: ESPDatabase
-    private lateinit var sessionManager: SessionManager
+
     private var sessionId: Int = -1
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -44,106 +47,113 @@ class DragScreen : ComponentActivity() {
         database = (application as TrackProApp).database
 
         //Create session
-        sessionId = StartSession(database);
+        sessionId = startSession(database)
 
-        val espManager = ESP32Manager(
-            url = "ws://192.168.4.1:81", // WebSocket URL of ESP32
-            onDataReceived = { data ->
-                // Handle incoming data from ESP32
-                println("Data received: $data")
-            },
-            onConnectionStatusChanged = { isConnected ->
-                // Handle connection status changes
-                if (isConnected) {
-                    println("Connected to ESP32")
-                } else {
-                    println("Disconnected from ESP32")
-                }
-            }
-        )
 
-        espManager.connect()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        espManager.disconnect() // Ensure the connection is closed when activity is destroyed
     }
 }
 
+
+
+
 @Composable
 fun DragRaceScreen(
-    espManager: ESP32Manager,
     onBack: () -> Unit,
     database: ESPDatabase
 ) {
+    // SESSION RELATED VAR
     var isSessionActive by remember { mutableStateOf(false) }
-    var speed by remember { mutableStateOf(0.0) }
-    var acceleration by remember { mutableStateOf(0.0) }
-    var zeroToHundredTime by remember { mutableStateOf<Double?>(null) }
-    var sessionStartTime by remember { mutableStateOf<Long?>(null) }
-    var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    var sessionID by remember { mutableStateOf(-1) }
 
-    val gpsData = remember { mutableStateListOf<Pair<Double, Double>>() }
+    // GPS DATA RELATED
+    val isConnected = remember { mutableStateOf(false) }
+    val gpsData = remember { mutableStateOf<com.example.trackpro.ManagerClasses.RawGPSData?>(null) }
+    val rawJson = remember { mutableStateOf("") }
 
+    // ESP TCP Client connection
+    var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
+
+    // Tracking the last timestamp to prevent redundant inserts
+    var lastTimestamp: Long? by remember { mutableStateOf(null) }
+
+    // Start/Stop session and manage GPS data reception
     LaunchedEffect(isSessionActive) {
+        Log.d("launch", "Started")
         if (isSessionActive) {
-            sessionStartTime = System.currentTimeMillis()
-            gpsData.clear()
-            zeroToHundredTime = null
+            if (sessionID != -1) {
+                // Initialize and connect ESP TCP Client
+                espTcpClient = ESPTcpClient(
+                    serverAddress = "192.168.4.1",
+                    port = 4210,
+                    onMessageReceived = { data ->
+                        gpsData.value = data
+                        rawJson.value = data.toString()
+                    },
+                    onConnectionStatusChanged = { connected ->
+                        isConnected.value = connected
+                    }
+                )
+                espTcpClient?.connect()
 
-            while (isSessionActive) {
-                //gpsData.add(newData)
-                speed = calculateSpeed(gpsData) // Calculate speed from GPS data
-                acceleration = calculateAcceleration(gpsData) // Calculate acceleration
+                // Insert data while the session is active
+                while (isSessionActive) {
+                    val derivedData = gpsData.value?.let {
+                        RawGPSData(
+                            sessionid = sessionID.toLong(),
+                            latitude = it.latitude,
+                            longitude = it.longitude,
+                            altitude = it.altitude,
+                            timestamp = parseTimeToMilliseconds(it.timestamp),
+                            speed = it.speed,
+                            fixQuality = it.satellites
+                        )
+                    }
 
-                if (zeroToHundredTime == null && speed >= 100.0) {
-                    zeroToHundredTime = (System.currentTimeMillis() - sessionStartTime!!) / 1000.0
+                    // Insert data if it's a new timestamp or new data
+                    derivedData?.let { data ->
+                        if (lastTimestamp == null || data.timestamp != lastTimestamp!!) {
+                            Log.d("Database", "Inserting data: $data")
+                            database.rawGPSDataDao().insert(data)
+                            lastTimestamp = data.timestamp
+
+
+                            // Optional: Query to verify insertion (for debugging)
+                            val insertedData = database.rawGPSDataDao().getGPSDataBySession(sessionID.toInt())
+                            Log.d("Database", "Inserted data for session $sessionID: $insertedData")
+
+                        } else {
+                            Log.d("Database", "Skipping duplicate data for timestamp: ${data.timestamp}")
+                        }
+                    }
+
+
+                    // Sleep for a short duration before fetching new data again
+                    delay(40) // Adjust as needed for data rate
                 }
-
-                delay(40) // 25 Hz = 1000ms / 25 = 40ms interval
-                currentTime = System.currentTimeMillis()
             }
+        } else {
+            // Disconnect TCP client if session is stopped
+            espTcpClient?.disconnect()
+            espTcpClient = null
         }
     }
 
+    // UI Layout
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-
         Text(
             text = "Make a drag time calculation here!",
             style = MaterialTheme.typography.titleLarge
-
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Speed: ${"%.2f".format(speed)} km/h",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Text(
-            text = "Acceleration: ${"%.2f".format(acceleration)} m/s²",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        zeroToHundredTime?.let {
-            Text(
-                text = "0-100 km/h Time: ${"%.2f".format(it)} seconds",
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Session Time: ${(currentTime - (sessionStartTime ?: currentTime)) / 1000} seconds",
-            style = MaterialTheme.typography.bodySmall
-        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -153,7 +163,13 @@ fun DragRaceScreen(
             Button(
                 onClick = {
                     isSessionActive = !isSessionActive
-                    startSession(database)
+                    // Trigger session state change (start/stop session)
+                    if (isSessionActive) {
+                        sessionID = startSession(database) // Start session when button is pressed
+                    } else {
+                        // Stop session and disconnect from ESP client
+                        espTcpClient?.disconnect()
+                    }
                 }
             ) {
                 Text(if (isSessionActive) "Stop Session" else "Start Session")
@@ -162,43 +178,13 @@ fun DragRaceScreen(
     }
 }
 
-private fun startSession(database: ESPDatabase)
-{
-    SessionManager.startSession(database,"drag","")
-}
 
-private fun calculateSpeed(gpsData: List<Pair<Double, Double>>): Double {
-    // Implement a function to calculate speed from GPS data (in km/h)
-    // This is just a placeholder
-    return gpsData.size * 2.0
-}
 
-private fun calculateAcceleration(gpsData: List<Pair<Double, Double>>): Double {
-    // Implement a function to calculate acceleration (in m/s^2)
-    // This is just a placeholder
-    return gpsData.size * 0.1
-}
 
 
 @Preview(showBackground = true)
 @Composable
 fun DragScreenPreview() {
-    val mockESPManager = ESP32Manager(
-        url = "ws://192.168.4.1:81", // WebSocket URL of ESP32
-        onDataReceived = { data ->
-            // Handle incoming data from ESP32
-            println("Data received: $data")
-        },
-        onConnectionStatusChanged = { isConnected ->
-            // Handle connection status changes
-            if (isConnected) {
-                println("Connected to ESP32")
-            } else {
-                println("Disconnected from ESP32")
-            }
-        }
-    )
-
 
     // Create a fake or mock database instance
     val fakeDatabase = Room.inMemoryDatabaseBuilder(
@@ -207,34 +193,28 @@ fun DragScreenPreview() {
     ).build()
 
     DragRaceScreen(
-        espManager = mockESPManager,
         onBack = {},
         database = fakeDatabase
     )
 }
 
 
-// Helper functions
 
-fun StartSession(database: ESPDatabase): Int
+
+// Starts the session for a drag run
+fun startSession(database: ESPDatabase): Int
 {
     val sessionManager = SessionManager.getInstance(database)
-
     CoroutineScope(Dispatchers.IO).launch {
         sessionManager.startSession("DragSession", "Drag data session")
     }
-
-    return sessionManager.getCurrentSessionId()?.toInt() ?:-1 ;
+    return sessionManager.getCurrentSessionId()?.toInt() ?:-1
 }
 
-fun addRawDataToSession(sessionId : Int)
-{
-
-}
-
-fun endSession()
-{
-
+fun parseTimeToMilliseconds(timeString: String): Long {
+    val format = SimpleDateFormat("HH:mm:ss")
+    val date: Date = format.parse(timeString) ?: throw IllegalArgumentException("Invalid time format")
+    return date.time  // This will give the timestamp in milliseconds
 }
 
 

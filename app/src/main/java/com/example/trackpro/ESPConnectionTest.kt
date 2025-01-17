@@ -18,16 +18,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.trackpro.ManagerClasses.ESP32Manager
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
-import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.RawGPSData  // Make sure to use the correct package
+
 class ESPConnectionTest : ComponentActivity() {
 
-    private lateinit var espManager: ESP32Manager // ESP32 Manager instance
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,8 +33,7 @@ class ESPConnectionTest : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        espManager.disconnect() // Ensure the connection is closed when activity is destroyed
+        super.onDestroy();
     }
 }
 
@@ -63,7 +58,6 @@ fun ESPConnectionTestScreen() {
                 println("Connection status: ${if (connected) "Connected" else "Disconnected"}")
             }
         )
-
         espTcpClient.connect()  // Connect to the server
     }
 

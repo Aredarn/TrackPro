@@ -11,6 +11,7 @@ import androidx.room.PrimaryKey
     childColumns = ["sessionid"],
     onDelete = androidx.room.ForeignKey.CASCADE
 )])
+
 data class DerivedData(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val sessionid: Int, // Links to the session that produced this data

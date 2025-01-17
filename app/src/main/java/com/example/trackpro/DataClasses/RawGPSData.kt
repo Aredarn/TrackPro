@@ -4,6 +4,7 @@ package com.example.trackpro.DataClasses
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 @Entity(
     tableName = "raw_gps_data",
@@ -15,9 +16,9 @@ import androidx.room.PrimaryKey
     )]
 
 )
+
 data class RawGPSData(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val sessionid: Long,
     val latitude: Double,
     val longitude: Double,

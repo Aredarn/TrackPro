@@ -22,7 +22,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.ManagerClasses.ESP32Manager
 import com.example.trackpro.ManagerClasses.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,7 +36,6 @@ class TrackProApp : Application() {
 }
 
 class MainActivity : ComponentActivity() {
-    private lateinit var espManager: ESP32Manager // ESP32 Manager instance
     private lateinit var database: ESPDatabase
     private lateinit var sessionManager: SessionManager
 
@@ -53,23 +51,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // Initialize ESP32Manager with IP and port
-        val espManager = ESP32Manager(
-            url = "ws://192.168.4.1:81", // WebSocket URL of ESP32
-            onDataReceived = { data ->
-                // Handle incoming data from ESP32
-                println("Data received: $data")
-            },
-            onConnectionStatusChanged = { isConnected ->
-                // Handle connection status changes
-                if (isConnected) {
-                    println("Connected to ESP32")
-                } else {
-                    println("Disconnected from ESP32")
-                }
-            }
-        )
 
-        espManager.connect()
 
         setContent {
             TrackProTheme {
@@ -78,7 +60,6 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = navController, startDestination = "main") {
                     composable("main") {
                         MainScreen(
-                            espManager = espManager,
                             onNavigateToGraph = { navController.navigate("graph") },
                             onNavigateToDragRace = {navController.navigate("drag")},
                             onNavigateToESPTestScreen = {navController.navigate("esptest")},
@@ -86,21 +67,17 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("graph") {
-                        espManager.disconnect() // Ensure the connection is closed when activity is destroyed
                         GraphScreen(onBack = { navController.popBackStack() })
                     }
                     composable("drag")
                     {
-                        espManager.disconnect();
                         DragRaceScreen(
-                            espManager = espManager,
                             database = database,
                             onBack = {navController.popBackStack()}
                         )
                     }
                     composable("esptest")
                     {
-                        espManager.disconnect();
                         ESPConnectionTestScreen()
                     }
                 }
@@ -110,7 +87,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        espManager.disconnect() // Ensure the connection is closed when activity is destroyed
     }
 }
 
@@ -118,7 +94,7 @@ class MainActivity : ComponentActivity() {
 //
 
 @Composable
-fun MainScreen(espManager: ESP32Manager, onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, database: ESPDatabase) {
+fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, database: ESPDatabase) {
     val coroutineScope = rememberCoroutineScope()
     val sessionManager = SessionManager.getInstance(database)
 
@@ -226,22 +202,6 @@ fun parseData(data: String): Triple<Float, Float, Long>? {
 @Composable
 fun MainScreenPreview() {
     // Create a mock ESP32Manager
-    val mockESPManager = ESP32Manager(
-        url = "ws://192.168.4.1:81", // WebSocket URL of ESP32
-        onDataReceived = { data ->
-            // Handle incoming data from ESP32
-            println("Data received: $data")
-        },
-        onConnectionStatusChanged = { isConnected ->
-            // Handle connection status changes
-            if (isConnected) {
-                println("Connected to ESP32")
-            } else {
-                println("Disconnected from ESP32")
-            }
-        }
-    )
-
 
     // Create a fake or mock database instance
     val fakeDatabase = Room.inMemoryDatabaseBuilder(
@@ -252,7 +212,6 @@ fun MainScreenPreview() {
     // Use the fake database in the preview
     TrackProTheme {
         MainScreen(
-            espManager = mockESPManager,
             onNavigateToGraph = {},
             onNavigateToDragRace = {},
             onNavigateToESPTestScreen = {},

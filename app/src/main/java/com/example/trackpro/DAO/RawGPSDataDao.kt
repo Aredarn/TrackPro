@@ -11,9 +11,7 @@ import com.example.trackpro.DataClasses.RawGPSData
 interface RawGPSDataDao {
     @Insert
     suspend fun insert(rawGPSData: RawGPSData)
-    {
-        Log.d("Database", "Inserted RawGPSData: $rawGPSData")
-    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(data: List<RawGPSData>)
 
