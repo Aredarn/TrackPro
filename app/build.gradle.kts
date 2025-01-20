@@ -78,6 +78,10 @@ dependencies {
 
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    testImplementation ("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2")
 
+    testImplementation ("org.mockito.kotlin:mockito-kotlin:4.0.0")// Kotlin extension for Mockito
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2")  // for coroutine testing
 }
+
 

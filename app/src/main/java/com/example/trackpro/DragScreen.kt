@@ -48,8 +48,6 @@ class DragScreen : ComponentActivity() {
 
         //Create session
         sessionId = startSession(database)
-
-
     }
 
     override fun onDestroy() {
