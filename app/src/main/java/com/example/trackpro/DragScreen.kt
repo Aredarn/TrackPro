@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.room.Room
+import com.example.trackpro.CalculationClasses.DragTimeCalculation
 import com.example.trackpro.ManagerClasses.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -118,18 +119,14 @@ fun DragRaceScreen(
                             database.rawGPSDataDao().insert(data)
                             lastTimestamp = data.timestamp
 
-
                             // Optional: Query to verify insertion (for debugging)
-                            val insertedData = database.rawGPSDataDao().getGPSDataBySession(sessionID.toInt())
+                            /*val insertedData = database.rawGPSDataDao().getGPSDataBySession(sessionID.toInt())
                             Log.d("Database", "Inserted data for session $sessionID: $insertedData")
-
+                            */
                         } else {
                             Log.d("Database", "Skipping duplicate data for timestamp: ${data.timestamp}")
                         }
                     }
-
-
-                    // Sleep for a short duration before fetching new data again
                     delay(40) // Adjust as needed for data rate
                 }
             }
@@ -166,6 +163,7 @@ fun DragRaceScreen(
                         sessionID = startSession(database) // Start session when button is pressed
                     } else {
                         // Stop session and disconnect from ESP client
+
                         espTcpClient?.disconnect()
                     }
                 }
@@ -184,7 +182,6 @@ fun DragRaceScreen(
 @Composable
 fun DragScreenPreview() {
 
-    // Create a fake or mock database instance
     val fakeDatabase = Room.inMemoryDatabaseBuilder(
         LocalContext.current,
         ESPDatabase::class.java
@@ -208,6 +205,15 @@ fun startSession(database: ESPDatabase): Int
     }
     return sessionManager.getCurrentSessionId()?.toInt() ?:-1
 }
+
+suspend fun endSessionPostProcess(sessionid: Long, database: ESPDatabase) : Int
+{
+    val dragtimecalc = DragTimeCalculation(sessionid, database);
+
+    return dragtimecalc.timeFromZeroToHundred();
+}
+
+
 
 fun parseTimeToMilliseconds(timeString: String): Long {
     val format = SimpleDateFormat("HH:mm:ss")

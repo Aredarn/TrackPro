@@ -2,6 +2,7 @@ package com.example.trackpro.CalculationClasses
 
 import com.example.trackpro.DAO.RawGPSDataDao
 import com.example.trackpro.DataClasses.RawGPSData
+import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.ESPDatabase
 
 
@@ -13,14 +14,16 @@ class DragTimeCalculation(
     private lateinit var postProc : PostProcessing;
 
     // This function is responsible for smoothing the recorded data before any calculation
-    suspend fun postProcessing(Sessionid: Long)
+    private suspend fun postProcessing()
     {
-        postProc.postProcessing(Sessionid)
+        postProc.postProcessing(sessionid)
     }
 
-    suspend fun timeFromZeroToHundred(sessionId: Int): Int {
+    suspend fun timeFromZeroToHundred(): Int {
+
+        postProcessing()
         // Step 1: Retrieve the raw GPS data for the given session
-        val sessionItems: List<RawGPSData> = database.rawGPSDataDao().getGPSDataBySession(sessionId)
+        val sessionItems: List<SmoothedGPSData> = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid.toInt())
 
         // Debugging log: Inspect the session items
         println("Session Items: $sessionItems")
@@ -34,10 +37,10 @@ class DragTimeCalculation(
             val currentData = sessionItems[i]
 
             // Debugging log: Inspect the current speed and timestamp
-            println("Checking Data - Timestamp: ${currentData.timestamp}, Speed: ${currentData.speed}")
+            println("Checking Data - Timestamp: ${currentData.timestamp}, Speed: ${currentData.smoothedSpeed}")
 
             // Check if we are at 0 km/h
-            if (currentData.speed != null && currentData.speed <= 0f) {
+            if (currentData.smoothedSpeed != null && currentData.smoothedSpeed <= 0f) {
                 lastZeroTime = currentData.timestamp
                 println("Last 0 km/h found at Timestamp: $lastZeroTime")
                 break  // Found the last 0 km/h, stop searching
@@ -50,10 +53,10 @@ class DragTimeCalculation(
                 val currentData = i
 
                 // Debugging log: Inspect the current speed and timestamp again
-                println("Checking Data - Timestamp: ${currentData.timestamp}, Speed: ${currentData.speed}")
+                println("Checking Data - Timestamp: ${currentData.timestamp}, Speed: ${currentData.smoothedSpeed}")
 
                 // If speed exceeds or equals 100 km/h after the last 0 km/h
-                if (currentData.speed != null && currentData.speed >= 100f && currentData.timestamp > lastZeroTime) {
+                if (currentData.smoothedSpeed != null && currentData.smoothedSpeed >= 100f && currentData.timestamp > lastZeroTime) {
                     endTime = currentData.timestamp
                     println("First 100 km/h found at Timestamp: $endTime")
                     break
