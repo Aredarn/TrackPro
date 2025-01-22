@@ -29,6 +29,9 @@ import kotlinx.coroutines.launch
 
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.ManagerClasses.ESPTcpClient
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -59,6 +62,7 @@ class DragScreen : ComponentActivity() {
 
 
 
+@OptIn(DelicateCoroutinesApi::class)
 @Composable
 fun DragRaceScreen(
     onBack: () -> Unit,
@@ -78,6 +82,8 @@ fun DragRaceScreen(
 
     // Tracking the last timestamp to prevent redundant inserts
     var lastTimestamp: Long? by remember { mutableStateOf(null) }
+
+    var dragtime: Int? by remember { mutableStateOf(null) }
 
     // Start/Stop session and manage GPS data reception
     LaunchedEffect(isSessionActive) {
@@ -120,8 +126,11 @@ fun DragRaceScreen(
                             lastTimestamp = data.timestamp
 
                             // Optional: Query to verify insertion (for debugging)
-                            /*val insertedData = database.rawGPSDataDao().getGPSDataBySession(sessionID.toInt())
+                            /*
+
+                            val insertedData = database.rawGPSDataDao().getGPSDataBySession(sessionID.toInt())
                             Log.d("Database", "Inserted data for session $sessionID: $insertedData")
+
                             */
                         } else {
                             Log.d("Database", "Skipping duplicate data for timestamp: ${data.timestamp}")
@@ -163,19 +172,19 @@ fun DragRaceScreen(
                         sessionID = startSession(database) // Start session when button is pressed
                     } else {
                         // Stop session and disconnect from ESP client
-
-                        espTcpClient?.disconnect()
+                        GlobalScope.launch {
+                            dragtime = endSessionPostProcess(sessionID.toLong(), database)
+                            espTcpClient?.disconnect()
+                        }
                     }
                 }
             ) {
                 Text(if (isSessionActive) "Stop Session" else "Start Session")
             }
         }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
-
-
-
 
 
 @Preview(showBackground = true)

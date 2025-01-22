@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
                             onNavigateToGraph = { navController.navigate("graph") },
                             onNavigateToDragRace = {navController.navigate("drag")},
                             onNavigateToESPTestScreen = {navController.navigate("esptest")},
+                            onNavigateToTrackScreen = {navController.navigate("track")},
                             database = database
                         )
                     }
@@ -80,6 +81,10 @@ class MainActivity : ComponentActivity() {
                     {
                         ESPConnectionTestScreen()
                     }
+                    composable("track")
+                    {
+                        TrackScreen()
+                    }
                 }
             }
         }
@@ -94,7 +99,7 @@ class MainActivity : ComponentActivity() {
 //
 
 @Composable
-fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, database: ESPDatabase) {
+fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackScreen: () -> Unit ,database: ESPDatabase) {
     val coroutineScope = rememberCoroutineScope()
     val sessionManager = SessionManager.getInstance(database)
 
@@ -171,6 +176,12 @@ fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,o
         ) {
             Text("ESP connection Screen")
         }
+        Button(
+            onClick = onNavigateToTrackScreen,
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text("Track")
+        }
 
     }
 }
@@ -215,6 +226,7 @@ fun MainScreenPreview() {
             onNavigateToGraph = {},
             onNavigateToDragRace = {},
             onNavigateToESPTestScreen = {},
+            onNavigateToTrackScreen = {},
             database = fakeDatabase
         )
     }
