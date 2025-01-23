@@ -12,17 +12,11 @@ class DragTimeCalculation(
     val sessionid : Long,
     private val database: ESPDatabase
 ) {
-
-
-
     private lateinit var postProc: PostProcessing
-
 
     fun initializePostProcessing() {
         postProc = PostProcessing(database) // Or retrieve an existing instance
     }
-
-
 
     private suspend fun postProcessing() {
         Log.d("trackpro", "Inside outer postProc")
@@ -36,10 +30,6 @@ class DragTimeCalculation(
 
 
     suspend fun timeFromZeroToHundred(): Int {
-
-
-        Log.d("trackpro","Inside 0-100")
-
         postProcessing()
         // Step 1: Retrieve the raw GPS data for the given session
         val sessionItems: List<SmoothedGPSData> = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid.toInt())
@@ -66,18 +56,14 @@ class DragTimeCalculation(
             }
         }
 
-        // Step 3: Now, track the next 100 km/h after the last 0 km/h
+        // Step 3: track the next 100 km/h after the last 0 km/h
         if (lastZeroTime != null) {
             for (i in sessionItems) {
                 val currentData = i
 
-                // Debugging log: Inspect the current speed and timestamp again
-                println("Checking Data - Timestamp: ${currentData.timestamp}, Speed: ${currentData.smoothedSpeed}")
-
                 // If speed exceeds or equals 100 km/h after the last 0 km/h
                 if (currentData.smoothedSpeed != null && currentData.smoothedSpeed >= 100f && currentData.timestamp > lastZeroTime) {
                     endTime = currentData.timestamp
-                    println("First 100 km/h found at Timestamp: $endTime")
                     break
                 }
             }
@@ -94,7 +80,4 @@ class DragTimeCalculation(
             -1
         }
     }
-
-
-
 }

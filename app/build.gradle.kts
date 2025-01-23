@@ -82,6 +82,13 @@ dependencies {
 
     testImplementation ("org.mockito.kotlin:mockito-kotlin:4.0.0")// Kotlin extension for Mockito
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2")  // for coroutine testing
+
+    implementation ("androidx.compose.material3:material3:<latest_version>")
+    implementation ("androidx.compose.material:material-icons-extended:<latest_version>")
+
+
+    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.0") // or the latest version)
+
 }
 
 

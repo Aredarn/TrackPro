@@ -2,11 +2,15 @@ package com.example.trackpro
 
 import android.app.Application
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -16,42 +20,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.ui.theme.TrackProTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.room.Room
-import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.ManagerClasses.SessionManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class TrackProApp : Application() {
-    lateinit var database: ESPDatabase private set
     override fun onCreate() {
         super.onCreate()
-        database = ESPDatabase.getInstance(this)
     }
 }
 
 class MainActivity : ComponentActivity() {
-    private lateinit var database: ESPDatabase
-    private lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        database = (application as TrackProApp).database
-        sessionManager = SessionManager.getInstance(database)
-
-        // Explicitly start a session here
-        CoroutineScope(Dispatchers.IO).launch {
-            //sessionManager.startSession(eventType = "Test Event", description = "Test description")
-            Log.e("SessionManager", "Session started with ID: ${sessionManager.getCurrentSessionId()}")
-        }
-
-        // Initialize ESP32Manager with IP and port
-
+        val database = ESPDatabase.getInstance(applicationContext)
 
         setContent {
             TrackProTheme {
@@ -64,7 +48,6 @@ class MainActivity : ComponentActivity() {
                             onNavigateToDragRace = {navController.navigate("drag")},
                             onNavigateToESPTestScreen = {navController.navigate("esptest")},
                             onNavigateToTrackScreen = {navController.navigate("track")},
-                            database = database
                         )
                     }
                     composable("graph") {
@@ -96,28 +79,10 @@ class MainActivity : ComponentActivity() {
 }
 
 
-//
-
 @Composable
-fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackScreen: () -> Unit ,database: ESPDatabase) {
-    val coroutineScope = rememberCoroutineScope()
-    val sessionManager = SessionManager.getInstance(database)
-
-    // Real-time state variables
-    var speed by remember { mutableStateOf(0f) } // in km/h
-    var acceleration by remember { mutableStateOf(0f) } // in m/s²
-    var rawData by remember { mutableStateOf("No Data Yet") }
-    var startTime: Long? by remember { mutableStateOf(null) }
-    var isAccelerating by remember { mutableStateOf(false) }
-    var accToHundred: String? by remember { mutableStateOf(null) }
-    var timestamp: Long? by remember { mutableStateOf(null) }
-    var accelerationStartTime: Long? by remember { mutableStateOf(null) }
-    var elapsedTime: Float? by remember { mutableStateOf(null) }
-
+fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackScreen: () -> Unit) {
     LaunchedEffect(Unit) {
     }
-
-    // Composables displaying the data
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -126,83 +91,91 @@ fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,o
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Speed: %.2f km/h".format(speed),
-            style = MaterialTheme.typography.headlineMedium,
+            text = "Welcome to TRACKPRO",
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            ),
             modifier = Modifier.padding(8.dp)
         )
         Text(
-            text = "Acceleration: %.2f m/s²".format(acceleration),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(8.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Raw Data: $rawData",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(8.dp)
+            text = "Ready to beat some records?",
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.secondary
+            ),
+            modifier = Modifier.padding(4.dp)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Show the 0-100 time
-        Text(
-            text = "0-100: $elapsedTime",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(6.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Show the 0-100 time
-        Text(
-            text = "0-100: $accToHundred",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(6.dp)
-        )
         Button(
             onClick = onNavigateToGraph,
-            modifier = Modifier.padding(top = 16.dp)
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .padding(top = 12.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
+            Icon(Icons.Default.ShowChart, contentDescription = "Graph Icon")
+            Spacer(modifier = Modifier.width(8.dp))
             Text("View Graph")
         }
+
         Button(
             onClick = onNavigateToDragRace,
-            modifier = Modifier.padding(top = 16.dp)
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .padding(top = 12.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary,
+                contentColor = MaterialTheme.colorScheme.onSecondary
+            )
         ) {
+            Icon(Icons.Default.RocketLaunch, contentDescription = "Drag Race Icon")
+            Spacer(modifier = Modifier.width(8.dp))
             Text("Drag Screen")
         }
+
         Button(
             onClick = onNavigateToESPTestScreen,
-            modifier = Modifier.padding(top = 16.dp)
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .padding(top = 12.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onTertiary
+            )
         ) {
-            Text("ESP connection Screen")
+            Icon(Icons.Default.Wifi, contentDescription = "ESP Icon")
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("ESP Connection")
         }
+
         Button(
             onClick = onNavigateToTrackScreen,
-            modifier = Modifier.padding(top = 16.dp)
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .padding(top = 12.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         ) {
+            Icon(Icons.Default.Timelapse, contentDescription = "Track Icon")
+            Spacer(modifier = Modifier.width(8.dp))
             Text("Track")
         }
-
-    }
-}
-
-
-
-fun parseData(data: String): Triple<Float, Float, Long>? {
-    return try {
-        // Split the data by commas (expecting "speed,acceleration,timestamp")
-        val parts = data.split(",")
-
-        // Parse speed, acceleration, and timestamp from the parts
-        val speed = parts[0].toFloat()
-        val acceleration = parts[1].toFloat()
-        val timestamp = parts[2].toLong() // Assuming timestamp is in milliseconds
-
-        // Return a Triple with speed, acceleration, and timestamp
-        Triple(speed, acceleration, timestamp)
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null // Return null in case of any errors
     }
 }
 
@@ -212,22 +185,13 @@ fun parseData(data: String): Triple<Float, Float, Long>? {
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
-    // Create a mock ESP32Manager
 
-    // Create a fake or mock database instance
-    val fakeDatabase = Room.inMemoryDatabaseBuilder(
-        LocalContext.current,
-        ESPDatabase::class.java
-    ).build()
-
-    // Use the fake database in the preview
     TrackProTheme {
         MainScreen(
             onNavigateToGraph = {},
             onNavigateToDragRace = {},
             onNavigateToESPTestScreen = {},
             onNavigateToTrackScreen = {},
-            database = fakeDatabase
         )
     }
 }

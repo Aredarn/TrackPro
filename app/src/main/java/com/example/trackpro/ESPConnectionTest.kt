@@ -23,8 +23,6 @@ import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.RawGPSData  // Make sure to use the correct package
 
 class ESPConnectionTest : ComponentActivity() {
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -55,7 +53,6 @@ fun ESPConnectionTestScreen() {
             },
             onConnectionStatusChanged = { connected ->
                 isConnected.value = connected
-                println("Connection status: ${if (connected) "Connected" else "Disconnected"}")
             }
         )
         espTcpClient.connect()  // Connect to the server
@@ -107,9 +104,6 @@ fun ESPConnectionTestScreen() {
 
     }
 }
-
-
-
 
 @Preview(showBackground = true)
 @Composable

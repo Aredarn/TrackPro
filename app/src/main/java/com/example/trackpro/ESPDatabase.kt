@@ -32,7 +32,7 @@ abstract class ESPDatabase : RoomDatabase() {
                     ESPDatabase::class.java,
                     "esp_database"
                 )
-                    .fallbackToDestructiveMigration() // Optional: handles schema changes
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

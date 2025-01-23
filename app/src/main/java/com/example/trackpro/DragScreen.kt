@@ -1,8 +1,10 @@
 package com.example.trackpro
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,32 +33,35 @@ import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 
 class DragScreen : ComponentActivity() {
+    private lateinit var database: ESPDatabase
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-    }
-    override fun onDestroy() {
-        super.onDestroy()
+        database = ESPDatabase.getInstance(applicationContext)
+
+        setContent {
+            DragRaceScreen(
+                database = database, // Pass the database instance here
+                onBack = { /* handle back */ }
+            )
+        }
     }
 }
-
-
-
 
 @OptIn(DelicateCoroutinesApi::class)
 @Composable
 fun DragRaceScreen(
+    database: ESPDatabase,
     onBack: () -> Unit,
-    database: ESPDatabase
 ) {
-    // SESSION RELATED VAR
+
     var isSessionActive by remember { mutableStateOf(false) }
     var sessionID by remember { mutableStateOf(-1) }
 
@@ -110,16 +115,13 @@ fun DragRaceScreen(
                     derivedData?.let { data ->
                         if (lastTimestamp == null || data.timestamp != lastTimestamp!!) {
                             Log.d("Database", "Inserting data: $data")
-                            database.rawGPSDataDao().insert(data)
+
+                            // Perform the database operation off the main thread
+                            withContext(Dispatchers.IO) {
+                                database.rawGPSDataDao().insert(data)
+                            }
+
                             lastTimestamp = data.timestamp
-
-                            // Optional: Query to verify insertion (for debugging)
-                            /*
-
-                            val insertedData = database.rawGPSDataDao().getGPSDataBySession(sessionID.toInt())
-                            Log.d("Database", "Inserted data for session $sessionID: $insertedData")
-
-                            */
                         } else {
                             Log.d("Database", "Skipping duplicate data for timestamp: ${data.timestamp}")
                         }
@@ -176,6 +178,7 @@ fun DragRaceScreen(
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
+
 
 
 @Preview(showBackground = true)
