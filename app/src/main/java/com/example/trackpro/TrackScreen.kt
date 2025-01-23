@@ -31,35 +31,64 @@ import androidx.compose.ui.unit.dp
 data class LatLonOffset(val lat: Double, val lon: Double)
 @Composable
 fun TrackScreen() {
-    // Suzuka Circuit GPS points
+    // Pannonia ring
     val gpsPoints = listOf(
-        LatLonOffset(52.06038, -1.02483), // Start/Finish line
-        LatLonOffset(52.06106, -1.02571), // Turn 1 (Copse)
-        LatLonOffset(52.06174, -1.02658), // Turn 2 (Maggotts)
-        LatLonOffset(52.06242, -1.02745), // Turn 3 (Becketts)
-        LatLonOffset(52.06298, -1.02832), // Turn 4 (Chapel)
-        LatLonOffset(52.06344, -1.02919), // Turn 5 (The Loop)
-        LatLonOffset(52.06390, -1.03006), // Turn 6 (Abbey)
-        LatLonOffset(52.06436, -1.03093), // Turn 7 (Farm Curve)
-        LatLonOffset(52.06482, -1.03180), // Turn 8 (Village)
-        LatLonOffset(52.06528, -1.03267), // Turn 9 (Aintree)
-        LatLonOffset(52.06574, -1.03354), // Turn 10 (Luffield)
-        LatLonOffset(52.06620, -1.03441), // Turn 11 (Maggots)
-        LatLonOffset(52.06666, -1.03528), // Turn 12 (Becketts)
-        LatLonOffset(52.06712, -1.03615), // Turn 13 (Chapel)
-        LatLonOffset(52.06758, -1.03702), // Turn 14 (The Loop)
-        LatLonOffset(52.06804, -1.03789), // Turn 15 (Abbey)
-        LatLonOffset(52.06850, -1.03876), // Turn 16 (Farm Curve)
-        LatLonOffset(52.06896, -1.03963), // Turn 17 (Village)
-        LatLonOffset(52.06942, -1.04050), // Turn 18 (Aintree)
-        LatLonOffset(52.06988, -1.04137), // Turn 19 (Luffield)
-        LatLonOffset(52.07034, -1.04224), // Turn 20 (Stowe)
-        LatLonOffset(52.07080, -1.04311), // Turn 21 (Vale)
-        LatLonOffset(52.07126, -1.04398), // Turn 22 (Club)
-        LatLonOffset(52.07172, -1.04485), // Turn 23 (Abbey)
-        LatLonOffset(52.07218, -1.04572), // Turn 24 (Woodcote)
-        LatLonOffset(52.07264, -1.04659), // Turn 25 (Copse)
-        LatLonOffset(52.06038, -1.02483)  // Back to Start/Finish
+        LatLonOffset(47.305300, 17.048138),
+        LatLonOffset(47.302270, 17.049691),
+        LatLonOffset(47.301004, 17.048439),
+        LatLonOffset(47.300890, 17.048053),
+        LatLonOffset(47.301029, 17.047764),
+        LatLonOffset(47.302883, 17.046380),
+        LatLonOffset(47.302997, 17.046187),
+        LatLonOffset(47.303095, 17.045789),
+        LatLonOffset(47.303422, 17.043212),
+        LatLonOffset(47.303258, 17.042779),
+        LatLonOffset(47.302997, 17.042706),
+        LatLonOffset(47.300882, 17.045801),
+        LatLonOffset(47.300572, 17.045994),
+        LatLonOffset(47.300237, 17.045910),
+        LatLonOffset(47.299959, 17.045356),
+        LatLonOffset(47.299992, 17.044838),
+        LatLonOffset(47.301160, 17.040972),
+        LatLonOffset(47.301486, 17.040623),
+        LatLonOffset(47.301846, 17.040563),
+        LatLonOffset(47.302744, 17.041346),
+        LatLonOffset(47.302981, 17.041382),
+        LatLonOffset(47.303307, 17.041213),
+        LatLonOffset(47.303724, 17.040515),
+        LatLonOffset(47.303887, 17.039732),
+        LatLonOffset(47.303691, 17.037420),
+        LatLonOffset(47.303691, 17.037046),
+        LatLonOffset(47.304508, 17.035324),
+        LatLonOffset(47.304696, 17.035192),
+        LatLonOffset(47.304851, 17.035276),
+        LatLonOffset(47.305349, 17.036324),
+        LatLonOffset(47.305373, 17.036757),
+        LatLonOffset(47.305210, 17.037335),
+        LatLonOffset(47.304843, 17.037733),
+        LatLonOffset(47.304638, 17.038239),
+        LatLonOffset(47.304565, 17.038624),
+        LatLonOffset(47.304508, 17.043248),
+        LatLonOffset(47.304451, 17.043513),
+        LatLonOffset(47.304075, 17.044344),
+        LatLonOffset(47.304026, 17.044549),
+        LatLonOffset(47.304059, 17.044838),
+        LatLonOffset(47.304181, 17.045151),
+        LatLonOffset(47.304393, 17.045187),
+        LatLonOffset(47.304557, 17.045139),
+        LatLonOffset(47.305594, 17.044380),
+        LatLonOffset(47.306631, 17.042670),
+        LatLonOffset(47.306778, 17.042550),
+        LatLonOffset(47.306958, 17.042550),
+        LatLonOffset(47.307137, 17.042622),
+        LatLonOffset(47.308574, 17.044501),
+        LatLonOffset(47.308648, 17.044730),
+        LatLonOffset(47.308721, 17.045585),
+        LatLonOffset(47.308615, 17.046054),
+        LatLonOffset(47.308436, 17.046392),
+        LatLonOffset(47.306092, 17.047740),
+        LatLonOffset(47.304973, 17.048282)
+
     )
 
     // Interpolate to generate higher resolution points
