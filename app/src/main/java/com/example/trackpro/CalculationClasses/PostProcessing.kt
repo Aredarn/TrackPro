@@ -1,14 +1,14 @@
 package com.example.trackpro.CalculationClasses
 
+import android.util.Log
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.ESPDatabase
 
-class PostProcessing {
-
-    private lateinit var database: ESPDatabase
+class PostProcessing(val database: ESPDatabase) {
 
     suspend fun postProcessing(sessionId: Long) {
+        Log.d("trackpro","Inside inner postproc")
         // Step 1: Retrieve raw GPS data for the session
         val sessionItems: List<RawGPSData> = database.rawGPSDataDao().getGPSDataBySession(sessionId.toInt())
 

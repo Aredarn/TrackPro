@@ -1,9 +1,11 @@
 package com.example.trackpro.CalculationClasses
 
+import android.util.Log
 import com.example.trackpro.DAO.RawGPSDataDao
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.ESPDatabase
+
 
 
 class DragTimeCalculation(
@@ -11,15 +13,32 @@ class DragTimeCalculation(
     private val database: ESPDatabase
 ) {
 
-    private lateinit var postProc : PostProcessing;
 
-    // This function is responsible for smoothing the recorded data before any calculation
-    private suspend fun postProcessing()
-    {
+
+    private lateinit var postProc: PostProcessing
+
+
+    fun initializePostProcessing() {
+        postProc = PostProcessing(database) // Or retrieve an existing instance
+    }
+
+
+
+    private suspend fun postProcessing() {
+        Log.d("trackpro", "Inside outer postProc")
+        initializePostProcessing()
+        if (!::postProc.isInitialized) {
+            Log.e("trackpro", "postProc is not initialized")
+            return
+        }
         postProc.postProcessing(sessionid)
     }
 
+
     suspend fun timeFromZeroToHundred(): Int {
+
+
+        Log.d("trackpro","Inside 0-100")
 
         postProcessing()
         // Step 1: Retrieve the raw GPS data for the given session

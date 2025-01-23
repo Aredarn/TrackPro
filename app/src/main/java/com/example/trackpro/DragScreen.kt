@@ -39,21 +39,9 @@ import java.util.Locale
 
 
 class DragScreen : ComponentActivity() {
-
-    private lateinit var database: ESPDatabase
-
-    private var sessionId: Int = -1
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Initialize your managers or other logic here
-        database = (application as TrackProApp).database
-
-        //Create session
-        sessionId = startSession(database)
     }
-
     override fun onDestroy() {
         super.onDestroy()
     }
@@ -172,9 +160,12 @@ fun DragRaceScreen(
                         sessionID = startSession(database) // Start session when button is pressed
                     } else {
                         // Stop session and disconnect from ESP client
+                        Log.d("trackpro","Clicked")
                         GlobalScope.launch {
+
+                            Log.d("trackpro","Globalscope")
                             dragtime = endSessionPostProcess(sessionID.toLong(), database)
-                            espTcpClient?.disconnect()
+                            //espTcpClient?.disconnect()
                         }
                     }
                 }
@@ -217,6 +208,8 @@ fun startSession(database: ESPDatabase): Int
 
 suspend fun endSessionPostProcess(sessionid: Long, database: ESPDatabase) : Int
 {
+
+    Log.d("trackpro", "Inside endSession");
     val dragtimecalc = DragTimeCalculation(sessionid, database);
 
     return dragtimecalc.timeFromZeroToHundred();
