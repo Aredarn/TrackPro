@@ -23,6 +23,8 @@ import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.RawGPSData  // Make sure to use the correct package
 
 class ESPConnectionTest : ComponentActivity() {
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -43,6 +45,7 @@ fun ESPConnectionTestScreen() {
 
     // Establish connection when the composable is entered
     LaunchedEffect(Unit) {
+
         val espTcpClient = ESPTcpClient(
             serverAddress = "192.168.4.1",  // Replace with your server's IP address
             port = 4210,  // Replace with your server's port
@@ -53,9 +56,11 @@ fun ESPConnectionTestScreen() {
             },
             onConnectionStatusChanged = { connected ->
                 isConnected.value = connected
+                println("Connection status: ${if (connected) "Connected" else "Disconnected"}")
             }
         )
         espTcpClient.connect()  // Connect to the server
+
     }
 
     // UI Layout
@@ -104,6 +109,9 @@ fun ESPConnectionTestScreen() {
 
     }
 }
+
+
+
 
 @Preview(showBackground = true)
 @Composable

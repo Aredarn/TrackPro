@@ -60,29 +60,5 @@ class SessionManager private constructor(
                 instance
             }
         }
-
-        fun startSession(database: ESPDatabase, eventType: String, description: String) {
-            val sessionManager = getInstance(database)
-            CoroutineScope(Dispatchers.IO).launch {
-                sessionManager.startSession(eventType, description)
-                Log.e("SessionManager", "Inserted session")
-            }
-        }
     }
-
-    suspend fun insertRawGPSData(latitude: Double, longitude: Double, altitude: Double?, speed: Float?, timestamp: Long, fixQuality: Int?) {
-        currentSessionId?.let { sessionId ->
-            val rawGPSData = RawGPSData(
-                sessionid = sessionId, // Keep as Long
-                latitude = latitude,
-                longitude = longitude,
-                altitude = altitude,
-                speed = speed,
-                timestamp = timestamp,
-                fixQuality = fixQuality
-            )
-            rawGPSDataDao.insert(rawGPSData) // Insert into database
-        } ?: throw IllegalStateException("No active session. Start a session before inserting raw GPS data.")
-    }
-
 }

@@ -1,4 +1,5 @@
 package com.example.trackpro.ManagerClasses
+import com.example.trackpro.parseTimeToMilliseconds
 import kotlinx.serialization.Serializable
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -14,6 +15,19 @@ data class RawGPSData(
     val satellites: Int?,
     val timestamp: String
 )
+
+fun com.example.trackpro.ManagerClasses.RawGPSData.toDataClass(): com.example.trackpro.DataClasses.RawGPSData {
+    return com.example.trackpro.DataClasses.RawGPSData(
+        sessionid = 0,  // Replace with the actual session ID as needed
+        latitude = this.latitude,
+        longitude = this.longitude,
+        altitude = this.altitude,
+        timestamp = parseTimeToMilliseconds(this.timestamp),
+        speed = this.speed,
+        fixQuality = this.satellites
+    )
+}
+
 
 class ESPTcpClient(
     private val serverAddress: String,

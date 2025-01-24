@@ -174,7 +174,7 @@ fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,o
         ) {
             Icon(Icons.Default.Timelapse, contentDescription = "Track Icon")
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Track")
+            Text("Lap timer / track builder")
         }
     }
 }
