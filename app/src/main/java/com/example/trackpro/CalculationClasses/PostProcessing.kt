@@ -13,13 +13,12 @@ class PostProcessing(val database: ESPDatabase) {
         val sessionItems: List<RawGPSData> = database.rawGPSDataDao().getGPSDataBySession(sessionId.toInt())
 
         // Step 2: Apply smoothing
-        val windowSize = 5
+        val windowSize = 3
         val smoothedData = applyMovingAverage(sessionItems, windowSize,sessionId)
 
         // Step 3: Save smoothed data back to the database
         saveSmoothedData(smoothedData)
     }
-
 
 
 //------------------------------------//

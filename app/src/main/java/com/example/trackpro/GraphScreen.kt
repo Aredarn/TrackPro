@@ -33,34 +33,7 @@ fun GraphScreen(onBack: () -> Unit) {
     }
 
     // Draw the graph using MPAndroidChart
-    AndroidView(
-        factory = { context ->
-            LineChart(context).apply {
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
 
-                // Customize the chart
-                xAxis.position = XAxis.XAxisPosition.BOTTOM
-                xAxis.setDrawGridLines(false)
-                axisRight.isEnabled = false
-                description.isEnabled = false
-            }
-        },
-        update = { chart ->
-            // Update chart data
-            val dataSet = LineDataSet(dataPoints, "Speed (km/h)")
-            dataSet.setDrawValues(false)
-            dataSet.setDrawCircles(false)
-
-            chart.data = LineData(dataSet)
-            chart.invalidate() // Refresh the chart
-        },
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    )
 }
 
 @Preview(showBackground = true)
