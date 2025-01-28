@@ -8,6 +8,8 @@ The communication works with TCP only at the moment.
 
 Key Features:
 - Lap Timing: Measures lap times for circuit racing, karting, or track days.
+
+- Track builder: make your own track, store it and mesure your speed and times
   
 - Drag Timer: ¼-mile, 0-60 mph / 0-100Kmh or other custom drag race metrics
   
