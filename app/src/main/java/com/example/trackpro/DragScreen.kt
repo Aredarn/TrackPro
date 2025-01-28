@@ -143,7 +143,6 @@ fun DragRaceScreen(
                     }
                 },
                 onConnectionStatusChanged = { connected ->
-                    // Update connection status
                     isConnected.value = connected
                 }
             )
@@ -151,15 +150,9 @@ fun DragRaceScreen(
             // Connect the client
             espTcpClient?.connect()
 
-            // Keep running as long as this page is active
-            while (isActive) {
-                // Optional: Add reconnection logic here if needed
-                delay(100) // Adjust delay as necessary to reduce CPU usage
-            }
         } catch (e: Exception) {
             Log.e("LaunchedEffect", "Error: ${e.message}")
         } finally {
-            // Clean up resources when exiting
             espTcpClient?.disconnect()
         }
     }

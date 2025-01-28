@@ -31,9 +31,6 @@ fun GraphScreen(onBack: () -> Unit) {
             dataPoints.add(Entry(i.toFloat(), i * (10..200).random().toFloat()))
         }
     }
-
-    // Draw the graph using MPAndroidChart
-
 }
 
 @Preview(showBackground = true)

@@ -44,7 +44,7 @@ class PostProcessingTest {
     @Test
     fun testTimeFromZeroToHundred() = runBlocking {
         // Test for the sample data
-        val result = dragTimes.timeFromZeroToHundred(1)
+        val result = dragTimes.timeFromZeroToHundred()
 
         assertEquals(3, result)
     }
