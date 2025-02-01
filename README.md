@@ -6,6 +6,7 @@ TrackPro, combined with any ESP32 or ESP8266 MCU and a GPS module, allows user
 The communication works with TCP only at the moment.
 
 
+
 Key Features:
 - Lap Timing: Measures lap times for circuit racing, karting, or track days.
 
