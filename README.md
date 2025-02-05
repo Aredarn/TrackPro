@@ -17,3 +17,9 @@ Key Features:
 - Acceleration Analysis: Analyze acceleration data over time as well as distance for performance evaluation.
   
 - Breaking Stats: Track and review braking efficiency and metrics such as stopping distance and deceleration rates.
+
+
+Future plans:
+- Live sharing
+
+- Data-to-video
