@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 data class LatLonOffset(val lat: Double, val lon: Double)
+
+
 @Composable
 fun TrackScreen() {
     // Pannonia ring
