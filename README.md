@@ -21,5 +21,5 @@ Key Features:
 
 Future plans:
 - Live sharing
-
+- Online leaderboard
 - Data-to-video
