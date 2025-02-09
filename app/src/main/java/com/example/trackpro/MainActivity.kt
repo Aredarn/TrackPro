@@ -1,6 +1,5 @@
 package com.example.trackpro
 
-import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -35,13 +34,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.trackpro.ui.screens.DragTimesListView
 import kotlinx.coroutines.launch
 
-class TrackProApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
-    }
-}
+
 
 class MainActivity : ComponentActivity() {
 
@@ -60,6 +56,7 @@ class MainActivity : ComponentActivity() {
                             onNavigateToDragRace = {navController.navigate("drag")},
                             onNavigateToESPTestScreen = {navController.navigate("esptest")},
                             onNavigateToTrackScreen = {navController.navigate("track")},
+                            onNavigateToDragTimesList = {navController.navigate("dragsessions")}
                         )
                     }
                     composable("graph") {
@@ -80,20 +77,20 @@ class MainActivity : ComponentActivity() {
                     {
                         TrackScreen()
                     }
+                    composable("dragsessions")
+                    {
+                        DragTimesListView()
+                    }
                 }
             }
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
     }
 }
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackScreen: () -> Unit) {
+fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackScreen: () -> Unit, onNavigateToDragTimesList:() -> Unit ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -110,12 +107,19 @@ fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,o
 
                     Text("", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
                     NavigationDrawerItem(
-                        label = { Text("Item 1") },
+                        label = { Text("My drag sessions") },
+                        selected = false,
+                        onClick = {
+                            onNavigateToDragTimesList()
+                        }
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Shared sessions") },
                         selected = false,
                         onClick = { /* Handle click */ }
                     )
                     NavigationDrawerItem(
-                        label = { Text("Item 2") },
+                        label = { Text("Top racers") },
                         selected = false,
                         onClick = { /* Handle click */ }
                     )
@@ -272,6 +276,7 @@ fun MainScreenPreview() {
             onNavigateToDragRace = {},
             onNavigateToESPTestScreen = {},
             onNavigateToTrackScreen = {},
+            onNavigateToDragTimesList = {}
         )
     }
 }
