@@ -1,15 +1,43 @@
 package com.example.trackpro.ManagerClasses
 
+import android.content.Context
 import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.example.trackpro.DAO.DerivedDataDao
 import com.example.trackpro.DAO.RawGPSDataDao
 import com.example.trackpro.DAO.SessionDataDao
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.ESPDatabase
+import com.example.trackpro.ui.screens.SessionViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+
+
+class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
+
+    private val _sessions = MutableStateFlow<List<SessionData>>(emptyList())
+    val sessions: StateFlow<List<SessionData>> = _sessions
+
+    init {
+        fetchSessions()
+    }
+
+    private fun fetchSessions() {
+        viewModelScope.launch {
+            // This will run on a background thread
+            _sessions.value = database.sessionDataDao().getAllSessions()
+        }
+    }
+}
+
+
+
 
 class SessionManager private constructor(
     private val sessionDataDao: SessionDataDao,

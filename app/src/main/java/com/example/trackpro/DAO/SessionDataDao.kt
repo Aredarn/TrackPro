@@ -26,7 +26,7 @@ interface SessionDataDao {
 
     // Get all sessions
     @Query("SELECT * FROM session_data")
-    fun getAllSessions(): List<SessionData>
+    suspend fun getAllSessions(): List<SessionData>
 }
 
 

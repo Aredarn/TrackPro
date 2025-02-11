@@ -1,50 +1,79 @@
 package com.example.trackpro.ui.screens
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.trackpro.ESPDatabase
 import com.example.trackpro.DataClasses.SessionData
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlinx.coroutines.selects.SelectInstance
 
-class DragTimesList() : ComponentActivity() {
-    private lateinit var database: ESPDatabase
-
+class DragTimesList : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContent {
+            val viewModel: SessionViewModel = viewModel(factory = SessionViewModelFactory(this))
+            DragTimesListView(viewModel)
+        }
+    }
+}
 
-        database = ESPDatabase.getInstance(applicationContext)
+// ViewModel to handle session data retrieval
+class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
+    private var _sessions = MutableStateFlow<List<SessionData>>(emptyList())
+    val sessions = _sessions.asStateFlow()
+
+    init {
+        fetchSessions()
+    }
+
+    private fun fetchSessions() {
+        viewModelScope.launch {
+            _sessions.value = database.sessionDataDao().getAllSessions();
+        }
+    }
+}
+
+class SessionViewModelFactory(private val activity: Context) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return SessionViewModel(ESPDatabase.getInstance(activity.applicationContext)) as T
     }
 }
 
 @Composable
-fun DragTimesListView() {
-    LaunchedEffect(Unit) {
-        // Database or UI-related operations can be added here
-    }
+fun DragTimesListView(viewModel: SessionViewModel) {
+    val sessionList by viewModel.sessions.collectAsState()
+
+    SessionListScreen(sessions = sessionList)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SessionListScreen(navController: NavController, sessions: List<SessionData>) {
+fun SessionListScreen(navController: NavController? = null, sessions: List<SessionData>) {
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Your Sessions") })
-        }
+        topBar = { TopAppBar(title = { Text("Your Sessions") }) }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             if (sessions.isEmpty()) {
@@ -55,32 +84,29 @@ fun SessionListScreen(navController: NavController, sessions: List<SessionData>)
                     Text("No sessions available", fontSize = 18.sp, color = Color.Gray)
                 }
             } else {
-                SessionList(sessions, navController)
+                LazyColumn(modifier = Modifier.padding(16.dp)) {
+                    items(sessions) { session ->
+                        SessionCard(session, navController)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun SessionList(sessions: List<SessionData>, navController: NavController) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        sessions.forEach { session ->
-            SessionCard(session, navController)
-        }
-    }
-}
-
-@Composable
-fun SessionCard(session: SessionData, navController: NavController) {
+fun SessionCard(session: SessionData, navController: NavController?) {
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
     val startTimeFormatted = dateFormat.format(Date(session.startTime))
-    val endTimeFormatted = session.endTime?.let { dateFormat.format(Date(it)) } ?: "Ongoing"
+    val endTimeFormatted = session.endTime?.let { dateFormat.format(Date(it)) } ?: "In Progress"
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .clickable { /* Navigate to session details */ },
+            .clickable {
+                navController?.navigate("sessionDetails/${session.id}")
+            },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {

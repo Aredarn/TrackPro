@@ -2,6 +2,7 @@ package com.example.trackpro
 
 import android.app.Application
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -32,27 +33,29 @@ import androidx.compose.ui.unit.dp
 import com.example.trackpro.ui.theme.TrackProTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.trackpro.ui.screens.DragTimesListView
+import com.example.trackpro.ui.screens.SessionViewModel
+import com.example.trackpro.ui.screens.SessionViewModelFactory
 import kotlinx.coroutines.launch
-
-
 
 class TrackProApp : Application() {
     override fun onCreate() {
         super.onCreate()
     }
 }
-
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val database = ESPDatabase.getInstance(applicationContext)
 
         setContent {
+
+            val database = ESPDatabase.getInstance(applicationContext)
+            val sessionViewModel: SessionViewModel = viewModel(factory = SessionViewModelFactory(applicationContext))
             TrackProTheme {
                 val navController = rememberNavController()
 
@@ -60,39 +63,37 @@ class MainActivity : ComponentActivity() {
                     composable("main") {
                         MainScreen(
                             onNavigateToGraph = { navController.navigate("graph") },
-                            onNavigateToDragRace = {navController.navigate("drag")},
-                            onNavigateToESPTestScreen = {navController.navigate("esptest")},
-                            onNavigateToTrackScreen = {navController.navigate("track")},
-                            onNavigateToDragTimesList = {navController.navigate("dragsessions")}
+                            onNavigateToDragRace = { navController.navigate("drag") },
+                            onNavigateToESPTestScreen = { navController.navigate("esptest") },
+                            onNavigateToTrackScreen = { navController.navigate("track") },
+                            onNavigateToDragTimesList = { navController.navigate("dragsessions") }
                         )
                     }
                     composable("graph") {
                         GraphScreen(onBack = { navController.popBackStack() })
                     }
-                    composable("drag")
-                    {
+                    composable("drag") {
                         DragRaceScreen(
                             database = database,
-                            onBack = {navController.popBackStack()}
+                            onBack = { navController.popBackStack() }
                         )
                     }
-                    composable("esptest")
-                    {
+                    composable("esptest") {
                         ESPConnectionTestScreen()
                     }
-                    composable("track")
-                    {
+                    composable("track") {
                         TrackScreen()
                     }
-                    composable("dragsessions")
-                    {
-                        DragTimesListView()
+                    composable("dragsessions") {
+                        // Pass the sessionViewModel to DragTimesListView
+                        DragTimesListView(viewModel = sessionViewModel)
                     }
                 }
             }
         }
     }
 }
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
