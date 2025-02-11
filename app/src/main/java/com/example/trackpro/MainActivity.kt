@@ -1,5 +1,6 @@
 package com.example.trackpro
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,6 +39,12 @@ import com.example.trackpro.ui.screens.DragTimesListView
 import kotlinx.coroutines.launch
 
 
+
+class TrackProApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+    }
+}
 
 class MainActivity : ComponentActivity() {
 
