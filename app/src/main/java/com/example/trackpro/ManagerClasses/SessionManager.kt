@@ -19,26 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 
-class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
-
-    private val _sessions = MutableStateFlow<List<SessionData>>(emptyList())
-    val sessions: StateFlow<List<SessionData>> = _sessions
-
-    init {
-        fetchSessions()
-    }
-
-    private fun fetchSessions() {
-        viewModelScope.launch {
-            // This will run on a background thread
-            _sessions.value = database.sessionDataDao().getAllSessions()
-        }
-    }
-}
-
-
-
-
 class SessionManager private constructor(
     private val sessionDataDao: SessionDataDao,
     private val rawGPSDataDao: RawGPSDataDao,

@@ -152,6 +152,8 @@ fun TrackView(gpsPoints: List<LatLonOffset>) {
         }
     }
 }
+
+
 fun DrawScope.drawTrack(
     gpsPoints: List<LatLonOffset>,
     margin: Float,
