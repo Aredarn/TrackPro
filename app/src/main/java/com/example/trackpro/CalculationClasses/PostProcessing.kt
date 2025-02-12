@@ -25,7 +25,7 @@ class PostProcessing(val database: ESPDatabase) {
 //------------------------------------//
 
 
-    private fun applyMovingAverage(data: List<RawGPSData>, windowSize: Int,sessionId: Long): List<SmoothedGPSData> {
+    fun applyMovingAverage(data: List<RawGPSData>, windowSize: Int,sessionId: Long): List<SmoothedGPSData> {
         val smoothed = mutableListOf<SmoothedGPSData>()
         val latWindow = mutableListOf<Double>()
         val lonWindow = mutableListOf<Double>()

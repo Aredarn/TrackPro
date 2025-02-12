@@ -10,6 +10,6 @@ data class TrackMainData (
     @PrimaryKey(autoGenerate = true)
     val trackId: Int,
     val trackName: String,
-    val totalLength: Length,
+    val totalLength: Double,
     val country: String
 )

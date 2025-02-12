@@ -2,6 +2,7 @@ package com.example.trackpro.DataClasses
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.PrimaryKey
 
 
 @Entity(
@@ -14,6 +15,8 @@ import androidx.room.ForeignKey
     )]
 )
 data class TrackCoordinatesData(
+    @PrimaryKey(autoGenerate = true)
+    val id : Int,
     val trackId: Int,
     val latitude: Double,
     val longitude: Double,

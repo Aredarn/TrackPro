@@ -15,6 +15,7 @@ import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
+import com.example.trackpro.DataClasses.TrackMainData
 
 @Database(entities =
 [
@@ -22,7 +23,7 @@ import com.example.trackpro.DataClasses.TrackCoordinatesData
     RawGPSData::class,
     DerivedData::class,
     SmoothedGPSData::class,
-    TrackMainDataDAO::class,
+    TrackMainData::class,
     TrackCoordinatesData::class
 ], version = 1, exportSchema = false)
 abstract class ESPDatabase : RoomDatabase() {

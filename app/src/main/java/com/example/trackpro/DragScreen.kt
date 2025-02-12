@@ -19,6 +19,7 @@ import androidx.room.Room
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
+import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.SessionManager
 import com.example.trackpro.ManagerClasses.toDataClass
 import com.github.mikephil.charting.charts.LineChart
@@ -73,6 +74,8 @@ fun DragRaceScreen(
 
 
     val dataPoints = remember { mutableStateListOf<Entry>() }
+    val context = LocalContext.current  // Get the Context in Compose
+    val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
 
     var i = 0f;
 
@@ -94,8 +97,8 @@ fun DragRaceScreen(
             // Initialize ESPTcpClient
 
             espTcpClient = ESPTcpClient(
-                serverAddress = "192.168.4.1",
-                port = 4210,
+                serverAddress = ip,
+                port = port,
                 onMessageReceived = { data ->
                     // Update state with received data
                     gpsData.value = data.toDataClass()

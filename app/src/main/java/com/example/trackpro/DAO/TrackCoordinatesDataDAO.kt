@@ -8,7 +8,7 @@ import com.example.trackpro.DataClasses.TrackCoordinatesData
 @Dao
 interface TrackCoordinatesDataDAO {
     @Query("SELECT * FROM track_coordinates_data where trackId = :trackId")
-    suspend fun getCoordinatesOfTrack(trackId: Int)
+    suspend fun getCoordinatesOfTrack(trackId: Int):List<TrackCoordinatesData>
 
     @Insert
     suspend fun insertWholeTrack(data: List<TrackCoordinatesData>)
