@@ -9,9 +9,12 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData  // Make sure to use the correct package
+import com.yourpackage.ui.components.SevenSegmentView
 import java.io.IOException
 import kotlin.math.cos
 import kotlin.math.sin
@@ -149,17 +153,30 @@ fun ESPConnectionTestScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            val currentSpeed = gpsData.value?.speed ?: 0f // Provide a default value
-            Speedometer(currentSpeed) // Pass current speed
+            val currentSpeed = gpsData.value?.speed ?: 0f
+            Speedometer(currentSpeed)
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(50.dp)
+            ) {
+                SevenSegmentView(
+                    number = gpsData.value?.speed?.toInt() ?: 0,
+                    digitsNumber = 3,
+                    segmentsSpace = 1.dp,
+                    segmentWidth = 8.dp,
+                    digitsSpace = 16.dp,
+                    activeColor = androidx.compose.ui.graphics.Color.Green,
+                    modifier = Modifier.height(100.dp)
+                )
+            }
         }
     }
-
-
-
 }
 
 
-// BMW wannabe gaguge
+// BMW wannabe gauge
 @Composable
 fun Speedometer(speed: Float) {
     val animatedSpeed by animateFloatAsState(

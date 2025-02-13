@@ -27,6 +27,7 @@ import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
+import com.yourpackage.ui.components.SevenSegmentView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -237,6 +238,22 @@ fun DragRaceScreen(
             }
         }
 
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(50.dp)
+            ) {
+                SevenSegmentView(
+                    number = 299,
+                    digitsNumber = 3,
+                    segmentsSpace = 1.dp,
+                    segmentWidth = 8.dp,
+                    digitsSpace = 16.dp,
+                    activeColor = androidx.compose.ui.graphics.Color.Green,
+                    modifier = Modifier.height(100.dp)
+                )
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly

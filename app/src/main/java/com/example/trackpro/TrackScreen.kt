@@ -252,8 +252,6 @@ fun TrackCreationDialog(
 }
 
 
-
-
 fun DrawScope.drawTrack(
     gpsPoints: List<LatLonOffset>,
     margin: Float,
