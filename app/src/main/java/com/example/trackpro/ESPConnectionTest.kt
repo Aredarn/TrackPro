@@ -12,15 +12,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import com.example.trackpro.ManagerClasses.ESPTcpClient
+import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData  // Make sure to use the correct package
+import java.io.IOException
 
 class ESPConnectionTest : ComponentActivity() {
 
@@ -43,24 +49,41 @@ fun ESPConnectionTestScreen() {
     val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
     val rawJson = remember { mutableStateOf("") }
 
+    val context = LocalContext.current  // Get the Context in Compose
+    val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
+
+
+    var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
+
     // Establish connection when the composable is entered
     LaunchedEffect(Unit) {
 
-        val espTcpClient = ESPTcpClient(
-            serverAddress = "192.168.4.1",  // Replace with your server's IP address
-            port = 4210,  // Replace with your server's port
+        espTcpClient = ESPTcpClient(
+            serverAddress = ip,
+            port = port,
             onMessageReceived = { data ->
-                println("Received data: $data")  // Log raw JSON
+                //println("Received data: $data")  // Log raw JSON
                 gpsData.value = data // Directly assign the RawGPSData object
                 rawJson.value = data.toString()  // Store raw JSON for display
             },
             onConnectionStatusChanged = { connected ->
                 isConnected.value = connected
-                println("Connection status: ${if (connected) "Connected" else "Disconnected"}")
+                //println("Connection status: ${if (connected) "Connected" else "Disconnected"}")
             }
         )
-        espTcpClient.connect()  // Connect to the server
+        espTcpClient?.connect()  // Connect to the server
 
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                espTcpClient?.disconnect()
+                //Log.d("TCP", "Disconnected from server")
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
     }
 
     // UI Layout

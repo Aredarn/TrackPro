@@ -33,6 +33,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -160,9 +161,16 @@ fun DragRaceScreen(
         }
     }
 
-
-
-
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                espTcpClient?.disconnect()
+                //Log.d("TCP", "Disconnected from server")
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     Column(
         modifier = Modifier

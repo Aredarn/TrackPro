@@ -4,11 +4,19 @@ import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -97,10 +105,33 @@ fun TrackScreen() {
         LatLonOffset(47.306092, 17.047740),
         LatLonOffset(47.304973, 17.048282)
     )
+    var showDialog by remember { mutableStateOf(false) }
+
 
     // Interpolate to generate higher resolution points
     val highResGpsPoints = interpolatePoints(gpsPoints, 50) // 50 steps between each point
     TrackView(gpsPoints = highResGpsPoints)
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Button(onClick = { showDialog = true }) {
+            Text("Open Dialog")
+        }
+
+        if (showDialog) {
+            TrackCreationDialog(
+                onDismiss = { showDialog = false },
+                onConfirm = { trackName, lastName ->
+                    println("First Name: $trackName, Last Name: $lastName")
+                    showDialog = false
+                }
+            )
+        }
+    }
+
 }
 
 //************************************//
@@ -130,8 +161,6 @@ fun TrackView(gpsPoints: List<LatLonOffset>) {
     val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
 
     LaunchedEffect(Unit) {
-
-        Log.d("IP:", "IP address: $ip")
         //Just for testing purposes.
         //Moves a "Car dot" around the track
         /*while (true) {
@@ -159,8 +188,8 @@ fun TrackView(gpsPoints: List<LatLonOffset>) {
 
     Box(
         modifier = Modifier
-            .fillMaxSize() // Fill the entire screen
-            .padding(16.dp), // Padding around the canvas
+            .fillMaxSize()
+            .padding(16.dp),
         contentAlignment = Alignment.Center // Center the canvas within the Box
     ) {
         // Canvas with a border
@@ -181,6 +210,48 @@ fun TrackView(gpsPoints: List<LatLonOffset>) {
         }
     }
 }
+
+
+@Composable
+fun TrackCreationDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
+) {
+    var trackName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = { onDismiss() },
+        title = { Text(text = "Enter Details") },
+        text = {
+            Column {
+                TextField(
+                    value = trackName,
+                    onValueChange = { trackName = it },
+                    label = { Text("Name of the track") }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = lastName,
+                    onValueChange = { lastName = it },
+                    label = { Text("Total length (if known)") }
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(trackName, lastName) }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            Button(onClick = { onDismiss() }) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+
 
 
 fun DrawScope.drawTrack(
@@ -260,7 +331,6 @@ fun DrawScope.drawTrack(
 
 fun CreateTrack()
 {
-
 
 
 }
