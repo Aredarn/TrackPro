@@ -167,7 +167,7 @@ fun ESPConnectionTestScreen() {
                     segmentsSpace = 1.dp,
                     segmentWidth = 8.dp,
                     digitsSpace = 16.dp,
-                    activeColor = androidx.compose.ui.graphics.Color.Green,
+                    activeColor = androidx.compose.ui.graphics.Color.Gray,
                     modifier = Modifier.height(100.dp)
                 )
             }

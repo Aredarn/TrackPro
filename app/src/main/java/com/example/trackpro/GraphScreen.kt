@@ -46,7 +46,7 @@ fun GraphScreen(onBack: () -> Unit) {
             segmentsSpace = 1.dp,
             segmentWidth = 8.dp,
             digitsSpace = 16.dp,
-            activeColor = androidx.compose.ui.graphics.Color.Green,
+            activeColor = androidx.compose.ui.graphics.Color.Black,
             modifier = Modifier.height(100.dp)
         )
 

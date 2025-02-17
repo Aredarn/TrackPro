@@ -24,32 +24,34 @@ class PostProcessing(val database: ESPDatabase) {
 //------------------------------------//
 //------------------------------------//
 
-
-    fun applyMovingAverage(data: List<RawGPSData>, windowSize: Int,sessionId: Long): List<SmoothedGPSData> {
+    fun applyMovingAverage(data: List<RawGPSData>, windowSize: Int, sessionId: Long): List<SmoothedGPSData> {
         val smoothed = mutableListOf<SmoothedGPSData>()
-        val latWindow = mutableListOf<Double>()
-        val lonWindow = mutableListOf<Double>()
-        val altWindow = mutableListOf<Double?>()
-        val speedWindow = mutableListOf<Float?>()
+
+        val latWindow = ArrayDeque<Double>(windowSize)
+        val lonWindow = ArrayDeque<Double>(windowSize)
+        val altWindow = ArrayDeque<Double?>(windowSize)
+        val speedWindow = ArrayDeque<Float?>(windowSize)
 
         data.forEach { gpsData ->
             // Add values to the respective windows
-            latWindow.add(gpsData.latitude)
-            lonWindow.add(gpsData.longitude)
-            gpsData.altitude?.let { altWindow.add(it) }
-            gpsData.speed?.let { speedWindow.add(it) }
+            if (latWindow.size == windowSize) latWindow.removeFirst()
+            if (lonWindow.size == windowSize) lonWindow.removeFirst()
+            if (altWindow.size == windowSize) altWindow.removeFirst()
+            if (speedWindow.size == windowSize) speedWindow.removeFirst()
 
-            // Maintain window size
-            if (latWindow.size > windowSize) latWindow.removeAt(0)
-            if (lonWindow.size > windowSize) lonWindow.removeAt(0)
-            if (altWindow.size > windowSize) altWindow.removeAt(0)
-            if (speedWindow.size > windowSize) speedWindow.removeAt(0)
+            latWindow.addLast(gpsData.latitude)
+            lonWindow.addLast(gpsData.longitude)
+            altWindow.addLast(gpsData.altitude)
+            speedWindow.addLast(gpsData.speed)
 
             // Compute smoothed values
-            val smoothedLat = if (latWindow.size == windowSize) latWindow.average() else gpsData.latitude
-            val smoothedLon = if (lonWindow.size == windowSize) lonWindow.average() else gpsData.longitude
-            val smoothedAlt = if (altWindow.size == windowSize) altWindow.filterNotNull().averageOrNull() else gpsData.altitude
-            val smoothedSpeed = if (speedWindow.size == windowSize) speedWindow.filterNotNull().averageOrNull()?.toFloat() else gpsData.speed
+            val smoothedLat = latWindow.average()
+            val smoothedLon = lonWindow.average()
+            val smoothedAlt = altWindow.filterNotNull().averageOrNull() ?: gpsData.altitude
+            val smoothedSpeed = speedWindow.filterNotNull().averageOrNull()?.toFloat() ?: gpsData.speed
+
+            // Debug log
+            Log.d("PostProcessing", "Timestamp: ${gpsData.timestamp}, Smoothed Speed: $smoothedSpeed")
 
             // Add smoothed result to the list
             smoothed.add(
@@ -66,6 +68,7 @@ class PostProcessing(val database: ESPDatabase) {
 
         return smoothed
     }
+
 
 
 
