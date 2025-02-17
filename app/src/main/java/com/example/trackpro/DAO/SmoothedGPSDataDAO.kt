@@ -16,5 +16,5 @@ interface SmoothedGPSDataDAO {
     suspend fun insertAll(data: List<SmoothedGPSData>)
 
     @Query("SELECT * FROM smoothed_gps_data WHERE sessionId = :sessionId ORDER BY timestamp ASC")
-    suspend fun getSmoothedGPSDataBySession(sessionId:Int):List<SmoothedGPSData>
+    suspend fun getSmoothedGPSDataBySession(sessionId:Long):List<SmoothedGPSData>
 }

@@ -231,7 +231,7 @@ fun DragRaceScreen(
 
             dragTime?.let {
                 Text(
-                    text = "Drag Time: ${it}ms",
+                    text = "Drag Time: ${it}s",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -244,12 +244,12 @@ fun DragRaceScreen(
                 verticalArrangement = Arrangement.spacedBy(50.dp)
             ) {
                 SevenSegmentView(
-                    number = 299,
+                    number = gpsData.value?.speed?.toInt() ?: 0,
                     digitsNumber = 3,
                     segmentsSpace = 1.dp,
                     segmentWidth = 8.dp,
                     digitsSpace = 16.dp,
-                    activeColor = androidx.compose.ui.graphics.Color.Green,
+                    activeColor = androidx.compose.ui.graphics.Color.Black,
                     modifier = Modifier.height(100.dp)
                 )
             }
@@ -274,10 +274,16 @@ fun DragRaceScreen(
                         }
                     } else {
                         CoroutineScope(Dispatchers.Main).launch {
+
                             isSessionActive = !isSessionActive
 
+                            if(sessionID.toInt() != -1)
+                            {
+                                   endSession(database)
+                                    Log.d("Ended?","I guess the session ended")
+                            }
                             Log.d("isItFalse?" , isSessionActive.toString());
-                            dragTime = endSessionPostProcess(sessionID, database)
+                           dragTime = endSessionPostProcess(sessionID, database)
                         }
                     }
                 }
@@ -315,6 +321,16 @@ fun DragScreenPreview() {
         }
 
         return id
+    }
+
+    suspend fun endSession(database: ESPDatabase)
+    {
+        val sessionManager = SessionManager.getInstance(database)
+
+        withContext(Dispatchers.IO) {
+            Log.d("In end", sessionManager.getCurrentSessionId().toString())
+            sessionManager.endSession()
+        }
     }
 
 

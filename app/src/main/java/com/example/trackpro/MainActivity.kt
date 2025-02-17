@@ -34,9 +34,11 @@ import com.example.trackpro.ui.theme.TrackProTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.trackpro.ui.screens.DragTimesListView
 import com.example.trackpro.ui.screens.SessionViewModel
 import com.example.trackpro.ui.screens.SessionViewModelFactory
@@ -62,15 +64,11 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = navController, startDestination = "main") {
                     composable("main") {
                         MainScreen(
-                            onNavigateToGraph = { navController.navigate("graph") },
                             onNavigateToDragRace = { navController.navigate("drag") },
                             onNavigateToESPTestScreen = { navController.navigate("esptest") },
                             onNavigateToTrackScreen = { navController.navigate("track") },
                             onNavigateToDragTimesList = { navController.navigate("dragsessions") }
                         )
-                    }
-                    composable("graph") {
-                        GraphScreen(onBack = { navController.popBackStack() })
                     }
                     composable("drag") {
                         DragRaceScreen(
@@ -85,10 +83,17 @@ class MainActivity : ComponentActivity() {
                         TrackScreen()
                     }
                     composable("dragsessions") {
-                        // Pass the sessionViewModel to DragTimesListView
-                        DragTimesListView(viewModel = sessionViewModel)
+                        DragTimesListView(viewModel = sessionViewModel, navController = navController) // Ensure navController is passed
+                    }
+                    composable(
+                        route = "graph/{sessionId}",
+                        arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
+                    ) { backStackEntry ->
+                        val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
+                        GraphScreen(onBack = { navController.popBackStack() }, sessionId = sessionId)
                     }
                 }
+
             }
         }
     }
@@ -98,7 +103,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackScreen: () -> Unit, onNavigateToDragTimesList:() -> Unit ) {
+fun MainScreen( onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackScreen: () -> Unit, onNavigateToDragTimesList:() -> Unit ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -199,22 +204,7 @@ fun MainScreen( onNavigateToGraph: () -> Unit,onNavigateToDragRace: () -> Unit,o
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Button(
-                    onClick = onNavigateToGraph,
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .padding(top = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Icon(Icons.Default.ShowChart, contentDescription = "Graph Icon")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("View Graph")
-                }
+
 
                 Button(
                     onClick = onNavigateToDragRace,
@@ -280,7 +270,6 @@ fun MainScreenPreview() {
 
     TrackProTheme {
         MainScreen(
-            onNavigateToGraph = {},
             onNavigateToDragRace = {},
             onNavigateToESPTestScreen = {},
             onNavigateToTrackScreen = {},

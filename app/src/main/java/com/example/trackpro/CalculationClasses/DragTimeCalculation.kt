@@ -34,7 +34,7 @@ class DragTimeCalculation(
             postProcessing()
         }
 
-        val sessionItems: List<SmoothedGPSData> = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid.toInt())
+        val sessionItems: List<SmoothedGPSData> = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)
 
         var lastZeroTime: Long? = null
         var endTime: Long? = null

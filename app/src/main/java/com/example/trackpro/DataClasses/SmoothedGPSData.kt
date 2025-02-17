@@ -14,7 +14,6 @@ import androidx.room.ForeignKey
     )]
 )
 
-
 data class SmoothedGPSData (
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val sessionid: Long,

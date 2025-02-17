@@ -2,6 +2,7 @@ package com.example.trackpro.ui.screens
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.trackpro.ESPDatabase
 import com.example.trackpro.DataClasses.SessionData
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,11 +36,16 @@ class DragTimesList : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            // Initialize the NavController here
+            val navController = rememberNavController()
+
+            // Now pass the navController and the viewModel to your DragTimesListView
             val viewModel: SessionViewModel = viewModel(factory = SessionViewModelFactory(this))
-            DragTimesListView(viewModel)
+            DragTimesListView(viewModel = viewModel, navController = navController)
         }
     }
 }
+
 
 // ViewModel to handle session data retrieval
 class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
@@ -63,7 +70,7 @@ class SessionViewModelFactory(private val activity: Context) : ViewModelProvider
 }
 
 @Composable
-fun DragTimesListView(viewModel: SessionViewModel) {
+fun DragTimesListView(viewModel: SessionViewModel,navController: NavController) {
     val sessionList by viewModel.sessions.collectAsState()
 
     SessionListScreen(sessions = sessionList)
@@ -94,6 +101,7 @@ fun SessionListScreen(navController: NavController? = null, sessions: List<Sessi
     }
 }
 
+
 @Composable
 fun SessionCard(session: SessionData, navController: NavController?) {
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
@@ -105,7 +113,12 @@ fun SessionCard(session: SessionData, navController: NavController?) {
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable {
-                navController?.navigate("sessionDetails/${session.id}")
+                Log.d("Card clicked", "Navigating to graph/${session.id}")
+                if (navController == null) {
+                    Log.e("Navigation Error", "navController is null!")
+                } else {
+                    navController.navigate("graph/${session.id}")
+                }
             },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -122,3 +135,4 @@ fun SessionCard(session: SessionData, navController: NavController?) {
         }
     }
 }
+
