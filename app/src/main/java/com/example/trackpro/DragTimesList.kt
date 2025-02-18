@@ -70,15 +70,16 @@ class SessionViewModelFactory(private val activity: Context) : ViewModelProvider
 }
 
 @Composable
-fun DragTimesListView(viewModel: SessionViewModel,navController: NavController) {
+fun DragTimesListView(viewModel: SessionViewModel, navController: NavController) {
     val sessionList by viewModel.sessions.collectAsState()
 
-    SessionListScreen(sessions = sessionList)
+    SessionListScreen(navController = navController, sessions = sessionList)
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SessionListScreen(navController: NavController? = null, sessions: List<SessionData>) {
+fun SessionListScreen(navController: NavController, sessions: List<SessionData>) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("Your Sessions") }) }
     ) { paddingValues ->
