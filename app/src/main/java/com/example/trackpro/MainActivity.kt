@@ -83,8 +83,9 @@ class MainActivity : ComponentActivity() {
                         TrackScreen()
                     }
                     composable("dragsessions") {
-                        DragTimesListView(viewModel = sessionViewModel, navController = navController) // Ensure navController is passed
+                        DragTimesListView(viewModel = sessionViewModel, navController = navController)
                     }
+
                     composable(
                         route = "graph/{sessionId}",
                         arguments = listOf(navArgument("sessionId") { type = NavType.LongType })

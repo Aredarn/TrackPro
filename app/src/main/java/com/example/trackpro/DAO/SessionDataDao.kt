@@ -22,7 +22,7 @@ interface SessionDataDao {
 
     // Get session by ID
     @Query("SELECT * FROM session_data WHERE id = :id")
-    fun getSessionById(id: Long): SessionData?
+    suspend fun getSessionById(id: Long): SessionData?
 
     // Get all sessions
     @Query("SELECT * FROM session_data")

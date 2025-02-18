@@ -72,7 +72,7 @@ fun DragRaceScreen(
 
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
     var lastTimestamp: Long? by remember { mutableStateOf(null) }
-    var dragTime: Int? by remember { mutableStateOf(null) }
+    var dragTime: Double? by remember { mutableStateOf(null) }
 
 
     val dataPoints = remember { mutableStateListOf<Entry>() }
@@ -334,7 +334,7 @@ fun DragScreenPreview() {
     }
 
 
-    suspend fun endSessionPostProcess(sessionId: Long, database: ESPDatabase): Int {
+    suspend fun endSessionPostProcess(sessionId: Long, database: ESPDatabase): Double {
         Log.d("trackpro", "Ending session")
         val dragTimeCalculation = DragTimeCalculation(sessionId, database)
         return dragTimeCalculation.timeFromZeroToHundred()

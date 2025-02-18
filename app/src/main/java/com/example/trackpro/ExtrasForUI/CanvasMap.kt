@@ -58,7 +58,7 @@ fun DrawScope.drawTrack(
                 lineTo(screenPoint.x, screenPoint.y)  // Pass x and y separately
             }
 
-            close()  // Connect back to start if needed
+            //close()  // Connect back to start if needed
         }
 
         // Draw track
