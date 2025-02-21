@@ -114,7 +114,6 @@ fun SessionCard(session: SessionData, navController: NavController?) {
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable {
-                Log.d("Card clicked", "Navigating to graph/${session.id}")
                 if (navController == null) {
                     Log.e("Navigation Error", "navController is null!")
                 } else {
