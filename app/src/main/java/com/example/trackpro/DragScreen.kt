@@ -30,6 +30,7 @@ import com.github.mikephil.charting.data.LineDataSet
 import com.yourpackage.ui.components.SevenSegmentView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -62,7 +63,6 @@ fun DragRaceScreen(
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp
 
-
     var isSessionActive by remember { mutableStateOf(false) }
     var sessionID by remember { mutableLongStateOf(-1) }
 
@@ -78,9 +78,43 @@ fun DragRaceScreen(
     val dataPoints = remember { mutableStateListOf<Entry>() }
     val context = LocalContext.current  // Get the Context in Compose
     val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
+    val coroutineScope = rememberCoroutineScope()
+    // Buffer list for batch inserts
+    val dataBuffer = mutableListOf<RawGPSData>()
+
+// Coroutine job to handle periodic inserts
+    var insertJob: Job? = null
 
     var i = 0f;
 
+
+    fun startBatchInsert() {
+        insertJob = coroutineScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(800)
+                if (dataBuffer.isNotEmpty()) {
+                    try {
+                        Log.d("BatchInsert", "Inserting ${dataBuffer.size} data points at ${System.currentTimeMillis()}")
+                        database.rawGPSDataDao().insertAll(dataBuffer.toList())
+                        dataBuffer.clear()
+                    } catch (e: Exception) {
+                        Log.e("Database", "Batch insert failed: ${e.message}")
+                    }
+                }
+                // Keep the latest 1000 points only
+                if (dataPoints.size > 1000) {
+                    dataPoints.removeAt(0)
+                }
+
+            }
+        }
+    }
+
+    fun stopBatchInsert() {
+        insertJob?.cancel()
+        dataBuffer.clear()
+        insertJob = null
+    }
 
     LaunchedEffect(Unit) {
         try {
@@ -97,6 +131,7 @@ fun DragRaceScreen(
             dataPoints.add(Entry(10f,102f))
             */
             // Initialize ESPTcpClient
+            startBatchInsert()
 
             espTcpClient = ESPTcpClient(
                 serverAddress = ip,
@@ -122,27 +157,16 @@ fun DragRaceScreen(
 
                         derivedData?.let { data ->
                             if (lastTimestamp == null || data.timestamp != lastTimestamp) {
-                                try {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        try {
-                                            Log.d("Data:", data.toString())
-                                            database.rawGPSDataDao().insert(data)
+                                // Add data to buffer instead of inserting directly
+                                dataBuffer.add(data)
 
-                                            data.speed?.let {
-                                                Entry(i,
-                                                    it.toFloat())
-                                            }?.let { dataPoints.add(it) }
+                                // Update graph points (if needed)
+                                data.speed?.let {
+                                    Entry(i, it.toFloat())
+                                }?.let { dataPoints.add(it) }
 
-                                            i = i+1;
-
-                                            lastTimestamp = data.timestamp
-                                        } catch (e: Exception) {
-                                            Log.e("Database", "Error inserting data: ${e.message}")
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e("Database", "Error inserting data: ${e.message}")
-                                }
+                                i += 1
+                                lastTimestamp = data.timestamp
                             }
                         }
                     }
@@ -151,6 +175,7 @@ fun DragRaceScreen(
                     isConnected.value = connected
                 }
             )
+
 
             // Connect the client
             espTcpClient?.connect()
@@ -166,6 +191,7 @@ fun DragRaceScreen(
         onDispose {
             try {
                 espTcpClient?.disconnect()
+                stopBatchInsert()
                 //Log.d("TCP", "Disconnected from server")
             } catch (e: IOException) {
                 e.printStackTrace()
@@ -279,7 +305,9 @@ fun DragRaceScreen(
 
                             if(sessionID.toInt() != -1)
                             {
+                                stopBatchInsert()
                                    endSession(database)
+
                                     Log.d("Ended?","I guess the session ended")
                             }
                             Log.d("isItFalse?" , isSessionActive.toString());
@@ -292,6 +320,7 @@ fun DragRaceScreen(
             }
         }
     }
+
 }
 
 
