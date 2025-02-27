@@ -4,12 +4,18 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,6 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.room.Database
 import com.example.trackpro.DataClasses.RawGPSData
@@ -88,9 +95,13 @@ fun TrackBuilderScreen(
     var insertJob: Job? = null
     var i = 0f
 
+    //Alert
+    var showDialog by remember { mutableStateOf(false) }
+    var trackname by remember { mutableStateOf("") }
+    var countryname by remember { mutableStateOf("") }
+    var lengthoftrack by remember { mutableStateOf(0.0) }
 
     //Starting the job which will insert the track coordinates into a temp List
-    //
 
     fun startBatchInsert()
     {
@@ -193,7 +204,83 @@ fun TrackBuilderScreen(
             Text(if(isSessionActive) "Stop Track Builder" else "Start Track Builder")
         }
     }
+
+    TrackInfoAlert(
+        showDialog = showDialog,
+        onDismiss = {showDialog = false},
+        onConfirm = { name,country,length ->
+            trackname = name
+            countryname = country
+            lengthoftrack = length
+
+        }
+    )
 }
+
+
+@Composable
+fun TrackInfoAlert(
+    showDialog: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, Double) -> Unit
+) {
+    var trackName by remember { mutableStateOf("") }
+    var country by remember { mutableStateOf("") }
+    var length by remember { mutableStateOf("") }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(text = "Enter Details") },
+            text = {
+                Column {
+                    TextField(
+                        value = trackName,
+                        onValueChange = { trackName = it },
+                        label = { Text("Track name:") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextField(
+                        value = country,
+                        onValueChange = { country = it },
+                        label = { Text("Track's country:") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextField(
+                        value = length,
+                        onValueChange = { length = it },
+                        label = { Text("Track's length") },
+                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val number = length.toDoubleOrNull() ?: 0.0
+                    onConfirm(trackName, country, number)
+                    onDismiss()
+                }) {
+                    Text("Start")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+
+
+
+
+
+
+
 
 suspend fun startTrackBuilder(database: ESPDatabase):Long
 {

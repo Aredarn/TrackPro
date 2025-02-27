@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
                             onNavigateToESPTestScreen = { navController.navigate("esptest") },
                             onNavigateToTrackScreen = { navController.navigate("track") },
                             onNavigateToDragTimesList = { navController.navigate("dragsessions") }
+
                         )
                     }
                     composable("drag") {
@@ -85,13 +86,17 @@ class MainActivity : ComponentActivity() {
                     composable("dragsessions") {
                         DragTimesListView(viewModel = sessionViewModel, navController = navController)
                     }
-
                     composable(
                         route = "graph/{sessionId}",
                         arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
                         GraphScreen(onBack = { navController.popBackStack() }, sessionId = sessionId)
+                    }
+                    composable(
+                        route = "trackbuilder"
+                    ){
+                        TrackBuilderScreen(database, onBack = {navController.popBackStack()})
                     }
                 }
 
