@@ -10,7 +10,7 @@ import com.example.trackpro.DataClasses.TrackMainData
 @Dao
 interface TrackMainDataDAO {
     @Insert
-    suspend fun insertTrackMainDataDAO(trackMainData: TrackMainData)
+    suspend fun insertTrackMainDataDAO(trackMainData: TrackMainData) : Long
 
     @Query("SELECT * FROM track_main_data ORDER BY trackName ASC")
     suspend fun getAllTrack():List<TrackMainData>

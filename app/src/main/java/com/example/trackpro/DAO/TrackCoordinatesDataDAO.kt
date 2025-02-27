@@ -11,5 +11,5 @@ interface TrackCoordinatesDataDAO {
     suspend fun getCoordinatesOfTrack(trackId: Int):List<TrackCoordinatesData>
 
     @Insert
-    suspend fun insertWholeTrack(data: List<TrackCoordinatesData>)
+    suspend fun insertTrackPart(data: List<TrackCoordinatesData>)
 }

@@ -21,10 +21,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.room.Database
 import com.example.trackpro.DataClasses.RawGPSData
+import com.example.trackpro.DataClasses.TrackCoordinatesData
+import com.example.trackpro.DataClasses.TrackMainData
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.toDataClass
 import com.github.mikephil.charting.data.Entry
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 class TrackBuilderScreen : ComponentActivity()
@@ -55,7 +60,7 @@ fun TrackBuilderScreen(
 {
 
     var isSessionActive by remember { mutableStateOf(false) }
-    var sessionID by remember { mutableLongStateOf(-1) }
+    var trackID by remember { mutableLongStateOf(-1) }
 
     val isConnected = remember { mutableStateOf(false) }
     val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
@@ -66,7 +71,7 @@ fun TrackBuilderScreen(
     val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
     var lastTimestamp: Long? by remember { mutableStateOf(null) }
 
-    val dataBuffer = mutableListOf<RawGPSData>()
+    val dataBuffer = mutableListOf<TrackCoordinatesData>()
     var i = 0f;
 
     LaunchedEffect(Unit) {
@@ -82,24 +87,22 @@ fun TrackBuilderScreen(
                 // Only process and store data if session is active and connected
                 if (isSessionActive && isConnected.value) {
                     val derivedData = gpsData.value?.let {
-                        RawGPSData(
-                            sessionid = sessionID.toLong(),
+                        TrackCoordinatesData(
+                            trackId = trackID.toInt(),
                             latitude = it.latitude,
                             longitude = it.longitude,
-                            altitude = it.altitude,
-                            timestamp = it.timestamp,
-                            speed = it.speed,
-                            fixQuality = it.fixQuality
+                            altitude = it.altitude
                         )
                     }
 
+                    val timestamp = gpsData.value?.timestamp
+
                     derivedData?.let { data ->
-                        if (lastTimestamp == null || data.timestamp != lastTimestamp) {
+                        if (lastTimestamp == null || timestamp != lastTimestamp) {
                             // Add data to buffer instead of inserting directly
                             dataBuffer.add(data)
-
                             i += 1
-                            lastTimestamp = data.timestamp
+                            lastTimestamp = timestamp
                         }
                     }
                 }
@@ -109,13 +112,10 @@ fun TrackBuilderScreen(
             }
         )
 
-
         // Connect the client
         espTcpClient?.connect()
-
-
-
     }
+
 
 
     Row(){
@@ -126,6 +126,19 @@ fun TrackBuilderScreen(
 
         Button(onClick = {
                 isSessionActive = !isSessionActive
+
+                if(isSessionActive)
+                {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        trackID = startTrackBuilder(database);
+                    }
+                }
+                else
+                {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        trackID = -1;
+                    }
+                }
             }
         )
         {
@@ -134,13 +147,10 @@ fun TrackBuilderScreen(
     }
 }
 
-
-
-
 suspend fun startTrackBuilder(database: ESPDatabase):Long
 {
-    database.trackMainDao().insertTrackMainDataDAO()
+    val Track = TrackMainData(trackName = "TesztTrack", totalLength = 2234.1, country = "Hun")
+    val id = database.trackMainDao().insertTrackMainDataDAO(Track)
 
-
-
+    return  id;
 }

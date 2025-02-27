@@ -37,7 +37,6 @@ class SessionManager private constructor(
         Log.e("SessionManager", "Inserted session with ID: $currentSessionId")
     }
 
-
     // End the current session
     suspend fun endSession() {
         currentSessionId?.let { sessionId ->
