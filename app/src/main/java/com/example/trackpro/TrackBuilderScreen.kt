@@ -1,6 +1,7 @@
 package com.example.trackpro
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -29,7 +31,12 @@ import com.example.trackpro.ManagerClasses.toDataClass
 import com.github.mikephil.charting.data.Entry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
 
 
 class TrackBuilderScreen : ComponentActivity()
@@ -52,6 +59,10 @@ class TrackBuilderScreen : ComponentActivity()
 }
 
 
+
+
+
+
 @Composable
 fun TrackBuilderScreen(
     database: ESPDatabase,
@@ -72,7 +83,42 @@ fun TrackBuilderScreen(
     var lastTimestamp: Long? by remember { mutableStateOf(null) }
 
     val dataBuffer = mutableListOf<TrackCoordinatesData>()
-    var i = 0f;
+
+    val coroutineScope = rememberCoroutineScope()
+    var insertJob: Job? = null
+    var i = 0f
+
+
+    //Starting the job which will insert the track coordinates into a temp List
+    //
+
+    fun startBatchInsert()
+    {
+        insertJob = coroutineScope.launch(Dispatchers.IO) {
+            while (isActive)
+            {
+                delay(800)
+
+                if(dataBuffer.isNotEmpty())
+                {
+                    try {
+                        database.trackCoordinatesDao().insertTrackPart(dataBuffer.toList())
+                        dataBuffer.clear()
+                    }catch (e: Exception)
+                    {
+                        Log.e("Database", "Insert failed ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
+    fun stopBatchInsert()
+    {
+        insertJob?.cancel()
+        dataBuffer.clear()
+        insertJob = null
+    }
 
     LaunchedEffect(Unit) {
 
@@ -129,14 +175,16 @@ fun TrackBuilderScreen(
 
                 if(isSessionActive)
                 {
-                    CoroutineScope(Dispatchers.Main).launch {
+                    CoroutineScope(Dispatchers.IO).launch {
                         trackID = startTrackBuilder(database);
+                        startBatchInsert()
                     }
                 }
                 else
                 {
-                    CoroutineScope(Dispatchers.Main).launch {
+                    CoroutineScope(Dispatchers.IO).launch {
                         trackID = -1;
+                        stopBatchInsert()
                     }
                 }
             }

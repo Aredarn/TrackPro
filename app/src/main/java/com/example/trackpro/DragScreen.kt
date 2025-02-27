@@ -132,7 +132,6 @@ fun DragRaceScreen(
             */
             // Initialize ESPTcpClient
             startBatchInsert()
-
             espTcpClient = ESPTcpClient(
                 serverAddress = ip,
                 port = port,
