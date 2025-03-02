@@ -67,9 +67,6 @@ class TrackBuilderScreen : ComponentActivity()
 
 
 
-
-
-
 @Composable
 fun TrackBuilderScreen(
     database: ESPDatabase,
@@ -182,23 +179,23 @@ fun TrackBuilderScreen(
     Row {
 
         Button(onClick = {
-                isSessionActive = !isSessionActive
+            isSessionActive = !isSessionActive
 
-                if(isSessionActive)
-                {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        trackID = startTrackBuilder(database);
-                        startBatchInsert()
-                    }
-                }
-                else
-                {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        trackID = -1;
-                        stopBatchInsert()
-                    }
+            if(isSessionActive)
+            {
+                CoroutineScope(Dispatchers.IO).launch {
+                    trackID = startTrackBuilder(database);
+                    startBatchInsert()
                 }
             }
+            else
+            {
+                CoroutineScope(Dispatchers.IO).launch {
+                    trackID = -1;
+                    stopBatchInsert()
+                }
+            }
+        }
         )
         {
             Text(if(isSessionActive) "Stop Track Builder" else "Start Track Builder")
