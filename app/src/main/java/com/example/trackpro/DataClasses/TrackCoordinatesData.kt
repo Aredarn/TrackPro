@@ -20,5 +20,6 @@ data class TrackCoordinatesData(
     val trackId: Int,
     val latitude: Double,
     val longitude: Double,
-    val altitude: Double?
+    val altitude: Double?,
+    val isStartPoint: Boolean
 )
