@@ -15,6 +15,9 @@ interface TrackMainDataDAO {
     @Query("SELECT * FROM track_main_data ORDER BY trackName ASC")
     suspend fun getAllTrack():List<TrackMainData>
 
+    @Query("Select * from track_main_data where trackId =:trackId")
+    suspend fun getTrack(trackId: Int): TrackMainData
+
     @Query("DELETE FROM track_main_data WHERE trackId = :trackId")
     suspend fun deleteTrack(trackId : Int)
 
