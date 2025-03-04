@@ -44,6 +44,7 @@ import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData  // Make sure to use the correct package
 import com.yourpackage.ui.components.SevenSegmentView
+import kotlinx.coroutines.channels.Channel
 import java.io.IOException
 import kotlin.math.cos
 import kotlin.math.sin
@@ -62,7 +63,6 @@ class ESPConnectionTest : ComponentActivity() {
         super.onDestroy();
     }
 }
-
 @Composable
 fun ESPConnectionTestScreen() {
     val isConnected = remember { mutableStateOf(false) }
@@ -72,43 +72,44 @@ fun ESPConnectionTestScreen() {
     val context = LocalContext.current  // Get the Context in Compose
     val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
 
-
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
 
-    // Establish connection when the composable is entered
-    LaunchedEffect(Unit) {
+    // Channel to handle incoming GPS data efficiently
+    val gpsChannel = remember { Channel<RawGPSData>(capacity = Channel.CONFLATED) }
 
+    // Launch effect for connection setup
+    LaunchedEffect(Unit) {
         espTcpClient = ESPTcpClient(
             serverAddress = ip,
             port = port,
             onMessageReceived = { data ->
-                //println("Received data: $data")  // Log raw JSON
-                gpsData.value = data // Directly assign the RawGPSData object
-                rawJson.value = data.toString()  // Store raw JSON for display
+                gpsChannel.trySend(data) // Send to channel instead of direct UI update
             },
             onConnectionStatusChanged = { connected ->
                 isConnected.value = connected
-                //println("Connection status: ${if (connected) "Connected" else "Disconnected"}")
             }
         )
-        espTcpClient?.connect()  // Connect to the server
+        espTcpClient?.connect()
+    }
 
+    // Process incoming GPS data without UI lag
+    LaunchedEffect(Unit) {
+        for (data in gpsChannel) {
+            gpsData.value = data
+            rawJson.value = data.toString()
+        }
     }
 
     DisposableEffect(Unit) {
         onDispose {
             try {
                 espTcpClient?.disconnect()
-                //Log.d("TCP", "Disconnected from server")
             } catch (e: IOException) {
                 e.printStackTrace()
             }
         }
     }
 
-
-
-    // UI Layout
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -136,44 +137,41 @@ fun ESPConnectionTestScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Parsed GPS Data Display
-        gpsData.value?.let { data ->
-            Text("Parsed GPS Data:", style = MaterialTheme.typography.labelLarge)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Latitude: ${data.latitude}")
-            Text("Longitude: ${data.longitude}")
-            Text("Altitude: ${data.altitude ?: "N/A"}")
-            Text("Speed: ${data.speed ?: "N/A"}")
-            Text("Satellites: ${data.satellites ?: "N/A"}")
-            Text("Timestamp: ${data.timestamp}")
-        } ?: run {
-            // Display a loading message while waiting for GPS data
-            Text("Waiting for GPS data...")
-        }
+        gpsData.value?.let { GpsDataDisplay(it) } ?: Text("Waiting for GPS data...")
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            val currentSpeed = gpsData.value?.speed ?: 0f
-            Speedometer(currentSpeed)
-        }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(50.dp)
-            ) {
-                SevenSegmentView(
-                    number = gpsData.value?.speed?.toInt() ?: 0,
-                    digitsNumber = 3,
-                    segmentsSpace = 1.dp,
-                    segmentWidth = 8.dp,
-                    digitsSpace = 16.dp,
-                    activeColor = androidx.compose.ui.graphics.Color.Gray,
-                    modifier = Modifier.height(100.dp)
-                )
-            }
-        }
+        SpeedometerView(gpsData.value?.speed ?: 0f)
     }
 }
+
+@Composable
+fun GpsDataDisplay(data: RawGPSData) {
+    Column {
+        Text("Parsed GPS Data:", style = MaterialTheme.typography.labelLarge)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Latitude: ${data.latitude}")
+        Text("Longitude: ${data.longitude}")
+        Text("Altitude: ${data.altitude ?: "N/A"}")
+        Text("Speed: ${data.speed ?: "N/A"}")
+        Text("Satellites: ${data.satellites ?: "N/A"}")
+        Text("Timestamp: ${data.timestamp}")
+    }
+}
+
+@Composable
+fun SpeedometerView(speed: Float) {
+    Canvas(modifier = Modifier.size(200.dp)) {
+        drawArc(
+            color = Color.Green,
+            startAngle = -90f,
+            sweepAngle = (speed / 100f) * 180f, // Adjust scale based on expected max speed
+            useCenter = false,
+            style = Stroke(8.dp.toPx())
+        )
+    }
+}
+
 
 
 // BMW wannabe gauge
