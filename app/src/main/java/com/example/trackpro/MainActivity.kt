@@ -58,6 +58,8 @@ class MainActivity : ComponentActivity() {
 
             val database = ESPDatabase.getInstance(applicationContext)
             val sessionViewModel: SessionViewModel = viewModel(factory = SessionViewModelFactory(applicationContext))
+            val trackViewModel: TrackViewModel = viewModel(factory = TrackViewModelFactory(applicationContext))
+
             TrackProTheme {
                 val navController = rememberNavController()
 
@@ -66,9 +68,9 @@ class MainActivity : ComponentActivity() {
                         MainScreen(
                             onNavigateToDragRace = { navController.navigate("drag") },
                             onNavigateToESPTestScreen = { navController.navigate("esptest") },
-                            onNavigateToTrackScreen = { navController.navigate("track") },
+                            onNavigateToTrackListScreen = { navController.navigate("tracklist") },
+                            onNavigateToTrackBuilder = {navController.navigate("trackbuilder")},
                             onNavigateToDragTimesList = { navController.navigate("dragsessions") }
-
                         )
                     }
                     composable("drag") {
@@ -80,8 +82,12 @@ class MainActivity : ComponentActivity() {
                     composable("esptest") {
                         ESPConnectionTestScreen()
                     }
-                    composable("track") {
-                        TrackScreen()
+                    composable(
+                        "track/{trackId}",
+                        arguments = listOf(navArgument("trackId"){type = NavType.LongType})
+                    ) { backStackEntry ->
+                        val trackId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
+                        TrackScreen(onBack = { navController.popBackStack() }, trackId = trackId)
                     }
                     composable("dragsessions") {
                         DragTimesListView(viewModel = sessionViewModel, navController = navController)
@@ -98,6 +104,12 @@ class MainActivity : ComponentActivity() {
                     ){
                         TrackBuilderScreen(database, onBack = {navController.popBackStack()})
                     }
+                    composable(
+                        route = "tracklist"
+                    )
+                    {
+                        TrackListScreen(navController = navController, viewModel = trackViewModel )
+                    }
                 }
 
             }
@@ -109,11 +121,9 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen( onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackScreen: () -> Unit, onNavigateToDragTimesList:() -> Unit ) {
+fun MainScreen( onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackListScreen: () -> Unit,onNavigateToTrackBuilder: () -> Unit ,onNavigateToDragTimesList:() -> Unit ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
-
     ModalNavigationDrawer(
         drawerContent = {
             ModalDrawerSheet {
@@ -133,16 +143,17 @@ fun MainScreen( onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() ->
                         }
                     )
                     NavigationDrawerItem(
+                        label = { Text("My tracks") },
+                        selected = false,
+                        onClick = {
+                            onNavigateToTrackListScreen()
+                        }
+                    )
+                    NavigationDrawerItem(
                         label = { Text("Shared sessions") },
                         selected = false,
                         onClick = { /* Handle click */ }
                     )
-                    NavigationDrawerItem(
-                        label = { Text("Top racers") },
-                        selected = false,
-                        onClick = { /* Handle click */ }
-                    )
-
 
                     Text("Section 2", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
                     NavigationDrawerItem(
@@ -247,7 +258,7 @@ fun MainScreen( onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() ->
                 }
 
                 Button(
-                    onClick = onNavigateToTrackScreen,
+                    onClick = onNavigateToTrackBuilder,
                     modifier = Modifier
                         .fillMaxWidth(0.8f)
                         .padding(top = 12.dp),
@@ -260,7 +271,7 @@ fun MainScreen( onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() ->
                 ) {
                     Icon(Icons.Default.Timelapse, contentDescription = "Track Icon")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Lap timer / track builder")
+                    Text("Track builder")
                 }
             }
         }
@@ -278,7 +289,8 @@ fun MainScreenPreview() {
         MainScreen(
             onNavigateToDragRace = {},
             onNavigateToESPTestScreen = {},
-            onNavigateToTrackScreen = {},
+            onNavigateToTrackListScreen = {},
+            onNavigateToTrackBuilder = {},
             onNavigateToDragTimesList = {}
         )
     }

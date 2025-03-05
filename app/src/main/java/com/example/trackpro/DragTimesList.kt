@@ -39,7 +39,7 @@ class DragTimesList : ComponentActivity() {
             // Initialize the NavController here
             val navController = rememberNavController()
 
-            // Now pass the navController and the viewModel to your DragTimesListView
+            // the navController and the viewModel to DragTimesListView
             val viewModel: SessionViewModel = viewModel(factory = SessionViewModelFactory(this))
             DragTimesListView(viewModel = viewModel, navController = navController)
         }

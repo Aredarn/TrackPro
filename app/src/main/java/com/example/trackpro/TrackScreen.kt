@@ -41,7 +41,7 @@ import com.example.trackpro.ManagerClasses.toDataClass
 
 
 @Composable
-fun TrackScreen() {
+fun TrackScreen(onBack: () -> Unit, trackId: Long) {
     // Pannonia ring
     val gpsPoints = listOf(
         LatLonOffset(47.305300, 17.048138),
@@ -100,6 +100,8 @@ fun TrackScreen() {
         LatLonOffset(47.306092, 17.047740),
         LatLonOffset(47.304973, 17.048282)
     )
+
+
     var showDialog by remember { mutableStateOf(false) }
 
 
