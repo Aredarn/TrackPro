@@ -28,6 +28,7 @@ import com.example.trackpro.ESPDatabase
 import com.example.trackpro.DataClasses.SessionData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -58,7 +59,7 @@ class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
 
     private fun fetchSessions() {
         viewModelScope.launch {
-            _sessions.value = database.sessionDataDao().getAllSessions();
+            _sessions.value = database.sessionDataDao().getAllSessions().first();
         }
     }
 }

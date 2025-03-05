@@ -26,7 +26,7 @@ interface SessionDataDao {
 
     // Get all sessions
     @Query("SELECT * FROM session_data")
-    suspend fun getAllSessions(): List<SessionData>
+    fun getAllSessions(): Flow<List<SessionData>>
 }
 
 

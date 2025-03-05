@@ -250,5 +250,6 @@ suspend fun startTrackBuilder(database: ESPDatabase):Long
 {
     val Track = TrackMainData(trackName = "TesztTrack", totalLength = 2234.1, country = "Hun")
     val id = database.trackMainDao().insertTrackMainDataDAO(Track)
+
     return  id;
 }

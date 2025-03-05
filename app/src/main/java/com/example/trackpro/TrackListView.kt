@@ -42,8 +42,10 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.trackpro.DataClasses.TrackMainData
 import com.example.trackpro.ui.screens.SessionViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class TrackListView : ComponentActivity()
@@ -72,11 +74,12 @@ class TrackViewModel(private val database:ESPDatabase):ViewModel()
 
     private fun fetchTracks()
     {
-        viewModelScope.launch {
-            _tracks.value = database.trackMainDao().getAllTrack()
+        viewModelScope.launch(Dispatchers.IO){
+            database.trackMainDao().getAllTrack().collect { trackList ->
+                _tracks.value = trackList
+            }
         }
     }
-
 }
 
 class TrackViewModelFactory(private val activity: Context) : ViewModelProvider.Factory {
