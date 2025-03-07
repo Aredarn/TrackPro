@@ -6,9 +6,12 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.example.trackpro.DataClasses.SmoothedGPSData
+import com.example.trackpro.DataClasses.TrackCoordinatesData
 
 data class LatLonOffset(val lat: Double, val lon: Double)
 
+
+@JvmName("LatLonTrackDrawer")
 fun DrawScope.drawTrack(
     gpsPoints: List<LatLonOffset>,
     margin: Float,
@@ -22,19 +25,23 @@ fun DrawScope.drawTrack(
         val maxLon = gpsPoints.maxOf { it.lon }
 
         // Calculate aspect ratio
-        val trackWidth = maxLon - minLon
-        val trackHeight = maxLat - minLat
+        val trackWidth = (maxLon - minLon).takeIf { it != 0.0 } ?: 0.0001 // Prevent zero width
+        val trackHeight = (maxLat - minLat).takeIf { it != 0.0 } ?: 0.0001 // Prevent zero height
+
         val trackAspectRatio = trackWidth / trackHeight
 
         // Available space after margin
         val screenWidth = size.width - 2 * margin
         val screenHeight = size.height - 2 * margin
 
+        val safeTrackWidth = if (trackWidth != 0.0) trackWidth else 1.0
+        val safeTrackHeight = if (trackHeight != 0.0) trackHeight else 1.0
+
         // Calculate scale factor and offsets for centering
         val scaleFactor = if (trackAspectRatio > 1) {
-            screenWidth / trackWidth
+            screenWidth / safeTrackWidth
         } else {
-            screenHeight / trackHeight
+            screenHeight / safeTrackHeight
         }
 
         // Calculate centering offsets
@@ -81,6 +88,92 @@ fun DrawScope.drawTrack(
         drawCircle(Color.Blue, 10f, currentPos)
     }
 }
+
+
+
+@JvmName("TrackCoordinatesTrackDrawer")
+fun DrawScope.drawTrack(
+    gpsPoints: List<TrackCoordinatesData>,
+    margin: Float,
+    animationProgress: Float
+) {
+    if (gpsPoints.isEmpty()) return
+
+    val minLat = gpsPoints.minOf { it.latitude }
+    val maxLat = gpsPoints.maxOf { it.latitude }
+    val minLon = gpsPoints.minOf { it.longitude }
+    val maxLon = gpsPoints.maxOf { it.longitude }
+
+    val trackWidth = (maxLon - minLon).takeIf { it != 0.0 } ?: 0.0001 // Prevent zero width
+    val trackHeight = (maxLat - minLat).takeIf { it != 0.0 } ?: 0.0001 // Prevent zero height
+
+    val trackAspectRatio = trackWidth / trackHeight
+
+    val screenWidth = size.width - 2 * margin
+    val screenHeight = size.height - 2 * margin
+
+    val safeTrackWidth = if (trackWidth != 0.0) trackWidth else 1.0
+    val safeTrackHeight = if (trackHeight != 0.0) trackHeight else 1.0
+
+    val scaleFactor = if (trackAspectRatio > 1) {
+        screenWidth / safeTrackWidth
+    } else {
+        screenHeight / safeTrackHeight
+    }
+
+
+    val horizontalOffset = (screenWidth - (trackWidth * scaleFactor)) / 2
+    val verticalOffset = (screenHeight - (trackHeight * scaleFactor)) / 2
+
+    fun latLonToScreen(lat: Double, lon: Double): Offset {
+        val x = (lon - minLon) * scaleFactor + margin + horizontalOffset
+        val y = (maxLat - lat) * scaleFactor + margin + verticalOffset
+
+        return if (x.isNaN() || y.isNaN()) {
+            Offset.Zero  // Default to (0,0) instead of crashing
+        } else {
+            Offset(x.toFloat(), y.toFloat())
+        }
+    }
+
+
+
+    val path = Path().apply {
+        val firstPoint = latLonToScreen(gpsPoints[0].latitude, gpsPoints[0].longitude)
+        if (!firstPoint.x.isNaN() && !firstPoint.y.isNaN()) {
+            moveTo(firstPoint.x, firstPoint.y)
+        }
+
+        gpsPoints.forEach { point ->
+            val screenPoint = latLonToScreen(point.latitude, point.longitude)
+            if (!screenPoint.x.isNaN() && !screenPoint.y.isNaN()) {
+                lineTo(screenPoint.x, screenPoint.y)
+            }
+        }
+    }
+
+    drawPath(path, Color.Red, style = Stroke(width = 5f))
+
+    val startPoint = latLonToScreen(gpsPoints[0].latitude, gpsPoints[0].longitude)
+    drawLine(
+        color = Color.Green,
+        start = Offset(startPoint.x - 20f, startPoint.y),
+        end = Offset(startPoint.x + 20f, startPoint.y),
+        strokeWidth = 4f
+    )
+
+    val totalPoints = gpsPoints.size
+    if (totalPoints > 0) {
+        val currentIndex = (animationProgress * totalPoints).toInt() % totalPoints
+        val currentPos = latLonToScreen(
+            gpsPoints[currentIndex].latitude,
+            gpsPoints[currentIndex].longitude
+        )
+        drawCircle(Color.Blue, 10f, currentPos)
+    }
+}
+
+
 
 fun convertToLatLonOffsetList(data: List<SmoothedGPSData>): List<LatLonOffset> {
     return data.map { LatLonOffset(lat = it.latitude, lon = it.longitude) }
