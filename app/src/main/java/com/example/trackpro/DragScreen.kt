@@ -385,10 +385,4 @@ fun DragScreenPreview() {
         return dragTimeCalculation.timeFromZeroToHundred()
     }
 
-fun parseTimeToMilliseconds(timeString: String): Long {
-    val format = SimpleDateFormat("HH:mm:ss")
-    val date: Date = format.parse(timeString) ?: throw IllegalArgumentException("Invalid time format")
-    return date.time.toLong()  // This will give the timestamp in milliseconds
-}
-
 
