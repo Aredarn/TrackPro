@@ -1,5 +1,7 @@
 package com.example.trackpro
+import android.view.ViewGroup
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -26,10 +29,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
 import com.example.trackpro.CalculationClasses.PostProcessing
 import com.example.trackpro.DataClasses.SmoothedGPSData
@@ -37,6 +42,11 @@ import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.convertToLatLonOffsetList
 import com.example.trackpro.ExtrasForUI.drawTrack
 import com.example.trackpro.ui.theme.TrackProTheme
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,8 +55,16 @@ import java.sql.Time
 import java.util.Date
 import java.util.concurrent.TimeUnit
 
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import com.google.accompanist.pager.HorizontalPagerIndicator
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
+
+    val screenHeight = LocalConfiguration.current.screenHeightDp
+
     val context = LocalContext.current
     val database = remember { ESPDatabase.getInstance(context) }
     var coordinates by remember { mutableStateOf(emptyList<SmoothedGPSData>()) }
@@ -55,14 +73,24 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     val dragTimeClass = remember { DragTimeCalculation(sessionId, database) }
     val scope = rememberCoroutineScope()
     var totalDist by remember { mutableStateOf(-1.0) }
+    var dataPoints = remember { mutableListOf<Entry>() }
     val margin = 16f
 
     LaunchedEffect(sessionId) {
         scope.launch(Dispatchers.IO) {
             val data = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionId)
+
+            data.forEachIndexed { index, data ->
+                data.smoothedSpeed?.let { Entry(index.toFloat(), it.toFloat()) }
+                    ?.let { dataPoints.add(it) }
+            }
+
+
             val simplifiedData = convertToLatLonOffsetList(data)
             val dragTimeValue = dragTimeClass.timeFromZeroToHundred()
             val totalDistValue = dragTimeClass.totalDistance(simplifiedData)
+
+
 
             withContext(Dispatchers.Main) {
                 coordinates = data
@@ -101,23 +129,79 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     Text("No data available")
                 }
                 Text("Total Distance: $totalDist km")
-                Text("0-100 Time: ${if (dragTime > 0) "$dragTime sec" else "Calculating..."}")
+                Text("0-100 Time: ${if (dragTime > 0) "$dragTime sec" else "No 0-100 detected"}")
                 Text("1/4 Mile:")
             }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .border(2.dp, Color.Black, RoundedCornerShape(8.dp))
-                .background(Color.LightGray)
-                .padding(8.dp)
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawTrack(coordinatesSimplified, margin, 1f)
+
+
+        val pagerState = rememberPagerState { 2 } // Two pages: Canvas & Chart
+
+        Column {
+            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                when (page) {
+                    0 -> {
+                        // First page: Canvas (Map/Track)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .border(2.dp, Color.Black, RoundedCornerShape(8.dp))
+                                .background(Color.LightGray)
+                                .padding(8.dp)
+                        ) {
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                drawTrack(coordinatesSimplified, margin, 1f)
+                            }
+                        }
+                    }
+                    1 -> {
+                        // Second page: Line Chart
+                        AndroidView(
+                            factory = { context ->
+                                LineChart(context).apply {
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
+
+                                    // Customize the chart
+                                    xAxis.position = XAxis.XAxisPosition.BOTTOM
+                                    xAxis.setDrawGridLines(false)
+                                    axisRight.isEnabled = false
+                                    description.isEnabled = false
+                                }
+                            },
+                            update = { chart ->
+                                val dataSet = LineDataSet(dataPoints, "Speed (km/h)").apply {
+                                    setDrawValues(false)
+                                    setDrawCircles(false)
+                                    lineWidth = 4f
+                                    color = android.graphics.Color.RED
+                                    setDrawFilled(true)
+                                    fillColor = android.graphics.Color.parseColor("#80FF0000")
+                                }
+
+                                if (chart.data == null) {
+                                    chart.data = LineData(dataSet)
+                                } else {
+                                    chart.data.clearValues()
+                                    chart.data.addDataSet(dataSet)
+                                }
+
+                                chart.notifyDataSetChanged()
+                                chart.postInvalidate()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height((screenHeight / 2).dp)
+                                .padding(16.dp)
+                        )
+                    }
+                }
             }
         }
     }
