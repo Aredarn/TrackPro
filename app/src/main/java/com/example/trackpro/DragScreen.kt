@@ -1,5 +1,6 @@
 package com.example.trackpro
 
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
@@ -91,7 +92,7 @@ fun DragRaceScreen(
     fun startBatchInsert() {
         insertJob = coroutineScope.launch(Dispatchers.IO) {
             while (isActive) {
-                delay(800)
+                delay(1000)
                 if (dataBuffer.isNotEmpty()) {
                     try {
                         Log.d("BatchInsert", "Inserting ${dataBuffer.size} data points at ${System.currentTimeMillis()}")
@@ -221,6 +222,8 @@ fun DragRaceScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            //Diagram
             AndroidView(
                 factory = { context ->
                     LineChart(context).apply {
@@ -237,19 +240,31 @@ fun DragRaceScreen(
                     }
                 },
                 update = { chart ->
-                    // Update chart data
-                    val dataSet = LineDataSet(dataPoints, "Speed (km/h)")
-                    dataSet.setDrawValues(false)
-                    dataSet.setDrawCircles(false)
+                    val dataSet = LineDataSet(dataPoints, "Speed (km/h)").apply {
+                        setDrawValues(false)
+                        setDrawCircles(false)
+                        lineWidth = 4f  // Increase line thickness
+                        color = Color.RED  // Set a more visible color
+                        setDrawFilled(true)  // Fill area under the line
+                        fillColor = Color.parseColor("#80FF0000") // Semi-transparent fill
+                    }
 
-                    chart.data = LineData(dataSet)
-                    chart.invalidate() // Refresh the chart
+                    if (chart.data == null) {
+                        chart.data = LineData(dataSet)
+                    } else {
+                        chart.data.clearValues()
+                        chart.data.addDataSet(dataSet)
+                    }
+
+                    chart.notifyDataSetChanged() // Notify the chart of dataset changes
+                    chart.postInvalidate() // Refresh UI immediately
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height((screenHeight / 2).dp) // Half of the screen height
+                    .height((screenHeight / 2).dp)
                     .padding(16.dp)
             )
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -263,6 +278,7 @@ fun DragRaceScreen(
             }
         }
 
+        /*
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -278,7 +294,8 @@ fun DragRaceScreen(
                     modifier = Modifier.height(100.dp)
                 )
             }
-        }
+        } */
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
