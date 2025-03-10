@@ -90,6 +90,11 @@ dependencies {
 
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.0") // or the latest version)
 
+    implementation ("com.google.accompanist:accompanist-pager:0.31.1-alpha")
+    implementation ("com.google.accompanist:accompanist-pager-indicators:0.31.1-alpha")
+
+
+
 }
 
 
