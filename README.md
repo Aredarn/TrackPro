@@ -18,6 +18,7 @@ Key Features:
   
 - Breaking Stats: Track and review braking efficiency and metrics such as stopping distance and deceleration rates.
 
+- Save your car, bike or other vehicle 
 
 Future plans:
 - Live sharing
