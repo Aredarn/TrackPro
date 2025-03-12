@@ -96,7 +96,7 @@ class PostProcessing(val database: ESPDatabase) {
 
     fun processTrackPoints(
         rawPoints: List<TrackCoordinatesData>,
-        minDistance: Double = 10.0,  // Minimum distance between points in meters
+        minDistance: Double = 1.0,  // Minimum distance between points in meters
         lapThreshold: Double = 50.0  // Distance to consider as completing a lap
     ): List<TrackCoordinatesData> {
         if (rawPoints.isEmpty()) return emptyList()

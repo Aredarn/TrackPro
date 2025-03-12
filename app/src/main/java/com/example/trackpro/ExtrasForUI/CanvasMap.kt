@@ -34,14 +34,12 @@ fun DrawScope.drawTrack(
         val screenWidth = size.width - 2 * margin
         val screenHeight = size.height - 2 * margin
 
-        val safeTrackWidth = if (trackWidth != 0.0) trackWidth else 1.0
-        val safeTrackHeight = if (trackHeight != 0.0) trackHeight else 1.0
 
         // Calculate scale factor and offsets for centering
         val scaleFactor = if (trackAspectRatio > 1) {
-            screenWidth / safeTrackWidth
+            screenWidth / trackWidth
         } else {
-            screenHeight / safeTrackHeight
+            screenHeight / trackHeight
         }
 
         // Calculate centering offsets
