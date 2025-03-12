@@ -110,23 +110,39 @@ fun DragRaceScreen(
         insertJob = coroutineScope.launch(Dispatchers.IO) {
             while (isActive) {
                 delay(1000)
-                if (dataBuffer.isNotEmpty()) {
+
+                // Initialize safely outside the synchronized block
+                val dataToInsert: List<RawGPSData> = synchronized(dataBuffer) {
+                    if (dataBuffer.isNotEmpty()) {
+                        dataBuffer.toList().also { dataBuffer.clear() } // Copy & clear safely
+                    } else {
+                        emptyList() // Return an empty list if no data is available
+                    }
+                }
+
+                if (dataToInsert.isNotEmpty()) {
                     try {
-                        Log.d("BatchInsert", "Inserting ${dataBuffer.size} data points at ${System.currentTimeMillis()}")
-                        database.rawGPSDataDao().insertAll(dataBuffer.toList())
-                        dataBuffer.clear()
+                        Log.d("BatchInsert", "Inserting ${dataToInsert.size} data points at ${System.currentTimeMillis()}")
+                        database.rawGPSDataDao().insertAll(dataToInsert) // Safe call
                     } catch (e: Exception) {
                         Log.e("Database", "Batch insert failed: ${e.message}")
                     }
                 }
-                // Keep the latest 1000 points only
-                if (dataPoints.size > 1000) {
-                    dataPoints.removeAt(0)
-                }
 
+                // Keep only the latest 1000 points (UI-related)
+                withContext(Dispatchers.Main) {
+                    synchronized(dataPoints) {
+                        while (dataPoints.size > 1000) {
+                            dataPoints.removeAt(0)
+                        }
+                    }
+                }
             }
         }
     }
+
+
+
 
     fun stopBatchInsert() {
         insertJob?.cancel()
@@ -172,18 +188,20 @@ fun DragRaceScreen(
                             )
                         }
 
-                        derivedData?.let { data ->
-                            if (lastTimestamp == null || data.timestamp != lastTimestamp) {
-                                // Add data to buffer instead of inserting directly
-                                dataBuffer.add(data)
+                        synchronized(dataPoints) {
+                            derivedData?.let { data ->
+                                if (lastTimestamp == null || data.timestamp != lastTimestamp) {
+                                    // Add data to buffer instead of inserting directly
+                                    dataBuffer.add(data)
 
-                                // Update graph points (if needed)
-                                data.speed?.let {
-                                    Entry(i, it.toFloat())
-                                }?.let { dataPoints.add(it) }
+                                    // Update graph points (if needed)
+                                    data.speed?.let {
+                                        Entry(i, it.toFloat())
+                                    }?.let { dataPoints.add(it) }
 
-                                i += 1
-                                lastTimestamp = data.timestamp
+                                    i += 1
+                                    lastTimestamp = data.timestamp
+                                }
                             }
                         }
                     }
@@ -401,11 +419,5 @@ fun DragScreenPreview() {
         val dragTimeCalculation = DragTimeCalculation(sessionId, database)
         return dragTimeCalculation.timeFromZeroToHundred()
     }
-
-fun parseTimeToMilliseconds(timeString: String): Long {
-    val format = SimpleDateFormat("HH:mm:ss")
-    val date: Date = format.parse(timeString) ?: throw IllegalArgumentException("Invalid time format")
-    return date.time.toLong()  // This will give the timestamp in milliseconds
-}
 
 

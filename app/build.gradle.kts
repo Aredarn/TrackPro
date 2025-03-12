@@ -15,7 +15,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -66,9 +66,10 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    //Sajátok
-    implementation("androidx.navigation:navigation-compose:2.7.3") //Navigáció
-    implementation ("com.github.PhilJay:MPAndroidChart:v3.1.0") //Gráf
+    //OWN:
+
+    implementation("androidx.navigation:navigation-compose:2.7.3") //Nav
+    implementation ("com.github.PhilJay:MPAndroidChart:v3.1.0") //Graph
 
     implementation("androidx.room:room-runtime:2.5.1")
     ksp("androidx.room:room-compiler:2.5.1") // Annotation processor for Room
