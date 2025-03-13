@@ -41,7 +41,7 @@ class DragTimeCalculation(
 
         // If no data exists, run postProcessing and re-fetch.
         if (sessionItems.isEmpty()) {
-            runBlocking { postProcessing() }
+            //runBlocking { postProcessing() }
             sessionItems = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)
         }
 

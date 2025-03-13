@@ -2,6 +2,7 @@ package com.example.trackpro
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -170,7 +171,9 @@ fun CarCreationScreen(
 
                             coroutineScope.launch {
                                 database.vehicleInformationDAO().insertVehicle(vehicle)
-                            }                            },
+                            }
+                            Toast.makeText(context, "Vehicle succesfully saved!", Toast.LENGTH_SHORT).show()
+},
                         colors = ButtonDefaults.elevatedButtonColors(containerColor = Color(0xFF007BFF), contentColor = Color.White),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()

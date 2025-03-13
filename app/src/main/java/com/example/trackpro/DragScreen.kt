@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -34,9 +35,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
+import com.example.trackpro.DAO.VehiclePair
 import com.example.trackpro.DataClasses.RawGPSData
+import com.example.trackpro.DataClasses.VehicleInformationData
+import com.example.trackpro.ExtrasForUI.DropdownMenuField
+import com.example.trackpro.ExtrasForUI.DropdownMenuFieldMulti
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.SessionManager
@@ -50,6 +59,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -71,6 +87,43 @@ class DragScreen : ComponentActivity() {
                 onBack = { finish() }
             )
         }
+    }
+}
+
+class VehicleViewModel(private val database: ESPDatabase) : ViewModel() {
+    private val _vehicles = MutableStateFlow<List<VehiclePair>>(emptyList())
+    val vehicles: StateFlow<List<VehiclePair>> = _vehicles
+
+    private val _loadingState = MutableStateFlow(true) // Track loading state
+    val loadingState: StateFlow<Boolean> = _loadingState
+
+    fun fetchVehicles() {
+        viewModelScope.launch {
+            _loadingState.value = true // Set loading state to true before fetching
+            Log.d("ViewModel", "Fetching vehicles...")
+
+            try {
+                val fetchedVehicles = database.vehicleInformationDAO().getPairVehicles().first() // Collect the first value
+                _vehicles.value = fetchedVehicles
+                Log.d("ViewModel", "Fetched vehicles: ${_vehicles.value}")
+            } catch (e: Exception) {
+                Log.e("Error", "Fetching vehicles failed: ${e.message}")
+            } finally {
+                _loadingState.value = false // Set loading state to false after fetching
+                Log.d("ViewModel", "Loading state: ${_loadingState.value}")
+            }
+        }
+    }
+}
+
+class VehicleViewModelFactory(private val database: ESPDatabase) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(VehicleViewModel::class.java)) {
+            // Ensure the return type is correct (casting it to T)
+            @Suppress("UNCHECKED_CAST")
+            return VehicleViewModel(database) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
 
@@ -104,6 +157,18 @@ fun DragRaceScreen(
     var insertJob: Job? = null
 
     var i = 0f;
+
+
+
+
+    // Get the ViewModel using viewModel()
+    val viewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
+    // Observe the state for vehicles and loadingState
+    val vehicles by viewModel.vehicles.collectAsState(initial = emptyList())
+    val loadingState by viewModel.loadingState.collectAsState()
+
+    var selectedVehicle by remember { mutableStateOf("") }
+    var selectedVehicleId by remember { mutableStateOf(-1) }
 
 
     fun startBatchInsert() {
@@ -142,16 +207,25 @@ fun DragRaceScreen(
     }
 
 
-
-
     fun stopBatchInsert() {
         insertJob?.cancel()
         dataBuffer.clear()
         insertJob = null
     }
 
+
+    LaunchedEffect(vehicles) {
+        Log.d("UI", "Vehicles state updated: ${vehicles.size}")
+    }
+    LaunchedEffect(loadingState) {
+        Log.d("UI", "Loading state updated: $loadingState")
+    }
+
     LaunchedEffect(Unit) {
         try {
+
+            viewModel.fetchVehicles()
+
             /*
             dataPoints.add(Entry(1f,0f))
             dataPoints.add(Entry(2f,21f))
@@ -255,6 +329,21 @@ fun DragRaceScreen(
                 text = if (isConnected.value) "Connected to ESP" else "Not Connected",
                 color = if (isConnected.value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
             )
+            Spacer(modifier = Modifier.height(16.dp))
+
+
+            // Show a loading state while vehicles are being fetched
+            if (loadingState) {
+                Text(text = "Loading vehicles...") // Show loading message
+            } else {
+                // DropdownMenuFieldMulti will be displayed when vehicles are available
+                if (vehicles.isNotEmpty()) {
+                    DropdownMenuFieldMulti("Select car", vehicles, selectedVehicle) { selectedVehicleId = it.toInt() }
+                } else {
+                    Text(text = "No vehicles available") // Show a message if no vehicles are found
+                }
+            }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -346,7 +435,7 @@ fun DragRaceScreen(
                             isSessionActive = !isSessionActive
 
                             Log.d("isItTrue?", isSessionActive.toString());
-                            sessionID = startSession(database)
+                            sessionID = startSession(database,selectedVehicleId.toLong())
                             Log.d("sessionid:", "Id:" + sessionID)
                         }
                     } else {
@@ -389,13 +478,13 @@ fun DragScreenPreview() {
     )
 }
 
-    suspend fun startSession(database: ESPDatabase): Long {
+    suspend fun startSession(database: ESPDatabase, selectedVehicleId: Long): Long {
         val sessionManager = SessionManager.getInstance(database)
         var id: Long = -1
 
         // Use suspendCoroutine to suspend until the session id is retrieved.
         withContext(Dispatchers.IO) {
-            sessionManager.startSession("DragSession", "Drag data session")
+            sessionManager.startSession("DragSession", "Drag data session", vehicleId = selectedVehicleId )
             Log.d("In start", sessionManager.getCurrentSessionId().toString())
             id = (sessionManager.getCurrentSessionId() ?: -1).toLong()
         }

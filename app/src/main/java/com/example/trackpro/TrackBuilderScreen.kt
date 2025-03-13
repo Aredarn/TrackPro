@@ -87,7 +87,7 @@ class TrackBuilderScreen : ComponentActivity()
     }
 }
 
-/*
+
 val gpsPoints = listOf(
     LatLonOffset(47.305300, 17.048138),
     LatLonOffset(47.302270, 17.049691),
@@ -143,9 +143,10 @@ val gpsPoints = listOf(
     LatLonOffset(47.308615, 17.046054),
     LatLonOffset(47.308436, 17.046392),
     LatLonOffset(47.306092, 17.047740),
-    LatLonOffset(47.304973, 17.048282)
+    LatLonOffset(47.304973, 17.048282),
+    LatLonOffset(47.305300, 17.048138)
 )
-*/
+
 
 @OptIn(DelicateCoroutinesApi::class)
 @Composable
@@ -211,7 +212,7 @@ fun TrackBuilderScreen(
 
 
     //Tester function. works with static data from Pannonia ring
-    /*
+
     suspend fun startAddingGpsPoints() {
         // Loop to add points at intervals
         while (currentIndex < gpsPoints.size-1) {
@@ -226,11 +227,11 @@ fun TrackBuilderScreen(
             // Wait for 1 second before adding the next point
             delay(100)
         }
-    }*/
+    }
 
     LaunchedEffect(Unit) {
 
-        //startAddingGpsPoints()
+        startAddingGpsPoints()
 
         espTcpClient = ESPTcpClient(
             serverAddress = ip,
