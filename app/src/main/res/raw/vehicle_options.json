@@ -1,0 +1,53 @@
+{
+  "engineTypes": [
+    "Inline-3","Inline-4","Inline-5", "Inline-6", "Rotary-2",
+    "Boxer-4","Boxer-6","VR-6","V6", "V8", "V10", "V12"
+  ],
+  "aspirationTypes": [
+    "Naturally Aspirated", "Turbocharged", "Supercharged", "Twin-Turbo",
+    "Quad-Turbo", "Electric Assisted Turbo"
+  ],
+  "drivetrains": [
+    "RWD", "AWD", "FWD", "4WD", "XWD"
+  ],
+  "fuelTypes": [
+    "Petrol", "Diesel", "Electric", "Hybrid", "Ethanol", "Hydrogen", "Methanol"
+  ],
+  "tireTypes": [
+    "Street","Slick", "All-Weather", "Soft Compound", "Medium Compound", "Hard Compound",
+    "Wet Tires", "Drag Radials", "Off-Road", "Semi-Slick"
+  ],
+  "transmissions": [
+    "Manual", "Automatic", "Sequential", "Dual-Clutch", "CVT", "8-Speed Auto",
+    "7-Speed Dual-Clutch", "6-Speed Manual", "10-Speed Auto", "Direct-Drive"
+  ],
+  "suspensionTypes": [
+    "Independent", "Double Wishbone", "MacPherson Strut", "Pushrod", "Multilink",
+    "Trailing Arm", "Torsion Beam", "Active Suspension", "Hydropneumatic", "Solid Axle"
+  ],
+  "brakeTypes": [
+    "Disc Brakes", "Drum Brakes", "Carbon-Ceramic", "Steel Brakes", "ABS",
+    "Regenerative Braking", "Hydraulic Brakes"
+  ],
+  "differentials": [
+    "Open Differential", "Limited-Slip Differential", "Electronic Limited-Slip",
+    "Torsen Differential", "Locking Differential"
+  ],
+  "fuelDeliverySystems": [
+    "Carbureted", "Fuel Injected", "Direct Injection", "Port Injection",
+    "Throttle Body Injection"
+  ],
+  "aerodynamicFeatures": [
+    "Active Aero", "Fixed Wing", "Adjustable Wing", "Ground Effect",
+    "Vortex Generators", "Diffuser", "Front Splitter", "Side Skirts"
+  ],
+  "safetyFeatures": [
+    "Roll Cage", "Fire Suppression System", "HANS Device", "Racing Harness",
+    "Side Impact Protection", "Carbon Monocoque"
+  ],
+  "steeringTypes": [
+    "Hydraulic Power Steering", "Electric Power Steering", "Manual Steering",
+    "Rack and Pinion", "Re-circulating Ball"
+  ]
+}
+

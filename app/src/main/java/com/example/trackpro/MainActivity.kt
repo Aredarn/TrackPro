@@ -70,7 +70,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToESPTestScreen = { navController.navigate("esptest") },
                             onNavigateToTrackListScreen = { navController.navigate("tracklist") },
                             onNavigateToTrackBuilder = {navController.navigate("trackbuilder")},
-                            onNavigateToDragTimesList = { navController.navigate("dragsessions") }
+                            onNavigateToDragTimesList = { navController.navigate("dragsessions") },
+                            onNavigateToVehicleCreatorScreen = {navController.navigate("createvehicle")}
                         )
                     }
                     composable("drag") {
@@ -110,6 +111,12 @@ class MainActivity : ComponentActivity() {
                     {
                         TrackListScreen(navController = navController, viewModel = trackViewModel )
                     }
+                    composable(
+                        route = "createvehicle"
+                    )
+                    {
+                        CarCreationScreen(database) { }
+                    }
                 }
 
             }
@@ -121,7 +128,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen( onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackListScreen: () -> Unit,onNavigateToTrackBuilder: () -> Unit ,onNavigateToDragTimesList:() -> Unit ) {
+fun MainScreen( onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() -> Unit, onNavigateToTrackListScreen: () -> Unit,onNavigateToTrackBuilder: () -> Unit ,onNavigateToDragTimesList:() -> Unit, onNavigateToVehicleCreatorScreen:() -> Unit ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     ModalNavigationDrawer(
@@ -221,8 +228,6 @@ fun MainScreen( onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() ->
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-
-
                 Button(
                     onClick = onNavigateToDragRace,
                     modifier = Modifier
@@ -273,6 +278,23 @@ fun MainScreen( onNavigateToDragRace: () -> Unit,onNavigateToESPTestScreen:() ->
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Track builder")
                 }
+
+                Button(
+                    onClick = onNavigateToVehicleCreatorScreen,
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .padding(top = 12.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Icon(Icons.Default.CarRepair, contentDescription = "Car icon")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Add your vehicle")
+                }
             }
         }
     }
@@ -291,7 +313,8 @@ fun MainScreenPreview() {
             onNavigateToESPTestScreen = {},
             onNavigateToTrackListScreen = {},
             onNavigateToTrackBuilder = {},
-            onNavigateToDragTimesList = {}
+            onNavigateToDragTimesList = {},
+            onNavigateToVehicleCreatorScreen = {}
         )
     }
 }

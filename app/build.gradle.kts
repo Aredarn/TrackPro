@@ -58,6 +58,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation(libs.generativeai)
     implementation(libs.androidx.ui.test.android)
+    implementation(libs.androidx.material3.android)
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")
@@ -94,7 +95,7 @@ dependencies {
     implementation ("com.google.accompanist:accompanist-pager:0.31.1-alpha")
     implementation ("com.google.accompanist:accompanist-pager-indicators:0.31.1-alpha")
 
-
+    implementation(platform("androidx.compose:compose-bom:2024.03.00")) // Update to latest BOM
 
 }
 

@@ -10,12 +10,14 @@ import com.example.trackpro.DAO.SessionDataDao
 import com.example.trackpro.DAO.SmoothedGPSDataDAO
 import com.example.trackpro.DAO.TrackCoordinatesDataDAO
 import com.example.trackpro.DAO.TrackMainDataDAO
+import com.example.trackpro.DAO.VehicleInformationDAO
 import com.example.trackpro.DataClasses.DerivedData
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.DataClasses.TrackMainData
+import com.example.trackpro.DataClasses.VehicleInformationData
 
 @Database(entities =
 [
@@ -24,7 +26,8 @@ import com.example.trackpro.DataClasses.TrackMainData
     DerivedData::class,
     SmoothedGPSData::class,
     TrackMainData::class,
-    TrackCoordinatesData::class
+    TrackCoordinatesData::class,
+    VehicleInformationData::class
 ], version = 1, exportSchema = false)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
@@ -33,6 +36,7 @@ abstract class ESPDatabase : RoomDatabase() {
     abstract fun smoothedDataDao() : SmoothedGPSDataDAO
     abstract fun trackMainDao(): TrackMainDataDAO
     abstract fun trackCoordinatesDao(): TrackCoordinatesDataDAO
+    abstract fun vehicleInformationDAO(): VehicleInformationDAO
 
 
     companion object {

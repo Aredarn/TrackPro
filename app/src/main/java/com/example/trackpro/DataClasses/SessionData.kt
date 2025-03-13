@@ -10,5 +10,6 @@ data class SessionData(
     val id: Long  = 0,
     val startTime: Long, // Session start time in milliseconds
     val endTime: Long?, // Session end time (null if ongoing)
-    val eventType: String
+    val eventType: String,
+    val vehicleId: Long
 )
