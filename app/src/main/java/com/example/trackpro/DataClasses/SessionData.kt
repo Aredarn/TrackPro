@@ -4,7 +4,19 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.Date
 
-@Entity(tableName = "session_data")
+
+
+
+@Entity(
+    tableName = "session_data",
+    foreignKeys = [androidx.room.ForeignKey(
+        entity = com.example.trackpro.DataClasses.VehicleInformationData::class,
+        parentColumns = ["vehicleId"],
+        childColumns = ["vehicleId"],
+        onDelete = androidx.room.ForeignKey.CASCADE
+    )]
+
+)
 data class SessionData(
     @PrimaryKey(autoGenerate = true)
     val id: Long  = 0,

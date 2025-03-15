@@ -7,6 +7,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.example.trackpro.DataClasses.SessionData
+import com.example.trackpro.Models.DragSessionWithVehicle
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -27,6 +28,18 @@ interface SessionDataDao {
     // Get all sessions
     @Query("SELECT * FROM session_data")
     fun getAllSessions(): Flow<List<SessionData>>
+
+    //Get DRAG sessions with vehicle info
+    @Query("SELECT " +
+            "vehicle_information_data.manufacturer as manufacturer ," +
+            "vehicle_information_data.model as model," +
+            " vehicle_information_data.year as year," +
+            " session_data.startTime as startTime," +
+            "session_data.endTime as endTime," +
+            "session_data.eventType as eventType " +
+            "FROM session_data,vehicle_information_data " +
+            "WHERE session_data.vehicleId = vehicle_information_data.vehicleId")
+    fun getAllSessionsWithVehicles(): Flow<List<DragSessionWithVehicle>>
 }
 
 
