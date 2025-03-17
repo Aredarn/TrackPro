@@ -1,46 +1,52 @@
 package com.example.trackpro.ui.screens
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.trackpro.ESPDatabase
 import com.example.trackpro.DataClasses.SessionData
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import com.example.trackpro.ViewModels.SessionViewModel
+import com.example.trackpro.ViewModels.SessionViewModelFactory
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 class DragTimesList : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // Initialize the NavController here
-            val navController = rememberNavController()
+             val navController = rememberNavController()
 
-            // the navController and the viewModel to DragTimesListView
             val viewModel: SessionViewModel = viewModel(factory = SessionViewModelFactory(this))
             DragTimesListView(viewModel = viewModel, navController = navController)
         }
@@ -48,32 +54,11 @@ class DragTimesList : ComponentActivity() {
 }
 
 
-// ViewModel to handle session data retrieval
-class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
-    private var _sessions = MutableStateFlow<List<SessionData>>(emptyList())
-    val sessions = _sessions.asStateFlow()
-
-    init {
-        fetchSessions()
-    }
-
-    private fun fetchSessions() {
-        viewModelScope.launch {
-            _sessions.value = database.sessionDataDao().getAllSessions().first();
-        }
-    }
-}
-
-class SessionViewModelFactory(private val activity: Context) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return SessionViewModel(ESPDatabase.getInstance(activity.applicationContext)) as T
-    }
-}
-
 @Composable
 fun DragTimesListView(viewModel: SessionViewModel, navController: NavController) {
     val sessionList by viewModel.sessions.collectAsState()
 
+    Log.d("Sessions:",sessionList.toString())
     SessionListScreen(navController = navController, sessions = sessionList)
 }
 
