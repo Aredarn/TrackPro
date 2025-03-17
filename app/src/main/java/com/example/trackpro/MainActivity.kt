@@ -39,9 +39,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.trackpro.ViewModels.SessionViewModel
+import com.example.trackpro.ViewModels.SessionViewModelFactory
 import com.example.trackpro.ui.screens.DragTimesListView
-import com.example.trackpro.ui.screens.SessionViewModel
-import com.example.trackpro.ui.screens.SessionViewModelFactory
 import kotlinx.coroutines.launch
 
 class TrackProApp : Application() {

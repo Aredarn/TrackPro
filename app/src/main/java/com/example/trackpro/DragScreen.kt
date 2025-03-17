@@ -434,8 +434,9 @@ fun DragRaceScreen(
                         CoroutineScope(Dispatchers.Main).launch {
                             isSessionActive = !isSessionActive
 
-                            Log.d("isItTrue?", isSessionActive.toString());
+                            Log.d("CarID", selectedVehicleId.toString())
                             sessionID = startSession(database,selectedVehicleId.toLong())
+
                             Log.d("sessionid:", "Id:" + sessionID)
                         }
                     } else {
@@ -447,8 +448,6 @@ fun DragRaceScreen(
                             {
                                 stopBatchInsert()
                                    endSession(database)
-
-                                    Log.d("Ended?","I guess the session ended")
                             }
                             Log.d("isItFalse?" , isSessionActive.toString());
                            dragTime = endSessionPostProcess(sessionID, database)

@@ -35,6 +35,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.trackpro.DataClasses.SessionData
+import com.example.trackpro.Models.DragSessionWithVehicle
 import com.example.trackpro.ViewModels.SessionViewModel
 import com.example.trackpro.ViewModels.SessionViewModelFactory
 import java.text.SimpleDateFormat
@@ -45,9 +46,11 @@ class DragTimesList : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-             val navController = rememberNavController()
+            val navController = rememberNavController()
 
+            //To get all data dynamically from the DB
             val viewModel: SessionViewModel = viewModel(factory = SessionViewModelFactory(this))
+
             DragTimesListView(viewModel = viewModel, navController = navController)
         }
     }
@@ -57,15 +60,16 @@ class DragTimesList : ComponentActivity() {
 @Composable
 fun DragTimesListView(viewModel: SessionViewModel, navController: NavController) {
     val sessionList by viewModel.sessions.collectAsState()
+    val sessionWithVehicleList by viewModel.sessionsWithVehicle.collectAsState()
 
-    Log.d("Sessions:",sessionList.toString())
-    SessionListScreen(navController = navController, sessions = sessionList)
+    Log.d("Cars:" ,sessionWithVehicleList.toString())
+    SessionListScreen(navController = navController, sessions = sessionList, sessionsWithVehicles = sessionWithVehicleList)
 }
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SessionListScreen(navController: NavController, sessions: List<SessionData>) {
+fun SessionListScreen(navController: NavController, sessions: List<SessionData>, sessionsWithVehicles: List<DragSessionWithVehicle>) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("Your Sessions") }) }
     ) { paddingValues ->
@@ -79,7 +83,7 @@ fun SessionListScreen(navController: NavController, sessions: List<SessionData>)
                 }
             } else {
                 LazyColumn(modifier = Modifier.padding(16.dp)) {
-                    items(sessions) { session ->
+                    items(sessionsWithVehicles) { session ->
                         SessionCard(session, navController)
                     }
                 }
@@ -88,7 +92,41 @@ fun SessionListScreen(navController: NavController, sessions: List<SessionData>)
     }
 }
 
+@Composable
+fun SessionCard(session: DragSessionWithVehicle, navController: NavController?) {
+    val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+    val startTimeFormatted = dateFormat.format(Date(session.startTime))
+    val endTimeFormatted = session.endTime?.let { dateFormat.format(Date(it)) } ?: "..."
 
+    Log.d("Car inside:", session.toString())
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable {
+                if (navController == null) {
+                    Log.e("Navigation Error", "navController is null!")
+                } else {
+                    navController.navigate("graph/${session.sessionId}")
+                }
+            },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "${session.manufacturer} ${session.model} - ${session.year}",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Start: $startTimeFormatted", fontSize = 14.sp, color = Color.DarkGray)
+            Text("End: $endTimeFormatted", fontSize = 14.sp, color = Color.DarkGray)
+        }
+    }
+}
+
+/*
 @Composable
 fun SessionCard(session: SessionData, navController: NavController?) {
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
@@ -122,3 +160,4 @@ fun SessionCard(session: SessionData, navController: NavController?) {
     }
 }
 
+*/

@@ -11,12 +11,6 @@ import com.example.trackpro.DAO.SessionDataDao
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.ESPDatabase
-import com.example.trackpro.ui.screens.SessionViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 
 
 class SessionManager private constructor(
