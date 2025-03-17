@@ -115,13 +115,13 @@ fun SessionCard(session: DragSessionWithVehicle, navController: NavController?) 
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "${session.manufacturer} ${session.model} - ${session.year}",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                text = "${session.manufacturer}${session.model} - ${session.year}",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.W800
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Start: $startTimeFormatted", fontSize = 14.sp, color = Color.DarkGray)
-            Text("End: $endTimeFormatted", fontSize = 14.sp, color = Color.DarkGray)
+            Text("Start: $startTimeFormatted", fontSize = 14.sp, color = MaterialTheme.colorScheme.secondary)
+            Text("End: $endTimeFormatted", fontSize = 14.sp, color = MaterialTheme.colorScheme.secondary)
         }
     }
 }
