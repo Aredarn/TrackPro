@@ -224,7 +224,7 @@ fun TrackBuilderScreen(
 
             Log.d("add", "Added: ${gpsPoints[currentIndex]}")
 
-            // Wait for 1 second before adding the next point
+            // Wait for 0.1 second before adding the next point
             delay(100)
         }
     }
@@ -282,7 +282,9 @@ fun TrackBuilderScreen(
                 isSessionActive = !isSessionActive
                 if (isSessionActive) {
                     coroutineScope.launch(Dispatchers.IO) {
-                        trackID = startTrackBuilder(database)
+
+
+                        trackID = startTrackBuilder(database,trackname,countryname,lengthoftrack)
                         startBatchInsert()
                     }
                 } else {
@@ -403,9 +405,9 @@ fun TrackInfoAlert(
 }
 
 
-suspend fun startTrackBuilder(database: ESPDatabase):Long
+suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countryname: String,lengthoftrack: Double):Long
 {
-    val Track = TrackMainData(trackName = "TesztTrack", totalLength = 2234.1, country = "Hun")
+    val Track = TrackMainData(trackName = trackName, totalLength = lengthoftrack, country = countryname)
     val id = database.trackMainDao().insertTrackMainDataDAO(Track)
 
     return  id;
