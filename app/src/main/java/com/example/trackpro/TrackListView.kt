@@ -1,8 +1,6 @@
 package com.example.trackpro
 
-import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.border
@@ -29,64 +27,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Color.Companion.Gray
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.trackpro.DataClasses.TrackMainData
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import com.example.trackpro.ViewModels.TrackViewModel
 
 class TrackListView : ComponentActivity()
 {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent{
-
-            val navController = rememberNavController()
-            val viewModel: TrackViewModel = viewModel(factory = TrackViewModelFactory(this))
-
         }
     }
 }
-
-
-//ViewModel to handle track data retrieval
-class TrackViewModel(private val database:ESPDatabase):ViewModel()
-{
-    private var _tracks = MutableStateFlow<List<TrackMainData>>(emptyList())
-    val tracks = _tracks.asStateFlow()
-
-    init {
-        fetchTracks()
-    }
-
-    private fun fetchTracks()
-    {
-        viewModelScope.launch(Dispatchers.IO){
-            database.trackMainDao().getAllTrack().collect { trackList ->
-                _tracks.value = trackList
-            }
-        }
-    }
-}
-
-class TrackViewModelFactory(private val activity: Context) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return TrackViewModel(ESPDatabase.getInstance(activity.applicationContext)) as T
-    }
-}
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,11 +87,7 @@ fun TrackCard(track:TrackMainData,navController: NavController)
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable {
-                if (navController == null) {
-                    Log.e("Navigation Error", "navController is null!")
-                } else {
-                    navController.navigate("graph/${track.trackId}")
-                }
+                navController.navigate("graph/${track.trackId}")
             },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
