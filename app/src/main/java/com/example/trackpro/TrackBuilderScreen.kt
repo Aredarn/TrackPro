@@ -159,6 +159,8 @@ fun TrackBuilderScreen(
     val isConnected = remember { mutableStateOf(false) }
 
     val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
+    var gpsPointsList = remember { mutableListOf<TrackCoordinatesData>() }
+
     val rawJson = remember { mutableStateOf("") }
     val context = LocalContext.current
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
@@ -189,7 +191,7 @@ fun TrackBuilderScreen(
                         database.trackCoordinatesDao().insertTrackPart(dataBuffer.toList())
 
                         //add the points to the gpsPoints which will be rendered on screen
-                        //gpsPoints.addAll(dataBuffer.toList());
+                        gpsPointsList.addAll(dataBuffer.toList());
 
                         dataBuffer.clear()
                     } catch (e: Exception) {
@@ -206,18 +208,16 @@ fun TrackBuilderScreen(
         insertJob = null
     }
 
-    val gpsPointsList = remember { mutableStateListOf<LatLonOffset>() }
     // Index to keep track of which point to add
     var currentIndex by remember { mutableStateOf(0) }
 
 
     //Tester function. works with static data from Pannonia ring
-
     suspend fun startAddingGpsPoints() {
         // Loop to add points at intervals
         while (currentIndex < gpsPoints.size-1) {
             // Add the next point to the list
-            gpsPointsList.add(gpsPoints[currentIndex])
+            //gpsPointsList.add(gpsPoints[currentIndex])
 
             // Increment the index to add the next point
             currentIndex++
@@ -282,8 +282,6 @@ fun TrackBuilderScreen(
                 isSessionActive = !isSessionActive
                 if (isSessionActive) {
                     coroutineScope.launch(Dispatchers.IO) {
-
-
                         trackID = startTrackBuilder(database,trackname,countryname,lengthoftrack)
                         startBatchInsert()
                     }
@@ -343,12 +341,7 @@ fun TrackBuilderScreen(
             showStartBuilderButton = true
         }
     )
-
-
-
 }
-
-
 
 @Composable
 fun TrackInfoAlert(
