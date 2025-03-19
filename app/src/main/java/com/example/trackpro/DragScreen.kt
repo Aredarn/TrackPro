@@ -41,7 +41,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
-import com.example.trackpro.DAO.VehiclePair
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.VehicleInformationData
 import com.example.trackpro.ExtrasForUI.DropdownMenuField
@@ -50,6 +49,7 @@ import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.SessionManager
 import com.example.trackpro.ManagerClasses.toDataClass
+import com.example.trackpro.Models.VehiclePair
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
