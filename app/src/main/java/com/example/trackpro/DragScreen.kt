@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -135,14 +136,20 @@ fun DragRaceScreen(
     val gpsData = rememberSaveable { mutableStateOf<RawGPSData?>(null) }
     val rawJson = rememberSaveable { mutableStateOf("") }
 
-    var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
+    var espTcpClient: ESPTcpClient? by rememberSaveable { mutableStateOf(null) }
     var lastTimestamp: Long? by rememberSaveable { mutableStateOf(null) }
     var dragTime: Double? by rememberSaveable { mutableStateOf(null) }
 
 
-    val dataPoints = rememberSaveable { mutableStateListOf<Entry>() }
+    val dataPoints = rememberSaveable(
+        saver = listSaver(
+            save = { it.toList() },
+            restore = { mutableStateListOf(*it.toTypedArray()) }
+        )
+    ) { mutableStateListOf<Entry>() }
+
     val context = LocalContext.current  // Get the Context in Compose
-    val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
+    val (ip, port) = rememberSaveable { JsonReader.loadConfig(context) } // Load once & remember it
     val coroutineScope = rememberCoroutineScope()
     // Buffer list for batch inserts
     val dataBuffer = mutableListOf<RawGPSData>()
