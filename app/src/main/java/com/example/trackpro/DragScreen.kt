@@ -22,11 +22,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,8 +44,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
 import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.DataClasses.VehicleInformationData
-import com.example.trackpro.ExtrasForUI.DropdownMenuField
 import com.example.trackpro.ExtrasForUI.DropdownMenuFieldMulti
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
@@ -59,19 +59,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
 
 class DragScreen : ComponentActivity() {
 
@@ -134,19 +128,19 @@ fun DragRaceScreen(
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp
 
-    var isSessionActive by remember { mutableStateOf(false) }
-    var sessionID by remember { mutableLongStateOf(-1) }
+    var isSessionActive by rememberSaveable { mutableStateOf(false) }
+    var sessionID by rememberSaveable { mutableLongStateOf(-1) }
 
-    val isConnected = remember { mutableStateOf(false) }
-    val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
-    val rawJson = remember { mutableStateOf("") }
+    val isConnected = rememberSaveable { mutableStateOf(false) }
+    val gpsData = rememberSaveable { mutableStateOf<RawGPSData?>(null) }
+    val rawJson = rememberSaveable { mutableStateOf("") }
 
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
-    var lastTimestamp: Long? by remember { mutableStateOf(null) }
-    var dragTime: Double? by remember { mutableStateOf(null) }
+    var lastTimestamp: Long? by rememberSaveable { mutableStateOf(null) }
+    var dragTime: Double? by rememberSaveable { mutableStateOf(null) }
 
 
-    val dataPoints = remember { mutableStateListOf<Entry>() }
+    val dataPoints = rememberSaveable { mutableStateListOf<Entry>() }
     val context = LocalContext.current  // Get the Context in Compose
     val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
     val coroutineScope = rememberCoroutineScope()
@@ -154,9 +148,9 @@ fun DragRaceScreen(
     val dataBuffer = mutableListOf<RawGPSData>()
 
     // Coroutine job to handle periodic inserts
-    var insertJob: Job? = null
+    var insertJob: Job? by rememberSaveable { mutableStateOf(null) }
 
-    var i = 0f;
+    var i = 0f
 
     // Get the ViewModel using viewModel()
     val viewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
@@ -164,8 +158,8 @@ fun DragRaceScreen(
     val vehicles by viewModel.vehicles.collectAsState(initial = emptyList())
     val loadingState by viewModel.loadingState.collectAsState()
 
-    var selectedVehicle by remember { mutableStateOf("") }
-    var selectedVehicleId by remember { mutableStateOf(-1) }
+    val selectedVehicle by rememberSaveable { mutableStateOf("") }
+    var selectedVehicleId by rememberSaveable { mutableIntStateOf(-1) }
 
 
     fun startBatchInsert() {
@@ -211,13 +205,6 @@ fun DragRaceScreen(
     }
 
 
-    LaunchedEffect(vehicles) {
-        Log.d("UI", "Vehicles state updated: ${vehicles.size}")
-    }
-    LaunchedEffect(loadingState) {
-        Log.d("UI", "Loading state updated: $loadingState")
-    }
-
     LaunchedEffect(Unit) {
         try {
 
@@ -249,7 +236,7 @@ fun DragRaceScreen(
                     if (isSessionActive && isConnected.value) {
                         val derivedData = gpsData.value?.let {
                             RawGPSData(
-                                sessionid = sessionID.toLong(),
+                                sessionid = sessionID,
                                 latitude = it.latitude,
                                 longitude = it.longitude,
                                 altitude = it.altitude,
@@ -267,7 +254,7 @@ fun DragRaceScreen(
 
                                     // Update graph points (if needed)
                                     data.speed?.let {
-                                        Entry(i, it.toFloat())
+                                        Entry(i, it)
                                     }?.let { dataPoints.add(it) }
 
                                     i += 1
@@ -434,7 +421,7 @@ fun DragRaceScreen(
                             Log.d("CarID", selectedVehicleId.toString())
                             sessionID = startSession(database,selectedVehicleId.toLong())
 
-                            Log.d("sessionid:", "Id:" + sessionID)
+                            Log.d("session:", "Id:$sessionID")
                         }
                     } else {
                         CoroutineScope(Dispatchers.Main).launch {
@@ -446,7 +433,7 @@ fun DragRaceScreen(
                                 stopBatchInsert()
                                    endSession(database)
                             }
-                            Log.d("isItFalse?" , isSessionActive.toString());
+                            Log.d("isItFalse?" , isSessionActive.toString())
                            dragTime = endSessionPostProcess(sessionID, database)
                         }
                     }

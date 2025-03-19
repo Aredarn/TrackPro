@@ -1,8 +1,8 @@
 package com.example.trackpro
 
+import android.annotation.SuppressLint
 import android.view.ViewGroup
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,7 +51,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
-@OptIn(ExperimentalFoundationApi::class)
+
 @Composable
 fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
 
@@ -60,12 +61,12 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     val database = remember { ESPDatabase.getInstance(context) }
     var coordinates by remember { mutableStateOf(emptyList<SmoothedGPSData>()) }
     var coordinatesSimplified by remember { mutableStateOf(emptyList<LatLonOffset>()) }
-    var dragTime by remember { mutableStateOf(-1.0) }
+    var dragTime by remember { mutableDoubleStateOf(-1.0) }
     val dragTimeClass = remember { DragTimeCalculation(sessionId, database) }
     val scope = rememberCoroutineScope()
-    var totalDist by remember { mutableStateOf(-1.0) }
-    var quarterMileTime by remember { mutableStateOf(-1.0) }
-    var dataPoints = remember { mutableListOf<Entry>() }
+    var totalDist by remember { mutableDoubleStateOf(-1.0) }
+    var quarterMileTime by remember { mutableDoubleStateOf(-1.0) }
+    val dataPoints = remember { mutableListOf<Entry>() }
     val margin = 16f
 
     LaunchedEffect(sessionId) {
@@ -73,7 +74,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             val data = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionId)
 
             data.forEachIndexed { index, data ->
-                data.smoothedSpeed?.let { Entry(index.toFloat(), it.toFloat()) }
+                data.smoothedSpeed?.let { Entry(index.toFloat(), it) }
                     ?.let { dataPoints.add(it) }
             }
 
@@ -209,6 +210,7 @@ fun GraphScreenPreview() {
     }
 }
 
+@SuppressLint("DefaultLocale")
 fun formatTime(milliseconds: Long): String {
     val minutes = TimeUnit.MILLISECONDS.toMinutes(milliseconds)
     val seconds = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60

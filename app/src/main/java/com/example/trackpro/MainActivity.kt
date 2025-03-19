@@ -2,7 +2,6 @@ package com.example.trackpro
 
 import android.app.Application
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -43,7 +42,6 @@ import com.example.trackpro.ViewModels.SessionViewModel
 import com.example.trackpro.ViewModels.SessionViewModelFactory
 import com.example.trackpro.ViewModels.TrackViewModel
 import com.example.trackpro.ViewModels.TrackViewModelFactory
-import com.example.trackpro.ui.screens.DragTimesListView
 import kotlinx.coroutines.launch
 
 class TrackProApp : Application() {
@@ -52,7 +50,6 @@ class TrackProApp : Application() {
     }
 }
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

@@ -1,4 +1,4 @@
-package com.example.trackpro.ui.screens
+package com.example.trackpro
 
 import android.os.Bundle
 import android.util.Log

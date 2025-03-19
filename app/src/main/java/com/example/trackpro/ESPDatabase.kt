@@ -51,7 +51,7 @@ abstract class ESPDatabase : RoomDatabase() {
                     "esp_database"
                 )
                     .fallbackToDestructiveMigration()
-                    .setJournalMode(RoomDatabase.JournalMode.TRUNCATE) // Forces immediate writes
+                    .setJournalMode(JournalMode.TRUNCATE) // Forces immediate writes
                     .build()
                 INSTANCE = instance
                 instance
