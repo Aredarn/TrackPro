@@ -158,9 +158,6 @@ fun DragRaceScreen(
 
     var i = 0f;
 
-
-
-
     // Get the ViewModel using viewModel()
     val viewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
     // Observe the state for vehicles and loadingState

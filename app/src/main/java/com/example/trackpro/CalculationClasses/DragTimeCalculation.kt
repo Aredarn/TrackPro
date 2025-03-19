@@ -1,10 +1,5 @@
 package com.example.trackpro.CalculationClasses
 
-import android.annotation.SuppressLint
-import android.util.Log
-import com.example.trackpro.DAO.RawGPSDataDao
-import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.ESPDatabase
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import kotlinx.coroutines.runBlocking
@@ -35,34 +30,42 @@ class DragTimeCalculation(
         }
         postProc.postProcessing(sessionid)
     }
+
+
     suspend fun timeFromZeroToHundred(): Double {
         // Fetch session data in chronological order.
         var sessionItems = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)
 
         // If no data exists, run postProcessing and re-fetch.
         if (sessionItems.isEmpty()) {
-            //runBlocking { postProcessing() }
+            runBlocking { postProcessing() }
             sessionItems = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)
         }
 
         var minTimeDiff: Double? = null
 
-        // Iterate through each data point in chronological order.
+        // Iterate through the session items to find all valid start points.
         for (i in sessionItems.indices) {
             val currentSpeed = sessionItems[i].smoothedSpeed
-            // Identify a valid "start" point: speed at or near 0.
+
+            // Check if the current speed is a valid start point (at or near 0 km/h).
             if (currentSpeed != null && currentSpeed <= ZERO_THRESHOLD) {
                 val startTime = sessionItems[i].timestamp
-                // Look forward in time for the first occurrence of speed >= 100.
+
+                // Look forward to find the first occurrence of speed >= 100 km/h.
                 for (j in (i + 1) until sessionItems.size) {
                     val candidateSpeed = sessionItems[j].smoothedSpeed
+
+                    // Check if the candidate speed is >= 100 km/h.
                     if (candidateSpeed != null && candidateSpeed >= 100f) {
                         val diff = sessionItems[j].timestamp - startTime
-                        // Save the smallest valid time difference.
+
+                        // Update the minimum time difference if this interval is better.
                         if (minTimeDiff == null || diff < minTimeDiff) {
                             minTimeDiff = diff.toDouble()
                         }
-                        // Stop checking for this start point after a valid 100 km/h is found.
+
+                        // Stop searching for this start point after finding the first 100 km/h.
                         break
                     }
                 }
@@ -72,8 +75,6 @@ class DragTimeCalculation(
         // Return the best (smallest) time difference in seconds, or -1 if no valid sequence was found.
         return minTimeDiff?.div(1000) ?: -1.0  // Convert milliseconds to seconds.
     }
-
-
 
     fun totalDistance(latLngList: List<LatLonOffset>): Double {
         var totalDistance = 0.0
@@ -96,4 +97,57 @@ class DragTimeCalculation(
 
         return R * c // Distance in kilometers
     }
+
+    suspend fun quarterMile(): Double {
+        // Fetch session data in chronological order.
+        var sessionItems = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)
+
+        // If no data exists, run postProcessing and re-fetch.
+        if (sessionItems.isEmpty()) {
+            runBlocking { postProcessing() }
+            sessionItems = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)
+        }
+
+        var minQuarterMileTime: Double? = null
+
+        // Iterate through the session items to find all valid start points.
+        for (i in sessionItems.indices) {
+            val currentSpeed = sessionItems[i].smoothedSpeed
+
+            // Check if the current speed is a valid start point (at or near 0 km/h).
+            if (currentSpeed != null && currentSpeed <= ZERO_THRESHOLD) {
+                val startTime = sessionItems[i].timestamp
+                var totalDistance = 0.0
+
+                // Look forward to accumulate distance until reaching 402.336 meters.
+                for (j in (i + 1) until sessionItems.size) {
+                    val prevLat = sessionItems[j - 1].latitude
+                    val prevLon = sessionItems[j - 1].longitude
+                    val currLat = sessionItems[j].latitude
+                    val currLon = sessionItems[j].longitude
+
+                    // Calculate distance between consecutive points using Haversine formula.
+                    val distance = haversineDistance(prevLat, prevLon, currLat, currLon)
+                    totalDistance += distance
+
+                    // Check if the quarter-mile distance has been reached.
+                    if (totalDistance >= 402.336) {
+                        val diff = sessionItems[j].timestamp - startTime
+
+                        // Update the minimum time difference if this interval is better.
+                        if (minQuarterMileTime == null || diff < minQuarterMileTime) {
+                            minQuarterMileTime = diff.toDouble()
+                        }
+
+                        // Stop searching for this start point after reaching the quarter-mile distance.
+                        break
+                    }
+                }
+            }
+        }
+
+        // Return the best (smallest) quarter-mile time in seconds, or -1 if no valid sequence was found.
+        return minQuarterMileTime?.div(1000) ?: -1.0  // Convert milliseconds to seconds.
+    }
+
 }
