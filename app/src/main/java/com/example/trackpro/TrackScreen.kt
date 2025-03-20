@@ -197,7 +197,16 @@ fun TrackView(gpsPoints: List<LatLonOffset>) {
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 // Draw the track, start line, and animated dot
-                drawTrack(gpsPoints, margin,1f )//,animationProgress)
+                val driverPos: LatLonOffset? = gpsData.value?.let { LatLonOffset(it.latitude,
+                    gpsData.value!!.longitude) }
+
+                if (driverPos != null) {
+                    drawTrack(gpsPoints, margin,driverPos )
+                }
+                else
+                {
+                    drawTrack(gpsPoints,margin,1f)
+                }
             }
         }
     }

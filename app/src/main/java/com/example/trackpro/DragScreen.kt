@@ -136,17 +136,10 @@ fun DragRaceScreen(
     val gpsData = rememberSaveable { mutableStateOf<RawGPSData?>(null) }
     val rawJson = rememberSaveable { mutableStateOf("") }
 
-    var espTcpClient: ESPTcpClient? by rememberSaveable { mutableStateOf(null) }
+    var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
     var lastTimestamp: Long? by rememberSaveable { mutableStateOf(null) }
     var dragTime: Double? by rememberSaveable { mutableStateOf(null) }
-
-
-    val dataPoints = rememberSaveable(
-        saver = listSaver(
-            save = { it.toList() },
-            restore = { mutableStateListOf(*it.toTypedArray()) }
-        )
-    ) { mutableStateListOf<Entry>() }
+    val dataPoints = remember { mutableStateListOf<Entry>() }
 
     val context = LocalContext.current  // Get the Context in Compose
     val (ip, port) = rememberSaveable { JsonReader.loadConfig(context) } // Load once & remember it
@@ -155,7 +148,7 @@ fun DragRaceScreen(
     val dataBuffer = mutableListOf<RawGPSData>()
 
     // Coroutine job to handle periodic inserts
-    var insertJob: Job? by rememberSaveable { mutableStateOf(null) }
+    var insertJob: Job? by remember { mutableStateOf(null) }
 
     var i = 0f
 
@@ -204,13 +197,11 @@ fun DragRaceScreen(
         }
     }
 
-
     fun stopBatchInsert() {
         insertJob?.cancel()
         dataBuffer.clear()
         insertJob = null
     }
-
 
     LaunchedEffect(Unit) {
         try {
@@ -454,23 +445,9 @@ fun DragRaceScreen(
 }
 
 
-@Preview(showBackground = true)
-@Composable
-fun DragScreenPreview() {
-    val fakeDatabase = Room.inMemoryDatabaseBuilder(
-        LocalContext.current,
-        ESPDatabase::class.java
-    ).build()
-
-    DragRaceScreen(
-        database = fakeDatabase,
-        onBack = {}
-    )
-}
-
     suspend fun startSession(database: ESPDatabase, selectedVehicleId: Long): Long {
         val sessionManager = SessionManager.getInstance(database)
-        var id: Long = -1
+        var id: Long
 
         // Use suspendCoroutine to suspend until the session id is retrieved.
         withContext(Dispatchers.IO) {
@@ -494,9 +471,24 @@ fun DragScreenPreview() {
 
 
     suspend fun endSessionPostProcess(sessionId: Long, database: ESPDatabase): Double {
-        Log.d("trackpro", "Ending session")
         val dragTimeCalculation = DragTimeCalculation(sessionId, database)
         return dragTimeCalculation.timeFromZeroToHundred()
     }
+
+@Preview(
+    showBackground = true,
+    device = "spec:width=411dp,height=891dp,dpi=420,isRound=false,chinSize=0dp,orientation=landscape")
+@Composable
+fun DragScreenPreview() {
+    val fakeDatabase = Room.inMemoryDatabaseBuilder(
+        LocalContext.current,
+        ESPDatabase::class.java
+    ).build()
+
+    DragRaceScreen(
+        database = fakeDatabase,
+        onBack = {}
+    )
+}
 
 
