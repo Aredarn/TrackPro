@@ -1,10 +1,10 @@
 package com.example.trackpro.DAO
 
-import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import com.example.trackpro.DataClasses.VehicleInformationData
+import com.example.trackpro.Models.VehiclePair
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -27,10 +27,4 @@ interface VehicleInformationDAO {
     suspend fun deleteVehicle(vehicleId: Int)
 }
 
-data class VehiclePair(
-    val vehicleId: Long,
 
-    // Use @ColumnInfo to specify the column name to map the concatenated result
-    @ColumnInfo(name = "manufacturer || ' ' || model")
-    val manufacturerAndModel: String
-)

@@ -190,14 +190,23 @@ fun TrackView(gpsPoints: List<LatLonOffset>) {
                 .border(
                     width = 2.dp,
                     color = Color.Black,
-                    shape = RoundedCornerShape(8.dp) // Optional rounded corners
+                    shape = RoundedCornerShape(8.dp)
                 )
                 .aspectRatio(1f) // Make the canvas square
-                .background(Color.LightGray) // Optional background for the canvas
+                .background(Color.LightGray)
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 // Draw the track, start line, and animated dot
-                drawTrack(gpsPoints, margin,1f )//,animationProgress)
+                val driverPos: LatLonOffset? = gpsData.value?.let { LatLonOffset(it.latitude,
+                    gpsData.value!!.longitude) }
+
+                if (driverPos != null) {
+                    drawTrack(gpsPoints, margin,driverPos )
+                }
+                else
+                {
+                    drawTrack(gpsPoints,margin,1f)
+                }
             }
         }
     }

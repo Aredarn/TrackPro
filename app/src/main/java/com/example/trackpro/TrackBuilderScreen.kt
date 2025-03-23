@@ -1,16 +1,13 @@
 package com.example.trackpro
-import androidx.compose.foundation.Canvas
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,13 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,28 +40,21 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.room.Database
 import androidx.room.Room
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.DataClasses.TrackMainData
 import com.example.trackpro.ExtrasForUI.LatLonOffset
+import com.example.trackpro.ExtrasForUI.drawTrack
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.toDataClass
 import com.example.trackpro.ui.theme.TrackProTheme
-import com.github.mikephil.charting.data.Entry
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import com.example.trackpro.ExtrasForUI.drawTrack
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlin.random.Random
 
 
 class TrackBuilderScreen : ComponentActivity()
@@ -148,7 +137,6 @@ val gpsPoints = listOf(
 )
 
 
-@OptIn(DelicateCoroutinesApi::class)
 @Composable
 fun TrackBuilderScreen(
     database: ESPDatabase,
@@ -159,6 +147,8 @@ fun TrackBuilderScreen(
     val isConnected = remember { mutableStateOf(false) }
 
     val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
+    val gpsPointsList = remember { mutableListOf<TrackCoordinatesData>() }
+
     val rawJson = remember { mutableStateOf("") }
     val context = LocalContext.current
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
@@ -189,7 +179,7 @@ fun TrackBuilderScreen(
                         database.trackCoordinatesDao().insertTrackPart(dataBuffer.toList())
 
                         //add the points to the gpsPoints which will be rendered on screen
-                        //gpsPoints.addAll(dataBuffer.toList());
+                        gpsPointsList.addAll(dataBuffer.toList())
 
                         dataBuffer.clear()
                     } catch (e: Exception) {
@@ -206,25 +196,23 @@ fun TrackBuilderScreen(
         insertJob = null
     }
 
-    val gpsPointsList = remember { mutableStateListOf<LatLonOffset>() }
     // Index to keep track of which point to add
-    var currentIndex by remember { mutableStateOf(0) }
+    var currentIndex by remember { mutableIntStateOf(0) }
 
 
     //Tester function. works with static data from Pannonia ring
-
     suspend fun startAddingGpsPoints() {
         // Loop to add points at intervals
         while (currentIndex < gpsPoints.size-1) {
             // Add the next point to the list
-            gpsPointsList.add(gpsPoints[currentIndex])
+            //gpsPointsList.add(gpsPoints[currentIndex])
 
             // Increment the index to add the next point
             currentIndex++
 
             Log.d("add", "Added: ${gpsPoints[currentIndex]}")
 
-            // Wait for 1 second before adding the next point
+            // Wait for 0.1 second before adding the next point
             delay(100)
         }
     }
@@ -282,7 +270,7 @@ fun TrackBuilderScreen(
                 isSessionActive = !isSessionActive
                 if (isSessionActive) {
                     coroutineScope.launch(Dispatchers.IO) {
-                        trackID = startTrackBuilder(database)
+                        trackID = startTrackBuilder(database,trackname,countryname,lengthoftrack)
                         startBatchInsert()
                     }
                 } else {
@@ -341,12 +329,7 @@ fun TrackBuilderScreen(
             showStartBuilderButton = true
         }
     )
-
-
-
 }
-
-
 
 @Composable
 fun TrackInfoAlert(
@@ -403,12 +386,12 @@ fun TrackInfoAlert(
 }
 
 
-suspend fun startTrackBuilder(database: ESPDatabase):Long
+suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countryname: String,lengthoftrack: Double):Long
 {
-    val Track = TrackMainData(trackName = "TesztTrack", totalLength = 2234.1, country = "Hun")
-    val id = database.trackMainDao().insertTrackMainDataDAO(Track)
+    val track = TrackMainData(trackName = trackName, totalLength = lengthoftrack, country = countryname)
+    val id = database.trackMainDao().insertTrackMainDataDAO(track)
 
-    return  id;
+    return  id
 }
 
 

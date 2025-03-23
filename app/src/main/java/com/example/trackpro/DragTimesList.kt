@@ -1,86 +1,75 @@
-package com.example.trackpro.ui.screens
+package com.example.trackpro
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.trackpro.ESPDatabase
 import com.example.trackpro.DataClasses.SessionData
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import com.example.trackpro.Models.DragSessionWithVehicle
+import com.example.trackpro.ViewModels.SessionViewModel
+import com.example.trackpro.ViewModels.SessionViewModelFactory
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 class DragTimesList : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // Initialize the NavController here
             val navController = rememberNavController()
 
-            // the navController and the viewModel to DragTimesListView
+            //To get all data dynamically from the DB
             val viewModel: SessionViewModel = viewModel(factory = SessionViewModelFactory(this))
+
             DragTimesListView(viewModel = viewModel, navController = navController)
         }
     }
 }
 
 
-// ViewModel to handle session data retrieval
-class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
-    private var _sessions = MutableStateFlow<List<SessionData>>(emptyList())
-    val sessions = _sessions.asStateFlow()
-
-    init {
-        fetchSessions()
-    }
-
-    private fun fetchSessions() {
-        viewModelScope.launch {
-            _sessions.value = database.sessionDataDao().getAllSessions().first();
-        }
-    }
-}
-
-class SessionViewModelFactory(private val activity: Context) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return SessionViewModel(ESPDatabase.getInstance(activity.applicationContext)) as T
-    }
-}
-
 @Composable
 fun DragTimesListView(viewModel: SessionViewModel, navController: NavController) {
     val sessionList by viewModel.sessions.collectAsState()
+    val sessionWithVehicleList by viewModel.sessionsWithVehicle.collectAsState()
 
-    SessionListScreen(navController = navController, sessions = sessionList)
+    Log.d("Cars:" ,sessionWithVehicleList.toString())
+    SessionListScreen(navController = navController, sessions = sessionList, sessionsWithVehicles = sessionWithVehicleList)
 }
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SessionListScreen(navController: NavController, sessions: List<SessionData>) {
+fun SessionListScreen(navController: NavController, sessions: List<SessionData>, sessionsWithVehicles: List<DragSessionWithVehicle>) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("Your Sessions") }) }
     ) { paddingValues ->
@@ -94,7 +83,7 @@ fun SessionListScreen(navController: NavController, sessions: List<SessionData>)
                 }
             } else {
                 LazyColumn(modifier = Modifier.padding(16.dp)) {
-                    items(sessions) { session ->
+                    items(sessionsWithVehicles) { session ->
                         SessionCard(session, navController)
                     }
                 }
@@ -103,7 +92,41 @@ fun SessionListScreen(navController: NavController, sessions: List<SessionData>)
     }
 }
 
+@Composable
+fun SessionCard(session: DragSessionWithVehicle, navController: NavController?) {
+    val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+    val startTimeFormatted = dateFormat.format(Date(session.startTime))
+    val endTimeFormatted = session.endTime?.let { dateFormat.format(Date(it)) } ?: "..."
 
+    Log.d("Car inside:", session.toString())
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable {
+                if (navController == null) {
+                    Log.e("Navigation Error", "navController is null!")
+                } else {
+                    navController.navigate("graph/${session.sessionId}")
+                }
+            },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "${session.manufacturer}${session.model} - ${session.year}",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.W800
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Start: $startTimeFormatted", fontSize = 14.sp, color = MaterialTheme.colorScheme.secondary)
+            Text("End: $endTimeFormatted", fontSize = 14.sp, color = MaterialTheme.colorScheme.secondary)
+        }
+    }
+}
+
+/*
 @Composable
 fun SessionCard(session: SessionData, navController: NavController?) {
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
@@ -137,3 +160,4 @@ fun SessionCard(session: SessionData, navController: NavController?) {
     }
 }
 
+*/
