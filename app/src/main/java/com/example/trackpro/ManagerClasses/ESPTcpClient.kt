@@ -1,5 +1,7 @@
 package com.example.trackpro.ManagerClasses
+import convertToUnixTimestamp
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.Socket
@@ -78,34 +80,16 @@ class ESPTcpClient(
 
     // Simple function to parse the incoming data (assumed to be JSON format)
     private fun parseGpsData(data: String): RawGPSData {
-        // Improved regex to handle potential formatting issues
-        val regex = Regex(
-            "\\\"latitude\\\":\\s*([-+]?\\d*\\.\\d+|\\d+),\\s*" +
-                    "\\\"longitude\\\":\\s*([-+]?\\d*\\.\\d+|\\d+),\\s*" +
-                    "\\\"altitude\\\":\\s*(\\d+\\.?\\d*|null),\\s*" +
-                    "\\\"speed\\\":\\s*(\\d+\\.?\\d*|null),\\s*" +
-                    "\\\"satellites\\\":\\s*(\\d+|null),\\s*" +
-                    "\\\"timestamp\\\":\\s*(\\d+)"
-        )
+        return try {
+            val json = Json { ignoreUnknownKeys = true }  // Ignore unexpected fields
+            val gpsData = json.decodeFromString<RawGPSData>(data)
 
-        val matchResult = regex.find(data)
-
-        if (matchResult != null) {
-            return try {
-                RawGPSData(
-                    latitude = matchResult.groupValues[1].toDouble(),
-                    longitude = matchResult.groupValues[2].toDouble(),
-                    altitude = matchResult.groupValues[3].toDoubleOrNull(),
-                    speed = matchResult.groupValues[4].toFloatOrNull(),
-                    satellites = matchResult.groupValues[5].toIntOrNull(),
-                    timestamp = matchResult.groupValues[6].toLong()
-                )
-            } catch (e: Exception) {
-                throw IllegalArgumentException("Failed to parse GPS data due to conversion error: ${e.message}")
-            }
-        } else {
-            throw IllegalArgumentException("Failed to parse GPS data: Invalid format")
+            // Convert timestamp from String to Long
+            gpsData.copy(timestamp = convertToUnixTimestamp(gpsData.timestamp.toString()))
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Failed to parse GPS data: ${e.message} - Raw Data: $data")
         }
     }
+
 
 }
