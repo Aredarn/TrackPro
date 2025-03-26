@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
@@ -128,10 +130,10 @@ fun ESPConnectionTestScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         // Parsed GPS Data Display
-        gpsData.value?.let { GpsDataDisplay(it) } ?: Text("Waiting for GPS data...")
+        gpsData.value?.let { } ?: Text("Waiting for GPS data...")
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         Box(
             modifier = Modifier
@@ -144,9 +146,18 @@ fun ESPConnectionTestScreen() {
             Box(
                 modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color(255, 255, 255, 255))
-                .padding(10.dp))
+                .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF82F3CA), // Soft pastel green
+                                Color(0xFF8FD5FA)  // Soft pastel blue
+                            ),
+                            start = Offset(0f, 0f), // Top-left
+                            end = Offset(1000f, 1000f) // Bottom-right (spread wider for smoothness)
+                        )
+                    )
+                .padding(16.dp))
             {
                 Column {
 
@@ -155,7 +166,8 @@ fun ESPConnectionTestScreen() {
                             Text(
                                 text = "Last GPS data",
                                 style = TextStyle(
-                                    fontWeight = FontWeight.W700
+                                    fontWeight = FontWeight.W700,
+                                    fontSize = 18.sp
                                 )
 
                             )
@@ -173,7 +185,7 @@ fun ESPConnectionTestScreen() {
                         }
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "Longitude: ${gpsData.value?.longitude?:"0.00000"}",
+                                text = "Longitude: ${gpsData.value?.longitude?:"0.000000"}",
                             )
                         }
                     }
