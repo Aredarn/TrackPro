@@ -265,8 +265,6 @@ fun DragRaceScreen(
                     isConnected.value = connected
                 }
             )
-
-
             // Connect the client
             espTcpClient?.connect()
 
@@ -283,6 +281,7 @@ fun DragRaceScreen(
                 coroutineScope.launch(Dispatchers.IO) {
                     espTcpClient?.disconnect()
                     stopBatchInsert()
+                    endSessionPostProcess(sessionID,database)
                 }
             } catch (e: IOException) {
                 e.printStackTrace()
@@ -437,12 +436,22 @@ fun DragRaceScreen(
                                 fontWeight = FontWeight(700))
                         )
                     }
+                    Spacer(modifier = Modifier.height(5.dp))
+
 
                     HorizontalDivider(thickness = 3 .dp)
 
-                    Spacer(modifier = Modifier.padding(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
 
+                    Row(modifier = Modifier.fillMaxWidth() ) {
+                        Text(
+                            text = "Acceleration (0-100): ${dragTime ?: -1} sec",
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight(700))
+                        )
+                    }
                     Row(modifier = Modifier.fillMaxWidth() ) {
                         Text(
                             text = "Acceleration (0-100): ${dragTime ?: -1} sec",
