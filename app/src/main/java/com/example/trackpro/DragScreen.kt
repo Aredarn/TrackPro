@@ -1,12 +1,14 @@
 package com.example.trackpro
 
-import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +16,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,10 +37,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -67,6 +79,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import kotlin.io.path.Path
 
 class DragScreen : ComponentActivity() {
 
@@ -197,7 +210,8 @@ fun DragRaceScreen(
         }
     }
 
-    fun stopBatchInsert() {
+    suspend fun stopBatchInsert() {
+        endSession(database)
         insertJob?.cancel()
         dataBuffer.clear()
         insertJob = null
@@ -208,18 +222,6 @@ fun DragRaceScreen(
 
             viewModel.fetchVehicles()
 
-            /*
-            dataPoints.add(Entry(1f,0f))
-            dataPoints.add(Entry(2f,21f))
-            dataPoints.add(Entry(3f,29f))
-            dataPoints.add(Entry(4f,36f))
-            dataPoints.add(Entry(5f,45f))
-            dataPoints.add(Entry(6f,58f))
-            dataPoints.add(Entry(7f,75f))
-            dataPoints.add(Entry(8f,86f))
-            dataPoints.add(Entry(9f,95f))
-            dataPoints.add(Entry(10f,102f))
-            */
             // Initialize ESPTcpClient
             startBatchInsert()
             espTcpClient = ESPTcpClient(
@@ -247,10 +249,7 @@ fun DragRaceScreen(
                         synchronized(dataPoints) {
                             derivedData?.let { data ->
                                 if (lastTimestamp == null || data.timestamp != lastTimestamp) {
-                                    // Add data to buffer instead of inserting directly
                                     dataBuffer.add(data)
-
-                                    // Update graph points (if needed)
                                     data.speed?.let {
                                         Entry(i, it)
                                     }?.let { dataPoints.add(it) }
@@ -281,9 +280,10 @@ fun DragRaceScreen(
     DisposableEffect(Unit) {
         onDispose {
             try {
-                espTcpClient?.disconnect()
-                stopBatchInsert()
-                //Log.d("TCP", "Disconnected from server")
+                coroutineScope.launch(Dispatchers.IO) {
+                    espTcpClient?.disconnect()
+                    stopBatchInsert()
+                }
             } catch (e: IOException) {
                 e.printStackTrace()
             }
@@ -330,60 +330,139 @@ fun DragRaceScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             //Diagram
-            AndroidView(
-                factory = { context ->
-                    LineChart(context).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-
-                        // Customize the chart
-                        xAxis.position = XAxis.XAxisPosition.BOTTOM
-                        xAxis.setDrawGridLines(false)
-                        axisRight.isEnabled = false
-                        description.isEnabled = false
-                    }
-                },
-                update = { chart ->
-                    val dataSet = LineDataSet(dataPoints, "Speed (km/h)").apply {
-                        setDrawValues(false)
-                        setDrawCircles(false)
-                        lineWidth = 4f  // Increase line thickness
-                        color = Color.RED  // Set a more visible color
-                        setDrawFilled(true)  // Fill area under the line
-                        fillColor = Color.parseColor("#80FF0000") // Semi-transparent fill
-                    }
-
-                    if (chart.data == null) {
-                        chart.data = LineData(dataSet)
-                    } else {
-                        chart.data.clearValues()
-                        chart.data.addDataSet(dataSet)
-                    }
-
-                    chart.notifyDataSetChanged() // Notify the chart of dataset changes
-                    chart.postInvalidate() // Refresh UI immediately
-                },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height((screenHeight / 2).dp)
-                    .padding(16.dp)
+                    .border(2.dp, Color(0, 0, 0, 255))
             )
+            {
+                AndroidView(
+                    factory = { context ->
+                        LineChart(context).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
 
+                            // Customize the chart
+                            xAxis.position = XAxis.XAxisPosition.BOTTOM
+                            xAxis.setDrawGridLines(false)
+                            axisRight.isEnabled = false
+                            description.isEnabled = false
+                        }
+                    },
+                    update = { chart ->
+                        val dataSet = LineDataSet(dataPoints, "Speed (km/h)").apply {
+                            setDrawValues(false)
+                            setDrawCircles(false)
+                            lineWidth = 4f  // Increase line thickness
+                            color = 2  // Set a more visible color
+                            setDrawFilled(true)  // Fill area under the line
+                            fillColor = 230 // Semi-transparent fill
+                        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                        if (chart.data == null) {
+                            chart.data = LineData(dataSet)
+                        } else {
+                            chart.data.clearValues()
+                            chart.data.addDataSet(dataSet)
+                        }
 
-
-            dragTime?.let {
-                Text(
-                    text = "Drag Time: ${it}s",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.tertiary
+                        chart.notifyDataSetChanged()
+                        chart.postInvalidate()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height((screenHeight / 2).dp)
+                        .border(16.dp, Color(0,0,255,0))
                 )
             }
+
+
+            //Overengineered bottom borders by: CHATGPT
+            //Everything for design I guess...
+            //Don't use AI kids.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)) // Clip only bottom corners
+                    .background(Color.White) // Box background color
+                    .drawBehind {
+                        val strokeWidth = 5.dp.toPx()
+                        val cornerRadius = 20.dp.toPx()
+                        val width = size.width
+                        val height = size.height
+
+                        val path = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(0f, 0f) // Start from top-left corner
+                            lineTo(width, 0f) // Draw top straight line
+                            lineTo(width, height - cornerRadius) // Move down on right side
+                            quadraticBezierTo(
+                                width, height, // Control point
+                                width - cornerRadius, height // Bottom-right curve
+                            )
+                            lineTo(cornerRadius, height) // Move left
+                            quadraticBezierTo(
+                                0f, height, // Control point
+                                0f, height - cornerRadius // Bottom-left curve
+                            )
+                            close() // Close path
+                        }
+
+                        drawPath(
+                            path = path,
+                            color = Color(0, 0, 0, 255), // Border color
+                            style = Stroke(width = strokeWidth)
+                        )
+                    }
+                    .padding(20.dp)
+            )
+
+            {
+                dragTime?.let {
+                    Text(
+                        text = "Drag Time: ${it}s",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+
+                Column()
+                {
+                    Row(modifier = Modifier.fillMaxWidth() ) {
+                        Text(
+                            text = "Speed : ${gpsData.value?.speed ?: -1} Km/H",
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight(700))
+                        )
+                    }
+
+                    HorizontalDivider(thickness = 3 .dp)
+
+                    Spacer(modifier = Modifier.padding(10.dp))
+
+
+                    Row(modifier = Modifier.fillMaxWidth() ) {
+                        Text(
+                            text = "Acceleration (0-100): ${dragTime ?: -1} sec",
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight(700))
+                        )
+                    }
+                }
+
+            }
+
+
         }
 
+
+
+
+        // A 7 segment display to show speed.
+        // Allocates a bunch of resources
         /*
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Column(
@@ -401,6 +480,9 @@ fun DragRaceScreen(
                 )
             }
         } */
+
+
+
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -477,7 +559,8 @@ fun DragRaceScreen(
 
 @Preview(
     showBackground = true,
-    device = "spec:width=411dp,height=891dp,dpi=420,isRound=false,chinSize=0dp,orientation=landscape")
+    //device = "spec:width=411dp,height=891dp,dpi=420,isRound=false,chinSize=0dp,orientation=landscape"
+)
 @Composable
 fun DragScreenPreview() {
     val fakeDatabase = Room.inMemoryDatabaseBuilder(
