@@ -20,7 +20,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTimeFilled
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Satellite
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -129,9 +138,8 @@ fun ESPConnectionTestScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-
         // Parsed GPS Data Display
-        gpsData.value?.let { } ?: Text("Waiting for GPS data...")
+        //gpsData.value?.let { } ?: Text("Waiting for GPS data...")
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -176,32 +184,61 @@ fun ESPConnectionTestScreen() {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Row(modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.fillMaxWidth() ) {
+
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                            Text(
-                                text = "Latitude: ${gpsData.value?.latitude ?: "0.000000"}",
-                                style = TextStyle()
-                            )
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Latitude", modifier = Modifier.size(20.dp))
+                                Text(
+                                    text = "Latitude: ${gpsData.value?.latitude ?: "0.000000"}",
+                                    style = TextStyle()
+                                )
+                            }
                         }
+
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "Longitude: ${gpsData.value?.longitude?:"0.000000"}",
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.LocationOn,
+                                        contentDescription = "Latitude",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = "Longitude: ${gpsData.value?.longitude ?: "0.000000"}",
+                                    )
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                            Text(
-                                text = "Altitude: ${gpsData.value?.altitude ?: "0.000000"}",
-                                style = TextStyle()
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically)
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.Terrain,
+                                    contentDescription = "Altitude",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Altitude: ${gpsData.value?.altitude ?: "0.000000"}",
+                                    style = TextStyle()
+                                )
+                            }
                         }
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "Satellites: ${gpsData.value?.satellites?:"0"}",
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically)
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.Satellite,
+                                    contentDescription = "Satellites",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Satellites: ${gpsData.value?.satellites?:"0"}",
+                                )
+                            }
                         }
                     }
 
@@ -209,15 +246,32 @@ fun ESPConnectionTestScreen() {
 
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                            Text(
-                                text = "Speed: ${gpsData.value?.speed ?: "0.00"} km/h",
-                                style = TextStyle()
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically)
+                            {
+
+                                Icon(
+                                    imageVector = Icons.Default.Speed,
+                                    contentDescription = "Speed",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Speed: ${gpsData.value?.speed ?: "0.00"} km/h",
+                                    style = TextStyle()
+                                )
+                            }
                         }
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "Timestamp: ${gpsData.value?.timestamp?:"12:00.000"}",
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically)
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.AccessTimeFilled,
+                                    contentDescription = "Timestamp",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Timestamp: ${gpsData.value?.timestamp ?: "12:00.00"}",
+                                )
+                            }
                         }
                     }
                 }
