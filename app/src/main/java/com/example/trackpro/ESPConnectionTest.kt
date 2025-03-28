@@ -91,6 +91,8 @@ fun ESPConnectionTestScreen() {
 
     // Channel to handle incoming GPS data efficiently
     val gpsChannel = remember { Channel<RawGPSData>(capacity = Channel.CONFLATED) }
+    val updateRate = remember { mutableStateOf(0) }
+
 
     // Launch effect for connection setup
     LaunchedEffect(Unit) {
@@ -136,7 +138,6 @@ fun ESPConnectionTestScreen() {
             color = if (isConnected.value) Color.Green else Color.Red
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
 
         // Parsed GPS Data Display
         //gpsData.value?.let { } ?: Text("Waiting for GPS data...")
@@ -185,14 +186,19 @@ fun ESPConnectionTestScreen() {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Row(modifier = Modifier.fillMaxWidth() ) {
-
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.LocationOn, contentDescription = "Latitude", modifier = Modifier.size(20.dp))
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = "Latitude",
+                                    modifier = Modifier.size(20.dp)
+                                )
                                 Text(
                                     text = "Latitude: ${gpsData.value?.latitude ?: "0.000000"}",
-                                    style = TextStyle()
+                                    style = TextStyle(
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight(370)
+                                    )
                                 )
                             }
                         }
@@ -206,6 +212,10 @@ fun ESPConnectionTestScreen() {
                                     )
                                     Text(
                                         text = "Longitude: ${gpsData.value?.longitude ?: "0.000000"}",
+                                        style = TextStyle(
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight(370)
+                                        )
                                     )
                             }
                         }
@@ -223,7 +233,10 @@ fun ESPConnectionTestScreen() {
                                 )
                                 Text(
                                     text = "Altitude: ${gpsData.value?.altitude ?: "0.000000"}",
-                                    style = TextStyle()
+                                    style = TextStyle(
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight(370)
+                                    )
                                 )
                             }
                         }
@@ -237,6 +250,11 @@ fun ESPConnectionTestScreen() {
                                 )
                                 Text(
                                     text = "Satellites: ${gpsData.value?.satellites?:"0"}",
+                                    style = TextStyle(
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight(370)
+                                    )
+
                                 )
                             }
                         }
@@ -256,7 +274,10 @@ fun ESPConnectionTestScreen() {
                                 )
                                 Text(
                                     text = "Speed: ${gpsData.value?.speed ?: "0.00"} km/h",
-                                    style = TextStyle()
+                                    style = TextStyle(
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight(370)
+                                    )
                                 )
                             }
                         }
@@ -270,6 +291,12 @@ fun ESPConnectionTestScreen() {
                                 )
                                 Text(
                                     text = "Timestamp: ${gpsData.value?.timestamp ?: "12:00.00"}",
+                                    style = TextStyle(
+
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight(370)
+                                    )
+
                                 )
                             }
                         }
@@ -291,6 +318,13 @@ fun ESPConnectionTestScreen() {
             modifier = Modifier
                 .background(Color.LightGray.copy(alpha = 0.2f))
                 .padding(8.dp)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Updates/sec: ${updateRate}",
+            style = MaterialTheme.typography.bodySmall,
+            //modifier = Modifier
         )
 
 
