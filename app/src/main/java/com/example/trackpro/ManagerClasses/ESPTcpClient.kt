@@ -79,17 +79,34 @@ class ESPTcpClient(
     }
 
     // Simple function to parse the incoming data (assumed to be JSON format)
+
     private fun parseGpsData(data: String): RawGPSData {
         return try {
-            val json = Json { ignoreUnknownKeys = true }  // Ignore unexpected fields
-            val gpsData = json.decodeFromString<RawGPSData>(data)
+            val json = Json { ignoreUnknownKeys = true }
+            val gpsDataRaw = json.decodeFromString<RawGPSDataRaw>(data)
 
             // Convert timestamp from String to Long
-            gpsData.copy(timestamp = convertToUnixTimestamp(gpsData.timestamp.toString()))
+            val convertedTimestamp = convertToUnixTimestamp(gpsDataRaw.timestamp)
+
+            gpsDataRaw.toRawGPSData(convertedTimestamp)
+
         } catch (e: Exception) {
             throw IllegalArgumentException("Failed to parse GPS data: ${e.message} - Raw Data: $data")
         }
     }
 
-
+    // Temporary Data Class to Handle String Timestamps
+    @Serializable
+    data class RawGPSDataRaw(
+        val latitude: Double,
+        val longitude: Double,
+        val altitude: Double,
+        val speed: Float,
+        val satellites: Int,
+        val timestamp: String
+    ) {
+        fun toRawGPSData(timestampLong: Long): RawGPSData {
+            return RawGPSData(latitude, longitude, altitude, speed, satellites, timestampLong)
+        }
+    }
 }

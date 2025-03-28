@@ -147,8 +147,8 @@ fun ESPConnectionTestScreen() {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0, 142, 215, 255))
-                .padding(8.dp)
+                .background(Color(0, 0, 0, 255))
+                .padding(4.dp)
         )
         {
             Box(

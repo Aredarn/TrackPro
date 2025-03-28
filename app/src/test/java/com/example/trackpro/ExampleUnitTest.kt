@@ -2,7 +2,6 @@ package com.example.trackpro
 
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
 import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.ESPDatabase
 import com.example.trackpro.DAO.RawGPSDataDao
 import org.junit.Before
 import org.junit.Test
