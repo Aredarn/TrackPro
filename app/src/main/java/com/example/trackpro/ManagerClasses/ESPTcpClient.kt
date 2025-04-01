@@ -45,10 +45,14 @@ class ESPTcpClient(
         Thread {
             try {
                 socket = Socket(serverAddress, port)
-                reader = BufferedReader(InputStreamReader(socket?.getInputStream()))
+                //reader = BufferedReader(InputStreamReader(socket?.getInputStream()))
+                val inputStream = socket!!.getInputStream()
+                val buffer = ByteArray(256) // Match ESP32 buffer size
+
                 onConnectionStatusChanged(true)  // Notify that the connection was successful
 
                 // Continuously read data from the server
+                /*
                 while (true) {
                     val message = reader?.readLine()  // Read message from the server
                     if (message != null) {
@@ -57,6 +61,20 @@ class ESPTcpClient(
                             onMessageReceived(gpsData)
                         } catch (e: Exception) {
                             e.printStackTrace()  // If parsing fails, just log the error
+                        }
+                    }
+                }*/
+                while (true) {
+                    val bytesRead = inputStream.read(buffer)
+                    if (bytesRead > 0) {
+                        try {
+                            val message = String(buffer, 0, bytesRead).trim()
+                            val gpsData = parseGpsData(message)
+                            onMessageReceived(gpsData)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            // Optional: Send raw message for debugging
+                            //onMessageReceived(RawGPSData().apply { raw = message })
                         }
                     }
                 }
