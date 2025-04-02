@@ -124,7 +124,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 }
                 Text("Total Distance: $totalDist km")
                 Text("0-100 Time: ${if (dragTime > 0) "$dragTime sec" else "No 0-100 detected"}")
-                Text("1/4 Mile:")
+                Text("1/4 Mile: ${if (quarterMileTime >0) "$quarterMileTime sec" else "No 1/4 mile run detected"}")
             }
         }
 

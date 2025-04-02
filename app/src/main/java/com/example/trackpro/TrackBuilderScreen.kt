@@ -171,10 +171,8 @@ fun TrackBuilderScreen(
     var showStartBuilderButton by remember { mutableStateOf(false) }
 
     lateinit var postProc: PostProcessing
+    postProc = PostProcessing(database)
 
-    fun initializePostProcessing() {
-        postProc = PostProcessing(database) // Or retrieve an existing instance
-    }
 
     fun startBatchInsert() {
         insertJob = coroutineScope.launch(Dispatchers.IO) {
