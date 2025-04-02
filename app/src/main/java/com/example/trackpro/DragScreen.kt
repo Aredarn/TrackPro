@@ -148,6 +148,7 @@ fun DragRaceScreen(
 
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
     var lastTimestamp: Long? by rememberSaveable { mutableStateOf(null) }
+    var isReady: Boolean by rememberSaveable { mutableStateOf(false) }
     var dragTime: Double? by rememberSaveable { mutableStateOf(null) }
     val dataPoints = remember { mutableStateListOf<Entry>() }
 
@@ -172,6 +173,7 @@ fun DragRaceScreen(
     var selectedVehicleId by rememberSaveable { mutableIntStateOf(-1) }
 
 
+
     fun startBatchInsert() {
         insertJob = coroutineScope.launch(Dispatchers.IO) {
             while (isActive) {
@@ -190,6 +192,10 @@ fun DragRaceScreen(
                     try {
                         Log.d("BatchInsert", "Inserting ${dataToInsert.size} data points at ${System.currentTimeMillis()}")
                         database.rawGPSDataDao().insertAll(dataToInsert) // Safe call
+
+                        val list = dataPoints.takeLast(5)
+                        isReady = list.all { it.y <= 2 }
+
                     } catch (e: Exception) {
                         Log.e("Database", "Batch insert failed: ${e.message}")
                     }
@@ -314,12 +320,19 @@ fun DragRaceScreen(
             if (loadingState) {
                 Text(text = "Loading vehicles...") // Show loading message
             } else {
-                // DropdownMenuFieldMulti will be displayed when vehicles are available
-                if (vehicles.isNotEmpty()) {
-                    DropdownMenuFieldMulti("Select car", vehicles, selectedVehicle) { selectedVehicleId = it.toInt() }
-                } else {
-                    Text(text = "No vehicles available") // Show a message if no vehicles are found
+                if(!isSessionActive) {
+                    // DropdownMenuFieldMulti will be displayed when vehicles are available
+                    if (vehicles.isNotEmpty()) {
+                        DropdownMenuFieldMulti("Select car", vehicles, selectedVehicle) { selectedVehicleId = it.toInt() }
+                    } else {
+                        Text(text = "No vehicles available") // Show a message if no vehicles are found
+                    }
                 }
+            }
+
+            if(isSessionActive)
+            {
+                Text( text = if(isReady) "Go go GO" else "Wait")
             }
 
 
@@ -451,7 +464,7 @@ fun DragRaceScreen(
                     }
                     Row(modifier = Modifier.fillMaxWidth() ) {
                         Text(
-                            text = "Acceleration (0-100): ${dragTime ?: -1} sec",
+                            text = "Quarter mile time: ${0 ?: -1} sec",
                             style = TextStyle(
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight(700))
@@ -507,6 +520,11 @@ fun DragRaceScreen(
                             Log.d("CarID", selectedVehicleId.toString())
                             sessionID = startSession(database,selectedVehicleId.toLong())
 
+                            if(sessionID.toInt() == -1)
+                            {
+
+                            }
+
                             Log.d("session:", "Id:$sessionID")
                         }
                     } else {
@@ -534,6 +552,12 @@ fun DragRaceScreen(
 
 
     suspend fun startSession(database: ESPDatabase, selectedVehicleId: Long): Long {
+
+        if(selectedVehicleId == null)
+        {
+            return -1
+        }
+
         val sessionManager = SessionManager.getInstance(database)
         var id: Long
 
