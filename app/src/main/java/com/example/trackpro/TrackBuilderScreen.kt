@@ -41,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.room.Room
+import com.example.trackpro.CalculationClasses.PostProcessing
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.DataClasses.TrackMainData
@@ -169,6 +170,12 @@ fun TrackBuilderScreen(
     var showDialog by remember { mutableStateOf(false) }
     var showStartBuilderButton by remember { mutableStateOf(false) }
 
+    lateinit var postProc: PostProcessing
+
+    fun initializePostProcessing() {
+        postProc = PostProcessing(database) // Or retrieve an existing instance
+    }
+
     fun startBatchInsert() {
         insertJob = coroutineScope.launch(Dispatchers.IO) {
             while (isActive) {
@@ -250,8 +257,6 @@ fun TrackBuilderScreen(
             onConnectionStatusChanged = { connected -> isConnected.value = connected }
         )
         espTcpClient?.connect()
-
-
     }
 
     Column(
@@ -277,6 +282,7 @@ fun TrackBuilderScreen(
                     coroutineScope.launch(Dispatchers.IO) {
                         trackID = -1
                         stopBatchInsert()
+                        postProc.processTrackPoints(trackId = trackID.toInt())
                     }
                 }
             }, modifier = Modifier.fillMaxWidth()) {
@@ -316,7 +322,6 @@ fun TrackBuilderScreen(
             }
         }
     }
-
 
     //
     TrackInfoAlert(
@@ -391,7 +396,7 @@ suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countrynam
     val track = TrackMainData(trackName = trackName, totalLength = lengthoftrack, country = countryname)
     val id = database.trackMainDao().insertTrackMainDataDAO(track)
 
-    return  id
+    return id
 }
 
 

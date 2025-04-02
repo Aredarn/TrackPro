@@ -31,7 +31,6 @@ class DragTimeCalculation(
         postProc.postProcessing(sessionid)
     }
 
-
     suspend fun timeFromZeroToHundred(): Double {
         // Fetch session data in chronological order.
         var sessionItems = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)

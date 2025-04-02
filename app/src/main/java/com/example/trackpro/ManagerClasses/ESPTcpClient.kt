@@ -51,19 +51,6 @@ class ESPTcpClient(
 
                 onConnectionStatusChanged(true)  // Notify that the connection was successful
 
-                // Continuously read data from the server
-                /*
-                while (true) {
-                    val message = reader?.readLine()  // Read message from the server
-                    if (message != null) {
-                        try {
-                            val gpsData = parseGpsData(message)
-                            onMessageReceived(gpsData)
-                        } catch (e: Exception) {
-                            e.printStackTrace()  // If parsing fails, just log the error
-                        }
-                    }
-                }*/
                 while (true) {
                     val bytesRead = inputStream.read(buffer)
                     if (bytesRead > 0) {
@@ -73,8 +60,6 @@ class ESPTcpClient(
                             onMessageReceived(gpsData)
                         } catch (e: Exception) {
                             e.printStackTrace()
-                            // Optional: Send raw message for debugging
-                            //onMessageReceived(RawGPSData().apply { raw = message })
                         }
                     }
                 }
@@ -97,7 +82,6 @@ class ESPTcpClient(
     }
 
     // Simple function to parse the incoming data (assumed to be JSON format)
-
     private fun parseGpsData(data: String): RawGPSData {
         return try {
             val json = Json { ignoreUnknownKeys = true }

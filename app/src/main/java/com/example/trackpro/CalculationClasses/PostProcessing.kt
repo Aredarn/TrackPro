@@ -25,9 +25,9 @@ class PostProcessing(val database: ESPDatabase) {
     }
 
 
-//------------------------------------//
-//------------------------------------//
-//------------------------------------//
+    //------------------------------------//
+    //------------------------------------//
+    //------------------------------------//
 
     fun applyMovingAverage(data: List<RawGPSData>, windowSize: Int, sessionId: Long): List<SmoothedGPSData> {
         val smoothed = mutableListOf<SmoothedGPSData>()
@@ -85,20 +85,22 @@ class PostProcessing(val database: ESPDatabase) {
     }
 
     //------------------------------------//
-
     //------------------------------------//
-
+    //------------------------------------//
 
     suspend fun saveSmoothedData(smoothedData: List<SmoothedGPSData>) {
         database.smoothedDataDao().insertAll(smoothedData)
     }
 
 
-    fun processTrackPoints(
-        rawPoints: List<TrackCoordinatesData>,
+    suspend fun processTrackPoints(
+        trackId: Int,
         minDistance: Double = 1.0,  // Minimum distance between points in meters
         lapThreshold: Double = 50.0  // Distance to consider as completing a lap
     ): List<TrackCoordinatesData> {
+
+        var rawPoints: List<TrackCoordinatesData> = database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
+
         if (rawPoints.isEmpty()) return emptyList()
 
         // Step 1: Remove consecutive duplicates
