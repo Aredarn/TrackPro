@@ -79,6 +79,7 @@ class PostProcessing(val database: ESPDatabase) {
         val nonNullValues = this.filterNotNull()
         return if (nonNullValues.isNotEmpty()) nonNullValues.average() else null
     }
+
     private fun List<Float?>.averageOrNull(): Float? {
         val nonNullValues = this.filterNotNull()
         return if (nonNullValues.isNotEmpty()) nonNullValues.average().toFloat() else null
@@ -95,7 +96,7 @@ class PostProcessing(val database: ESPDatabase) {
 
     suspend fun processTrackPoints(
         trackId: Int,
-        minDistance: Double = 1.0,  // Minimum distance between points in meters
+        minDistance: Double = 0.5,  // Minimum distance between points in meters
         lapThreshold: Double = 50.0  // Distance to consider as completing a lap
     ): List<TrackCoordinatesData> {
 
