@@ -67,7 +67,7 @@ fun TimeAttackScreenView(
     val lastLap = remember { mutableStateOf("00'00,00''") }
 
 
-    val backgroundColor = if (delta.value < 0) Color.Green else Color.Red
+    val deltaColor = if (delta.value < 0) Color.Green else Color.Red
 
     val viewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
 
@@ -84,8 +84,8 @@ fun TimeAttackScreenView(
         Box(
             modifier = Modifier
                 .weight(1f) // Half of the screen
-                .fillMaxWidth()
-                .background(backgroundColor),
+                .fillMaxWidth(),
+                //.background(backgroundColor),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -93,7 +93,7 @@ fun TimeAttackScreenView(
                     .fillMaxSize()
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceEvenly
+                //verticalArrangement = Arrangement.SpaceEvenly
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -114,27 +114,74 @@ fun TimeAttackScreenView(
                     }
                 }
 
-                Box(
+
+                // CURRENT LAP TIME
+                Row(
                     modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth()
+                        .padding(10.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Text(
                         text = currentLapTime.value,
-                        fontSize = 44.sp,
+                        fontSize = 58.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                // + -
+                Row(
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Text(
+                        text = delta.value.toString(),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+
+                //BASIC TEXT
+                Row(
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .fillMaxWidth(),
+                ){
+                    Text(
+                        text = "REF LAP:",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.W500,
+                        color = Color.DarkGray
+                    )
+                }
+
+                // BEST LAP
+                Row(
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .fillMaxWidth(),
+                ){
+                    Text(
+                        text = bestLap.value,
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.W500,
+                        color = Color.DarkGray
                     )
                 }
             }
         }
 
+
+
+
+
         // Bottom Box - Lap info
         Box(
             modifier = Modifier
                 .weight(1f) // Half of the screen
-                .fillMaxWidth()
-                .background(backgroundColor),
+                .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
             Column(
