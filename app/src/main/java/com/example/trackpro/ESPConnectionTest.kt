@@ -59,7 +59,14 @@ import androidx.compose.ui.unit.sp
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import kotlin.math.cos
 import kotlin.math.sin
@@ -90,30 +97,39 @@ fun ESPConnectionTestScreen() {
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
 
     // Channel to handle incoming GPS data efficiently
-    val gpsChannel = remember { Channel<RawGPSData>(capacity = Channel.CONFLATED) }
+    //val gpsChannel = remember { Channel<RawGPSData>(capacity = Channel.CONFLATED) }
+    val gpsDataFlow = remember { MutableSharedFlow<RawGPSData>(extraBufferCapacity = 10) }
     val updateRate = remember { mutableStateOf(0) }
 
 
     // Launch effect for connection setup
     LaunchedEffect(Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
         espTcpClient = ESPTcpClient(
             serverAddress = ip,
             port = port,
             onMessageReceived = { data ->
-                gpsChannel.trySend(data) // Send to channel instead of direct UI update
+                gpsDataFlow.tryEmit(data) // Send to channel instead of direct UI update
             },
             onConnectionStatusChanged = { connected ->
                 isConnected.value = connected
             }
         )
         espTcpClient?.connect()
+        }
     }
 
     // Process incoming GPS data without UI lag
     LaunchedEffect(Unit) {
-        for (data in gpsChannel) {
-            gpsData.value = data
-            rawJson.value = data.toString()
+        gpsDataFlow.onEach { data ->
+            withContext(Dispatchers.Main.immediate)
+            {
+                gpsData.value = data
+            }
+            launch {
+                rawJson.value = data.toString()
+                //updateRate.value = calculateRate(data)
+            }
         }
     }
 
