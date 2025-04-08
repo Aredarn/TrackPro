@@ -64,15 +64,13 @@ class ESPTcpClient(
 
         scope.launch {
             try {
-                val newSocket = Socket().apply {
-                    connect(InetSocketAddress(serverAddress, port), 3000)
-                    soTimeout = 5000
-                }
 
-                socket = newSocket
+                socket = Socket(serverAddress,port)
+                val inputStream = socket!!.getInputStream()
+
+
                 onConnectionStatusChanged(true)
 
-                val inputStream = newSocket.getInputStream()
                 val delimiter = "\n".toByteArray() // ESP32 should send \n-terminated messages
                 val reader = DelimitedInputStreamReader(inputStream, delimiter)
 

@@ -1,7 +1,5 @@
 package com.example.trackpro
 
-import android.util.DisplayMetrics
-import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,13 +7,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,9 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -62,12 +58,12 @@ fun TimeAttackScreenView(
 
     val track = remember { mutableStateOf("Select Track") }
     val currentLapTime = remember { mutableStateOf("0'00.00''") }
-    val delta = remember { mutableStateOf(0.0) } // Positive = slower, Negative = faster
+    val delta = remember { mutableDoubleStateOf(0.0) } // Positive = slower, Negative = faster
     val bestLap = remember { mutableStateOf("00'00.00''") }
     val lastLap = remember { mutableStateOf("00'00,00''") }
 
 
-    val deltaColor = if (delta.value < 0) Color.Green else Color.Red
+    val deltaColor = if (delta.doubleValue < 0) Color.Green else Color.Red
 
     val viewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
 
@@ -85,18 +81,17 @@ fun TimeAttackScreenView(
             modifier = Modifier
                 .weight(1f) // Half of the screen
                 .fillMaxWidth(),
-                //.background(backgroundColor),
+            //.background(backgroundColor),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
+                    .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 //verticalArrangement = Arrangement.SpaceEvenly
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().background(Color(25,35,255)),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Button(onClick = { /* Track selection logic */ }) {
@@ -114,68 +109,73 @@ fun TimeAttackScreenView(
                     }
                 }
 
-
-                // CURRENT LAP TIME
-                Row(
+                Column(
                     modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                        .fillMaxSize()
+                        .padding(16.dp)
+                    ,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    //verticalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Text(
-                        text = currentLapTime.value,
-                        fontSize = 58.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-                }
+                    // CURRENT LAP TIME
+                    Row(
+                        modifier = Modifier
+                            .padding(top = 50.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Text(
+                            text = currentLapTime.value,
+                            color = deltaColor,
+                            fontSize = 68.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    }
 
-                // + -
-                Row(
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Text(
-                        text = delta.value.toString(),
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-                }
+                    // + -
+                    Row(
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Text(
+                            text = delta.doubleValue.toString(),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    }
 
-                //BASIC TEXT
-                Row(
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                ){
-                    Text(
-                        text = "REF LAP:",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.W500,
-                        color = Color.DarkGray
-                    )
-                }
+                    //BASIC TEXT
+                    Row(
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "REF LAP:",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.W500,
+                            color = Color.Gray
+                        )
+                    }
 
-                // BEST LAP
-                Row(
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                ){
-                    Text(
-                        text = bestLap.value,
-                        fontSize = 40.sp,
-                        fontWeight = FontWeight.W500,
-                        color = Color.DarkGray
-                    )
+                    // BEST LAP
+                    Row(
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = bestLap.value,
+                            fontSize = 40.sp,
+                            fontWeight = FontWeight.W500,
+                            color = Color.Gray
+                        )
+                    }
                 }
             }
         }
-
-
-
-
 
         // Bottom Box - Lap info
         Box(
@@ -197,7 +197,7 @@ fun TimeAttackScreenView(
                         .fillMaxWidth()
                 ) {
                     Text(
-                        text = "Best Lap: ${bestLap.value} | Last Lap: ${lastLap.value} | Δ ${delta.value}s",
+                        text = "Best Lap: ${bestLap.value} | Last Lap: ${lastLap.value} | Δ ${delta.doubleValue}s",
                         fontSize = 14.sp,
                         modifier = Modifier.align(Alignment.Center)
                     )

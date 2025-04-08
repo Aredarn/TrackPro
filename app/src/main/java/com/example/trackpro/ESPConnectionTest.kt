@@ -2,6 +2,7 @@ package com.example.trackpro
 
 import android.graphics.Typeface
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -59,15 +60,19 @@ import androidx.compose.ui.unit.sp
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
+import convertToUnixTimestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -101,37 +106,66 @@ fun ESPConnectionTestScreen() {
     val gpsDataFlow = remember { MutableSharedFlow<RawGPSData>(extraBufferCapacity = 10) }
     val updateRate = remember { mutableStateOf(0) }
 
+    fun calculateUiDelay(espTimestamp: Long): Long {
+        // Get current time in milliseconds (UTC)
+        val now = System.currentTimeMillis()
 
-    // Launch effect for connection setup
-    LaunchedEffect(Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
-        espTcpClient = ESPTcpClient(
-            serverAddress = ip,
-            port = port,
-            onMessageReceived = { data ->
-                gpsDataFlow.tryEmit(data) // Send to channel instead of direct UI update
-            },
-            onConnectionStatusChanged = { connected ->
-                isConnected.value = connected
-            }
-        )
-        espTcpClient?.connect()
+        // Calculate raw difference
+        val rawDelay = now - espTimestamp
+
+        // Check if difference is suspiciously large (> 1 hour)
+        return if (abs(rawDelay) > 3_600_000) {
+            // Assume ESP32 is using local timezone (2 hours behind UTC in your case)
+            val adjustedEspTime = espTimestamp + 7_200_000 // Add 2 hours (7,200,000 ms)
+            now - adjustedEspTime
+        } else {
+            rawDelay // Use as-is if within expected range
         }
     }
 
-    // Process incoming GPS data without UI lag
+
+// 1. Connection Setup (runs once)
     LaunchedEffect(Unit) {
-        gpsDataFlow.onEach { data ->
-            withContext(Dispatchers.Main.immediate)
-            {
+        try {
+            espTcpClient = ESPTcpClient(
+                serverAddress = ip,
+                port = port,
+                onMessageReceived = { data ->
+                    // Send data to Flow (thread-safe)
+                    gpsDataFlow.tryEmit(data)
+                },
+                onConnectionStatusChanged = { connected ->
+                    isConnected.value = connected
+                }
+            )
+            espTcpClient?.connect()
+        } catch (e: Exception) {
+            Log.e("ESPConnection", "TCP setup failed", e)
+        }
+    }
+
+// 2. Data Processing (UI updates)
+    LaunchedEffect(Unit) {
+        Log.d("GPSFlow", "Starting data collection...")
+        gpsDataFlow
+            .onStart { Log.d("GPSFlow", "Flow active") }
+            .catch { e -> Log.e("GPSFlow", "Flow error", e) }
+            .collect { data ->
+                Log.d("TimeDebug", """
+            Raw GPS Time: ${data.timestamp}
+            System Now: ${System.currentTimeMillis()}
+        """.trimIndent())
+
+                val delay = calculateUiDelay(data.timestamp)
+                Log.d("Performance", "UI update delay: $delay ms")
+                // Update UI states (automatically dispatched to Main thread)
                 gpsData.value = data
-            }
-            launch {
                 rawJson.value = data.toString()
-                //updateRate.value = calculateRate(data)
+                Log.d("GPSFlow", "UI updated with: $data")
             }
-        }
     }
+
+
 
     DisposableEffect(Unit) {
         onDispose {
@@ -338,7 +372,7 @@ fun ESPConnectionTestScreen() {
 
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Updates/sec: ${updateRate}",
+            text = "Delay in  ${gpsData.value?.let { calculateUiDelay(it.timestamp) / 1000 }}",
             style = MaterialTheme.typography.bodySmall,
             //modifier = Modifier
         )
