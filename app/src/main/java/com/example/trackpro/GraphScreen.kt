@@ -130,8 +130,6 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-
-
         val pagerState = rememberPagerState { 2 } // Two pages: Canvas & Chart
 
         Column {

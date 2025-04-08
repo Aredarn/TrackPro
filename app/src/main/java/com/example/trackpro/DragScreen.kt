@@ -477,9 +477,6 @@ fun DragRaceScreen(
 
         }
 
-
-
-
         // A 7 segment display to show speed.
         // Allocates a bunch of resources
         /*
@@ -539,6 +536,7 @@ fun DragRaceScreen(
                             }
                             Log.d("isItFalse?" , isSessionActive.toString())
                            dragTime = endSessionPostProcess(sessionID, database)
+
                         }
                     }
                 }
@@ -580,7 +578,6 @@ fun DragRaceScreen(
             sessionManager.endSession()
         }
     }
-
 
     suspend fun endSessionPostProcess(sessionId: Long, database: ESPDatabase): Double {
         val dragTimeCalculation = DragTimeCalculation(sessionId, database)

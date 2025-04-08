@@ -5,13 +5,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import java.io.InputStreamReader
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
@@ -171,7 +168,7 @@ class ESPTcpClient(
                     return length
                 }
 
-                if (buffer.size() > 4096) { // Prevent memory overflow
+                if (buffer.size() > 4096) {
                     buffer.reset()
                 }
             }

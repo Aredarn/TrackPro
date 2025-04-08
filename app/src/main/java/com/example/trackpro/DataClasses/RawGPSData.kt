@@ -22,9 +22,9 @@ data class RawGPSData(
     val sessionid: Long,
     val latitude: Double,
     val longitude: Double,
-    val altitude: Double?, // Optional: altitude in meters
-    val timestamp: Long, // Timestamp in milliseconds
-    val speed: Float?, // Optional: speed provided by GNSS (in m/s or km/h)
-    val fixQuality: Int? // Optional: GNSS signal quality, e.g., number of satellites
+    val altitude: Double?,
+    val timestamp: Long,
+    val speed: Float?,
+    val fixQuality: Int?
 )
 
