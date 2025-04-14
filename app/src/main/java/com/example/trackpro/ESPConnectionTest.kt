@@ -9,8 +9,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,16 +18,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTimeFilled
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Satellite
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,35 +42,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
-import convertToUnixTimestamp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.IOException
 import kotlin.math.abs
 import kotlin.math.cos
@@ -106,23 +94,55 @@ fun ESPConnectionTestScreen() {
     val gpsDataFlow = remember { MutableSharedFlow<RawGPSData>(extraBufferCapacity = 10) }
     val updateRate = remember { mutableStateOf(0) }
 
-    fun calculateUiDelay(espTimestamp: Long): Long {
-        // Get current time in milliseconds (UTC)
+    fun calculateUiDelayFormatted(espTimestamp: Long): String {
         val now = System.currentTimeMillis()
-
-        // Calculate raw difference
+        if(espTimestamp == 0L || espTimestamp == null)
+        {
+            return "-1";
+        }
         val rawDelay = now - espTimestamp
 
-        // Check if difference is suspiciously large (> 1 hour)
-        return if (abs(rawDelay) > 3_600_000) {
-            // Assume ESP32 is using local timezone (2 hours behind UTC in your case)
-            val adjustedEspTime = espTimestamp + 7_200_000 // Add 2 hours (7,200,000 ms)
+        val delay = if (abs(rawDelay) > 3_600_000) {
+            val adjustedEspTime = espTimestamp + 7_200_000 // Adjust for timezone drift
             now - adjustedEspTime
         } else {
-            rawDelay // Use as-is if within expected range
+            rawDelay
+        }
+
+        return if (delay < 1000) {
+            // Less than 1 second: show in milliseconds
+            "${delay} ms"
+        } else {
+            // 1 second or more: show in seconds with 3 decimal places
+            String.format("%.3f s", delay / 1000.0)
         }
     }
 
+
+
+    // Reusable Info Item
+    @Composable
+    fun InfoItem(icon: ImageVector, label: String, value: String) {
+        Column(
+            modifier = Modifier
+                .padding(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "$label: $value",
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium)
+                )
+            }
+        }
+    }
 
 // 1. Connection Setup (runs once)
     LaunchedEffect(Unit) {
@@ -156,8 +176,6 @@ fun ESPConnectionTestScreen() {
             System Now: ${System.currentTimeMillis()}
         """.trimIndent())
 
-                val delay = calculateUiDelay(data.timestamp)
-                Log.d("Performance", "UI update delay: $delay ms")
                 // Update UI states (automatically dispatched to Main thread)
                 gpsData.value = data
                 rawJson.value = data.toString()
@@ -182,204 +200,120 @@ fun ESPConnectionTestScreen() {
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        // Connection Status
         Text(
             text = "Connection Status (ESP WIFI): ${if (isConnected.value) "Connected" else "Disconnected"}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isConnected.value) Color.Green else Color.Red
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = if (isConnected.value) Color(0xFF4CAF50) else Color(0xFFF44336)
         )
-
-
-        // Parsed GPS Data Display
-        //gpsData.value?.let { } ?: Text("Waiting for GPS data...")
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color(0, 0, 0, 255))
-                .padding(4.dp)
-        )
-        {
-            Box(
-                modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xFF82F3CA), // Soft pastel green
-                                Color(0xFF8FD5FA)  // Soft pastel blue
-                            ),
-                            start = Offset(0f, 0f), // Top-left
-                            end = Offset(1000f, 1000f) // Bottom-right (spread wider for smoothness)
-                        )
-                    )
-                .padding(16.dp))
-            {
-                Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
 
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "Last GPS data",
-                                style = TextStyle(
-                                    fontWeight = FontWeight.W700,
-                                    fontSize = 18.sp
-                                )
+            val delayText = calculateUiDelayFormatted(gpsData.value?.timestamp ?: 0L)
+            val delayColor = if (delayText.toDouble() < 500) Color(0xFF4CAF50) else Color(0xFFF44336) // Green or Red
 
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth() ) {
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.LocationOn,
-                                    contentDescription = "Latitude",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "Latitude: ${gpsData.value?.latitude ?: "0.000000"}",
-                                    style = TextStyle(
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight(370)
-                                    )
-                                )
-                            }
-                        }
-
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.LocationOn,
-                                        contentDescription = "Latitude",
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = "Longitude: ${gpsData.value?.longitude ?: "0.000000"}",
-                                        style = TextStyle(
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight(370)
-                                        )
-                                    )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                            Row(verticalAlignment = Alignment.CenterVertically)
-                            {
-                                Icon(
-                                    imageVector = Icons.Default.Terrain,
-                                    contentDescription = "Altitude",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "Altitude: ${gpsData.value?.altitude ?: "0.000000"}",
-                                    style = TextStyle(
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight(370)
-                                    )
-                                )
-                            }
-                        }
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Row(verticalAlignment = Alignment.CenterVertically)
-                            {
-                                Icon(
-                                    imageVector = Icons.Default.Satellite,
-                                    contentDescription = "Satellites",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "Satellites: ${gpsData.value?.satellites?:"0"}",
-                                    style = TextStyle(
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight(370)
-                                    )
-
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                            Row(verticalAlignment = Alignment.CenterVertically)
-                            {
-
-                                Icon(
-                                    imageVector = Icons.Default.Speed,
-                                    contentDescription = "Speed",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "Speed: ${gpsData.value?.speed ?: "0.00"} km/h",
-                                    style = TextStyle(
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight(370)
-                                    )
-                                )
-                            }
-                        }
-                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                            Row(verticalAlignment = Alignment.CenterVertically)
-                            {
-                                Icon(
-                                    imageVector = Icons.Default.AccessTimeFilled,
-                                    contentDescription = "Timestamp",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "Timestamp: ${gpsData.value?.timestamp ?: "12:00.00"}",
-                                    style = TextStyle(
-
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight(370)
-                                    )
-
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            Text(
+                text = "Delay: ${delayText}",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = delayColor
+                )
+            )
         }
 
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // GPS Data Card
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.95f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = "Last GPS Data",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
 
-        // Raw JSON Display
-        Text("Raw JSON Data:", style = MaterialTheme.typography.labelLarge)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = rawJson.value.ifEmpty { "Waiting for data..." },
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier
-                .background(Color.LightGray.copy(alpha = 0.2f))
-                .padding(8.dp)
-        )
+                Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Delay in  ${gpsData.value?.let { calculateUiDelay(it.timestamp) / 1000 }}",
-            style = MaterialTheme.typography.bodySmall,
-            //modifier = Modifier
-        )
+                // Latitude and Longitude
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    InfoItem(
+                        icon = Icons.Default.LocationOn,
+                        label = "Latitude",
+                        value = "${gpsData.value?.latitude ?: "0.000000"}"
+                    )
+                    InfoItem(
+                        icon = Icons.Default.LocationOn,
+                        label = "Longitude",
+                        value = "${gpsData.value?.longitude ?: "0.000000"}"
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Altitude and Satellites
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    InfoItem(
+                        icon = Icons.Default.Terrain,
+                        label = "Altitude",
+                        value = "${gpsData.value?.altitude ?: "0.000000"} m"
+                    )
+                    InfoItem(
+                        icon = Icons.Default.Satellite,
+                        label = "Satellites",
+                        value = "${gpsData.value?.satellites ?: "0"}"
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Speed and Timestamp
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    InfoItem(
+                        icon = Icons.Default.Speed,
+                        label = "Speed",
+                        value = "${gpsData.value?.speed ?: "0.00"} km/h"
+                    )
+                    InfoItem(
+                        icon = Icons.Default.AccessTimeFilled,
+                        label = "Timestamp",
+                        value = "${gpsData.value?.timestamp ?: "--:--:--"}"
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
 
+        // Raw JSON Card
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.LightGray.copy(alpha = 0.2f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Raw JSON Data:",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+                )
 
-        // SpeedometerView(gpsData.value?.speed ?: 0f)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = rawJson.value.ifEmpty { "Waiting for data..." },
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                )
+            }
+        }
     }
 }
 
