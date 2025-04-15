@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
@@ -32,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
+import com.example.trackpro.CalculationClasses.rotateTrackPoints
+import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.ExtrasForUI.DropdownMenuFieldMulti
 
 
@@ -60,6 +63,8 @@ fun TimeAttackScreenView(
 ) {
 
     val track = remember { mutableStateOf("Select Track") }
+    val trackId = 1
+    //val trackCoordinates = database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
     val currentLapTime = remember { mutableStateOf("0'00.00''") }
     val delta = remember { mutableDoubleStateOf(0.0) } // Positive = slower, Negative = faster
     val bestLap = remember { mutableStateOf("00'00.00''") }
@@ -74,6 +79,20 @@ fun TimeAttackScreenView(
     val selectedVehicle by rememberSaveable { mutableStateOf("") }
     var selectedVehicleId by rememberSaveable { mutableIntStateOf(-1) }
 
+
+    // var finishLine = finishLine(track)
+
+
+
+    //User selects vehicle and starts the session
+    //Check if the user has passed the finish line
+    // Add laps, check if best lap, update delta
+    //very CPU
+    LaunchedEffect(Unit) {
+
+
+
+    }
 
     Column(
         modifier = Modifier
@@ -183,10 +202,7 @@ fun TimeAttackScreenView(
 
         // Bottom Box - Lap info
         Box(
-            modifier = Modifier
-                .weight(1f) // Half of the screen
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center
+            modifier = Modifier.weight(1f).fillMaxWidth(),contentAlignment = Alignment.Center
         ) {
             Column(
                 modifier = Modifier
@@ -202,7 +218,7 @@ fun TimeAttackScreenView(
                 ) {
                     Text(
                         text = "Δ ${delta.doubleValue}s",
-                        fontSize = 58.sp,
+                        fontSize = 68.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                         color = Color.Green,
@@ -216,8 +232,26 @@ fun TimeAttackScreenView(
             }
         }
     }
-
 }
+
+//
+fun finishLine(track: List<TrackCoordinatesData>) : List<TrackCoordinatesData>
+{
+    val finishPoint : TrackCoordinatesData? = track.find { it.isStartPoint == true }
+    var finishLine:List<TrackCoordinatesData> = emptyList()
+
+    if(finishPoint == null)
+    {
+        return finishLine
+    }
+
+    val coordinates : List<TrackCoordinatesData> = track.filter { finishPoint.id - 10 <= it.id && it.id <= finishPoint.id + 10 }
+
+    finishLine = rotateTrackPoints(coordinates, finishPoint)
+
+    return finishLine
+}
+
 
 
 @Preview(

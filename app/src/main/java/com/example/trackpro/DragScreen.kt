@@ -66,6 +66,7 @@ import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
+import com.yourpackage.ui.components.SevenSegmentView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -399,40 +400,13 @@ fun DragRaceScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)) // Clip only bottom corners
                     .background(Color.White) // Box background color
-                    .drawBehind {
-                        val strokeWidth = 5.dp.toPx()
-                        val cornerRadius = 20.dp.toPx()
-                        val width = size.width
-                        val height = size.height
-
-                        val path = androidx.compose.ui.graphics.Path().apply {
-                            moveTo(0f, 0f) // Start from top-left corner
-                            lineTo(width, 0f) // Draw top straight line
-                            lineTo(width, height - cornerRadius) // Move down on right side
-                            quadraticBezierTo(
-                                width, height, // Control point
-                                width - cornerRadius, height // Bottom-right curve
-                            )
-                            lineTo(cornerRadius, height) // Move left
-                            quadraticBezierTo(
-                                0f, height, // Control point
-                                0f, height - cornerRadius // Bottom-left curve
-                            )
-                            close() // Close path
-                        }
-
-                        drawPath(
-                            path = path,
-                            color = Color(0, 0, 0, 255), // Border color
-                            style = Stroke(width = strokeWidth)
-                        )
-                    }
                     .padding(20.dp)
             )
 
             {
                 Column()
                 {
+                    /*
                     Row(modifier = Modifier.fillMaxWidth() ) {
                         Text(
                             text = "Speed : ${gpsData.value?.speed ?: -1} Km/H",
@@ -441,10 +415,7 @@ fun DragRaceScreen(
                                 fontWeight = FontWeight(700))
                         )
                     }
-                    Spacer(modifier = Modifier.height(5.dp))
-
-
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))*/
 
 
                     Row(modifier = Modifier.fillMaxWidth() ) {
@@ -455,6 +426,9 @@ fun DragRaceScreen(
                                 fontWeight = FontWeight(700))
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Row(modifier = Modifier.fillMaxWidth() ) {
                         Text(
                             text = "Quarter mile time: ${0 ?: -1} sec",
@@ -471,12 +445,11 @@ fun DragRaceScreen(
         }
 
         // A 7 segment display to show speed.
-        // Allocates a bunch of resources
-        /*
+
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(50.dp)
+                verticalArrangement = Arrangement.spacedBy(40.dp)
             ) {
                 SevenSegmentView(
                     number = gpsData.value?.speed?.toInt() ?: 0,
@@ -488,10 +461,7 @@ fun DragRaceScreen(
                     modifier = Modifier.height(100.dp)
                 )
             }
-        } */
-
-
-
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
