@@ -1,4 +1,5 @@
 package com.example.trackpro.ManagerClasses
+import android.util.Log
 import convertToUnixTimestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,14 +65,12 @@ class ESPTcpClient(
 
         scope.launch {
             try {
-
-                socket = Socket(serverAddress,port)
+                socket = Socket(serverAddress, port)
                 val inputStream = socket!!.getInputStream()
-
 
                 onConnectionStatusChanged(true)
 
-                val delimiter = "\n".toByteArray() // ESP32 should send \n-terminated messages
+                val delimiter = "\n".toByteArray()
                 val reader = DelimitedInputStreamReader(inputStream, delimiter)
 
                 while (running.get()) {
@@ -86,10 +85,12 @@ class ESPTcpClient(
                     }
                 }
             } catch (e: Exception) {
+                Log.e("ESPTcpClient", "Connection error: ${e.message}", e) // <--- ADD THIS
                 onConnectionStatusChanged(false)
                 disconnect()
             }
         }
+
     }
 
     private suspend fun processChunk(buffer: ByteArray, length: Int) {

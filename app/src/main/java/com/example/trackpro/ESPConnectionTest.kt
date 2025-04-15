@@ -212,13 +212,13 @@ fun ESPConnectionTestScreen() {
         Row(verticalAlignment = Alignment.CenterVertically) {
 
             val delayText = calculateUiDelayFormatted(gpsData.value?.timestamp ?: 0L)
-            val delayColor = if (delayText.toDouble() < 500) Color(0xFF4CAF50) else Color(0xFFF44336) // Green or Red
+            //val delayColor = if (delayText.toDouble() < 500) Color(0xFF4CAF50) else Color(0xFFF44336) // Green or Red
 
             Text(
                 text = "Delay: ${delayText}",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = delayColor
+                    color = Color.Green
                 )
             )
         }

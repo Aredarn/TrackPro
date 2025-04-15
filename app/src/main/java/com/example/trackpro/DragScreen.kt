@@ -151,7 +151,6 @@ fun DragRaceScreen(
     var isReady: Boolean by rememberSaveable { mutableStateOf(false) }
     var dragTime: Double? by rememberSaveable { mutableStateOf(null) }
     val dataPoints = remember { mutableStateListOf<Entry>() }
-
     val context = LocalContext.current  // Get the Context in Compose
     val (ip, port) = rememberSaveable { JsonReader.loadConfig(context) } // Load once & remember it
     val coroutineScope = rememberCoroutineScope()
@@ -249,17 +248,19 @@ fun DragRaceScreen(
                             )
                         }
 
-                        synchronized(dataPoints) {
-                            derivedData?.let { data ->
-                                if (lastTimestamp == null || data.timestamp != lastTimestamp) {
-                                    dataBuffer.add(data)
-                                    data.speed?.let {
-                                        Entry(i, it)
-                                    }?.let { dataPoints.add(it) }
+                        derivedData?.let { data ->
+                            if (lastTimestamp == null || data.timestamp != lastTimestamp) {
+                                dataBuffer.add(data)
+                                lastTimestamp = data.timestamp
 
-                                    i += 1
-                                    lastTimestamp = data.timestamp
+                                // Do this on the MAIN thread
+                                coroutineScope.launch(Dispatchers.Main) {
+                                    data.speed?.let {
+                                        dataPoints.add(Entry(i, it))
+                                        i += 1
+                                    }
                                 }
+
                             }
                         }
                     }
@@ -361,7 +362,9 @@ fun DragRaceScreen(
                         }
                     },
                     update = { chart ->
-                        val dataSet = LineDataSet(dataPoints, "Speed (km/h)").apply {
+                        val safeList = dataPoints.toList() // create snapshot
+
+                        val dataSet = LineDataSet(safeList, "Speed (km/h)").apply {
                             setDrawValues(false)
                             setDrawCircles(false)
                             lineWidth = 4f  // Increase line thickness
@@ -428,14 +431,6 @@ fun DragRaceScreen(
             )
 
             {
-                dragTime?.let {
-                    Text(
-                        text = "Drag Time: ${it}s",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
-                }
-
                 Column()
                 {
                     Row(modifier = Modifier.fillMaxWidth() ) {
@@ -448,8 +443,6 @@ fun DragRaceScreen(
                     }
                     Spacer(modifier = Modifier.height(5.dp))
 
-
-                    HorizontalDivider(thickness = 3 .dp)
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -511,23 +504,23 @@ fun DragRaceScreen(
             Button(
                 onClick = {
                     if (!isSessionActive) {
-                        CoroutineScope(Dispatchers.Main).launch {
-                            isSessionActive = !isSessionActive
-
+                        coroutineScope.launch {
                             Log.d("CarID", selectedVehicleId.toString())
-                            sessionID = startSession(database,selectedVehicleId.toLong())
+                            val id = startSession(database, selectedVehicleId.toLong())
 
-                            if(sessionID.toInt() == -1)
-                            {
-
+                            if (id == -1L) {
+                                Log.e("Session", "Invalid vehicle ID or failed to start session")
+                                return@launch
                             }
 
-                            Log.d("session:", "Id:$sessionID")
+                            sessionID = id
+                            isSessionActive = true
+
+                            Log.d("session:", "Started with Id: $sessionID")
                         }
                     } else {
-                        CoroutineScope(Dispatchers.Main).launch {
-
-                            isSessionActive = !isSessionActive
+                        coroutineScope.launch {
+                        isSessionActive = !isSessionActive
 
                             if(sessionID.toInt() != -1)
                             {
