@@ -1,5 +1,7 @@
 package com.example.trackpro
 
+import android.os.SystemClock
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,11 +15,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,6 +41,10 @@ import androidx.room.Room
 import com.example.trackpro.CalculationClasses.rotateTrackPoints
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.ExtrasForUI.DropdownMenuFieldMulti
+import com.example.trackpro.ManagerClasses.ESPTcpClient
+import com.example.trackpro.ManagerClasses.JsonReader
+import com.example.trackpro.ManagerClasses.RawGPSData
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 
 class TimeAttackScreen {
@@ -43,16 +52,6 @@ class TimeAttackScreen {
 
 }
 
-
-//Select track
-//Select car
-//  |
-//  |
-//  |
-// \ /
-// Lap timing.
-//Show: DELTA, Best lap, last lap, in SMALL
-//SHOW BIG: Current lap time, red/green background based off of DELTA or
 
 //MANDATORY: Landscape mode!!!
 
@@ -62,37 +61,102 @@ fun TimeAttackScreenView(
     onBack: () -> Unit,
 ) {
 
-    val track = remember { mutableStateOf("Select Track") }
+    var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
+    val context = LocalContext.current  // Get the Context in Compose
+    val (ip, port) = rememberSaveable { JsonReader.loadConfig(context) } // Load once & remember it
+    val isConnected = rememberSaveable { mutableStateOf(false) }
+
+    val gpsDataFlow = remember { MutableSharedFlow<RawGPSData>(extraBufferCapacity = 10) }
+
+    //TRACK
+    val track :List<TrackCoordinatesData> = emptyList()
     val trackId = 1
     //val trackCoordinates = database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
-    val currentLapTime = remember { mutableStateOf("0'00.00''") }
+
+    //LAP DATA
+    val currentLapTime = remember { mutableStateOf("00:00.00''") }
     val delta = remember { mutableDoubleStateOf(0.0) } // Positive = slower, Negative = faster
     val bestLap = remember { mutableStateOf("00'00.00''") }
     val lastLap = remember { mutableStateOf("00'00,00''") }
+    val lastCrossTime = remember { mutableLongStateOf(0L) }
 
-
-    val deltaColor = if (delta.doubleValue < 0) Color.Green else Color.Red
+    val deltaColor by remember {
+        derivedStateOf {
+            if (delta.doubleValue < 0) Color.Green else Color.Red
+        }
+    }
 
     val viewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
 
     val vehicles by viewModel.vehicles.collectAsState(initial = emptyList())
-    val selectedVehicle by rememberSaveable { mutableStateOf("") }
+    var selectedVehicle by rememberSaveable { mutableStateOf("") }
     var selectedVehicleId by rememberSaveable { mutableIntStateOf(-1) }
+    val lapStartTime = remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
+    val finishLine by remember(track) { mutableStateOf(finishLine(track)) }
 
     // var finishLine = finishLine(track)
-
-
 
     //User selects vehicle and starts the session
     //Check if the user has passed the finish line
     // Add laps, check if best lap, update delta
     //very CPU
     LaunchedEffect(Unit) {
+        try {
+            espTcpClient = ESPTcpClient(
+                serverAddress = ip,
+                port = port,
+                onMessageReceived = { data ->
+                    gpsDataFlow.tryEmit(data)
+
+                    //5 second debounce
+                    if (SystemClock.elapsedRealtime() - lastCrossTime.longValue > 5000) {
+                        if (crossedFinishLine(data, finishLine)) {
+                            lastCrossTime.longValue = SystemClock.elapsedRealtime()
+                            val finishedTime = SystemClock.elapsedRealtime() - lapStartTime.longValue
+                            val lastTimeStr = currentLapTime.value
+                            lastLap.value = lastTimeStr
+
+                            val finishedSeconds = finishedTime / 1000.0
+
+                            if (bestLap.value == "00:00.00" || finishedSeconds < parseLapTimeToSeconds(
+                                    bestLap.value
+                                )
+                            ) {
+                                bestLap.value = lastTimeStr
+                            }
+
+                            val bestSeconds = parseLapTimeToSeconds(bestLap.value)
+                            delta.doubleValue = finishedSeconds - bestSeconds
+
+                            lapStartTime.longValue = SystemClock.elapsedRealtime()
+                        }
+                    }
+                    val elapsedMillis = SystemClock.elapsedRealtime() - lapStartTime.longValue
+                    val minutes = (elapsedMillis / 60000).toInt()
+                    val seconds = ((elapsedMillis % 60000) / 1000).toInt()
+                    val centis = ((elapsedMillis % 1000) / 10).toInt()
+                    currentLapTime.value = String.format("%02d:%02d.%02d", minutes, seconds, centis)
 
 
-
+                },
+                onConnectionStatusChanged = { connected ->
+                    isConnected.value = connected
+                }
+            )
+            espTcpClient?.connect()
+        } catch (e: Exception) {
+            Log.e("ESPConnection", "TCP setup failed", e)
+        }
     }
+
+
+    DisposableEffect(Unit) {
+        onDispose {
+            espTcpClient?.disconnect()
+        }
+    }
+
 
     Column(
         modifier = Modifier
@@ -119,7 +183,7 @@ fun TimeAttackScreenView(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Button(onClick = { /* Track selection logic */ }) {
-                        Text(text = track.value)
+                        Text(text = if (track.isEmpty()) "No Track Loaded" else "Track #$trackId")
                     }
 
                     if (vehicles.isNotEmpty()) {
@@ -127,7 +191,11 @@ fun TimeAttackScreenView(
                             label = "Select car",
                             options = vehicles,
                             selectedOption = selectedVehicle
-                        ) { selectedVehicleId = it.toInt() }
+                        ) { selectedId ->
+                            selectedVehicleId = selectedId.toInt()
+                            selectedVehicle = vehicles.find { it.vehicleId == selectedId }?.manufacturerAndModel ?: ""
+                        }
+
                     } else {
                         Text(text = "No vehicles available")
                     }
@@ -250,6 +318,28 @@ fun finishLine(track: List<TrackCoordinatesData>) : List<TrackCoordinatesData>
     finishLine = rotateTrackPoints(coordinates, finishPoint)
 
     return finishLine
+}
+
+fun crossedFinishLine(data: RawGPSData, finishLine: List<TrackCoordinatesData>): Boolean {
+    if (finishLine.size < 2) return false
+
+    val (lat1, lon1) = finishLine[0].let { it.latitude to it.longitude }
+    val (lat2, lon2) = finishLine[1].let { it.latitude to it.longitude }
+
+    // Simple bounding box check
+    val minLat = minOf(lat1, lat2)
+    val maxLat = maxOf(lat1, lat2)
+    val minLon = minOf(lon1, lon2)
+    val maxLon = maxOf(lon1, lon2)
+
+    return data.latitude in minLat..maxLat && data.longitude in minLon..maxLon
+}
+
+fun parseLapTimeToSeconds(lapTime: String): Double {
+    val regex = Regex("""(\d{2}):(\d{2})\.(\d{2})""")
+    val match = regex.find(lapTime) ?: return 0.0
+    val (min, sec, ms) = match.destructured
+    return min.toInt() * 60 + sec.toInt() + ms.toInt() / 100.0
 }
 
 
