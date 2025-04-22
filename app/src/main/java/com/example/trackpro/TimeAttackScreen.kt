@@ -137,8 +137,6 @@ fun TimeAttackScreenView(
                     val seconds = ((elapsedMillis % 60000) / 1000).toInt()
                     val centis = ((elapsedMillis % 1000) / 10).toInt()
                     currentLapTime.value = String.format("%02d:%02d.%02d", minutes, seconds, centis)
-
-
                 },
                 onConnectionStatusChanged = { connected ->
                     isConnected.value = connected

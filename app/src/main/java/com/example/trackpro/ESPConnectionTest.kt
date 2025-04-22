@@ -318,20 +318,6 @@ fun ESPConnectionTestScreen() {
 }
 
 @Composable
-fun GpsDataDisplay(data: RawGPSData) {
-    Column {
-        Text("Parsed GPS Data:", style = MaterialTheme.typography.labelLarge)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Latitude: ${data.latitude}")
-        Text("Longitude: ${data.longitude}")
-        Text("Altitude: ${data.altitude ?: "N/A"}")
-        Text("Speed: ${data.speed ?: "N/A"}")
-        Text("Satellites: ${data.satellites ?: "N/A"}")
-        Text("Timestamp: ${data.timestamp}")
-    }
-}
-
-@Composable
 fun SpeedometerView(speed: Float) {
     Canvas(modifier = Modifier.size(200.dp)) {
         drawArc(
