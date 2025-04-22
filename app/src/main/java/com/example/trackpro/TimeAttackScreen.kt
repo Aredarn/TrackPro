@@ -44,6 +44,8 @@ import com.example.trackpro.ExtrasForUI.DropdownMenuFieldMulti
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
+import com.example.trackpro.ViewModels.VehicleViewModel
+import com.example.trackpro.ViewModels.VehicleViewModelFactory
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 
@@ -102,6 +104,9 @@ fun TimeAttackScreenView(
     // Add laps, check if best lap, update delta
     //very CPU
     LaunchedEffect(Unit) {
+
+        viewModel.fetchVehicles()
+
         try {
             espTcpClient = ESPTcpClient(
                 serverAddress = ip,
