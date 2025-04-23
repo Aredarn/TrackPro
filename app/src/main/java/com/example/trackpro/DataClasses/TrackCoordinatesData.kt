@@ -16,8 +16,8 @@ import androidx.room.PrimaryKey
 )
 data class TrackCoordinatesData(
     @PrimaryKey(autoGenerate = true)
-    val id : Int = 0,
-    val trackId: Int,
+    val id : Long = 0,
+    val trackId: Long,
     val latitude: Double,
     val longitude: Double,
     val altitude: Double?,

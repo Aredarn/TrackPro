@@ -224,7 +224,7 @@ fun TrackBuilderScreen(
 
     LaunchedEffect(Unit) {
 
-        startAddingGpsPoints()
+        //startAddingGpsPoints()
 
         espTcpClient = ESPTcpClient(
             serverAddress = ip,
@@ -236,7 +236,7 @@ fun TrackBuilderScreen(
                 if (isSessionActive && isConnected.value) {
                     val derivedData = gpsData.value?.let {
                         TrackCoordinatesData(
-                            trackId = trackID.toInt(),
+                            trackId = trackID,
                             latitude = it.latitude,
                             longitude = it.longitude,
                             altitude = it.altitude
@@ -274,13 +274,14 @@ fun TrackBuilderScreen(
                 if (isSessionActive) {
                     coroutineScope.launch(Dispatchers.IO) {
                         trackID = startTrackBuilder(database,trackname,countryname,lengthoftrack)
+                        Log.d("TrckID:", "" + trackID)
                         startBatchInsert()
                     }
                 } else {
                     coroutineScope.launch(Dispatchers.IO) {
-                        trackID = -1
                         stopBatchInsert()
                         postProc.processTrackPoints(trackId = trackID.toInt())
+                        trackID = -1
                     }
                 }
             }, modifier = Modifier.fillMaxWidth()) {
@@ -394,6 +395,7 @@ suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countrynam
     val track = TrackMainData(trackName = trackName, totalLength = lengthoftrack, country = countryname)
     val id = database.trackMainDao().insertTrackMainDataDAO(track)
 
+    Log.d("Inser id:",""+ id )
     return id
 }
 
