@@ -3,6 +3,7 @@ package com.example.trackpro
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -106,6 +107,8 @@ fun DragRaceScreen(
     var lastTimestamp: Long? by rememberSaveable { mutableStateOf(null) }
     var isReady: Boolean by rememberSaveable { mutableStateOf(false) }
     var dragTime: Double? by rememberSaveable { mutableStateOf(null) }
+    var quarterMileTime: Double? by rememberSaveable { mutableStateOf(null) }
+
     val dataPoints = remember { mutableStateListOf<Entry>() }
     val context = LocalContext.current  // Get the Context in Compose
     val (ip, port) = rememberSaveable { JsonReader.loadConfig(context) } // Load once & remember it
@@ -128,7 +131,6 @@ fun DragRaceScreen(
     var selectedVehicleId by rememberSaveable { mutableIntStateOf(-1) }
 
 
-
     fun startBatchInsert() {
         insertJob = coroutineScope.launch(Dispatchers.IO) {
             while (isActive) {
@@ -145,7 +147,10 @@ fun DragRaceScreen(
 
                 if (dataToInsert.isNotEmpty()) {
                     try {
-                        Log.d("BatchInsert", "Inserting ${dataToInsert.size} data points at ${System.currentTimeMillis()}")
+                        Log.d(
+                            "BatchInsert",
+                            "Inserting ${dataToInsert.size} data points at ${System.currentTimeMillis()}"
+                        )
                         database.rawGPSDataDao().insertAll(dataToInsert) // Safe call
 
                         val list = dataPoints.takeLast(5)
@@ -241,7 +246,7 @@ fun DragRaceScreen(
                 coroutineScope.launch(Dispatchers.IO) {
                     espTcpClient?.disconnect()
                     stopBatchInsert()
-                    endSessionPostProcess(sessionID,database)
+                    endSessionPostProcess(sessionID, database)
                 }
             } catch (e: IOException) {
                 e.printStackTrace()
@@ -277,19 +282,22 @@ fun DragRaceScreen(
             if (loadingState) {
                 Text(text = "Loading vehicles...") // Show loading message
             } else {
-                if(!isSessionActive) {
+                if (!isSessionActive) {
                     // DropdownMenuFieldMulti will be displayed when vehicles are available
                     if (vehicles.isNotEmpty()) {
-                        DropdownMenuFieldMulti("Select car", vehicles, selectedVehicle) { selectedVehicleId = it.toInt() }
+                        DropdownMenuFieldMulti(
+                            "Select car",
+                            vehicles,
+                            selectedVehicle
+                        ) { selectedVehicleId = it.toInt() }
                     } else {
                         Text(text = "No vehicles available") // Show a message if no vehicles are found
                     }
                 }
             }
 
-            if(isSessionActive)
-            {
-                Text( text = if(isReady) "Go go GO" else "Wait")
+            if (isSessionActive) {
+                Text(text = if (isReady) "Go go GO" else "Wait")
             }
 
 
@@ -342,18 +350,19 @@ fun DragRaceScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height((screenHeight / 2).dp)
-                        .border(16.dp, Color(0,0,255,0))
+                        .border(16.dp, Color(0, 0, 255, 0))
                 )
             }
 
-
-            //Overengineered bottom borders by: CHATGPT
-            //Everything for design I guess...
-            //Don't use AI kids.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)) // Clip only bottom corners
+                    .clip(
+                        RoundedCornerShape(
+                            bottomStart = 20.dp,
+                            bottomEnd = 20.dp
+                        )
+                    ) // Clip only bottom corners
                     .background(Color.White) // Box background color
                     .padding(20.dp)
             )
@@ -373,23 +382,25 @@ fun DragRaceScreen(
                     Spacer(modifier = Modifier.height(10.dp))*/
 
 
-                    Row(modifier = Modifier.fillMaxWidth() ) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = "Acceleration (0-100): ${dragTime ?: -1} sec",
                             style = TextStyle(
                                 fontSize = 18.sp,
-                                fontWeight = FontWeight(700))
+                                fontWeight = FontWeight(700)
+                            )
                         )
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Row(modifier = Modifier.fillMaxWidth() ) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = "Quarter mile time: ${0 ?: -1} sec",
+                            text = "Quarter mile time: ${quarterMileTime?: -1} sec",
                             style = TextStyle(
                                 fontSize = 18.sp,
-                                fontWeight = FontWeight(700))
+                                fontWeight = FontWeight(700)
+                            )
                         )
                     }
                 }
@@ -412,7 +423,7 @@ fun DragRaceScreen(
                     segmentsSpace = 1.dp,
                     segmentWidth = 8.dp,
                     digitsSpace = 16.dp,
-                    activeColor = androidx.compose.ui.graphics.Color.Black,
+                    activeColor = Color.Black,
                     modifier = Modifier.height(100.dp)
                 )
             }
@@ -431,6 +442,13 @@ fun DragRaceScreen(
                     if (!isSessionActive) {
                         coroutineScope.launch {
                             Log.d("CarID", selectedVehicleId.toString())
+
+                            if(selectedVehicleId == -1)
+                            {
+                                Toast.makeText(context, "⚠️ No car selected", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
                             val id = startSession(database, selectedVehicleId.toLong())
 
                             if (id == -1L) {
@@ -445,16 +463,15 @@ fun DragRaceScreen(
                         }
                     } else {
                         coroutineScope.launch {
-                        isSessionActive = !isSessionActive
+                            isSessionActive = !isSessionActive
 
-                            if(sessionID.toInt() != -1)
-                            {
+                            if (sessionID.toInt() != -1) {
                                 stopBatchInsert()
-                                   endSession(database)
+                                endSession(database)
                             }
-                            Log.d("isItFalse?" , isSessionActive.toString())
-                           dragTime = endSessionPostProcess(sessionID, database)
-
+                            Log.d("isItFalse?", isSessionActive.toString())
+                            dragTime = endSessionPostProcess(sessionID, database)
+                            quarterMileTime = getQuarterMileTime(sessionID,database)
                         }
                     }
                 }
@@ -467,40 +484,45 @@ fun DragRaceScreen(
 }
 
 
-    suspend fun startSession(database: ESPDatabase, selectedVehicleId: Long): Long {
+suspend fun startSession(database: ESPDatabase, selectedVehicleId: Long): Long {
 
-        if(selectedVehicleId == null)
-        {
-            return -1
-        }
+    val sessionManager = SessionManager.getInstance(database)
+    var id: Long
 
-        val sessionManager = SessionManager.getInstance(database)
-        var id: Long
-
-        // Use suspendCoroutine to suspend until the session id is retrieved.
-        withContext(Dispatchers.IO) {
-            sessionManager.startSession("DragSession", "Drag data session", vehicleId = selectedVehicleId )
-            Log.d("In start", sessionManager.getCurrentSessionId().toString())
-            id = (sessionManager.getCurrentSessionId() ?: -1).toLong()
-        }
-
-        return id
+    // Use suspendCoroutine to suspend until the session id is retrieved.
+    withContext(Dispatchers.IO) {
+        sessionManager.startSession(
+            "DragSession",
+            "Drag data session",
+            vehicleId = selectedVehicleId
+        )
+        Log.d("In start", sessionManager.getCurrentSessionId().toString())
+        id = (sessionManager.getCurrentSessionId() ?: -1).toLong()
     }
 
-    suspend fun endSession(database: ESPDatabase)
-    {
-        val sessionManager = SessionManager.getInstance(database)
+    return id
+}
 
-        withContext(Dispatchers.IO) {
-            Log.d("In end", sessionManager.getCurrentSessionId().toString())
-            sessionManager.endSession()
-        }
-    }
+suspend fun endSession(database: ESPDatabase) {
+    val sessionManager = SessionManager.getInstance(database)
 
-    suspend fun endSessionPostProcess(sessionId: Long, database: ESPDatabase): Double {
-        val dragTimeCalculation = DragTimeCalculation(sessionId, database)
-        return dragTimeCalculation.timeFromZeroToHundred()
+    withContext(Dispatchers.IO) {
+        Log.d("In end", sessionManager.getCurrentSessionId().toString())
+        sessionManager.endSession()
     }
+}
+
+suspend fun endSessionPostProcess(sessionId: Long, database: ESPDatabase): Double {
+    val dragTimeCalculation = DragTimeCalculation(sessionId, database)
+    return dragTimeCalculation.timeFromZeroToHundred()
+}
+
+suspend fun getQuarterMileTime(sessionId: Long,database: ESPDatabase) : Double
+{
+    val quarterTime = DragTimeCalculation(sessionId,database)
+    return quarterTime.quarterMile()
+
+}
 
 @Preview(
     showBackground = true,
