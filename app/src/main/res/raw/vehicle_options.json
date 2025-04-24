@@ -4,21 +4,20 @@
     "Boxer-4","Boxer-6","VR-6","V6", "V8", "V10", "V12"
   ],
   "drivetrains": [
-    "RWD", "AWD", "FWD", "4WD", "XWD"
+    "FWD","RWD", "AWD","4WD", "XWD"
   ],
   "fuelTypes": [
     "Petrol", "Diesel", "Electric", "Hybrid", "Ethanol", "Hydrogen", "Methanol"
   ],
   "tireTypes": [
-    "Street","Slick", "All-Weather", "Soft Compound", "Medium Compound", "Hard Compound",
-    "Wet Tires", "Drag Radials", "Off-Road", "Semi-Slick"
+    "Street","Semi-Slick","Slick", "All-Weather", "Soft Compound", "Medium Compound", "Hard Compound",
+    "Wet Tires", "Drag Radials", "Off-Road"
   ],
   "transmissions": [
-    "Manual", "Automatic", "Sequential", "Dual-Clutch", "CVT", "8-Speed Auto",
-    "7-Speed Dual-Clutch", "6-Speed Manual", "10-Speed Auto", "Direct-Drive"
+    "Manual", "Automatic", "Sequential", "Dual-Clutch", "CVT", "Direct-Drive"
   ],
   "suspensionTypes": [
-    "Independent", "Double Wishbone", "MacPherson Strut", "Pushrod", "Multilink",
+    "Independent", "Double Wishbone", "Pushrod", "Multilink",
     "Trailing Arm", "Torsion Beam", "Active Suspension", "Hydropneumatic", "Solid Axle"
   ]
 }

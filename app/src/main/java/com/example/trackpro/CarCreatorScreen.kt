@@ -1,15 +1,13 @@
 package com.example.trackpro
 
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,18 +15,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.LocalGasStation
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,21 +40,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.DataClasses.VehicleInformationData
 import com.example.trackpro.ExtrasForUI.CustomTextField
 import com.example.trackpro.ExtrasForUI.DropdownMenuField
 import com.example.trackpro.ManagerClasses.JsonReader.loadJsonOptions
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 
 class CarCreatorScreen : ComponentActivity()
@@ -71,7 +70,6 @@ class CarCreatorScreen : ComponentActivity()
 
     }
 }
-
 
 @Composable
 fun CarCreationScreen(
@@ -101,10 +99,12 @@ fun CarCreationScreen(
 
     val scrollState = rememberScrollState()
 
+    val showSection = remember { mutableStateOf(true) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF1E1E1E), Color(0xFF3C3C3C)))) // Dark Racing Theme
+            .background(Color(0xFF121212))
             .padding(16.dp)
     ) {
         Column(
@@ -114,74 +114,96 @@ fun CarCreationScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Vehicle Survey",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
+                text = "🏎️ Vehicle Setup",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+            AnimatedVisibility(visible = showSection.value) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(10.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Manual Inputs
-                    CustomTextField("Manufacturer", manufacturer) { manufacturer = it }
-                    CustomTextField("Model", model) { model = it }
-                    CustomTextField("Year", year, true) { year = it }
-                    CustomTextField("Horsepower", horsepower, true) { horsepower = it }
-                    CustomTextField("Torque (Nm)", torque, true) { torque = it }
-                    CustomTextField("Weight (kg)", weight, true) { weight = it }
+                    Column(modifier = Modifier.padding(20.dp)) {
 
-                    // Dropdowns
-                    DropdownMenuField("Engine Type", jsonOptions.engineTypes, selectedEngineType) { selectedEngineType = it }
-                    DropdownMenuField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain) { selectedDrivetrain = it }
-                    DropdownMenuField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType) { selectedFuelType = it }
-                    DropdownMenuField("Tire Type", jsonOptions.tireTypes, selectedTireType) { selectedTireType = it }
-                    DropdownMenuField("Transmission", jsonOptions.transmissions, selectedTransmission) { selectedTransmission = it }
-                    DropdownMenuField("Suspension Type", jsonOptions.suspensionTypes, selectedSuspensionType) { selectedSuspensionType = it }
+                        SectionTitle("Basic Info (Required)")
+                        CustomTextField("Manufacturer", manufacturer, leadingIcon = Icons.Default.Business) { manufacturer = it }
+                        CustomTextField("Model", model, leadingIcon = Icons.Default.DirectionsCar) { model = it }
+                        CustomTextField("Year", year, leadingIcon = Icons.Default.Event) { year = it }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        SectionTitle("Performance")
+                        CustomTextField("Horsepower", horsepower, true, Icons.Default.FlashOn) { horsepower = it }
+                        CustomTextField("Torque (Nm)", torque, true, Icons.Default.Settings) { torque = it }
+                        CustomTextField("Weight (kg)", weight, true, Icons.Default.FitnessCenter) { weight = it }
+                        CustomTextField("Top Speed (km/h)", topSpeed, true, Icons.Default.Speed) { topSpeed = it }
+                        CustomTextField("0-100 km/h (s)", acceleration, true, Icons.Default.Timer) { acceleration = it }
+                        CustomTextField("Fuel Capacity (L)", fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
 
-                    ElevatedButton(
-                        onClick = {
-                            val vehicle = VehicleInformationData(
-                                manufacturer = manufacturer,
-                                model = model,
-                                year = year.toIntOrNull() ?: 0,
-                                engineType = selectedEngineType,
-                                horsepower = horsepower.toIntOrNull() ?: 0,
-                                torque = torque.toIntOrNull(),
-                                weight = weight.toDoubleOrNull() ?: 0.0,
-                                topSpeed = topSpeed.toDoubleOrNull(),
-                                acceleration = acceleration.toDoubleOrNull(),
-                                drivetrain = selectedDrivetrain,
-                                fuelType = selectedFuelType,
-                                tireType = selectedTireType,
-                                fuelCapacity = fuelCapacity.toDoubleOrNull(),
-                                transmission = selectedTransmission,
-                                suspensionType = selectedSuspensionType
-                            )
-                            Log.d("VehicleSurvey", vehicle.toString())
+                        SectionTitle("Configuration")
+                        DropdownMenuField("Engine Type", jsonOptions.engineTypes, selectedEngineType, Color.White) { selectedEngineType = it }
+                        DropdownMenuField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain, Color.White) { selectedDrivetrain = it }
+                        DropdownMenuField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType, Color.White) { selectedFuelType = it }
+                        DropdownMenuField("Tire Type", jsonOptions.tireTypes, selectedTireType, Color.White) { selectedTireType = it }
+                        DropdownMenuField("Transmission", jsonOptions.transmissions, selectedTransmission, Color.White) { selectedTransmission = it }
+                        DropdownMenuField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType, Color.White) { selectedSuspensionType = it }
 
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                            coroutineScope.launch {
-                                database.vehicleInformationDAO().insertVehicle(vehicle)
-                            }
-                            Toast.makeText(context, "Vehicle succesfully saved!", Toast.LENGTH_SHORT).show()
-},
-                        colors = ButtonDefaults.elevatedButtonColors(containerColor = Color(0xFF007BFF), contentColor = Color.White),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Submit", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = {
+                                if (manufacturer.isBlank() || model.isBlank() || year.isBlank()) {
+                                    Toast.makeText(context, "⚠️ Fill in required fields.", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+
+                                val vehicle = VehicleInformationData(
+                                    manufacturer = manufacturer,
+                                    model = model,
+                                    year = year.toIntOrNull() ?: 0,
+                                    engineType = selectedEngineType,
+                                    horsepower = horsepower.toIntOrNull() ?: 0,
+                                    torque = torque.toIntOrNull(),
+                                    weight = weight.toDoubleOrNull() ?: 0.0,
+                                    topSpeed = topSpeed.toDoubleOrNull(),
+                                    acceleration = acceleration.toDoubleOrNull(),
+                                    drivetrain = selectedDrivetrain,
+                                    fuelType = selectedFuelType,
+                                    tireType = selectedTireType,
+                                    fuelCapacity = fuelCapacity.toDoubleOrNull(),
+                                    transmission = selectedTransmission,
+                                    suspensionType = selectedSuspensionType
+                                )
+
+                                coroutineScope.launch {
+                                    database.vehicleInformationDAO().insertVehicle(vehicle)
+                                }
+
+                                Toast.makeText(context, "🚀 Vehicle saved successfully!", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text("Save Vehicle", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
         }
     }
+}
+
+
+@Composable
+fun SectionTitle(title: String) {
+    Text(
+        text = title,
+        color = Color(0xFFB0BEC5),
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
 }
