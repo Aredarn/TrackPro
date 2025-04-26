@@ -169,9 +169,7 @@ fun TrackBuilderScreen(
 
     var showDialog by remember { mutableStateOf(false) }
     var showStartBuilderButton by remember { mutableStateOf(false) }
-
-    lateinit var postProc: PostProcessing
-    postProc = PostProcessing(database)
+    var postProc = PostProcessing(database)
 
 
     fun startBatchInsert() {

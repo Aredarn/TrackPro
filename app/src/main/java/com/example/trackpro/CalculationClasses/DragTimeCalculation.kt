@@ -16,10 +16,10 @@ class DragTimeCalculation(
     private val database: ESPDatabase
 ) {
     private lateinit var postProc: PostProcessing
-    val ZERO_THRESHOLD = 0.3f // Adjust based on your data
+    private val ZERO_THRESHOLD = 0.3f // Adjust based on your data
 
 
-    fun initializePostProcessing() {
+    private fun initializePostProcessing() {
         postProc = PostProcessing(database) // Or retrieve an existing instance
     }
 
@@ -86,7 +86,7 @@ class DragTimeCalculation(
         return round(totalDistance * 1000) / 1000
     }
 
-    fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    private fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val R = 6371.0 // Radius of the Earth in kilometers
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
