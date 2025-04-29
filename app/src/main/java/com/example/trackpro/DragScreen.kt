@@ -187,6 +187,9 @@ fun DragRaceScreen(
 
             // Initialize ESPTcpClient
             startBatchInsert()
+
+            Log.d("trackpro ip",ip)
+            Log.d("trackpro", port.toString() + "")
             espTcpClient = ESPTcpClient(
                 serverAddress = ip,
                 port = port,
@@ -214,7 +217,6 @@ fun DragRaceScreen(
                                 dataBuffer.add(data)
                                 lastTimestamp = data.timestamp
 
-                                // Do this on the MAIN thread
                                 coroutineScope.launch(Dispatchers.Main) {
                                     data.speed?.let {
                                         dataPoints.add(Entry(i, it))

@@ -147,6 +147,8 @@ fun ESPConnectionTestScreen() {
 // 1. Connection Setup (runs once)
     LaunchedEffect(Unit) {
         try {
+            Log.d("trackpro ip",ip)
+            Log.d("trackpro", port.toString() + "")
             espTcpClient = ESPTcpClient(
                 serverAddress = ip,
                 port = port,
