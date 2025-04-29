@@ -1,10 +1,11 @@
 package com.example.trackpro.CalculationClasses
 
 import com.example.trackpro.DataClasses.TrackCoordinatesData
+import kotlin.math.cos
 
 fun toLocalCoords(refLat: Double, refLng: Double, lat: Double, lng: Double): Pair<Double, Double> {
     val earthRadius = 6371000.0 // meters
-    val x = Math.toRadians(lng - refLng) * earthRadius * Math.cos(Math.toRadians(refLat))
+    val x = Math.toRadians(lng - refLng) * earthRadius * cos(Math.toRadians(refLat))
     val y = Math.toRadians(lat - refLat) * earthRadius
     return x to y
 }
@@ -12,7 +13,7 @@ fun toLocalCoords(refLat: Double, refLng: Double, lat: Double, lng: Double): Pai
 fun toGPS(refLat: Double, refLng: Double, x: Double, y: Double): Pair<Double, Double> {
     val earthRadius = 6371000.0
     val newLat = refLat + Math.toDegrees(y / earthRadius)
-    val newLng = refLng + Math.toDegrees(x / (earthRadius * Math.cos(Math.toRadians(refLat))))
+    val newLng = refLng + Math.toDegrees(x / (earthRadius * cos(Math.toRadians(refLat))))
     return newLat to newLng
 }
 

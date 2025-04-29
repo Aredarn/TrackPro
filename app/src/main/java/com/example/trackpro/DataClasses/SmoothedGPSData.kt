@@ -10,7 +10,7 @@ import androidx.room.ForeignKey
         entity = SessionData::class,
         parentColumns = ["id"],
         childColumns = ["sessionid"],
-        onDelete = androidx.room.ForeignKey.CASCADE
+        onDelete = ForeignKey.CASCADE
     )]
 )
 

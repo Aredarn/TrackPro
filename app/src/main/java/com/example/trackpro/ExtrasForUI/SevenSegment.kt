@@ -193,8 +193,8 @@ fun SevenSegmentView(
     verticalAlignment = Alignment.CenterVertically
     ) {
     // Pad the digits to match the desired number of digits and display each digit using SingleSevenSegment
-    // Alternatively, replacing null with 0 ensures that unfilled segments display as 0 instead of remaining unilluminated
-    digits.padToStart(digitsNumber, null).forEach { digit ->
+    // Alternatively, replacing null with 0 ensures that unfilled segments display as 0 instead of remaining
+        digits.padToStart(digitsNumber, null).forEach { digit ->
         val state = digit?.getSegmentsState() ?: SegmentsState()
             SingleSevenSegment(
                 state = state,

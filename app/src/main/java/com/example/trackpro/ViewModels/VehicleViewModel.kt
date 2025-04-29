@@ -19,7 +19,7 @@ class VehicleViewModel(private val database: ESPDatabase) : ViewModel() {
     private val _loadingState = MutableStateFlow(true) // Track loading state
     val loadingState: StateFlow<Boolean> = _loadingState
 
-    public fun fetchVehicles() {
+    fun fetchVehicles() {
         viewModelScope.launch {
             _loadingState.value = true // Set loading state to true before fetching
             Log.d("ViewModel", "Fetching vehicles...")

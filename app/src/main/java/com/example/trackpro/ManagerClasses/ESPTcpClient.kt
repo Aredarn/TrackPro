@@ -10,7 +10,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -25,7 +24,7 @@ data class RawGPSData(
     val timestamp: Long
 )
 
-fun com.example.trackpro.ManagerClasses.RawGPSData.toDataClass(): com.example.trackpro.DataClasses.RawGPSData {
+fun RawGPSData.toDataClass(): com.example.trackpro.DataClasses.RawGPSData {
     return com.example.trackpro.DataClasses.RawGPSData(
         sessionid = 0,  // Replace with the actual session ID as needed
         latitude = this.latitude,
@@ -138,11 +137,7 @@ class ESPTcpClient(
         val speed: Float,
         val satellites: Int,
         val timestamp: String
-    ) {
-        fun toRawGPSData(timestampLong: Long): RawGPSData {
-            return RawGPSData(latitude, longitude, altitude, speed, satellites, timestampLong)
-        }
-    }
+    )
 
     // Helper class for message delimiting
     class DelimitedInputStreamReader(
@@ -152,7 +147,6 @@ class ESPTcpClient(
         private val buffer = ByteArrayOutputStream()
 
         fun read(target: ByteArray): Int {
-            var totalRead = 0
             while (true) {
                 val byte = input.read()
                 if (byte == -1) return -1
@@ -176,7 +170,7 @@ class ESPTcpClient(
         private fun endsWithDelimiter(): Boolean {
             val data = buffer.toByteArray()
             if (data.size < delimiter.size) return false
-            return (0 until delimiter.size).all { i ->
+            return delimiter.indices.all { i ->
                 data[data.size - delimiter.size + i] == delimiter[i]
             }
         }

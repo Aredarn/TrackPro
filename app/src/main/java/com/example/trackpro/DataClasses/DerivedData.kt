@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "derived_data",
         foreignKeys = [androidx.room.ForeignKey(
-    entity = com.example.trackpro.DataClasses.SessionData::class,
+    entity = SessionData::class,
     parentColumns = ["id"],
     childColumns = ["sessionid"],
     onDelete = androidx.room.ForeignKey.CASCADE

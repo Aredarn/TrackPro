@@ -29,7 +29,7 @@ class PostProcessing(val database: ESPDatabase) {
     //------------------------------------//
     //------------------------------------//
 
-    fun applyMovingAverage(data: List<RawGPSData>, windowSize: Int, sessionId: Long): List<SmoothedGPSData> {
+    private fun applyMovingAverage(data: List<RawGPSData>, windowSize: Int, sessionId: Long): List<SmoothedGPSData> {
         val smoothed = mutableListOf<SmoothedGPSData>()
 
         val latWindow = ArrayDeque<Double>(windowSize)
@@ -53,7 +53,7 @@ class PostProcessing(val database: ESPDatabase) {
             val smoothedLat = latWindow.average()
             val smoothedLon = lonWindow.average()
             val smoothedAlt = altWindow.filterNotNull().averageOrNull() ?: gpsData.altitude
-            val smoothedSpeed = speedWindow.filterNotNull().averageOrNull()?.toFloat() ?: gpsData.speed
+            val smoothedSpeed = speedWindow.filterNotNull().averageOrNull() ?: gpsData.speed
 
             // Debug log
             Log.d("PostProcessing", "Timestamp: ${gpsData.timestamp}, Smoothed Speed: $smoothedSpeed")
@@ -89,7 +89,7 @@ class PostProcessing(val database: ESPDatabase) {
     //------------------------------------//
     //------------------------------------//
 
-    suspend fun saveSmoothedData(smoothedData: List<SmoothedGPSData>) {
+    private suspend fun saveSmoothedData(smoothedData: List<SmoothedGPSData>) {
         database.smoothedDataDao().insertAll(smoothedData)
     }
 
