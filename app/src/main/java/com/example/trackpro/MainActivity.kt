@@ -29,6 +29,8 @@ import com.example.trackpro.ViewModels.SessionViewModel
 import com.example.trackpro.ViewModels.SessionViewModelFactory
 import com.example.trackpro.ViewModels.TrackViewModel
 import com.example.trackpro.ViewModels.TrackViewModelFactory
+import com.example.trackpro.ViewModels.VehicleFULLViewModel
+import com.example.trackpro.ViewModels.VehicleFULLViewModelFactory
 import kotlinx.coroutines.launch
 
 class TrackProApp : Application() {
@@ -46,6 +48,8 @@ class MainActivity : ComponentActivity() {
                 viewModel(factory = SessionViewModelFactory(applicationContext))
             val trackViewModel: TrackViewModel =
                 viewModel(factory = TrackViewModelFactory(applicationContext))
+            val vehicleFULLViewModel : VehicleFULLViewModel =
+                viewModel(factory = VehicleFULLViewModelFactory(applicationContext))
 
             TrackProTheme {
                 val navController = rememberNavController()
@@ -59,7 +63,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToTrackBuilder = { navController.navigate("trackbuilder") },
                             onNavigateToDragTimesList = { navController.navigate("dragsessions") },
                             onNavigateToVehicleCreatorScreen = { navController.navigate("createvehicle") } ,
-                            onNavigateToTimeAttackScreen = {navController.navigate("timeattack")}
+                            onNavigateToTimeAttackScreen = {navController.navigate("timeattack")},
+                            onNavigateToVehicleList = {navController.navigate("vehicles")}
                         )
                     }
                     composable("drag") {
@@ -84,6 +89,13 @@ class MainActivity : ComponentActivity() {
                             navController = navController
                         )
                     }
+                    composable("vehicles")
+                    {
+                        CarListScreen(
+                            viewModel = vehicleFULLViewModel,
+                            navController = navController
+                        )
+                    }
                     composable(
                         route = "graph/{sessionId}",
                         arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
@@ -104,6 +116,16 @@ class MainActivity : ComponentActivity() {
                     )
                     {
                         TrackListScreen(navController = navController, viewModel = trackViewModel)
+                    }
+                    composable(
+                        route = "vehicle/{vehicleid}",
+                        arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
+                    ) { backStackEntry ->
+                        val vehicleId = backStackEntry.arguments?.getLong("vehicleid") ?: 0L
+                        CarViewScreen(
+                            onBack = { navController.popBackStack() },
+                            vehicleId = vehicleId
+                        )
                     }
                     composable(
                         route = "createvehicle"
@@ -134,7 +156,8 @@ fun MainScreen(
     onNavigateToTrackBuilder: () -> Unit,
     onNavigateToDragTimesList: () -> Unit,
     onNavigateToVehicleCreatorScreen: () -> Unit,
-    onNavigateToTimeAttackScreen: () -> Unit
+    onNavigateToTimeAttackScreen: () -> Unit,
+    onNavigateToVehicleList: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -173,9 +196,11 @@ fun MainScreen(
                         }
                     )
                     NavigationDrawerItem(
-                        label = { Text("Shared sessions") },
+                        label = { Text("My vehicles") },
                         selected = false,
-                        onClick = { /* Handle click */ }
+                        onClick = {
+                            onNavigateToVehicleList()
+                        }
                     )
 
                     Text(
@@ -350,7 +375,8 @@ fun MainScreenPreview() {
             onNavigateToTrackBuilder = {},
             onNavigateToDragTimesList = {},
             onNavigateToVehicleCreatorScreen = {},
-            onNavigateToTimeAttackScreen = {}
+            onNavigateToTimeAttackScreen = {},
+            onNavigateToVehicleList = {}
         )
     }
 }

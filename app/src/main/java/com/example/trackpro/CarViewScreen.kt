@@ -12,7 +12,7 @@ class CarScreen : ComponentActivity()
 
 
 @Composable
-fun CarViewScreen()
+fun CarViewScreen(onBack: () -> Unit, vehicleId: Long)
 {
 
 }
