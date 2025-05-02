@@ -24,3 +24,4 @@ Future plans:
 - Live sharing
 - Online leaderboard
 - Data-to-video
+- Checkpoint time stat / sprint race
