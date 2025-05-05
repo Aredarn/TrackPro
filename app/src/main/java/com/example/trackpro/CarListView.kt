@@ -1,6 +1,8 @@
 package com.example.trackpro
 
+import android.content.Context
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -96,7 +98,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
                             onDelete = { vehicleToDelete ->
                                 scope.launch(Dispatchers.IO)
                                 {
-                                    DeleteVehicle(database, vehicleToDelete.vehicleId)
+                                    DeleteVehicle(context,database, vehicleToDelete.vehicleId)
                                 }
                             }
                         )
@@ -213,11 +215,12 @@ fun TrackCard(
 }
 
 
-suspend fun DeleteVehicle(database: ESPDatabase, vehicleId: Long)
+suspend fun DeleteVehicle(context: Context, database: ESPDatabase, vehicleId: Long)
 {
-    val sessionManager = SessionManager.getInstance(database)
-
     database.vehicleInformationDAO().deleteVehicle(vehicleId)
+
+    Toast.makeText(context, "🚀 Vehicle deleted successfully!", Toast.LENGTH_SHORT).show()
+
 }
 
 
