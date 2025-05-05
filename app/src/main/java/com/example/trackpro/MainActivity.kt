@@ -121,7 +121,7 @@ class MainActivity : ComponentActivity() {
                         route = "vehicle/{vehicleid}",
                         arguments = listOf(navArgument("vehicleid") { type = NavType.LongType })
                     ) { backStackEntry ->
-                        val vehicleId = backStackEntry.arguments?.getInt("vehicleid") ?: 0
+                        val vehicleId = backStackEntry.arguments?.getLong("vehicleid") ?: 0L
                         CarViewScreen(
                             onBack = { navController.popBackStack() },
                             vehicleId = vehicleId

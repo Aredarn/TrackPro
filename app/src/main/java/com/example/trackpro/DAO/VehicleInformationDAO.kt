@@ -18,7 +18,7 @@ interface VehicleInformationDAO {
 
 
     @Query("SELECT * FROM vehicle_information_data WHERE vehicleId =:vehicleId")
-    fun getVehicle(vehicleId: Int): Flow<VehicleInformationData>
+    fun getVehicle(vehicleId: Long): Flow<VehicleInformationData>
 
     @Insert
     suspend fun insertVehicle(vehicleInformationData: VehicleInformationData):Long
