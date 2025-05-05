@@ -24,7 +24,7 @@ interface VehicleInformationDAO {
     suspend fun insertVehicle(vehicleInformationData: VehicleInformationData):Long
 
     @Query("DELETE FROM vehicle_information_data WHERE vehicleId=:vehicleId")
-    suspend fun deleteVehicle(vehicleId: Int)
+    suspend fun deleteVehicle(vehicleId: Long)
 }
 
 
