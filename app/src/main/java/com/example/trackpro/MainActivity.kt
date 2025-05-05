@@ -119,9 +119,9 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(
                         route = "vehicle/{vehicleid}",
-                        arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
+                        arguments = listOf(navArgument("vehicleid") { type = NavType.LongType })
                     ) { backStackEntry ->
-                        val vehicleId = backStackEntry.arguments?.getLong("vehicleid") ?: 0L
+                        val vehicleId = backStackEntry.arguments?.getInt("vehicleid") ?: 0
                         CarViewScreen(
                             onBack = { navController.popBackStack() },
                             vehicleId = vehicleId

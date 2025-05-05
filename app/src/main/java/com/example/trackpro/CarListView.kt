@@ -92,7 +92,7 @@ fun TrackCard(vehicle: VehicleInformationData, navController: NavController) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable {
-                navController.navigate("/${vehicle.vehicleId}")
+                navController.navigate("vehicle/${vehicle.vehicleId}")
             },
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(8.dp),
