@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
@@ -56,6 +57,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
 
 
 class TrackBuilderScreen : ComponentActivity()
@@ -209,11 +212,8 @@ fun TrackBuilderScreen(
         while (currentIndex < gpsPoints.size-1) {
             // Add the next point to the list
             //gpsPointsList.add(gpsPoints[currentIndex])
-
             // Increment the index to add the next point
             currentIndex++
-
-            Log.d("add", "Added: ${gpsPoints[currentIndex]}")
 
             // Wait for 0.1 second before adding the next point
             delay(100)
@@ -231,7 +231,7 @@ fun TrackBuilderScreen(
                 gpsData.value = data.toDataClass()
                 rawJson.value = data.toString()
 
-                if (isSessionActive && isConnected.value) {
+                if (isSessionActive && isConnected.value && trackID > 0) {
                     val derivedData = gpsData.value?.let {
                         TrackCoordinatesData(
                             trackId = trackID,
@@ -242,6 +242,7 @@ fun TrackBuilderScreen(
                     }
                     val timestamp = gpsData.value?.timestamp
                     derivedData?.let { data ->
+
                         if (lastTimestamp == null || timestamp != lastTimestamp) {
                             dataBuffer.add(data)
                             i += 1
@@ -271,9 +272,11 @@ fun TrackBuilderScreen(
                 isSessionActive = !isSessionActive
                 if (isSessionActive) {
                     coroutineScope.launch(Dispatchers.IO) {
-                        trackID = startTrackBuilder(database,trackname,countryname,lengthoftrack)
+                        trackID = startTrackBuilder(database, trackname, countryname, lengthoftrack)
                         Log.d("TrckID:", "" + trackID)
-                        startBatchInsert()
+                        withContext(Dispatchers.Main) {
+                            startBatchInsert()  // 🔑 Start only after trackID is valid
+                        }
                     }
                 } else {
                     coroutineScope.launch(Dispatchers.IO) {
@@ -282,7 +285,7 @@ fun TrackBuilderScreen(
                         trackID = -1
                     }
                 }
-            }, modifier = Modifier.fillMaxWidth()) {
+            }, modifier = Modifier.fillMaxWidth().background(Color.Blue)) {
                 Text(if (isSessionActive) "Stop Track Builder" else "Start Track Builder")
             }
         }
@@ -290,7 +293,7 @@ fun TrackBuilderScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         //Button which opens the Popup for the track info inputs
-        Button(onClick = { showDialog = true }, modifier = Modifier.fillMaxWidth()) {
+        Button(onClick = { showDialog = true }, modifier = Modifier.fillMaxWidth().background(Color.Blue)) {
             Text("Enter Track Info")
         }
 
@@ -331,6 +334,18 @@ fun TrackBuilderScreen(
             showStartBuilderButton = true
         }
     )
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                coroutineScope.launch(Dispatchers.IO) {
+                    espTcpClient?.disconnect()
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+    }
 }
 
 @Composable

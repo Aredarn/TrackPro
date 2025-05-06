@@ -100,7 +100,7 @@ fun DragRaceScreen(
     var sessionID by rememberSaveable { mutableLongStateOf(-1) }
 
     val isConnected = rememberSaveable { mutableStateOf(false) }
-    val gpsData = rememberSaveable { mutableStateOf<RawGPSData?>(null) }
+    val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
     val rawJson = rememberSaveable { mutableStateOf("") }
 
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
