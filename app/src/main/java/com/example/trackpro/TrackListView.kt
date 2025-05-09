@@ -1,6 +1,7 @@
 package com.example.trackpro
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -101,10 +102,11 @@ fun TrackCard(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 10.dp)
             .clickable {
-                navController.navigate("graph/${track.trackId}")
+                Log.d("ID front?", track.trackId.toString())
+                navController.navigate("track/${track.trackId}")
             },
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(0.dp),  // No shadow
+        elevation = CardDefaults.cardElevation(0.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {

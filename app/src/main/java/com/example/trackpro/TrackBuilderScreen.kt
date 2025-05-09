@@ -281,7 +281,7 @@ fun TrackBuilderScreen(
                 } else {
                     coroutineScope.launch(Dispatchers.IO) {
                         stopBatchInsert()
-                        postProc.processTrackPoints(trackId = trackID.toInt())
+                        postProc.processTrackPoints(trackId = trackID)
                         trackID = -1
                     }
                 }

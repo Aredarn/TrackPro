@@ -1,5 +1,6 @@
 package com.example.trackpro
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,11 +30,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.DataClasses.RawGPSData
+import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.drawTrack
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.toDataClass
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -96,62 +101,27 @@ fun TrackScreen(onBack: () -> Unit, trackId: Long) {
         LatLonOffset(47.304973, 17.048282)
     )
 
+    val context = LocalContext.current
+    val database = remember { ESPDatabase.getInstance(context) }
 
-    var showDialog by remember { mutableStateOf(false) }
-
+    Log.d("ID:", trackId.toString())
 
     // Interpolate to generate higher resolution points
-    val highResGpsPoints = interpolatePoints(gpsPoints, 50) // 50 steps between each point
-    TrackView(gpsPoints = highResGpsPoints)
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Button(onClick = { showDialog = true }) {
-            Text("Open Dialog")
-        }
-
-        if (showDialog) {
-            TrackCreationDialog(
-                onDismiss = { showDialog = false },
-                onConfirm = { trackName, lastName ->
-                    println("First Name: $trackName, Last Name: $lastName")
-                    showDialog = false
-                }
-            )
-        }
-    }
-
-}
-
-//************************************//
-fun interpolatePoints(points: List<LatLonOffset>, steps: Int): List<LatLonOffset> {
-    val interpolatedPoints = mutableListOf<LatLonOffset>()
-    for (i in 0 until points.size - 1) {
-        val start = points[i]
-        val end = points[i + 1]
-        for (j in 0..steps) {
-            val lat = start.lat + (end.lat - start.lat) * (j / steps.toDouble())
-            val lon = start.lon + (end.lon - start.lon) * (j / steps.toDouble())
-            interpolatedPoints.add(LatLonOffset(lat, lon))
-        }
-    }
-    return interpolatedPoints
+    TrackView(database, trackId)
 }
 
 @Composable
-fun TrackView(gpsPoints: List<LatLonOffset>) {
+fun TrackView(database: ESPDatabase, trackId: Long) {
     // State for the animation progress
     // var animationProgress by remember { mutableFloatStateOf(0f) }
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
     val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
     val isConnected = remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val context = LocalContext.current  // Get the Context in Compose
     val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
-
+    var _trackparts = remember { mutableListOf<TrackCoordinatesData>() }
     LaunchedEffect(Unit) {
         //Just for testing purposes.
         //Moves a "Car dot" around the track
@@ -160,20 +130,14 @@ fun TrackView(gpsPoints: List<LatLonOffset>) {
             if (animationProgress > 1f) animationProgress = 0f
             delay(16) // ~60 FPS
         }*/
-
-        espTcpClient = ESPTcpClient(
-            serverAddress = ip,
-            port = port,
-            onMessageReceived = { data ->
-                gpsData.value = data.toDataClass()
-
-            },
-            onConnectionStatusChanged = { connected ->
-                isConnected.value = connected
+        scope.launch(Dispatchers.IO)
+        {
+            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { trackparts ->
+                Log.d("raw:", trackparts.toString())
+                _trackparts = trackparts.toMutableList()
+                Log.d("track: ", _trackparts.toString())
             }
-        )
-
-
+        }
     }
 
     val margin = 16f // Margin for the track within the box in pixels
@@ -197,68 +161,21 @@ fun TrackView(gpsPoints: List<LatLonOffset>) {
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 // Draw the track, start line, and animated dot
-                val driverPos: LatLonOffset? = gpsData.value?.let { LatLonOffset(it.latitude,
-                    gpsData.value!!.longitude) }
-
-                if (driverPos != null) {
-                    drawTrack(gpsPoints, margin,driverPos )
+                val driverPos: LatLonOffset? = gpsData.value?.let {
+                    LatLonOffset(
+                        it.latitude,
+                        gpsData.value!!.longitude
+                    )
                 }
-                else
-                {
-                    drawTrack(gpsPoints,margin,1f)
+
+                if (_trackparts.isNotEmpty()) {
+                    if (driverPos != null) {
+                        drawTrack(_trackparts, margin, driverPos)
+                    } else {
+                        drawTrack(_trackparts, margin, 1f)
+                    }
                 }
             }
         }
     }
 }
-
-
-@Composable
-fun TrackCreationDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
-) {
-    var trackName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = { onDismiss() },
-        title = { Text(text = "Enter Details") },
-        text = {
-            Column {
-                TextField(
-                    value = trackName,
-                    onValueChange = { trackName = it },
-                    label = { Text("Name of the track") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    label = { Text("Total length (if known)") }
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onConfirm(trackName, lastName) }) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            Button(onClick = { onDismiss() }) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-
-
-
-fun createTrack()
-{
-
-
-}
-
-

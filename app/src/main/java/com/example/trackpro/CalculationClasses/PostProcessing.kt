@@ -5,6 +5,9 @@ import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.ESPDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -95,12 +98,20 @@ class PostProcessing(val database: ESPDatabase) {
 
 
     suspend fun processTrackPoints(
-        trackId: Int,
+        trackId: Long,
         minDistance: Double = 0.2,  // Minimum distance between points in meters
         lapThreshold: Double = 50.0  // Distance to consider as completing a lap
     ): List<TrackCoordinatesData> {
 
-        var rawPoints: List<TrackCoordinatesData> = database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
+        val rawPoints = mutableListOf<TrackCoordinatesData>()
+
+        CoroutineScope(Dispatchers.Main).launch {
+            // Collect the flow inside a coroutine
+            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { points ->
+                rawPoints.clear() // Optionally clear previous data
+                rawPoints.addAll(points) // Add the new data
+            }
+        }
 
         if (rawPoints.isEmpty()) return emptyList()
 

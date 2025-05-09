@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
                         "track/{trackId}",
                         arguments = listOf(navArgument("trackId") { type = NavType.LongType })
                     ) { backStackEntry ->
-                        val trackId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
+                        val trackId = backStackEntry.arguments?.getLong("trackId") ?: 0L
                         TrackScreen(onBack = { navController.popBackStack() }, trackId = trackId)
                     }
                     composable("dragsessions") {
