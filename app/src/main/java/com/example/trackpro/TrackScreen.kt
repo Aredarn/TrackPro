@@ -20,6 +20,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -103,39 +104,25 @@ fun TrackScreen(onBack: () -> Unit, trackId: Long) {
 
     val context = LocalContext.current
     val database = remember { ESPDatabase.getInstance(context) }
-
-    Log.d("ID:", trackId.toString())
-
-    // Interpolate to generate higher resolution points
     TrackView(database, trackId)
 }
 
 @Composable
 fun TrackView(database: ESPDatabase, trackId: Long) {
-    // State for the animation progress
-    // var animationProgress by remember { mutableFloatStateOf(0f) }
-    var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
-    val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
-    val isConnected = remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current  // Get the Context in Compose
-    val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
-    var _trackparts = remember { mutableListOf<TrackCoordinatesData>() }
-    LaunchedEffect(Unit) {
-        //Just for testing purposes.
-        //Moves a "Car dot" around the track
-        /*while (true) {
-            animationProgress += 0.001f // Adjust speed here
-            if (animationProgress > 1f) animationProgress = 0f
-            delay(16) // ~60 FPS
-        }*/
-        scope.launch(Dispatchers.IO)
-        {
+
+    // Use a state to hold the list of track parts, so Compose tracks changes
+    val trackParts = remember { mutableStateListOf<TrackCoordinatesData>() }
+
+    LaunchedEffect(trackId) {  // Depend on trackId so it fetches data on trackId change
+        scope.launch(Dispatchers.IO) {
+            // Collect data from the database
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { trackparts ->
-                Log.d("raw:", trackparts.toString())
-                _trackparts = trackparts.toMutableList()
-                Log.d("track: ", _trackparts.toString())
+                // Update trackParts with the new data
+                trackParts.clear()
+                trackParts.addAll(trackparts)
             }
         }
     }
@@ -161,19 +148,8 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 // Draw the track, start line, and animated dot
-                val driverPos: LatLonOffset? = gpsData.value?.let {
-                    LatLonOffset(
-                        it.latitude,
-                        gpsData.value!!.longitude
-                    )
-                }
-
-                if (_trackparts.isNotEmpty()) {
-                    if (driverPos != null) {
-                        drawTrack(_trackparts, margin, driverPos)
-                    } else {
-                        drawTrack(_trackparts, margin, 1f)
-                    }
+                if (trackParts.isNotEmpty()) {
+                    drawTrack(trackParts, margin, 1f)
                 }
             }
         }

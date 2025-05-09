@@ -1,5 +1,6 @@
 package com.example.trackpro.ExtrasForUI
 
+import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -168,6 +169,7 @@ fun DrawScope.drawTrack(
     margin: Float,
     animationProgress: Float
 ) {
+    Log.d("Coordinates:", gpsPoints.toString())
     if (gpsPoints.isEmpty()) return
 
     val minLat = gpsPoints.minOf { it.latitude }
