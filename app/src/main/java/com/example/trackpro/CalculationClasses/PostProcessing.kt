@@ -97,7 +97,7 @@ class PostProcessing(val database: ESPDatabase) {
     }
 
 
-    suspend fun processTrackPoints(
+    fun processTrackPoints(
         trackId: Long,
         minDistance: Double = 0.2,  // Minimum distance between points in meters
         lapThreshold: Double = 50.0  // Distance to consider as completing a lap
@@ -114,7 +114,11 @@ class PostProcessing(val database: ESPDatabase) {
             }
         }
 
-        if (rawPoints.isEmpty()) return emptyList()
+        if (rawPoints.isEmpty())
+        {
+            Log.d("list:", "No rawPoints found")
+            return emptyList()
+        }
 
         // Step 1: Remove consecutive duplicates
         val deduplicated = rawPoints.distinct()

@@ -1,5 +1,6 @@
 package com.example.trackpro
 
+import android.content.res.Configuration
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.foundation.background
@@ -11,6 +12,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -26,12 +28,6 @@ import com.example.trackpro.ManagerClasses.*
 import com.example.trackpro.ViewModels.VehicleViewModel
 import com.example.trackpro.ViewModels.VehicleViewModelFactory
 import kotlinx.coroutines.flow.MutableSharedFlow
-
-
-class TimeAttackScreen {
-
-
-}
 
 
 //MANDATORY: Landscape mode!!!
@@ -50,7 +46,7 @@ fun TimeAttackScreenView(
     val gpsDataFlow = remember { MutableSharedFlow<RawGPSData>(extraBufferCapacity = 10) }
 
     //TRACK
-    val track :List<TrackCoordinatesData> = emptyList()
+    val track: List<TrackCoordinatesData> = emptyList()
     val trackId = 1
     //val trackCoordinates = database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
 
@@ -97,7 +93,8 @@ fun TimeAttackScreenView(
                     if (SystemClock.elapsedRealtime() - lastCrossTime.longValue > 5000) {
                         if (crossedFinishLine(data, finishLine)) {
                             lastCrossTime.longValue = SystemClock.elapsedRealtime()
-                            val finishedTime = SystemClock.elapsedRealtime() - lapStartTime.longValue
+                            val finishedTime =
+                                SystemClock.elapsedRealtime() - lapStartTime.longValue
                             val lastTimeStr = currentLapTime.value
                             lastLap.value = lastTimeStr
 
@@ -140,105 +137,90 @@ fun TimeAttackScreenView(
     }
 
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        // Top Box - Track selection and current lap time
-        Box(
-            modifier = Modifier
-                .weight(1f) // Half of the screen
-                .fillMaxWidth(),
-            //.background(backgroundColor),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
+    val configuration = LocalConfiguration.current
+
+
+    when (configuration.orientation) {
+
+        //LANDSCAPE MODE
+        Configuration.ORIENTATION_LANDSCAPE -> {
+            Row(
                 modifier = Modifier
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                //verticalArrangement = Arrangement.SpaceEvenly
+                    .fillMaxSize()
             ) {
-                Row(
+                // LEFT PANE: Track selection, lap info
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(25, 35, 255)),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Button(onClick = { /* Track selection logic */ }) {
-                        Text(text = if (track.isEmpty()) "No Track Loaded" else "Track #$trackId")
-                    }
-
-                    if (vehicles.isNotEmpty()) {
-                        DropdownMenuFieldMulti(
-                            label = "Select car",
-                            options = vehicles,
-                            selectedOption = selectedVehicle
-                        ) { selectedId ->
-                            selectedVehicleId = selectedId.toInt()
-                            selectedVehicle = vehicles.find { it.vehicleId == selectedId }?.manufacturerAndModel ?: ""
-                        }
-
-                    } else {
-                        Text(text = "No vehicles available")
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    //verticalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    // CURRENT LAP TIME
-                    Row(
+                    Column(
                         modifier = Modifier
-                            .padding(top = 50.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        // TRACK + VEHICLE SELECTION
+
+                        /*Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(25, 35, 255)),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Button(onClick = { /* Track selection logic */ }) {
+                                Text(text = if (track.isEmpty()) "No Track Loaded" else "Track #$trackId")
+                            }
+
+                            if (vehicles.isNotEmpty()) {
+                                DropdownMenuFieldMulti(
+                                    label = "Select car",
+                                    options = vehicles,
+                                    selectedOption = selectedVehicle
+                                ) { selectedId ->
+                                    selectedVehicleId = selectedId.toInt()
+                                    selectedVehicle =
+                                        vehicles.find { it.vehicleId == selectedId }?.manufacturerAndModel
+                                            ?: ""
+                                }
+                            } else {
+                                Text(text = "No vehicles available")
+                            }
+                        }*/
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // CURRENT LAP TIME
                         Text(
                             text = currentLapTime.value,
                             color = deltaColor,
                             fontSize = 68.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.ExtraBold
                         )
-                    }
 
-                    // + -
-                    Row(
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // DELTA
                         Text(
                             text = delta.doubleValue.toString(),
                             fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.ExtraBold
                         )
-                    }
 
-                    //BASIC TEXT
-                    Row(
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth(),
-                    ) {
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // REFERENCE LAP LABEL
                         Text(
                             text = "REF LAP:",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.W500,
                             color = Color.Gray
                         )
-                    }
 
-                    // BEST LAP
-                    Row(
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .fillMaxWidth(),
-                    ) {
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // BEST LAP TIME
                         Text(
                             text = bestLap.value,
                             fontSize = 40.sp,
@@ -247,55 +229,226 @@ fun TimeAttackScreenView(
                         )
                     }
                 }
-            }
-        }
 
-        // Bottom Box - Lap info
-        Box(
-            modifier = Modifier.weight(1f).fillMaxWidth(),contentAlignment = Alignment.Center
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
+                // RIGHT PANE: BIG DELTA DISPLAY
                 Box(
                     modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth()
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Δ ${delta.doubleValue}s",
-                        fontSize = 68.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color.Green,
-                        fontWeight = FontWeight.W700
-                    )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ){
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        Text(
+                            text = "Δ ${delta.doubleValue}s",
+                            fontSize = 84.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color.Green,
+                            fontWeight = FontWeight.W700
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
 
 
+                        Text(
+                            text = "Stint: 0'00.000",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color.DarkGray,
+                            fontSize = 28.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+
+                        Text(
+                            text = "Laps: 0",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color.DarkGray,
+                            fontSize = 28.sp
+                        )
+                    }
                 }
             }
         }
+
+
+        // PORTRAIT MODE
+        else -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                // Top Box - Track selection and current lap time
+                Box(
+                    modifier = Modifier
+                        .weight(1f) // Half of the screen
+                        .fillMaxWidth(),
+                    //.background(backgroundColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        //verticalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(25, 35, 255)),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Button(onClick = { /* Track selection logic */ }) {
+                                Text(text = if (track.isEmpty()) "No Track Loaded" else "Track #$trackId")
+                            }
+
+                            if (vehicles.isNotEmpty()) {
+                                DropdownMenuFieldMulti(
+                                    label = "Select car",
+                                    options = vehicles,
+                                    selectedOption = selectedVehicle
+                                ) { selectedId ->
+                                    selectedVehicleId = selectedId.toInt()
+                                    selectedVehicle =
+                                        vehicles.find { it.vehicleId == selectedId }?.manufacturerAndModel
+                                            ?: ""
+                                }
+
+                            } else {
+                                Text(text = "No vehicles available")
+                            }
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            //verticalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            // CURRENT LAP TIME
+                            Row(
+                                modifier = Modifier
+                                    .padding(top = 50.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                Text(
+                                    text = currentLapTime.value,
+                                    color = deltaColor,
+                                    fontSize = 68.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                )
+                            }
+
+                            // + -
+                            Row(
+                                modifier = Modifier
+                                    .padding(10.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Text(
+                                    text = delta.doubleValue.toString(),
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                )
+                            }
+
+                            //BASIC TEXT
+                            Row(
+                                modifier = Modifier
+                                    .padding(10.dp)
+                                    .fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = "REF LAP:",
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.W500,
+                                    color = Color.Gray
+                                )
+                            }
+
+                            // BEST LAP
+                            Row(
+                                modifier = Modifier
+                                    .padding(10.dp)
+                                    .fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = bestLap.value,
+                                    fontSize = 40.sp,
+                                    fontWeight = FontWeight.W500,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Bottom Box - Lap info
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Δ ${delta.doubleValue}s",
+                                fontSize = 68.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                                color = Color.Green,
+                                fontWeight = FontWeight.W700
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+
+                        }
+                    }
+                }
+            }
+        }
+
     }
+
+
 }
 
 //
-fun finishLine(track: List<TrackCoordinatesData>) : List<TrackCoordinatesData>
-{
-    val finishPoint : TrackCoordinatesData? = track.find { it.isStartPoint == true }
-    var finishLine:List<TrackCoordinatesData> = emptyList()
+fun finishLine(track: List<TrackCoordinatesData>): List<TrackCoordinatesData> {
+    val finishPoint: TrackCoordinatesData? = track.find { it.isStartPoint == true }
+    var finishLine: List<TrackCoordinatesData> = emptyList()
 
-    if(finishPoint == null)
-    {
+    if (finishPoint == null) {
         return finishLine
     }
 
-    val coordinates : List<TrackCoordinatesData> = track.filter { finishPoint.id - 10 <= it.id && it.id <= finishPoint.id + 10 }
+    val coordinates: List<TrackCoordinatesData> =
+        track.filter { finishPoint.id - 10 <= it.id && it.id <= finishPoint.id + 10 }
 
     finishLine = rotateTrackPoints(coordinates, finishPoint)
 
@@ -325,10 +478,9 @@ fun parseLapTimeToSeconds(lapTime: String): Double {
 }
 
 
-
 @Preview(
     showBackground = true,
-    //device = "spec:width=411dp,height=891dp,dpi=420,isRound=false,chinSize=0dp,orientation=landscape")
+    device = "spec:width=411dp,height=891dp,dpi=420,isRound=false,chinSize=0dp,orientation=landscape"
 )
 @Composable
 fun TimeAttackScreenPreview() {
