@@ -12,7 +12,7 @@ Key Features:
 
 - Track builder: make your own track, store it and mesure your speed and times
   
-- Drag Timer: ¼-mile, 0-60 mph / 0-100Kmh or other custom drag race metrics (Alpha testing)
+- Drag Timer: ¼-mile, 0-60 mph / 0-100Kmh or other custom drag race metrics (✅)
   
 - Acceleration Analysis: Analyze acceleration data over time as well as distance for performance evaluation.
   
