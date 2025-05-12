@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TrackMainDataDAO {
     @Insert
-    suspend fun insertTrackMainDataDAO(trackMainData: TrackMainData) : Long
+    suspend fun insertTrackMainDataDAO(trackMainData: TrackMainData): Long
 
     @Query("SELECT * FROM track_main_data ORDER BY trackName ASC")
     fun getAllTrack(): Flow<List<TrackMainData>>
@@ -19,6 +19,9 @@ interface TrackMainDataDAO {
     fun getTrack(trackId: Int): Flow<TrackMainData>
 
     @Query("DELETE FROM track_main_data WHERE trackId = :trackId")
-    suspend fun deleteTrack(trackId : Int)
+    suspend fun deleteTrack(trackId: Int)
+
+    @Query("UPDATE track_main_data SET totalLength = :length WHERE trackId = :trackId")
+    suspend fun updateTotalLength(trackId: Long, length: Double)
 
 }

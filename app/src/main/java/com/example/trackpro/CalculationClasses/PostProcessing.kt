@@ -108,6 +108,7 @@ class PostProcessing(val database: ESPDatabase) {
         CoroutineScope(Dispatchers.Main).launch {
             // Collect the flow inside a coroutine
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { points ->
+                Log.d("x:",points.toString())
                 rawPoints.clear() // Optionally clear previous data
                 rawPoints.addAll(points) // Add the new data
             }

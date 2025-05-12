@@ -267,17 +267,17 @@ fun DragRaceScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Drag Time Calculator",
+                text = "Drag Time",
                 style = MaterialTheme.typography.titleLarge
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = if (isConnected.value) "Connected to ESP" else "Not Connected",
+                text = if (isConnected.value) "Connected to ESP" else "Not Connected to ESP",
                 color = if (isConnected.value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
 
             // Show a loading state while vehicles are being fetched
@@ -303,7 +303,7 @@ fun DragRaceScreen(
             }
 
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             //Diagram
             Box(
@@ -351,8 +351,8 @@ fun DragRaceScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height((screenHeight / 2).dp)
-                        .border(16.dp, Color(0, 0, 255, 0))
+                        .height((screenHeight / 2.1).dp)
+                        .border(14.dp, Color(0, 0, 255, 0))
                 )
             }
 

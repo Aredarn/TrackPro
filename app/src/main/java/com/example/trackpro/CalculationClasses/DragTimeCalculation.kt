@@ -12,7 +12,7 @@ import kotlin.math.sqrt
 
 
 class DragTimeCalculation(
-    val sessionid : Long,
+    val sessionid: Long? = null,
     private val database: ESPDatabase
 ) {
     private lateinit var postProc: PostProcessing
@@ -28,44 +28,58 @@ class DragTimeCalculation(
         if (!::postProc.isInitialized) {
             return
         }
-        postProc.postProcessing(sessionid)
+        if (sessionid != null) {
+            postProc.postProcessing(sessionid)
+        }
     }
 
     suspend fun timeFromZeroToHundred(): Double {
         // Fetch session data in chronological order.
-        var sessionItems = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)
+        var sessionItems = sessionid?.let {
+            database.smoothedDataDao().getSmoothedGPSDataBySession(
+                it
+            )
+        }
 
         // If no data exists, run postProcessing and re-fetch.
-        if (sessionItems.isEmpty()) {
-            runBlocking { postProcessing() }
-            sessionItems = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)
+        if (sessionItems != null) {
+            if (sessionItems.isEmpty()) {
+                runBlocking { postProcessing() }
+                sessionItems = sessionid?.let {
+                    database.smoothedDataDao().getSmoothedGPSDataBySession(
+                        it
+                    )
+                }
+            }
         }
 
         var minTimeDiff: Double? = null
 
         // Iterate through the session items to find all valid start points.
-        for (i in sessionItems.indices) {
-            val currentSpeed = sessionItems[i].smoothedSpeed
+        if (sessionItems != null) {
+            for (i in sessionItems.indices) {
+                val currentSpeed = sessionItems[i].smoothedSpeed
 
-            // Check if the current speed is a valid start point (at or near 0 km/h).
-            if (currentSpeed != null && currentSpeed <= ZERO_THRESHOLD) {
-                val startTime = sessionItems[i].timestamp
+                // Check if the current speed is a valid start point (at or near 0 km/h).
+                if (currentSpeed != null && currentSpeed <= ZERO_THRESHOLD) {
+                    val startTime = sessionItems[i].timestamp
 
-                // Look forward to find the first occurrence of speed >= 100 km/h.
-                for (j in (i + 1) until sessionItems.size) {
-                    val candidateSpeed = sessionItems[j].smoothedSpeed
+                    // Look forward to find the first occurrence of speed >= 100 km/h.
+                    for (j in (i + 1) until sessionItems.size) {
+                        val candidateSpeed = sessionItems[j].smoothedSpeed
 
-                    // Check if the candidate speed is >= 100 km/h.
-                    if (candidateSpeed != null && candidateSpeed >= 100f) {
-                        val diff = sessionItems[j].timestamp - startTime
+                        // Check if the candidate speed is >= 100 km/h.
+                        if (candidateSpeed != null && candidateSpeed >= 100f) {
+                            val diff = sessionItems[j].timestamp - startTime
 
-                        // Update the minimum time difference if this interval is better.
-                        if (minTimeDiff == null || diff < minTimeDiff) {
-                            minTimeDiff = diff.toDouble()
+                            // Update the minimum time difference if this interval is better.
+                            if (minTimeDiff == null || diff < minTimeDiff) {
+                                minTimeDiff = diff.toDouble()
+                            }
+
+                            // Stop searching for this start point after finding the first 100 km/h.
+                            break
                         }
-
-                        // Stop searching for this start point after finding the first 100 km/h.
-                        break
                     }
                 }
             }
@@ -91,7 +105,10 @@ class DragTimeCalculation(
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
 
-        val a = sin(dLat / 2).pow(2.0) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2.0)
+        val a =
+            sin(dLat / 2).pow(2.0) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(
+                dLon / 2
+            ).pow(2.0)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
         return R * c // Distance in kilometers
@@ -99,47 +116,59 @@ class DragTimeCalculation(
 
     suspend fun quarterMile(): Double {
         // Fetch session data in chronological order.
-        var sessionItems = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)
+        var sessionItems = sessionid?.let {
+            database.smoothedDataDao().getSmoothedGPSDataBySession(
+                it
+            )
+        }
 
         // If no data exists, run postProcessing and re-fetch.
-        if (sessionItems.isEmpty()) {
-            runBlocking { postProcessing() }
-            sessionItems = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionid)
+        if (sessionItems != null) {
+            if (sessionItems.isEmpty()) {
+                runBlocking { postProcessing() }
+                sessionItems = sessionid?.let {
+                    database.smoothedDataDao().getSmoothedGPSDataBySession(
+                        it
+                    )
+                }
+            }
         }
 
         var minQuarterMileTime: Double? = null
 
         // Iterate through the session items to find all valid start points.
-        for (i in sessionItems.indices) {
-            val currentSpeed = sessionItems[i].smoothedSpeed
+        if (sessionItems != null) {
+            for (i in sessionItems.indices) {
+                val currentSpeed = sessionItems[i].smoothedSpeed
 
-            // Check if the current speed is a valid start point (at or near 0 km/h).
-            if (currentSpeed != null && currentSpeed <= ZERO_THRESHOLD) {
-                val startTime = sessionItems[i].timestamp
-                var totalDistance = 0.0
+                // Check if the current speed is a valid start point (at or near 0 km/h).
+                if (currentSpeed != null && currentSpeed <= ZERO_THRESHOLD) {
+                    val startTime = sessionItems[i].timestamp
+                    var totalDistance = 0.0
 
-                // Look forward to accumulate distance until reaching 402.336 meters.
-                for (j in (i + 1) until sessionItems.size) {
-                    val prevLat = sessionItems[j - 1].latitude
-                    val prevLon = sessionItems[j - 1].longitude
-                    val currLat = sessionItems[j].latitude
-                    val currLon = sessionItems[j].longitude
+                    // Look forward to accumulate distance until reaching 402.336 meters.
+                    for (j in (i + 1) until sessionItems.size) {
+                        val prevLat = sessionItems[j - 1].latitude
+                        val prevLon = sessionItems[j - 1].longitude
+                        val currLat = sessionItems[j].latitude
+                        val currLon = sessionItems[j].longitude
 
-                    // Calculate distance between consecutive points using Haversine formula.
-                    val distance = haversineDistance(prevLat, prevLon, currLat, currLon)
-                    totalDistance += distance
+                        // Calculate distance between consecutive points using Haversine formula.
+                        val distance = haversineDistance(prevLat, prevLon, currLat, currLon)
+                        totalDistance += distance
 
-                    // Check if the quarter-mile distance has been reached.
-                    if (totalDistance >= 402.336) {
-                        val diff = sessionItems[j].timestamp - startTime
+                        // Check if the quarter-mile distance has been reached.
+                        if (totalDistance >= 402.336) {
+                            val diff = sessionItems[j].timestamp - startTime
 
-                        // Update the minimum time difference if this interval is better.
-                        if (minQuarterMileTime == null || diff < minQuarterMileTime) {
-                            minQuarterMileTime = diff.toDouble()
+                            // Update the minimum time difference if this interval is better.
+                            if (minQuarterMileTime == null || diff < minQuarterMileTime) {
+                                minQuarterMileTime = diff.toDouble()
+                            }
+
+                            // Stop searching for this start point after reaching the quarter-mile distance.
+                            break
                         }
-
-                        // Stop searching for this start point after reaching the quarter-mile distance.
-                        break
                     }
                 }
             }

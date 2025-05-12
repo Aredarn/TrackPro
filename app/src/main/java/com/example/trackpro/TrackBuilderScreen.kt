@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -28,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,6 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.room.Room
+import com.example.trackpro.CalculationClasses.DragTimeCalculation
 import com.example.trackpro.CalculationClasses.PostProcessing
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
@@ -151,7 +154,7 @@ fun TrackBuilderScreen(
     val isConnected = remember { mutableStateOf(false) }
 
     val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
-    val gpsPointsList = remember { mutableListOf<TrackCoordinatesData>() }
+    val gpsPointsList = remember { mutableStateListOf<TrackCoordinatesData>() }
 
     val rawJson = remember { mutableStateOf("") }
     val context = LocalContext.current
@@ -241,10 +244,10 @@ fun TrackBuilderScreen(
                         )
                     }
                     val timestamp = gpsData.value?.timestamp
-                    derivedData?.let { data ->
+                    derivedData?.let { gpsdata ->
 
                         if (lastTimestamp == null || timestamp != lastTimestamp) {
-                            dataBuffer.add(data)
+                            dataBuffer.add(gpsdata)
                             i += 1
                             lastTimestamp = timestamp
                         }
@@ -262,40 +265,71 @@ fun TrackBuilderScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Track Builder Screen", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-
+        Text("Track creator ", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Start driving from the finish line, make a full lap and save your track to use later for lap timing")
         Spacer(modifier = Modifier.height(16.dp))
 
-        if(showStartBuilderButton)
-        {
-            Button(onClick = {
-                isSessionActive = !isSessionActive
-                if (isSessionActive) {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        trackID = startTrackBuilder(database, trackname, countryname, lengthoftrack)
-                        Log.d("TrckID:", "" + trackID)
-                        withContext(Dispatchers.Main) {
-                            startBatchInsert()  // 🔑 Start only after trackID is valid
+        val buttonShape = RoundedCornerShape(12.dp)
+        val buttonColors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF2196F3), // Soft blue, or replace with Color.Transparent for outline style
+            contentColor = Color.White
+        )
+
+        if (showStartBuilderButton) {
+            Button(
+                onClick = {
+                    isSessionActive = !isSessionActive
+                    if (isSessionActive) {
+                        coroutineScope.launch(Dispatchers.IO) {
+                            trackID = startTrackBuilder(database, trackname, countryname, lengthoftrack)
+                            Log.d("TrckID:", "" + trackID)
+                            withContext(Dispatchers.Main) {
+                                startBatchInsert()
+                            }
+                        }
+                    } else {
+                        coroutineScope.launch(Dispatchers.IO) {
+                            stopBatchInsert()
+                            endTrackBuilder(database,trackID)
+                            //postProc.processTrackPoints(trackId = trackID)
+                            trackID = -1
                         }
                     }
-                } else {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        stopBatchInsert()
-                        postProc.processTrackPoints(trackId = trackID)
-                        trackID = -1
-                    }
-                }
-            }, modifier = Modifier.fillMaxWidth().background(Color.Blue)) {
-                Text(if (isSessionActive) "Stop Track Builder" else "Start Track Builder")
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = buttonShape,
+                colors = buttonColors,
+                elevation = ButtonDefaults.buttonElevation(0.dp)
+            ) {
+                Text(
+                    if (isSessionActive) "Stop Track Builder" else "Start Track Builder",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        //Button which opens the Popup for the track info inputs
-        Button(onClick = { showDialog = true }, modifier = Modifier.fillMaxWidth().background(Color.Blue)) {
-            Text("Enter Track Info")
+        Button(
+            onClick = { showDialog = true },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = buttonShape,
+            colors = buttonColors,
+            elevation = ButtonDefaults.buttonElevation(0.dp)
+        ) {
+            Text(
+                "Enter Track Info",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
+
 
         // The track drawer BOX
         Box(
@@ -327,10 +361,9 @@ fun TrackBuilderScreen(
     TrackInfoAlert(
         showDialog = showDialog,
         onDismiss = { showDialog = false },
-        onConfirm = { name, country, length ->
+        onConfirm = { name, country ->
             trackname = name
             countryname = country
-            lengthoftrack = length
             showStartBuilderButton = true
         }
     )
@@ -352,11 +385,10 @@ fun TrackBuilderScreen(
 fun TrackInfoAlert(
     showDialog: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Double) -> Unit
+    onConfirm: (String, String) -> Unit
 ) {
     var trackName by remember { mutableStateOf("") }
     var country by remember { mutableStateOf("") }
-    var length by remember { mutableStateOf("") }
 
     if (showDialog) {
         AlertDialog(
@@ -375,19 +407,11 @@ fun TrackInfoAlert(
                         onValueChange = { country = it },
                         label = { Text("Country") }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    TextField(
-                        value = length,
-                        onValueChange = { length = it },
-                        label = { Text("Track Length (m)") },
-                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
-                    )
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val number = length.toDoubleOrNull() ?: 0.0
-                    onConfirm(trackName, country, number)
+                    onConfirm(trackName, country)
                     onDismiss()
                 }) {
                     Text("Confirm")
@@ -405,12 +429,42 @@ fun TrackInfoAlert(
 
 suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countryname: String,lengthoftrack: Double):Long
 {
-    val track = TrackMainData(trackName = trackName, totalLength = lengthoftrack, country = countryname)
+    val track = TrackMainData(trackName = trackName, country = countryname)
     val id = database.trackMainDao().insertTrackMainDataDAO(track)
-
-    Log.d("Inser id:",""+ id )
     return id
 }
+
+suspend fun endTrackBuilder(database: ESPDatabase, trackId: Long) {
+    val postProcess = PostProcessing(database)
+
+    // Explicitly wait and ensure the processed track data is retrieved
+    val track: List<TrackCoordinatesData> = postProcess.processTrackPoints(trackId)
+    Log.d("TRACK:", "Received ${track.size} points: $track")
+
+    if (track.isEmpty()) {
+        Log.w("endTrackBuilder", "No track points found for trackId=$trackId! Aborting.")
+        return
+    }
+
+    // Map to lat/lon offsets (synchronously after suspend)
+    val latlon: List<LatLonOffset> = track.map { point ->
+        LatLonOffset(lat = point.latitude, lon = point.longitude)
+    }
+    Log.d("latlon:", latlon.toString())
+
+    // Explicitly calculate total distance (blocking inside suspend)
+    val helper = DragTimeCalculation(database = database)
+    val totalLength = helper.totalDistance(latlon)
+    Log.d("Total length (meters):", totalLength.toString())
+
+    // Perform database update on IO dispatcher (ensure proper thread)
+    withContext(Dispatchers.IO) {
+        val affectedRows = database.trackMainDao().updateTotalLength(trackId, totalLength)
+        Log.d("DB Update", "Updated totalLength on trackId=$trackId, affected rows: $affectedRows")
+    }
+}
+
+
 
 
 
