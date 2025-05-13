@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 @Composable
 fun TimeAttackScreenView(
     database: ESPDatabase,
+    trackId: Long?,
+    vehicleId:Long?,
     onBack: () -> Unit,
 ) {
 
@@ -250,7 +252,6 @@ fun TimeAttackScreenView(
                             text = "Δ ${delta.doubleValue}s",
                             fontSize = 84.sp,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
                             color = Color.Green,
                             fontWeight = FontWeight.W700
                         )
@@ -261,18 +262,16 @@ fun TimeAttackScreenView(
                         Text(
                             text = "Stint: 0'00.000",
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
                             color = Color.DarkGray,
                             fontSize = 28.sp
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(18.dp))
 
 
                         Text(
                             text = "Laps: 0",
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
                             color = Color.DarkGray,
                             fontSize = 28.sp
                         )
@@ -302,6 +301,7 @@ fun TimeAttackScreenView(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         //verticalArrangement = Arrangement.SpaceEvenly
                     ) {
+                        /*
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -327,7 +327,7 @@ fun TimeAttackScreenView(
                             } else {
                                 Text(text = "No vehicles available")
                             }
-                        }
+                        }*/
 
                         Column(
                             modifier = Modifier
@@ -434,8 +434,6 @@ fun TimeAttackScreenView(
         }
 
     }
-
-
 }
 
 //
@@ -480,7 +478,7 @@ fun parseLapTimeToSeconds(lapTime: String): Double {
 
 @Preview(
     showBackground = true,
-    device = "spec:width=411dp,height=891dp,dpi=420,isRound=false,chinSize=0dp,orientation=landscape"
+    //device = "spec:width=411dp,height=891dp,dpi=420,isRound=false,chinSize=0dp,orientation=landscape"
 )
 @Composable
 fun TimeAttackScreenPreview() {
@@ -492,7 +490,9 @@ fun TimeAttackScreenPreview() {
 
     TimeAttackScreenView(
         database = fakeDatabase,
-        onBack = {}
+        onBack = {},
+        trackId = 1L,
+        vehicleId = 1L
     )
 }
 
