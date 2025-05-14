@@ -48,8 +48,8 @@ fun TimeAttackScreenView(
     val gpsDataFlow = remember { MutableSharedFlow<RawGPSData>(extraBufferCapacity = 10) }
 
     //TRACK
-    val track: List<TrackCoordinatesData> = emptyList()
-    val trackId = 1
+    var track: List<TrackCoordinatesData> = emptyList()
+    val trackId = 1L
     //val trackCoordinates = database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
 
     //LAP DATA
@@ -67,8 +67,6 @@ fun TimeAttackScreenView(
 
     val viewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
 
-    val vehicles by viewModel.vehicles.collectAsState(initial = emptyList())
-    var selectedVehicle by rememberSaveable { mutableStateOf("") }
     var selectedVehicleId by rememberSaveable { mutableIntStateOf(-1) }
     val lapStartTime = remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
@@ -77,12 +75,18 @@ fun TimeAttackScreenView(
     // var finishLine = finishLine(track)
 
     //User selects vehicle and starts the session
+
     //Check if the user has passed the finish line
+
     // Add laps, check if best lap, update delta
+
     //very CPU
     LaunchedEffect(Unit) {
 
         viewModel.fetchVehicles()
+        database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect {
+            trackPoint -> track = trackPoint
+        }
 
         try {
             espTcpClient = ESPTcpClient(
@@ -115,6 +119,8 @@ fun TimeAttackScreenView(
                             lapStartTime.longValue = SystemClock.elapsedRealtime()
                         }
                     }
+
+
                     val elapsedMillis = SystemClock.elapsedRealtime() - lapStartTime.longValue
                     val minutes = (elapsedMillis / 60000).toInt()
                     val seconds = ((elapsedMillis % 60000) / 1000).toInt()

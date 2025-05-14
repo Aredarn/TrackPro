@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.example.trackpro.DataClasses.TrackMainData
 import com.example.trackpro.Models.VehiclePair
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -87,6 +88,48 @@ fun DropdownMenuFieldMulti(label: String, options: List<VehiclePair>, selectedOp
         }
     }
 }
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun TrackDropdownMenu(
+    label: String,
+    tracks: List<TrackMainData>,
+    selectedTrackName: String,
+    onTrackSelected: (Long) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var selectedText by remember { mutableStateOf(selectedTrackName) }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selectedText,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFF007BFF),
+                unfocusedBorderColor = Color.Gray
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            tracks.forEach { track ->
+                DropdownMenuItem(
+                    text = { Text(track.trackName) },
+                    onClick = {
+                        selectedText = track.trackName
+                        expanded = false
+                        onTrackSelected(track.trackId)
+                    }
+                )
+            }
+        }
+    }
+}
+
+
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable

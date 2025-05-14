@@ -53,7 +53,6 @@ class MainActivity : ComponentActivity() {
 
             TrackProTheme {
                 val navController = rememberNavController()
-
                 NavHost(navController = navController, startDestination = "main") {
                     composable("main") {
                         MainScreen(
@@ -64,7 +63,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToDragTimesList = { navController.navigate("dragsessions") },
                             onNavigateToVehicleCreatorScreen = { navController.navigate("createvehicle") } ,
                             onNavigateToTimeAttackScreen = {navController.navigate("timeattack")},
-                            onNavigateToVehicleList = {navController.navigate("vehicles")}
+                            onNavigateToVehicleList = {navController.navigate("vehicles")},
+                            onNavigateToTrackVehicleSelector = {navController.navigate("trackandvehicle")}
                         )
                     }
                     composable("drag") {
@@ -134,11 +134,23 @@ class MainActivity : ComponentActivity() {
                         CarCreationScreen(database) { }
                     }
                     composable(
-                        route = "timeattack"
-                    )
-                    {
-                        TimeAttackScreenView(database) { }
+                        route = "timeattack/{vehicleId}/{trackId}"
+                    ) { backStackEntry ->
+                        val vehicleId = backStackEntry.arguments?.getString("vehicleId")?.toLongOrNull() ?: -1L
+                        val trackId = backStackEntry.arguments?.getString("trackId")?.toLongOrNull() ?: -1L
+
+                        TimeAttackScreenView(
+                            vehicleId = vehicleId,
+                            trackId = trackId,
+                            database = database,
+                            onBack = {}
+                        )
                     }
+
+                    composable(route = "trackandvehicle") {
+                        TrackVehicleSelectorScreenWrapper(navController = navController)
+                    }
+
                 }
 
             }
@@ -157,7 +169,8 @@ fun MainScreen(
     onNavigateToDragTimesList: () -> Unit,
     onNavigateToVehicleCreatorScreen: () -> Unit,
     onNavigateToTimeAttackScreen: () -> Unit,
-    onNavigateToVehicleList: () -> Unit
+    onNavigateToVehicleList: () -> Unit,
+    onNavigateToTrackVehicleSelector:() -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -343,7 +356,7 @@ fun MainScreen(
 
 
                 Button(
-                    onClick = onNavigateToTimeAttackScreen,
+                    onClick = onNavigateToTrackVehicleSelector,
                     modifier = Modifier
                         .fillMaxWidth(0.8f)
                         .padding(top = 12.dp),
@@ -376,7 +389,8 @@ fun MainScreenPreview() {
             onNavigateToDragTimesList = {},
             onNavigateToVehicleCreatorScreen = {},
             onNavigateToTimeAttackScreen = {},
-            onNavigateToVehicleList = {}
+            onNavigateToVehicleList = {},
+            onNavigateToTrackVehicleSelector = {}
         )
     }
 }
