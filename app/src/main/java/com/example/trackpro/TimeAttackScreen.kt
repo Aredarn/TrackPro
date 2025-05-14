@@ -49,7 +49,6 @@ fun TimeAttackScreenView(
 
     //TRACK
     var track: List<TrackCoordinatesData> = emptyList()
-    val trackId = 1L
     //val trackCoordinates = database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
 
     //LAP DATA
@@ -68,9 +67,17 @@ fun TimeAttackScreenView(
     val viewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
 
     var selectedVehicleId by rememberSaveable { mutableIntStateOf(-1) }
+
+    val lapCount = remember { mutableIntStateOf(0) }
+    val stintStartTime = remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
+
     val lapStartTime = remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
-    val finishLine by remember(track) { mutableStateOf(finishLine(track)) }
+    var finishLine by remember { mutableStateOf(emptyList<TrackCoordinatesData>()) }
+
+    LaunchedEffect(track) {
+        finishLine = finishLine(track)
+    }
 
     // var finishLine = finishLine(track)
 
@@ -84,8 +91,9 @@ fun TimeAttackScreenView(
     LaunchedEffect(Unit) {
 
         viewModel.fetchVehicles()
-        database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect {
-            trackPoint -> track = trackPoint
+        if (trackId != null) {
+            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { trackPoint -> track = trackPoint
+            }
         }
 
         try {
@@ -102,6 +110,7 @@ fun TimeAttackScreenView(
                             val finishedTime =
                                 SystemClock.elapsedRealtime() - lapStartTime.longValue
                             val lastTimeStr = currentLapTime.value
+                            lapCount.intValue++
                             lastLap.value = lastTimeStr
 
                             val finishedSeconds = finishedTime / 1000.0
