@@ -1,11 +1,10 @@
+// TimeAttackScreen.kt
 package com.example.trackpro
 
+import android.content.Context
 import android.content.res.Configuration
 import android.os.SystemClock
-import android.util.Log
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -16,498 +15,351 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.room.Room
+import androidx.lifecycle.viewModelScope
 import com.example.trackpro.CalculationClasses.rotateTrackPoints
 import com.example.trackpro.DataClasses.TrackCoordinatesData
-import com.example.trackpro.ExtrasForUI.DropdownMenuFieldMulti
-import com.example.trackpro.ManagerClasses.*
-import com.example.trackpro.ViewModels.VehicleViewModel
-import com.example.trackpro.ViewModels.VehicleViewModelFactory
-import kotlinx.coroutines.flow.MutableSharedFlow
+import com.example.trackpro.ManagerClasses.ESPTcpClient
+import com.example.trackpro.ManagerClasses.JsonReader
+import com.example.trackpro.ManagerClasses.RawGPSData
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
+// Data and enums
+private enum class CrossingDirection { ENTERING, EXITING }
+private data class CrossingResult(val isValid: Boolean, val direction: CrossingDirection)
+private data class Point(val x: Double, val y: Double)
 
-//MANDATORY: Landscape mode!!!
+// ViewModel
+class TimeAttackViewModel(
+    private val database: ESPDatabase,
+    context: Context
+) : ViewModel() {
+    // Load config without destructuring
+    private val config = JsonReader.loadConfig(context)
+    private val ip = config.first
+    private val port = config.second
 
+    // Finish line state
+    private val _finishLine = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
+    val finishLine: StateFlow<List<TrackCoordinatesData>> = _finishLine.asStateFlow()
+
+    // Timing state
+    private var lapStartTime = SystemClock.elapsedRealtime()
+    private var lastCrossTime = 0L
+    private var bestLapSeconds = Double.POSITIVE_INFINITY
+    private var previousGPSData: RawGPSData? = null
+
+    // UI state
+    private val _currentLapTime = MutableStateFlow("00:00.00")
+    val currentLapTime: StateFlow<String> = _currentLapTime.asStateFlow()
+    private val _bestLap = MutableStateFlow("--:--.--")
+    val bestLap: StateFlow<String> = _bestLap.asStateFlow()
+    private val _lastLap = MutableStateFlow("--:--.--")
+    val lastLap: StateFlow<String> = _lastLap.asStateFlow()
+    private val _delta = MutableStateFlow(0.0)
+    val delta: StateFlow<Double> = _delta.asStateFlow()
+    private val _lapCount = MutableStateFlow(0)
+    val lapCount: StateFlow<Int> = _lapCount.asStateFlow()
+    private val _stintStart = MutableStateFlow(lapStartTime)
+    val stintStart: StateFlow<Long> = _stintStart.asStateFlow()
+
+    fun loadTrack(trackId: Long) {
+        viewModelScope.launch {
+            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { coords ->
+                _finishLine.value = calculateFinishLine(coords)
+            }
+        }
+    }
+
+    init {
+        startTcpClient()
+    }
+
+    private fun startTcpClient() = viewModelScope.launch {
+        runCatching {
+            ESPTcpClient(
+                serverAddress = ip,
+                port = port,
+                onMessageReceived = { data -> handleGpsUpdate(data) },
+                onConnectionStatusChanged = { connected -> if (!connected) resetTiming() }
+            ).connect()
+        }
+    }
+
+    private fun handleGpsUpdate(current: RawGPSData) {
+        val now = SystemClock.elapsedRealtime()
+        previousGPSData?.let { prev ->
+            checkFinishLineCrossing(prev, current)?.let { crossing ->
+                if (crossing.isValid && now - lastCrossTime > 5000) {
+                    val lapMs = now - lapStartTime
+                    updateLapTimes(lapMs)
+                    lastCrossTime = now
+                    lapStartTime = now
+                    _lapCount.value += 1
+                }
+            }
+        }
+        _currentLapTime.value = formatLapTime(now - lapStartTime)
+        previousGPSData = current
+    }
+
+    private fun updateLapTimes(lapMs: Long) {
+        val seconds = lapMs / 1000.0
+        _delta.value = if (bestLapSeconds.isFinite()) seconds - bestLapSeconds else 0.0
+        if (seconds < bestLapSeconds) {
+            bestLapSeconds = seconds
+            _bestLap.value = formatLapTime(lapMs)
+        }
+        _lastLap.value = formatLapTime(lapMs)
+    }
+
+    private fun resetTiming() {
+        lapStartTime = SystemClock.elapsedRealtime()
+        lastCrossTime = 0L
+        _stintStart.value = lapStartTime
+        _lapCount.value = 0
+    }
+
+    private fun checkFinishLineCrossing(prev: RawGPSData, curr: RawGPSData): CrossingResult? {
+        val line = _finishLine.value
+        if (line.size < 2) return null
+        val a1 = Point(prev.longitude, prev.latitude)
+        val a2 = Point(curr.longitude, curr.latitude)
+        val b1 = Point(line[0].longitude, line[0].latitude)
+        val b2 = Point(line[1].longitude, line[1].latitude)
+        return if (lineSegmentsIntersect(a1, a2, b1, b2)) {
+            val dir = determineCrossingDirection(a1, a2, b1, b2)
+            CrossingResult(dir == CrossingDirection.ENTERING, dir)
+        } else null
+    }
+
+    private fun lineSegmentsIntersect(a1: Point, a2: Point, b1: Point, b2: Point): Boolean {
+        fun ccw(p1: Point, p2: Point, p3: Point) =
+            (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)
+        val c1 = ccw(a1, a2, b1)
+        val c2 = ccw(a1, a2, b2)
+        val c3 = ccw(b1, b2, a1)
+        val c4 = ccw(b1, b2, a2)
+        return (c1 * c2 < 0) && (c3 * c4 < 0)
+    }
+
+    private fun determineCrossingDirection(a1: Point, a2: Point, b1: Point, b2: Point): CrossingDirection {
+        val trackVec = Point(b2.x - b1.x, b2.y - b1.y)
+        val moveVec = Point(a2.x - a1.x, a2.y - a1.y)
+        return if ((trackVec.x * moveVec.y - trackVec.y * moveVec.x) > 0)
+            CrossingDirection.ENTERING else CrossingDirection.EXITING
+    }
+
+    private fun formatLapTime(millis: Long) = String.format(
+        "%02d:%02d.%02d",
+        (millis / 60000),
+        ((millis % 60000) / 1000),
+        ((millis % 1000) / 10)
+    )
+
+    private fun calculateFinishLine(track: List<TrackCoordinatesData>): List<TrackCoordinatesData> {
+        val start = track.find { it.isStartPoint } ?: return emptyList()
+        return rotateTrackPoints(
+            track.filter { it.id in (start.id - 10)..(start.id + 10) },
+            start
+        )
+    }
+}
+
+// ViewModel Factory
+class TimeAttackViewModelFactory(
+    private val context: Context,
+    private val database: ESPDatabase
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(TimeAttackViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return TimeAttackViewModel(database, context) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+// Composable UI
 @Composable
 fun TimeAttackScreenView(
     database: ESPDatabase,
     trackId: Long?,
-    vehicleId:Long?,
-    onBack: () -> Unit,
+    vehicleId: Long?,
+    onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val vm: TimeAttackViewModel = viewModel(
+        factory = TimeAttackViewModelFactory(context, database)
+    )
 
-    var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
-    val context = LocalContext.current  // Get the Context in Compose
-    val (ip, port) = rememberSaveable { JsonReader.loadConfig(context) } // Load once & remember it
-    val isConnected = rememberSaveable { mutableStateOf(false) }
-
-    val gpsDataFlow = remember { MutableSharedFlow<RawGPSData>(extraBufferCapacity = 10) }
-
-    //TRACK
-    var track: List<TrackCoordinatesData> = emptyList()
-    //val trackCoordinates = database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
-
-    //LAP DATA
-    val currentLapTime = remember { mutableStateOf("00:00.00''") }
-    val delta = remember { mutableDoubleStateOf(0.0) } // Positive = slower, Negative = faster
-    val bestLap = remember { mutableStateOf("00'00.00''") }
-    val lastLap = remember { mutableStateOf("00'00,00''") }
-    val lastCrossTime = remember { mutableLongStateOf(0L) }
-
-    val deltaColor by remember {
-        derivedStateOf {
-            if (delta.doubleValue < 0) Color.Green else Color.Red
-        }
+    LaunchedEffect(trackId) {
+        trackId?.let { vm.loadTrack(it) }
     }
 
-    val viewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
+    val currentLap by vm.currentLapTime.collectAsState()
+    val bestLap by vm.bestLap.collectAsState()
+    val delta by vm.delta.collectAsState()
+    val lapCount by vm.lapCount.collectAsState()
+    val stintStart by vm.stintStart.collectAsState()
 
-    var selectedVehicleId by rememberSaveable { mutableIntStateOf(-1) }
+    val deltaColor = if (delta < 0) Color.Green else Color.Red
 
-    val lapCount = remember { mutableIntStateOf(0) }
-    val stintStartTime = remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
-
-    val lapStartTime = remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
-
-    var finishLine by remember { mutableStateOf(emptyList<TrackCoordinatesData>()) }
-
-    LaunchedEffect(track) {
-        finishLine = finishLine(track)
-    }
-
-    // var finishLine = finishLine(track)
-
-    //User selects vehicle and starts the session
-
-    //Check if the user has passed the finish line
-
-    // Add laps, check if best lap, update delta
-
-    //very CPU
-    LaunchedEffect(Unit) {
-
-        viewModel.fetchVehicles()
-        if (trackId != null) {
-            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { trackPoint -> track = trackPoint
-            }
-        }
-
-        try {
-            espTcpClient = ESPTcpClient(
-                serverAddress = ip,
-                port = port,
-                onMessageReceived = { data ->
-                    gpsDataFlow.tryEmit(data)
-
-                    //5 second debounce
-                    if (SystemClock.elapsedRealtime() - lastCrossTime.longValue > 5000) {
-                        if (crossedFinishLine(data, finishLine)) {
-                            lastCrossTime.longValue = SystemClock.elapsedRealtime()
-                            val finishedTime =
-                                SystemClock.elapsedRealtime() - lapStartTime.longValue
-                            val lastTimeStr = currentLapTime.value
-                            lapCount.intValue++
-                            lastLap.value = lastTimeStr
-
-                            val finishedSeconds = finishedTime / 1000.0
-
-                            if (bestLap.value == "00:00.00" || finishedSeconds < parseLapTimeToSeconds(
-                                    bestLap.value
-                                )
-                            ) {
-                                bestLap.value = lastTimeStr
-                            }
-
-                            val bestSeconds = parseLapTimeToSeconds(bestLap.value)
-                            delta.doubleValue = finishedSeconds - bestSeconds
-
-                            lapStartTime.longValue = SystemClock.elapsedRealtime()
-                        }
-                    }
-
-
-                    val elapsedMillis = SystemClock.elapsedRealtime() - lapStartTime.longValue
-                    val minutes = (elapsedMillis / 60000).toInt()
-                    val seconds = ((elapsedMillis % 60000) / 1000).toInt()
-                    val centis = ((elapsedMillis % 1000) / 10).toInt()
-                    currentLapTime.value = String.format("%02d:%02d.%02d", minutes, seconds, centis)
-                },
-                onConnectionStatusChanged = { connected ->
-                    isConnected.value = connected
-                }
-            )
-            espTcpClient?.connect()
-        } catch (e: Exception) {
-            Log.e("ESPConnection", "TCP setup failed", e)
-        }
-    }
-
-
-    DisposableEffect(Unit) {
-        onDispose {
-            espTcpClient?.disconnect()
-        }
-    }
-
-
-    val configuration = LocalConfiguration.current
-
-
-    when (configuration.orientation) {
-
-        //LANDSCAPE MODE
-        Configuration.ORIENTATION_LANDSCAPE -> {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
-                // LEFT PANE: Track selection, lap info
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // TRACK + VEHICLE SELECTION
-
-                        /*Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(25, 35, 255)),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            Button(onClick = { /* Track selection logic */ }) {
-                                Text(text = if (track.isEmpty()) "No Track Loaded" else "Track #$trackId")
-                            }
-
-                            if (vehicles.isNotEmpty()) {
-                                DropdownMenuFieldMulti(
-                                    label = "Select car",
-                                    options = vehicles,
-                                    selectedOption = selectedVehicle
-                                ) { selectedId ->
-                                    selectedVehicleId = selectedId.toInt()
-                                    selectedVehicle =
-                                        vehicles.find { it.vehicleId == selectedId }?.manufacturerAndModel
-                                            ?: ""
-                                }
-                            } else {
-                                Text(text = "No vehicles available")
-                            }
-                        }*/
-
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        // CURRENT LAP TIME
-                        Text(
-                            text = currentLapTime.value,
-                            color = deltaColor,
-                            fontSize = 68.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // DELTA
-                        Text(
-                            text = delta.doubleValue.toString(),
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        // REFERENCE LAP LABEL
-                        Text(
-                            text = "REF LAP:",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.W500,
-                            color = Color.Gray
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // BEST LAP TIME
-                        Text(
-                            text = bestLap.value,
-                            fontSize = 40.sp,
-                            fontWeight = FontWeight.W500,
-                            color = Color.Gray
-                        )
-                    }
-                }
-
-                // RIGHT PANE: BIG DELTA DISPLAY
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    contentAlignment = Alignment.Center
-                ) {
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ){
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        Text(
-                            text = "Δ ${delta.doubleValue}s",
-                            fontSize = 84.sp,
-                            textAlign = TextAlign.Center,
-                            color = Color.Green,
-                            fontWeight = FontWeight.W700
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-
-                        Text(
-                            text = "Stint: 0'00.000",
-                            textAlign = TextAlign.Center,
-                            color = Color.DarkGray,
-                            fontSize = 28.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(18.dp))
-
-
-                        Text(
-                            text = "Laps: 0",
-                            textAlign = TextAlign.Center,
-                            color = Color.DarkGray,
-                            fontSize = 28.sp
-                        )
-                    }
-                }
-            }
-        }
-
-
-        // PORTRAIT MODE
-        else -> {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
-                // Top Box - Track selection and current lap time
-                Box(
-                    modifier = Modifier
-                        .weight(1f) // Half of the screen
-                        .fillMaxWidth(),
-                    //.background(backgroundColor),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        //verticalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        /*
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(25, 35, 255)),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            Button(onClick = { /* Track selection logic */ }) {
-                                Text(text = if (track.isEmpty()) "No Track Loaded" else "Track #$trackId")
-                            }
-
-                            if (vehicles.isNotEmpty()) {
-                                DropdownMenuFieldMulti(
-                                    label = "Select car",
-                                    options = vehicles,
-                                    selectedOption = selectedVehicle
-                                ) { selectedId ->
-                                    selectedVehicleId = selectedId.toInt()
-                                    selectedVehicle =
-                                        vehicles.find { it.vehicleId == selectedId }?.manufacturerAndModel
-                                            ?: ""
-                                }
-
-                            } else {
-                                Text(text = "No vehicles available")
-                            }
-                        }*/
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            //verticalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            // CURRENT LAP TIME
-                            Row(
-                                modifier = Modifier
-                                    .padding(top = 50.dp)
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                Text(
-                                    text = currentLapTime.value,
-                                    color = deltaColor,
-                                    fontSize = 68.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                )
-                            }
-
-                            // + -
-                            Row(
-                                modifier = Modifier
-                                    .padding(10.dp)
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                Text(
-                                    text = delta.doubleValue.toString(),
-                                    fontSize = 28.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                )
-                            }
-
-                            //BASIC TEXT
-                            Row(
-                                modifier = Modifier
-                                    .padding(10.dp)
-                                    .fillMaxWidth(),
-                            ) {
-                                Text(
-                                    text = "REF LAP:",
-                                    fontSize = 28.sp,
-                                    fontWeight = FontWeight.W500,
-                                    color = Color.Gray
-                                )
-                            }
-
-                            // BEST LAP
-                            Row(
-                                modifier = Modifier
-                                    .padding(10.dp)
-                                    .fillMaxWidth(),
-                            ) {
-                                Text(
-                                    text = bestLap.value,
-                                    fontSize = 40.sp,
-                                    fontWeight = FontWeight.W500,
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Bottom Box - Lap info
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Δ ${delta.doubleValue}s",
-                                fontSize = 68.sp,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color.Green,
-                                fontWeight = FontWeight.W700
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-
-                        }
-                    }
-                }
-            }
-        }
-
+    when (LocalConfiguration.current.orientation) {
+        Configuration.ORIENTATION_LANDSCAPE -> LandscapeLayout(
+            currentLap = currentLap,
+            delta = delta,
+            deltaColor = deltaColor,
+            bestLap = bestLap,
+            lapCount = lapCount,
+            stintStart = stintStart
+        )
+        else -> PortraitLayout(
+            currentLap = currentLap,
+            delta = delta,
+            deltaColor = deltaColor,
+            bestLap = bestLap,
+            lapCount = lapCount,
+            stintStart = stintStart
+        )
     }
 }
 
-//
-fun finishLine(track: List<TrackCoordinatesData>): List<TrackCoordinatesData> {
-    val finishPoint: TrackCoordinatesData? = track.find { it.isStartPoint == true }
-    var finishLine: List<TrackCoordinatesData> = emptyList()
-
-    if (finishPoint == null) {
-        return finishLine
-    }
-
-    val coordinates: List<TrackCoordinatesData> =
-        track.filter { finishPoint.id - 10 <= it.id && it.id <= finishPoint.id + 10 }
-
-    finishLine = rotateTrackPoints(coordinates, finishPoint)
-
-    return finishLine
-}
-
-fun crossedFinishLine(data: RawGPSData, finishLine: List<TrackCoordinatesData>): Boolean {
-    if (finishLine.size < 2) return false
-
-    val (lat1, lon1) = finishLine[0].let { it.latitude to it.longitude }
-    val (lat2, lon2) = finishLine[1].let { it.latitude to it.longitude }
-
-    // Simple bounding box check
-    val minLat = minOf(lat1, lat2)
-    val maxLat = maxOf(lat1, lat2)
-    val minLon = minOf(lon1, lon2)
-    val maxLon = maxOf(lon1, lon2)
-
-    return data.latitude in minLat..maxLat && data.longitude in minLon..maxLon
-}
-
-fun parseLapTimeToSeconds(lapTime: String): Double {
-    val regex = Regex("""(\d{2}):(\d{2})\.(\d{2})""")
-    val match = regex.find(lapTime) ?: return 0.0
-    val (min, sec, ms) = match.destructured
-    return min.toInt() * 60 + sec.toInt() + ms.toInt() / 100.0
-}
-
-
-@Preview(
-    showBackground = true,
-    //device = "spec:width=411dp,height=891dp,dpi=420,isRound=false,chinSize=0dp,orientation=landscape"
-)
 @Composable
-fun TimeAttackScreenPreview() {
+private fun LandscapeLayout(
+    currentLap: String,
+    delta: Double,
+    deltaColor: Color,
+    bestLap: String,
+    lapCount: Int,
+    stintStart: Long
+) {
+    Row(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.weight(1f).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            LapTimeDisplay(time = currentLap, color = deltaColor, size = 68.sp)
+            DeltaDisplay(delta = delta, size = 28.sp)
+            ReferenceLapDisplay(bestLap = bestLap)
+        }
+        Column(
+            modifier = Modifier.weight(1f).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            BigDeltaDisplay(delta = delta)
+            StintInfoDisplay(stintStart = stintStart, lapCount = lapCount)
+        }
+    }
+}
 
-    val fakeDatabase = Room.inMemoryDatabaseBuilder(
-        LocalContext.current,
-        ESPDatabase::class.java
-    ).build()
+@Composable
+private fun PortraitLayout(
+    currentLap: String,
+    delta: Double,
+    deltaColor: Color,
+    bestLap: String,
+    lapCount: Int,
+    stintStart: Long
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                LapTimeDisplay(time = currentLap, color = deltaColor, size = 56.sp)
+                DeltaDisplay(delta = delta, size = 24.sp)
+                ReferenceLapDisplay(bestLap = bestLap)
+            }
+        }
+        Box(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                BigDeltaDisplay(delta = delta)
+                StintInfoDisplay(stintStart = stintStart, lapCount = lapCount)
+            }
+        }
+    }
+}
 
-    TimeAttackScreenView(
-        database = fakeDatabase,
-        onBack = {},
-        trackId = 1L,
-        vehicleId = 1L
+@Composable
+private fun LapTimeDisplay(
+    time: String,
+    color: Color,
+    size: androidx.compose.ui.unit.TextUnit
+) {
+    Text(
+        text = time,
+        color = color,
+        fontSize = size,
+        fontWeight = FontWeight.ExtraBold,
+        modifier = Modifier.padding(vertical = 16.dp)
     )
 }
 
+@Composable
+private fun DeltaDisplay(
+    delta: Double,
+    size: androidx.compose.ui.unit.TextUnit
+) {
+    Text(
+        text = "Δ ${String.format("%+.2f", delta)}s",
+        fontSize = size,
+        fontWeight = FontWeight.Bold,
+        color = if (delta < 0) Color.Green else Color.Red
+    )
+}
+
+@Composable
+private fun BigDeltaDisplay(
+    delta: Double
+) {
+    Text(
+        text = "Δ ${String.format("%+.1f", delta)}s",
+        fontSize = 84.sp,
+        fontWeight = FontWeight.Black,
+        color = if (delta < 0) Color.Green else Color.Red,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+private fun ReferenceLapDisplay(
+    bestLap: String
+) {
+    Column(modifier = Modifier.padding(vertical = 16.dp)) {
+        Text(text = "REFERENCE LAP", color = Color.Gray, fontSize = 18.sp)
+        Text(text = bestLap, fontSize = 32.sp, color = Color.LightGray)
+    }
+}
+
+@Composable
+private fun StintInfoDisplay(
+    stintStart: Long,
+    lapCount: Int
+) {
+    var stintTime by rememberSaveable { mutableStateOf("00:00:00") }
+    LaunchedEffect(stintStart) {
+        while (true) {
+            delay(100L)
+            stintTime = formatDuration(SystemClock.elapsedRealtime() - stintStart)
+        }
+    }
+    Column {
+        Text(text = "Stint: $stintTime", fontSize = 20.sp, color = Color.DarkGray)
+        Text(text = "Laps: $lapCount", fontSize = 20.sp, color = Color.DarkGray)
+    }
+}
+
+private fun formatDuration(millis: Long): String = String.format(
+    "%02d:%02d:%02d",
+    millis / 3600000,
+    (millis % 3600000) / 60000,
+    (millis % 60000) / 1000
+)
