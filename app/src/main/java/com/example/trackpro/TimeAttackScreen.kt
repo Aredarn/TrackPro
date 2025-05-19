@@ -1,9 +1,11 @@
 // TimeAttackScreen.kt
 package com.example.trackpro
 
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.res.Configuration
 import android.os.SystemClock
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
@@ -31,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlin.math.pow
 
 // Data and enums
 private enum class CrossingDirection { ENTERING, EXITING }
@@ -75,6 +78,8 @@ class TimeAttackViewModel(
         viewModelScope.launch {
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { coords ->
                 _finishLine.value = calculateFinishLine(coords)
+                Log.d("Track:", "Loaded track with ${coords.size} points, finish line: ${_finishLine.value}")
+
             }
         }
     }
@@ -92,14 +97,18 @@ class TimeAttackViewModel(
                 onConnectionStatusChanged = { connected -> if (!connected) resetTiming() }
             ).connect()
         }
+
     }
 
     private fun handleGpsUpdate(current: RawGPSData) {
         val now = SystemClock.elapsedRealtime()
+        Log.d("TAG", "Received GPS: lat=${current.latitude}, lon=${current.longitude}, time=${current.timestamp}")
         previousGPSData?.let { prev ->
             checkFinishLineCrossing(prev, current)?.let { crossing ->
+                Log.d(TAG, "Crossing detected: valid=${crossing.isValid}, dir=${crossing.direction}")
                 if (crossing.isValid && now - lastCrossTime > 5000) {
                     val lapMs = now - lapStartTime
+                    Log.d(TAG, "Lap crossed: duration=${lapMs}ms")
                     updateLapTimes(lapMs)
                     lastCrossTime = now
                     lapStartTime = now
@@ -110,6 +119,7 @@ class TimeAttackViewModel(
         _currentLapTime.value = formatLapTime(now - lapStartTime)
         previousGPSData = current
     }
+
 
     private fun updateLapTimes(lapMs: Long) {
         val seconds = lapMs / 1000.0
@@ -131,15 +141,32 @@ class TimeAttackViewModel(
     private fun checkFinishLineCrossing(prev: RawGPSData, curr: RawGPSData): CrossingResult? {
         val line = _finishLine.value
         if (line.size < 2) return null
-        val a1 = Point(prev.longitude, prev.latitude)
-        val a2 = Point(curr.longitude, curr.latitude)
-        val b1 = Point(line[0].longitude, line[0].latitude)
-        val b2 = Point(line[1].longitude, line[1].latitude)
-        return if (lineSegmentsIntersect(a1, a2, b1, b2)) {
-            val dir = determineCrossingDirection(a1, a2, b1, b2)
-            CrossingResult(dir == CrossingDirection.ENTERING, dir)
-        } else null
+
+        val midLat = (line[0].latitude + line[1].latitude) / 2
+        val midLon = (line[0].longitude + line[1].longitude) / 2
+
+        val distance = haversine(curr.latitude, curr.longitude, midLat, midLon)
+
+        Log.d(TAG, "Checking proximity to finish line midpoint: $distance m")
+
+        return if (distance < 5.0) {  // 5 meters radius for simplicity
+            CrossingResult(true, CrossingDirection.ENTERING)
+        } else {
+            null
+        }
     }
+
+    private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val R = 6371000.0 // Earth radius in meters
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat / 2).pow(2.0) + Math.cos(Math.toRadians(lat1)) *
+                Math.cos(Math.toRadians(lat2)) * Math.sin(dLon / 2).pow(2.0)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return R * c
+    }
+
+
 
     private fun lineSegmentsIntersect(a1: Point, a2: Point, b1: Point, b2: Point): Boolean {
         fun ccw(p1: Point, p2: Point, p3: Point) =
@@ -166,12 +193,18 @@ class TimeAttackViewModel(
     )
 
     private fun calculateFinishLine(track: List<TrackCoordinatesData>): List<TrackCoordinatesData> {
-        val start = track.find { it.isStartPoint } ?: return emptyList()
-        return rotateTrackPoints(
-            track.filter { it.id in (start.id - 10)..(start.id + 10) },
-            start
-        )
+        val start = track.find { it.isStartPoint == true }
+        val surrounding = if (start != null) {
+            track.filter { it.id in (start.id - 10)..(start.id + 10) }
+        } else {
+            Log.w(TAG, "No start point flagged; falling back to first two track points.")
+            if (track.size >= 2) listOf(track[0], track[1]) else track
+        }
+        val finish = rotateTrackPoints(surrounding, start ?: surrounding.first())
+        Log.d(TAG, "Finish line calculated with ${finish.size} points: $finish")
+        return finish
     }
+
 }
 
 // ViewModel Factory
@@ -204,6 +237,8 @@ fun TimeAttackScreenView(
     LaunchedEffect(trackId) {
         trackId?.let { vm.loadTrack(it) }
     }
+
+
 
     val currentLap by vm.currentLapTime.collectAsState()
     val bestLap by vm.bestLap.collectAsState()
