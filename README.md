@@ -1,4 +1,5 @@
 # TrackPro
+[![Github All Releases](https://img.shields.io/github/downloads/aredarn/trackpro/total.svg)]()
 
 TrackPro is an open-source mobile app that grants automotive enthusiasts, racers, and anyone looking to enhance their driving experience—with real-time performance stats.
 
