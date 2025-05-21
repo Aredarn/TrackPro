@@ -45,7 +45,6 @@ class TimeAttackViewModel(
     private val database: ESPDatabase,
     context: Context
 ) : ViewModel() {
-    // Load config without destructuring
     private val config = JsonReader.loadConfig(context)
     private val ip = config.first
     private val port = config.second
