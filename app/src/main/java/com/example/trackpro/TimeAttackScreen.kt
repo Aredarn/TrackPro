@@ -45,6 +45,9 @@ class TimeAttackViewModel(
     private val database: ESPDatabase,
     context: Context
 ) : ViewModel() {
+    private var tcpClient: ESPTcpClient? = null
+
+
     private val config = JsonReader.loadConfig(context)
     private val ip = config.first
     private val port = config.second
@@ -89,15 +92,25 @@ class TimeAttackViewModel(
 
     private fun startTcpClient() = viewModelScope.launch {
         runCatching {
-            ESPTcpClient(
+            val client = ESPTcpClient(
                 serverAddress = ip,
                 port = port,
                 onMessageReceived = { data -> handleGpsUpdate(data) },
                 onConnectionStatusChanged = { connected -> if (!connected) resetTiming() }
-            ).connect()
+            )
+            tcpClient = client
+            client.connect()
+        }.onFailure {
+            Log.e(TAG, "TCP connection failed", it)
         }
-
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        tcpClient?.disconnect()  // Add this method to your ESPTcpClient if needed
+        Log.d(TAG, "TimeAttackViewModel cleared, TCP connection closed")
+    }
+
 
     private fun handleGpsUpdate(current: RawGPSData) {
         val now = SystemClock.elapsedRealtime()
@@ -167,22 +180,6 @@ class TimeAttackViewModel(
 
 
 
-    private fun lineSegmentsIntersect(a1: Point, a2: Point, b1: Point, b2: Point): Boolean {
-        fun ccw(p1: Point, p2: Point, p3: Point) =
-            (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)
-        val c1 = ccw(a1, a2, b1)
-        val c2 = ccw(a1, a2, b2)
-        val c3 = ccw(b1, b2, a1)
-        val c4 = ccw(b1, b2, a2)
-        return (c1 * c2 < 0) && (c3 * c4 < 0)
-    }
-
-    private fun determineCrossingDirection(a1: Point, a2: Point, b1: Point, b2: Point): CrossingDirection {
-        val trackVec = Point(b2.x - b1.x, b2.y - b1.y)
-        val moveVec = Point(a2.x - a1.x, a2.y - a1.y)
-        return if ((trackVec.x * moveVec.y - trackVec.y * moveVec.x) > 0)
-            CrossingDirection.ENTERING else CrossingDirection.EXITING
-    }
 
     private fun formatLapTime(millis: Long) = String.format(
         "%02d:%02d.%02d",

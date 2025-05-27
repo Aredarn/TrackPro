@@ -285,7 +285,7 @@ fun MainScreen(
                 )
 
                 Text(
-                    text = "Ready to beat some records?",
+                    text = "Ready to beat records?",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)

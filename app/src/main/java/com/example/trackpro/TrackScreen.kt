@@ -111,7 +111,6 @@ fun TrackScreen(onBack: () -> Unit, trackId: Long) {
 fun TrackView(database: ESPDatabase, trackId: Long) {
 
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current  // Get the Context in Compose
 
     // Use a state to hold the list of track parts, so Compose tracks changes
     val trackParts = remember { mutableStateListOf<TrackCoordinatesData>() }

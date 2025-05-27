@@ -97,7 +97,7 @@ class PostProcessing(val database: ESPDatabase) {
     }
 
 
-    fun processTrackPoints(
+    suspend fun processTrackPoints(
         trackId: Long,
         minDistance: Double = 0.2,  // Minimum distance between points in meters
         lapThreshold: Double = 50.0  // Distance to consider as completing a lap
@@ -105,14 +105,12 @@ class PostProcessing(val database: ESPDatabase) {
 
         val rawPoints = mutableListOf<TrackCoordinatesData>()
 
-        CoroutineScope(Dispatchers.Main).launch {
-            // Collect the flow inside a coroutine
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { points ->
                 Log.d("x:",points.toString())
                 rawPoints.clear() // Optionally clear previous data
                 rawPoints.addAll(points) // Add the new data
             }
-        }
+
 
         if (rawPoints.isEmpty())
         {

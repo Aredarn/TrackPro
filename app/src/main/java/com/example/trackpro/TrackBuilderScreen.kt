@@ -1,4 +1,5 @@
 package com.example.trackpro
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -26,8 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,7 +80,7 @@ class TrackBuilderScreen : ComponentActivity()
     }
 }
 
-
+/*
 val gpsPoints = listOf(
     LatLonOffset(47.305300, 17.048138),
     LatLonOffset(47.302270, 17.049691),
@@ -141,7 +138,7 @@ val gpsPoints = listOf(
     LatLonOffset(47.306092, 17.047740),
     LatLonOffset(47.304973, 17.048282),
     LatLonOffset(47.305300, 17.048138)
-)
+)*/
 
 
 @Composable
@@ -171,11 +168,9 @@ fun TrackBuilderScreen(
 
     var trackname by remember { mutableStateOf("") }
     var countryname by remember { mutableStateOf("") }
-    var lengthoftrack by remember { mutableDoubleStateOf(0.0) }
 
     var showDialog by remember { mutableStateOf(false) }
     var showStartBuilderButton by remember { mutableStateOf(false) }
-    var postProc = PostProcessing(database)
 
 
     fun startBatchInsert() {
@@ -205,11 +200,13 @@ fun TrackBuilderScreen(
         insertJob = null
     }
 
-    // Index to keep track of which point to add
-    var currentIndex by remember { mutableIntStateOf(0) }
+
 
 
     //Tester function. works with static data from Pannonia ring
+    /*
+     // Index to keep track of which point to add
+    var currentIndex by remember { mutableIntStateOf(0) }
     suspend fun startAddingGpsPoints() {
         // Loop to add points at intervals
         while (currentIndex < gpsPoints.size-1) {
@@ -221,7 +218,7 @@ fun TrackBuilderScreen(
             // Wait for 0.1 second before adding the next point
             delay(100)
         }
-    }
+    }*/
 
     LaunchedEffect(Unit) {
 
@@ -282,7 +279,7 @@ fun TrackBuilderScreen(
                     isSessionActive = !isSessionActive
                     if (isSessionActive) {
                         coroutineScope.launch(Dispatchers.IO) {
-                            trackID = startTrackBuilder(database, trackname, countryname, lengthoftrack)
+                            trackID = startTrackBuilder(database, trackname, countryname)
                             Log.d("TrckID:", "" + trackID)
                             withContext(Dispatchers.Main) {
                                 startBatchInsert()
@@ -291,7 +288,7 @@ fun TrackBuilderScreen(
                     } else {
                         coroutineScope.launch(Dispatchers.IO) {
                             stopBatchInsert()
-                            endTrackBuilder(database,trackID)
+                            endTrackBuilder(context, trackID)
                             //postProc.processTrackPoints(trackId = trackID)
                             trackID = -1
                         }
@@ -427,14 +424,15 @@ fun TrackInfoAlert(
 }
 
 
-suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countryname: String,lengthoftrack: Double):Long
+suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countryname: String):Long
 {
     val track = TrackMainData(trackName = trackName, country = countryname)
     val id = database.trackMainDao().insertTrackMainDataDAO(track)
     return id
 }
 
-suspend fun endTrackBuilder(database: ESPDatabase, trackId: Long) {
+suspend fun endTrackBuilder(context: Context, trackId: Long) {
+    val database = ESPDatabase.getInstance(context)
     val postProcess = PostProcessing(database)
 
     // Explicitly wait and ensure the processed track data is retrieved
