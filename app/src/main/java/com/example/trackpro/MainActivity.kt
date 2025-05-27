@@ -18,6 +18,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.ui.theme.TrackProTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -259,10 +261,16 @@ fun MainScreen(
                 )
             }
         ) { innerPadding ->
+            val colorRaceMode = Color(0xFF2B2F42)       // Steel Gray
+            val colorVehicle = Color(0xFF414770)        // Muted Indigo
+            val colorTrack = Color(0xFF3A3F58)          // Charcoal Blue
+            val colorESP = Color(0xFF2F4858)            // Dark Teal
+            val contentColor = Color.White
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding) // Use innerPadding here
+                    .padding(innerPadding)
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -271,107 +279,67 @@ fun MainScreen(
                     text = "Welcome to TRACKPRO",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = colorRaceMode
                     ),
                     modifier = Modifier.padding(8.dp)
                 )
+
                 Text(
                     text = "Ready to beat some records?",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     ),
                     modifier = Modifier.padding(4.dp)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Button(
-                    onClick = onNavigateToDragRace,
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .padding(top = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = MaterialTheme.colorScheme.onSecondary
-                    )
+                val buttonModifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .padding(top = 12.dp)
+
+                val shape = RoundedCornerShape(14.dp)
+                val elevation = ButtonDefaults.elevatedButtonElevation(6.dp)
+
+                @Composable
+                fun RacingButton(
+                    icon: ImageVector,
+                    label: String,
+                    onClick: () -> Unit,
+                    background: Color,
+                    content: Color
                 ) {
-                    Icon(Icons.Default.RocketLaunch, contentDescription = "Drag Race Icon")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Drag Screen")
+                    Button(
+                        onClick = onClick,
+                        modifier = buttonModifier,
+                        shape = shape,
+                        elevation = elevation,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = background,
+                            contentColor = content
+                        )
+                    ) {
+                        Icon(icon, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(label)
+                    }
                 }
 
-                Button(
-                    onClick = onNavigateToESPTestScreen,
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .padding(top = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.tertiary,
-                        contentColor = MaterialTheme.colorScheme.onTertiary
-                    )
-                ) {
-                    Icon(Icons.Default.Wifi, contentDescription = "ESP Icon")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("ESP Connection")
-                }
+                // 🏁 Race Mode
+                RacingButton(Icons.Default.RocketLaunch, "Drag Screen", onNavigateToDragRace, colorRaceMode, Color.White)
+                RacingButton(Icons.Default.FlagCircle, "Lap Timing", onNavigateToTrackVehicleSelector, colorRaceMode, Color.White)
 
-                Button(
-                    onClick = onNavigateToTrackBuilder,
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .padding(top = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                ) {
-                    Icon(Icons.Default.Timelapse, contentDescription = "Track Icon")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Track builder")
-                }
+                // 🔧 Vehicle Setup
+                RacingButton(Icons.Default.CarRepair, "Add Your Vehicle", onNavigateToVehicleCreatorScreen, colorVehicle, Color.White)
 
-                Button(
-                    onClick = onNavigateToVehicleCreatorScreen,
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .padding(top = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                ) {
-                    Icon(Icons.Default.CarRepair, contentDescription = "Car icon")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add your vehicle")
-                }
+                // 🛠 Track Management
+                RacingButton(Icons.Default.Timelapse, "Track Builder", onNavigateToTrackBuilder, colorTrack, Color.White)
 
-
-                Button(
-                    onClick = onNavigateToTrackVehicleSelector,
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .padding(top = 12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = ButtonDefaults.elevatedButtonElevation(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.outline,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                ) {
-                    Icon(Icons.Default.FlagCircle, contentDescription = "Car icon")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Lap timing")
-                }
+                // 📡 Connectivity
+                RacingButton(Icons.Default.Wifi, "ESP Connection", onNavigateToESPTestScreen, colorESP, Color.White)
             }
+
         }
     }
 }
