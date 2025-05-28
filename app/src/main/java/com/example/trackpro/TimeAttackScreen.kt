@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
@@ -25,6 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
 import com.example.trackpro.CalculationClasses.rotateTrackPoints
 import com.example.trackpro.DataClasses.TrackCoordinatesData
+import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
@@ -34,6 +36,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlin.math.pow
+import com.example.trackpro.ExtrasForUI.drawTrack
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.sqrt
 
 // Data and enums
 private enum class CrossingDirection { ENTERING, EXITING }
@@ -47,14 +53,21 @@ class TimeAttackViewModel(
 ) : ViewModel() {
     private var tcpClient: ESPTcpClient? = null
 
-
     private val config = JsonReader.loadConfig(context)
     private val ip = config.first
     private val port = config.second
+    private var hasStarted = false
+
+    private val _driverPosition = MutableStateFlow<LatLonOffset?>(null)
+    val driverPosition: StateFlow<LatLonOffset?> = _driverPosition.asStateFlow()
 
     // Finish line state
     private val _finishLine = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
     val finishLine: StateFlow<List<TrackCoordinatesData>> = _finishLine.asStateFlow()
+
+    private val _fullTrack = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
+    val fullTrack: StateFlow<List<TrackCoordinatesData>> = _fullTrack.asStateFlow()
+
 
     // Timing state
     private var lapStartTime = SystemClock.elapsedRealtime()
@@ -79,8 +92,12 @@ class TimeAttackViewModel(
     fun loadTrack(trackId: Long) {
         viewModelScope.launch {
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { coords ->
+                _fullTrack.value = coords
                 _finishLine.value = calculateFinishLine(coords)
-                Log.d("Track:", "Loaded track with ${coords.size} points, finish line: ${_finishLine.value}")
+                Log.d(
+                    "Track:",
+                    "Loaded track with ${coords.size} points, finish line: ${_finishLine.value}"
+                )
 
             }
         }
@@ -114,11 +131,26 @@ class TimeAttackViewModel(
 
     private fun handleGpsUpdate(current: RawGPSData) {
         val now = SystemClock.elapsedRealtime()
-        Log.d("TAG", "Received GPS: lat=${current.latitude}, lon=${current.longitude}, time=${current.timestamp}")
+
         previousGPSData?.let { prev ->
             checkFinishLineCrossing(prev, current)?.let { crossing ->
-                Log.d(TAG, "Crossing detected: valid=${crossing.isValid}, dir=${crossing.direction}")
+                Log.d(
+                    TAG,
+                    "Crossing detected: valid=${crossing.isValid}, dir=${crossing.direction}"
+                )
+
                 if (crossing.isValid && now - lastCrossTime > 5000) {
+                    if (!hasStarted) {
+                        hasStarted = true
+                        Log.d(
+                            TAG,
+                            "First valid crossing detected, marking session started but NOT counting lap."
+                        )
+                        lastCrossTime = now
+                        lapStartTime = now
+                        return  // Don't count the first lap
+                    }
+
                     val lapMs = now - lapStartTime
                     Log.d(TAG, "Lap crossed: duration=${lapMs}ms")
                     updateLapTimes(lapMs)
@@ -128,7 +160,9 @@ class TimeAttackViewModel(
                 }
             }
         }
+
         _currentLapTime.value = formatLapTime(now - lapStartTime)
+        _driverPosition.value = LatLonOffset(lat = current.latitude, lon = current.longitude)
         previousGPSData = current
     }
 
@@ -146,26 +180,9 @@ class TimeAttackViewModel(
     private fun resetTiming() {
         lapStartTime = SystemClock.elapsedRealtime()
         lastCrossTime = 0L
+        hasStarted = false  // Reset session state
         _stintStart.value = lapStartTime
         _lapCount.value = 0
-    }
-
-    private fun checkFinishLineCrossing(prev: RawGPSData, curr: RawGPSData): CrossingResult? {
-        val line = _finishLine.value
-        if (line.size < 2) return null
-
-        val midLat = (line[0].latitude + line[1].latitude) / 2
-        val midLon = (line[0].longitude + line[1].longitude) / 2
-
-        val distance = haversine(curr.latitude, curr.longitude, midLat, midLon)
-
-        Log.d(TAG, "Checking proximity to finish line midpoint: $distance m")
-
-        return if (distance < 5.0) {  // 5 meters radius for simplicity
-            CrossingResult(true, CrossingDirection.ENTERING)
-        } else {
-            null
-        }
     }
 
     private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
@@ -178,9 +195,6 @@ class TimeAttackViewModel(
         return R * c
     }
 
-
-
-
     private fun formatLapTime(millis: Long) = String.format(
         "%02d:%02d.%02d",
         (millis / 60000),
@@ -188,18 +202,128 @@ class TimeAttackViewModel(
         ((millis % 1000) / 10)
     )
 
-    private fun calculateFinishLine(track: List<TrackCoordinatesData>): List<TrackCoordinatesData> {
-        val start = track.find { it.isStartPoint == true }
-        val surrounding = if (start != null) {
-            track.filter { it.id in (start.id - 10)..(start.id + 10) }
-        } else {
-            Log.w(TAG, "No start point flagged; falling back to first two track points.")
-            if (track.size >= 2) listOf(track[0], track[1]) else track
+
+    private fun checkFinishLineCrossing(prev: RawGPSData, curr: RawGPSData): CrossingResult? {
+        val finishLine = _finishLine.value
+        if (finishLine.size < 2) return null
+
+        // Convert to vectors for easier calculations
+        val prevPos = Vector(prev.latitude, prev.longitude)
+        val currPos = Vector(curr.latitude, curr.longitude)
+        val lineStart = Vector(finishLine[0].latitude, finishLine[0].longitude)
+        val lineEnd = Vector(finishLine[1].latitude, finishLine[1].longitude)
+
+        // Check for intersection
+        val intersection = findIntersection(prevPos, currPos, lineStart, lineEnd)
+
+        if (intersection != null) {
+            // Determine crossing direction (which side of the line we're crossing to)
+            val crossingDirection = determineCrossingDirection(prevPos, currPos, lineStart, lineEnd)
+            return CrossingResult(true, crossingDirection)
         }
-        val finish = rotateTrackPoints(surrounding, start ?: surrounding.first())
-        Log.d(TAG, "Finish line calculated with ${finish.size} points: $finish")
-        return finish
+
+        return null
     }
+
+    private fun calculateFinishLine(track: List<TrackCoordinatesData>): List<TrackCoordinatesData> {
+        val startPoint = track.find { it.isStartPoint } ?: run {
+            Log.w(TAG, "No start point found, using first two points as fallback")
+            return if (track.size >= 2) listOf(track[0], track[1]) else track
+        }
+
+        // Find nearby points to determine track direction
+        val nearbyPoints = track.filter {
+            it.id in (startPoint.id - 5)..(startPoint.id + 5) && it.id != startPoint.id
+        }.take(10)
+
+        if (nearbyPoints.isEmpty()) {
+            Log.w(TAG, "Not enough points near start, using first two points")
+            return if (track.size >= 2) listOf(track[0], track[1]) else track
+        }
+
+        // Calculate average direction vector from nearby points
+        val avgDirection = nearbyPoints.fold(Vector(0.0, 0.0)) { acc, point ->
+            acc + Vector(point.longitude - startPoint.longitude,
+                point.latitude - startPoint.latitude)
+        } * (1.0 / nearbyPoints.size)
+
+        // Create perpendicular vector (rotated 90 degrees)
+        val perpendicular = Vector(-avgDirection.y, avgDirection.x).normalized()
+
+        // Scale to 8-16 meters (approx 0.00007-0.00014 degrees at equator)
+        val lineLength = 12.0 / 111320.0  // 12 meters in degrees (adjust as needed)
+        val scaledPerpendicular = perpendicular * lineLength
+
+        // Create finish line endpoints
+        return listOf(
+            TrackCoordinatesData(
+                id = -1,
+                trackId = startPoint.trackId,
+                latitude = startPoint.latitude - scaledPerpendicular.y,
+                longitude = startPoint.longitude - scaledPerpendicular.x,
+                altitude = startPoint.altitude,
+                isStartPoint = false
+            ),
+            TrackCoordinatesData(
+                id = -2,
+                trackId = startPoint.trackId,
+                latitude = startPoint.latitude + scaledPerpendicular.y,
+                longitude = startPoint.longitude + scaledPerpendicular.x,
+                altitude = startPoint.altitude,
+                isStartPoint = false
+            )
+        )
+    }
+
+    // Vector math helper functions
+    private data class Vector(val x: Double, val y: Double) {
+        operator fun plus(v: Vector) = Vector(x + v.x, y + v.y)
+        operator fun minus(v: Vector) = Vector(x - v.x, y - v.y)
+        operator fun times(scalar: Double) = Vector(x * scalar, y * scalar)
+        fun cross(v: Vector) = x * v.y - y * v.x
+        fun dot(v: Vector) = x * v.x + y * v.y
+        fun length() = sqrt(x * x + y * y)
+        fun normalized() = this * (1.0 / length())
+    }
+
+    private fun findIntersection(
+        a1: Vector, a2: Vector,  // Path segment
+        b1: Vector, b2: Vector   // Finish line segment
+    ): Vector? {
+        val r = a2 - a1
+        val s = b2 - b1
+        val rxs = r.cross(s)
+        val qmp = b1 - a1
+        val qpxr = qmp.cross(r)
+
+        // If segments are parallel or collinear
+        if (rxs == 0.0) return null
+
+        val t = qmp.cross(s) / rxs
+        val u = qpxr / rxs
+
+        // If intersection is within both segments
+        if (t in 0.0..1.0 && u in 0.0..1.0) {
+            return a1 + r * t
+        }
+        return null
+    }
+
+    private fun determineCrossingDirection(
+        prevPos: Vector, currPos: Vector,
+        lineStart: Vector, lineEnd: Vector
+    ): CrossingDirection {
+        val pathVector = currPos - prevPos
+        val lineVector = lineEnd - lineStart
+
+        // Calculate cross product to determine relative direction
+        val cross = pathVector.cross(lineVector)
+
+        // If cross product is positive, path is crossing in one direction
+        // If negative, it's crossing in the opposite direction
+        return if (cross > 0) CrossingDirection.ENTERING else CrossingDirection.EXITING
+    }
+
 
 }
 
@@ -234,8 +358,6 @@ fun TimeAttackScreenView(
         trackId?.let { vm.loadTrack(it) }
     }
 
-
-
     val currentLap by vm.currentLapTime.collectAsState()
     val bestLap by vm.bestLap.collectAsState()
     val delta by vm.delta.collectAsState()
@@ -243,6 +365,11 @@ fun TimeAttackScreenView(
     val stintStart by vm.stintStart.collectAsState()
 
     val deltaColor = if (delta < 0) Color.Green else Color.Red
+
+    val fullTrack by vm.fullTrack.collectAsState()
+    val finishLine by vm.finishLine.collectAsState()
+    val driver by vm.driverPosition.collectAsState()
+
 
     when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> LandscapeLayout(
@@ -253,13 +380,16 @@ fun TimeAttackScreenView(
             lapCount = lapCount,
             stintStart = stintStart
         )
+
         else -> PortraitLayout(
             currentLap = currentLap,
             delta = delta,
             deltaColor = deltaColor,
             bestLap = bestLap,
             lapCount = lapCount,
-            stintStart = stintStart
+            stintStart = stintStart,
+            gpsPoints = fullTrack + finishLine,
+            driver = driver ?: LatLonOffset(0.0, 0.0)
         )
     }
 }
@@ -275,7 +405,9 @@ private fun LandscapeLayout(
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.weight(1f).padding(16.dp),
+            modifier = Modifier
+                .weight(1f)
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             LapTimeDisplay(time = currentLap, color = deltaColor, size = 68.sp)
@@ -283,7 +415,9 @@ private fun LandscapeLayout(
             ReferenceLapDisplay(bestLap = bestLap)
         }
         Column(
-            modifier = Modifier.weight(1f).padding(16.dp),
+            modifier = Modifier
+                .weight(1f)
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             BigDeltaDisplay(delta = delta)
@@ -299,7 +433,9 @@ private fun PortraitLayout(
     deltaColor: Color,
     bestLap: String,
     lapCount: Int,
-    stintStart: Long
+    stintStart: Long,
+    gpsPoints: List<TrackCoordinatesData>,
+    driver: LatLonOffset
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f)) {
@@ -313,6 +449,14 @@ private fun PortraitLayout(
             Column(modifier = Modifier.padding(16.dp)) {
                 BigDeltaDisplay(delta = delta)
                 StintInfoDisplay(stintStart = stintStart, lapCount = lapCount)
+            }
+        }
+        Box(modifier = Modifier.weight(1f))
+        {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                // Draw the track, start line, and animated dot
+                drawTrack(gpsPoints, 8f,driver)
+
             }
         }
     }

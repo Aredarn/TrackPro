@@ -64,7 +64,6 @@ class MainActivity : ComponentActivity() {
                             onNavigateToTrackBuilder = { navController.navigate("trackbuilder") },
                             onNavigateToDragTimesList = { navController.navigate("dragsessions") },
                             onNavigateToVehicleCreatorScreen = { navController.navigate("createvehicle") } ,
-                            onNavigateToTimeAttackScreen = {navController.navigate("timeattack")},
                             onNavigateToVehicleList = {navController.navigate("vehicles")},
                             onNavigateToTrackVehicleSelector = {navController.navigate("trackandvehicle")}
                         )
@@ -170,7 +169,6 @@ fun MainScreen(
     onNavigateToTrackBuilder: () -> Unit,
     onNavigateToDragTimesList: () -> Unit,
     onNavigateToVehicleCreatorScreen: () -> Unit,
-    onNavigateToTimeAttackScreen: () -> Unit,
     onNavigateToVehicleList: () -> Unit,
     onNavigateToTrackVehicleSelector:() -> Unit
 ) {
@@ -356,7 +354,6 @@ fun MainScreenPreview() {
             onNavigateToTrackBuilder = {},
             onNavigateToDragTimesList = {},
             onNavigateToVehicleCreatorScreen = {},
-            onNavigateToTimeAttackScreen = {},
             onNavigateToVehicleList = {},
             onNavigateToTrackVehicleSelector = {}
         )

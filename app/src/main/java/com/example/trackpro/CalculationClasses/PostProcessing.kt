@@ -102,15 +102,12 @@ class PostProcessing(val database: ESPDatabase) {
         minDistance: Double = 0.2,  // Minimum distance between points in meters
         lapThreshold: Double = 50.0  // Distance to consider as completing a lap
     ): List<TrackCoordinatesData> {
-
         val rawPoints = mutableListOf<TrackCoordinatesData>()
 
-            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { points ->
-                Log.d("x:",points.toString())
-                rawPoints.clear() // Optionally clear previous data
-                rawPoints.addAll(points) // Add the new data
-            }
-
+        database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { points ->
+            rawPoints.clear()
+            rawPoints.addAll(points)
+        }
 
         if (rawPoints.isEmpty())
         {
