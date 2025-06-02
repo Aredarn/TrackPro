@@ -19,7 +19,7 @@ interface TrackMainDataDAO {
     fun getTrack(trackId: Int): Flow<TrackMainData>
 
     @Query("DELETE FROM track_main_data WHERE trackId = :trackId")
-    suspend fun deleteTrack(trackId: Int)
+    suspend fun deleteTrack(trackId: Long)
 
     @Query("UPDATE track_main_data SET totalLength = :length WHERE trackId = :trackId")
     suspend fun updateTotalLength(trackId: Long, length: Double)

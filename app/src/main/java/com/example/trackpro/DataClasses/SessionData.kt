@@ -3,9 +3,6 @@ package com.example.trackpro.DataClasses
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-
-
-
 @Entity(
     tableName = "session_data",
     foreignKeys = [androidx.room.ForeignKey(

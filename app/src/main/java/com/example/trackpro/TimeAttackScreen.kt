@@ -166,7 +166,6 @@ class TimeAttackViewModel(
         previousGPSData = current
     }
 
-
     private fun updateLapTimes(lapMs: Long) {
         val seconds = lapMs / 1000.0
         _delta.value = if (bestLapSeconds.isFinite()) seconds - bestLapSeconds else 0.0
@@ -250,7 +249,7 @@ class TimeAttackViewModel(
         // Create perpendicular vector (rotated 90 degrees)
         val perpendicular = Vector(-avgDirection.y, avgDirection.x).normalized()
 
-        // Scale to 8-16 meters (approx 0.00007-0.00014 degrees at equator)
+        // Scale to 8-16 meters
         val lineLength = 12.0 / 111320.0  // 12 meters in degrees (adjust as needed)
         val scaledPerpendicular = perpendicular * lineLength
 

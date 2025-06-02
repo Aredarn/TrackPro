@@ -15,17 +15,14 @@ interface TrackCoordinatesDataDAO {
     @Insert
     suspend fun insertTrackPart(data: List<TrackCoordinatesData>)
 
-
     //The user wanted a full track filter, insertion of the full track
     //Same as the insertTrackPart, but made two @Insert for better readability
     @Insert
     suspend fun insertTrack(data: List<TrackCoordinatesData>)
-
 
     // IF the user whats to recreate the track
     //OR
     // IF the user filters the coordinates (if the full track is complete)
     @Query("DELETE FROM track_coordinates_data WHERE trackId = :trackId")
     suspend fun deleteTrackCoordinates(trackId: Int)
-
 }

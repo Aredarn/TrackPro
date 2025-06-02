@@ -218,8 +218,7 @@ fun TrackCard(
 suspend fun DeleteVehicle(context: Context, database: ESPDatabase, vehicleId: Long)
 {
     database.vehicleInformationDAO().deleteVehicle(vehicleId)
-
-    //Toast.makeText(context, "🚀 Vehicle deleted successfully!", Toast.LENGTH_SHORT).show()
+   // Toast.makeText(context, "🚀 Vehicle deleted successfully!", Toast.LENGTH_SHORT).show()
 
 }
 

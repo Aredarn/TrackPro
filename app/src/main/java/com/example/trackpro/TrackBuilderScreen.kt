@@ -200,9 +200,6 @@ fun TrackBuilderScreen(
         insertJob = null
     }
 
-
-
-
     //Tester function. works with static data from Pannonia ring
     /*
      // Index to keep track of which point to add
@@ -269,7 +266,7 @@ fun TrackBuilderScreen(
 
         val buttonShape = RoundedCornerShape(12.dp)
         val buttonColors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF2196F3), // Soft blue, or replace with Color.Transparent for outline style
+            containerColor = Color(0xFF2196F3),
             contentColor = Color.White
         )
 
@@ -277,6 +274,8 @@ fun TrackBuilderScreen(
             Button(
                 onClick = {
                     isSessionActive = !isSessionActive
+                    Log.d("Button","Inside button click")
+
                     if (isSessionActive) {
                         coroutineScope.launch(Dispatchers.IO) {
                             trackID = startTrackBuilder(database, trackname, countryname)
@@ -432,12 +431,12 @@ suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countrynam
 }
 
 suspend fun endTrackBuilder(context: Context, trackId: Long) {
+    Log.d("endTrackBuilder", "Inside")
     val database = ESPDatabase.getInstance(context)
     val postProcess = PostProcessing(database)
 
     // Explicitly wait and ensure the processed track data is retrieved
     val track: List<TrackCoordinatesData> = postProcess.processTrackPoints(trackId)
-    Log.d("TRACK:", "Received ${track.size} points: $track")
 
     if (track.isEmpty()) {
         Log.w("endTrackBuilder", "No track points found for trackId=$trackId! Aborting.")

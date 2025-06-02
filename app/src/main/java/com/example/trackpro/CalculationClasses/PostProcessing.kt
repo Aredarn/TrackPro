@@ -1,5 +1,6 @@
 package com.example.trackpro.CalculationClasses
 
+import android.nfc.Tag
 import android.util.Log
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SmoothedGPSData
@@ -7,6 +8,7 @@ import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.ESPDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -102,18 +104,20 @@ class PostProcessing(val database: ESPDatabase) {
         minDistance: Double = 0.2,  // Minimum distance between points in meters
         lapThreshold: Double = 50.0  // Distance to consider as completing a lap
     ): List<TrackCoordinatesData> {
-        val rawPoints = mutableListOf<TrackCoordinatesData>()
+        Log.d("Ending","End track builder.")
 
-        database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { points ->
-            rawPoints.clear()
-            rawPoints.addAll(points)
-        }
+        val rawPoints = database.trackCoordinatesDao()
+            .getCoordinatesOfTrack(trackId)
+            .first()
+            .toMutableList()
+
 
         if (rawPoints.isEmpty())
         {
             Log.d("list:", "No rawPoints found")
             return emptyList()
         }
+        Log.d("Trackpoints:",rawPoints.toString())
 
         // Step 1: Remove consecutive duplicates
         val deduplicated = rawPoints.distinct()
@@ -175,8 +179,15 @@ class PostProcessing(val database: ESPDatabase) {
                 }
             }
         }
+        Log.d("ya:",withStartPoint.toString())
 
-        return lapEndIndex?.let { withStartPoint.subList(0, it + 1) } ?: withStartPoint
+        val finalProcessedList = lapEndIndex?.let { withStartPoint.subList(0, it + 1) } ?: withStartPoint
+
+        // Save the filtered result to DB
+        database.trackCoordinatesDao().deleteTrackCoordinates(trackId.toInt())
+        database.trackCoordinatesDao().insertTrack(finalProcessedList)
+
+        return finalProcessedList
     }
 
     // Haversine distance calculation

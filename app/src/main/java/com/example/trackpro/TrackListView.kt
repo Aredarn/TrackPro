@@ -1,7 +1,9 @@
 package com.example.trackpro
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -45,7 +47,12 @@ import com.example.trackpro.ViewModels.TrackViewModel
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class TrackListView : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +66,9 @@ class TrackListView : ComponentActivity() {
 @Composable
 fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
     val tracks by viewModel.tracks.collectAsState()
+    val context = LocalContext.current
+    val database = remember { ESPDatabase.getInstance(context) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Your recorded tracks") }) }
@@ -79,7 +89,10 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
                             track,
                             navController,
                             onDelete = { tracktodelete ->
-
+                                scope.launch(Dispatchers.IO)
+                                {
+                                    DeleteTrack(context, database, tracktodelete.trackId)
+                                }
                             }
                         )
                     }
@@ -196,4 +209,9 @@ fun TrackCard(
     }
 }
 
+suspend fun DeleteTrack(context: Context, database: ESPDatabase, trackId: Long)
+{
+    database.trackMainDao().deleteTrack(trackId)
+    //Toast.makeText(context, "🚀 Track deleted successfully!", Toast.LENGTH_SHORT).show()
+}
 
