@@ -15,9 +15,6 @@ interface TrackMainDataDAO {
     @Query("SELECT * FROM track_main_data ORDER BY trackName ASC")
     fun getAllTrack(): Flow<List<TrackMainData>>
 
-    @Query("SELECT trackName FROM track_main_data where trackId =:trackId")
-    fun getTrackName(trackId: Long): Flow<TrackMainData>
-
     @Query("Select * from track_main_data where trackId =:trackId")
     fun getTrack(trackId: Long): Flow<TrackMainData>
 

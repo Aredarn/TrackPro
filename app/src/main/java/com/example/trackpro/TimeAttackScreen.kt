@@ -134,6 +134,7 @@ class TimeAttackViewModel(
     override fun onCleared() {
         super.onCleared()
         tcpClient?.disconnect()  // Add this method to your ESPTcpClient if needed
+        resetTiming()
         Log.d(TAG, "TimeAttackViewModel cleared, TCP connection closed")
     }
 
@@ -280,25 +281,33 @@ class TimeAttackViewModel(
     // Creates a new lap timing session
     //Name: track name + date
 
-    private suspend fun createSession(trackId: Long, vehicleId: Long) {
+    suspend fun createSession(trackId: Long, vehicleId: Long) {
         val sessionManager = SessionManager.getInstance(database)
 
         withContext(Dispatchers.IO) {
-            // Get the track name once
-            val trackData = database.trackMainDao().getTrackName(trackId).first()
-            val trackName = trackData.trackName
+            val trackName =database.trackMainDao().getTrack(trackId).first().trackName
+            val todayFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+            val eventType = "$trackName - $todayFormatted"
 
-            // Format today's date
-            val todayFormatted: String = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+            // Check if this session already exists
+            val existingSessions = database.sessionDataDao().getAllSessions().first() // assuming this returns a Flow<List<Session>>
+            val duplicate = existingSessions.any {
+                it.eventType == eventType && it.vehicleId == vehicleId
+            }
 
-            // Start session with combined event type
+            Log.d(TAG,"ok?")
+            if (duplicate) {
+                return@withContext
+            }
+
             sessionManager.startSession(
-                eventType = "$trackName - $todayFormatted",
+                eventType = eventType,
                 vehicleId = vehicleId,
                 description = "Lap timing session"
             )
         }
     }
+
 
     // Vector math helper functions
     private data class Vector(val x: Double, val y: Double) {
@@ -379,8 +388,12 @@ fun TimeAttackScreenView(
     )
 
     LaunchedEffect(trackId) {
-        trackId?.let { vm.loadTrack(it) }
+        if (trackId != null && vehicleId != null) {
+            vm.loadTrack(trackId)
+            vm.createSession(trackId, vehicleId)
+        }
     }
+
 
     val currentLap by vm.currentLapTime.collectAsState()
     val bestLap by vm.bestLap.collectAsState()
