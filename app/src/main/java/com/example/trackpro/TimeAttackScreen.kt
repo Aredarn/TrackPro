@@ -7,10 +7,20 @@ import android.content.res.Configuration
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,23 +32,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewModelScope
-import com.example.trackpro.CalculationClasses.rotateTrackPoints
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.ExtrasForUI.LatLonOffset
+import com.example.trackpro.ExtrasForUI.drawTrack
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
+import com.example.trackpro.ManagerClasses.SessionManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
-import kotlin.math.pow
-import com.example.trackpro.ExtrasForUI.drawTrack
-import kotlin.math.abs
-import kotlin.math.atan2
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlin.math.sqrt
 
 // Data and enums
@@ -89,16 +102,12 @@ class TimeAttackViewModel(
     private val _stintStart = MutableStateFlow(lapStartTime)
     val stintStart: StateFlow<Long> = _stintStart.asStateFlow()
 
+
     fun loadTrack(trackId: Long) {
         viewModelScope.launch {
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { coords ->
                 _fullTrack.value = coords
                 _finishLine.value = calculateFinishLine(coords)
-                Log.d(
-                    "Track:",
-                    "Loaded track with ${coords.size} points, finish line: ${_finishLine.value}"
-                )
-
             }
         }
     }
@@ -184,23 +193,12 @@ class TimeAttackViewModel(
         _lapCount.value = 0
     }
 
-    private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val R = 6371000.0 // Earth radius in meters
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
-        val a = Math.sin(dLat / 2).pow(2.0) + Math.cos(Math.toRadians(lat1)) *
-                Math.cos(Math.toRadians(lat2)) * Math.sin(dLon / 2).pow(2.0)
-        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-        return R * c
-    }
-
     private fun formatLapTime(millis: Long) = String.format(
         "%02d:%02d.%02d",
         (millis / 60000),
         ((millis % 60000) / 1000),
         ((millis % 1000) / 10)
     )
-
 
     private fun checkFinishLineCrossing(prev: RawGPSData, curr: RawGPSData): CrossingResult? {
         val finishLine = _finishLine.value
@@ -274,13 +272,40 @@ class TimeAttackViewModel(
         )
     }
 
+    private fun addLapToSession()
+    {
+
+    }
+
+    // Creates a new lap timing session
+    //Name: track name + date
+
+    private suspend fun createSession(trackId: Long, vehicleId: Long) {
+        val sessionManager = SessionManager.getInstance(database)
+
+        withContext(Dispatchers.IO) {
+            // Get the track name once
+            val trackData = database.trackMainDao().getTrackName(trackId).first()
+            val trackName = trackData.trackName
+
+            // Format today's date
+            val todayFormatted: String = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+
+            // Start session with combined event type
+            sessionManager.startSession(
+                eventType = "$trackName - $todayFormatted",
+                vehicleId = vehicleId,
+                description = "Lap timing session"
+            )
+        }
+    }
+
     // Vector math helper functions
     private data class Vector(val x: Double, val y: Double) {
         operator fun plus(v: Vector) = Vector(x + v.x, y + v.y)
         operator fun minus(v: Vector) = Vector(x - v.x, y - v.y)
         operator fun times(scalar: Double) = Vector(x * scalar, y * scalar)
         fun cross(v: Vector) = x * v.y - y * v.x
-        fun dot(v: Vector) = x * v.x + y * v.y
         fun length() = sqrt(x * x + y * y)
         fun normalized() = this * (1.0 / length())
     }
@@ -446,7 +471,7 @@ private fun PortraitLayout(
         }
         Box(modifier = Modifier.weight(1f)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                BigDeltaDisplay(delta = delta)
+               // BigDeltaDisplay(delta = delta)
                 StintInfoDisplay(stintStart = stintStart, lapCount = lapCount)
             }
         }
@@ -454,7 +479,7 @@ private fun PortraitLayout(
         {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 // Draw the track, start line, and animated dot
-                drawTrack(gpsPoints, 8f,driver)
+                drawTrack(gpsPoints, 32f,driver)
 
             }
         }
