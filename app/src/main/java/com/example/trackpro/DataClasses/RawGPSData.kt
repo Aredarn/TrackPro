@@ -14,7 +14,6 @@ import kotlinx.serialization.Serializable
         childColumns = ["sessionid"],
         onDelete = ForeignKey.CASCADE
     )]
-
 )
 
 data class RawGPSData(
