@@ -295,7 +295,6 @@ class TimeAttackViewModel(
                 it.eventType == eventType && it.vehicleId == vehicleId
             }
 
-            Log.d(TAG,"ok?")
             if (duplicate) {
                 return@withContext
             }
@@ -305,6 +304,7 @@ class TimeAttackViewModel(
                 vehicleId = vehicleId,
                 description = "Lap timing session"
             )
+
         }
     }
 

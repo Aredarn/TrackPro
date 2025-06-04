@@ -15,8 +15,7 @@ import com.example.trackpro.ESPDatabase
 
 class SessionManager private constructor(
     private val sessionDataDao: SessionDataDao,
-    private val rawGPSDataDao: RawGPSDataDao,
-    private val derivedDataDao: DerivedDataDao
+
 ) {
 
     private var currentSessionId: Long? = null
@@ -55,8 +54,6 @@ class SessionManager private constructor(
             return INSTANCE ?: synchronized(this) {
                 val instance = SessionManager(
                     database.sessionDataDao(),
-                    database.rawGPSDataDao(),
-                    database.derivedDataDao()
                 )
                 INSTANCE = instance
                 instance
