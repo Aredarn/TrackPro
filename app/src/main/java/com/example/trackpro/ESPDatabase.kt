@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.trackpro.DAO.DerivedDataDao
+import com.example.trackpro.DAO.LapTimeDataDAO
 import com.example.trackpro.DAO.RawGPSDataDao
 import com.example.trackpro.DAO.SessionDataDao
 import com.example.trackpro.DAO.SmoothedGPSDataDAO
@@ -12,6 +13,7 @@ import com.example.trackpro.DAO.TrackCoordinatesDataDAO
 import com.example.trackpro.DAO.TrackMainDataDAO
 import com.example.trackpro.DAO.VehicleInformationDAO
 import com.example.trackpro.DataClasses.DerivedData
+import com.example.trackpro.DataClasses.LapTimeData
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.DataClasses.SmoothedGPSData
@@ -27,7 +29,8 @@ import com.example.trackpro.DataClasses.VehicleInformationData
     SmoothedGPSData::class,
     TrackMainData::class,
     TrackCoordinatesData::class,
-    VehicleInformationData::class
+    VehicleInformationData::class,
+    LapTimeData::class
 ], version = 1, exportSchema = false)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
@@ -37,7 +40,7 @@ abstract class ESPDatabase : RoomDatabase() {
     abstract fun trackMainDao(): TrackMainDataDAO
     abstract fun trackCoordinatesDao(): TrackCoordinatesDataDAO
     abstract fun vehicleInformationDAO(): VehicleInformationDAO
-
+    abstract fun lapTimeDataDAO(): LapTimeDataDAO
 
     companion object {
         @Volatile

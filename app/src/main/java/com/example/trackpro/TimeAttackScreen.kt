@@ -34,7 +34,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.trackpro.DataClasses.SessionData
+import com.example.trackpro.DataClasses.LapTimeData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.drawTrack
@@ -42,6 +42,7 @@ import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
 import com.example.trackpro.ManagerClasses.SessionManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -102,6 +103,8 @@ class TimeAttackViewModel(
     private val _stintStart = MutableStateFlow(lapStartTime)
     val stintStart: StateFlow<Long> = _stintStart.asStateFlow()
 
+    var sessionid: Long = -1
+    //var lap
 
     fun loadTrack(trackId: Long) {
         viewModelScope.launch {
@@ -163,10 +166,22 @@ class TimeAttackViewModel(
 
                     val lapMs = now - lapStartTime
                     Log.d(TAG, "Lap crossed: duration=${lapMs}ms")
+
+
                     updateLapTimes(lapMs)
                     lastCrossTime = now
                     lapStartTime = now
                     _lapCount.value += 1
+
+                    val lapTimeData = LapTimeData(
+                        sessionid = sessionid,
+                        lapnumber = _lapCount.value,
+                        laptime = formatLapTime(now - lapStartTime)
+                    )
+
+                    CoroutineScope(Dispatchers.IO).launch {
+                        addLapToSession(lapTimeData)
+                    }
                 }
             }
         }
@@ -273,7 +288,12 @@ class TimeAttackViewModel(
         )
     }
 
-    private fun addLapToSession()
+    private suspend fun addLapToSession(lapTimeData: LapTimeData)
+    {
+       database.lapTimeDataDAO().insert(lapTimeData)
+    }
+
+    private suspend fun addDataToLap()
     {
 
     }
@@ -304,6 +324,7 @@ class TimeAttackViewModel(
                 vehicleId = vehicleId,
                 description = "Lap timing session"
             )
+            sessionManager.getCurrentSessionId()
 
         }
     }
