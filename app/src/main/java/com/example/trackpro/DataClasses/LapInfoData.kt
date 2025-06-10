@@ -1,3 +1,5 @@
+package com.example.trackpro.DataClasses
+
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
@@ -8,7 +10,7 @@ import com.example.trackpro.DataClasses.LapTimeData
     foreignKeys = [ForeignKey(
         entity = LapTimeData::class,
         parentColumns = ["id"],
-        childColumns = ["lapid"],
+        childColumns = ["id"],
         onDelete = ForeignKey.CASCADE
     )]
 )
@@ -17,8 +19,8 @@ data class LapInfoData(
     val lapid: Long,
     val lat: Double,
     val lon: Double,
-    val alt: Double,
-    val spd: Double,
+    val alt: Double?,
+    val spd: Float?,
     val latgforce: Double?,
     val longforce: Double?
 )

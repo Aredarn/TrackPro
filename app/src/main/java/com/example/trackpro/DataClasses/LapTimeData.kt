@@ -15,7 +15,7 @@ import androidx.room.PrimaryKey
 )
 
 data class LapTimeData (
-    @PrimaryKey(autoGenerate = true) val lapid: Long = 0,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val sessionid: Long,
     val lapnumber: Int,
     val laptime: String

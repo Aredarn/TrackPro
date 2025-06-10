@@ -28,12 +28,14 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.trackpro.DataClasses.LapInfoData
 import com.example.trackpro.DataClasses.LapTimeData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.ExtrasForUI.LatLonOffset
@@ -104,6 +106,7 @@ class TimeAttackViewModel(
     val stintStart: StateFlow<Long> = _stintStart.asStateFlow()
 
     var sessionid: Long = -1
+    var _lapID: Long = -1
     //var lap
 
     fun loadTrack(trackId: Long) {
@@ -180,7 +183,7 @@ class TimeAttackViewModel(
                     )
 
                     CoroutineScope(Dispatchers.IO).launch {
-                        addLapToSession(lapTimeData)
+                        _lapID = addLapToSession(lapTimeData)
                     }
                 }
             }
@@ -189,6 +192,23 @@ class TimeAttackViewModel(
         _currentLapTime.value = formatLapTime(now - lapStartTime)
         _driverPosition.value = LatLonOffset(lat = current.latitude, lon = current.longitude)
         previousGPSData = current
+
+        if(_lapID == -1L)
+        {
+            val lapInfoData = LapInfoData(
+                lapid = _lapCount.value.toLong(),
+                lat = current.latitude,
+                lon = current.longitude,
+                spd = current.speed,
+                alt = current.altitude,
+                latgforce = null,
+                longforce = null
+            )
+
+            CoroutineScope(Dispatchers.IO).launch {
+                addDataToLap(lapInfoData)
+            }
+        }
     }
 
     private fun updateLapTimes(lapMs: Long) {
@@ -288,14 +308,16 @@ class TimeAttackViewModel(
         )
     }
 
-    private suspend fun addLapToSession(lapTimeData: LapTimeData)
+    private suspend fun addLapToSession(lapTimeData: LapTimeData) : Long
     {
-       database.lapTimeDataDAO().insert(lapTimeData)
+       return database.lapTimeDataDAO().insert(lapTimeData)
     }
 
-    private suspend fun addDataToLap()
-    {
 
+    //Creates lap and returns its id
+    private suspend fun addDataToLap(lapInfoData: LapInfoData)
+    {
+        database.lapInfoDataDAO().insert(lapInfoData)
     }
 
     // Creates a new lap timing session
@@ -310,7 +332,7 @@ class TimeAttackViewModel(
             val eventType = "$trackName - $todayFormatted"
 
             // Check if this session already exists
-            val existingSessions = database.sessionDataDao().getAllSessions().first() // assuming this returns a Flow<List<Session>>
+            val existingSessions = database.sessionDataDao().getAllSessions().first()
             val duplicate = existingSessions.any {
                 it.eventType == eventType && it.vehicleId == vehicleId
             }
@@ -524,7 +546,7 @@ private fun PortraitLayout(
 private fun LapTimeDisplay(
     time: String,
     color: Color,
-    size: androidx.compose.ui.unit.TextUnit
+    size: TextUnit
 ) {
     Text(
         text = time,
@@ -538,7 +560,7 @@ private fun LapTimeDisplay(
 @Composable
 private fun DeltaDisplay(
     delta: Double,
-    size: androidx.compose.ui.unit.TextUnit
+    size: TextUnit
 ) {
     Text(
         text = "Δ ${String.format("%+.2f", delta)}s",

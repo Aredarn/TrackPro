@@ -8,7 +8,7 @@ import com.example.trackpro.DataClasses.LapTimeData
 interface LapTimeDataDAO {
 
     @Insert
-    suspend fun insert(laptimedata: LapTimeData)
+    suspend fun insert(laptimedata: LapTimeData) : Long
 
 
 
