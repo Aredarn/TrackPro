@@ -10,7 +10,7 @@ import com.example.trackpro.DataClasses.LapTimeData
     foreignKeys = [ForeignKey(
         entity = LapTimeData::class,
         parentColumns = ["id"],
-        childColumns = ["id"],
+        childColumns = ["lapid"],
         onDelete = ForeignKey.CASCADE
     )]
 )
@@ -24,3 +24,6 @@ data class LapInfoData(
     val latgforce: Double?,
     val longforce: Double?
 )
+
+
+// NEM VÁLTOZIK A LAPID CROSSING UTÁN!!!!!!!!!!!!!!!!!!

@@ -44,13 +44,17 @@ import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
 import com.example.trackpro.ManagerClasses.SessionManager
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -104,6 +108,7 @@ class TimeAttackViewModel(
     val lapCount: StateFlow<Int> = _lapCount.asStateFlow()
     private val _stintStart = MutableStateFlow(lapStartTime)
     val stintStart: StateFlow<Long> = _stintStart.asStateFlow()
+    val lapDataChannel = Channel<LapInfoData>(capacity = Channel.UNLIMITED)
 
     var sessionid: Long = -1
     var _lapID: Long = -1
@@ -120,6 +125,7 @@ class TimeAttackViewModel(
 
     init {
         startTcpClient()
+        startLapDataConsumer(viewModelScope)
     }
 
     private fun startTcpClient() = viewModelScope.launch {
@@ -179,12 +185,26 @@ class TimeAttackViewModel(
                     val lapTimeData = LapTimeData(
                         sessionid = sessionid,
                         lapnumber = _lapCount.value,
-                        laptime = formatLapTime(now - lapStartTime)
+                        laptime = formatLapTime(lapMs)
                     )
+                    Log.d(TAG,"Lap time data: $lapTimeData")
 
-                    CoroutineScope(Dispatchers.IO).launch {
-                        _lapID = addLapToSession(lapTimeData)
+                    val newLapIdDeferred = CompletableDeferred<Long>()
+
+                    viewModelScope.launch(Dispatchers.IO) {
+                        val result = addLapToSession(lapTimeData)
+                        Log.d(TAG, "Insert result ID: $result")
+                        _lapID = result
+                        newLapIdDeferred.complete(result)
                     }
+
+                    // Wait until lap ID is updated before queuing more GPS
+                    viewModelScope.launch {
+                        val newLapId = newLapIdDeferred.await()
+                        Log.d(TAG, "Lap ID ready: $newLapId")
+                    }
+
+
                 }
             }
         }
@@ -193,10 +213,9 @@ class TimeAttackViewModel(
         _driverPosition.value = LatLonOffset(lat = current.latitude, lon = current.longitude)
         previousGPSData = current
 
-        if(_lapID == -1L)
-        {
+        if (_lapID != -1L) {
             val lapInfoData = LapInfoData(
-                lapid = _lapCount.value.toLong(),
+                lapid = _lapID,
                 lat = current.latitude,
                 lon = current.longitude,
                 spd = current.speed,
@@ -205,8 +224,9 @@ class TimeAttackViewModel(
                 longforce = null
             )
 
-            CoroutineScope(Dispatchers.IO).launch {
-                addDataToLap(lapInfoData)
+            // Send it to the buffered channel (non-blocking)
+            lapDataChannel.trySend(lapInfoData).onFailure {
+                Log.e("LapInsert", "Failed to queue lap data: ${it?.message}")
             }
         }
     }
@@ -310,15 +330,37 @@ class TimeAttackViewModel(
 
     private suspend fun addLapToSession(lapTimeData: LapTimeData) : Long
     {
-       return database.lapTimeDataDAO().insert(lapTimeData)
+        val result = database.lapTimeDataDAO().insert(lapTimeData)
+        Log.d(TAG, "Insert result ID: $result")
+        return result
+
+    }
+
+    private fun startLapDataConsumer(scope: CoroutineScope) {
+        scope.launch(Dispatchers.IO) {
+            for (lapData in lapDataChannel) {
+                try {
+                    addDataToLap(lapData)
+                    Log.d("LapInsert", "Lap info added: $lapData")
+                } catch (e: Exception) {
+                    Log.e("LapInsert", "Failed to insert lap data", e)
+                }
+            }
+        }
+    }
+
+    fun flushPendingLapData() {
+        lapDataChannel.close() // triggers the consumer to finish
     }
 
 
     //Creates lap and returns its id
-    private suspend fun addDataToLap(lapInfoData: LapInfoData)
-    {
-        database.lapInfoDataDAO().insert(lapInfoData)
+    suspend fun addDataToLap(data: LapInfoData) {
+        withContext(Dispatchers.IO) {
+            database.lapInfoDataDAO().insert(data)
+        }
     }
+
 
     // Creates a new lap timing session
     //Name: track name + date
@@ -326,18 +368,20 @@ class TimeAttackViewModel(
     suspend fun createSession(trackId: Long, vehicleId: Long) {
         val sessionManager = SessionManager.getInstance(database)
 
-        withContext(Dispatchers.IO) {
-            val trackName =database.trackMainDao().getTrack(trackId).first().trackName
+        return withContext(Dispatchers.IO) {
+            val track = database.trackMainDao().getTrack(trackId).firstOrNull() ?: return@withContext
+            val trackName = track.trackName
             val todayFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
             val eventType = "$trackName - $todayFormatted"
 
-            // Check if this session already exists
-            val existingSessions = database.sessionDataDao().getAllSessions().first()
-            val duplicate = existingSessions.any {
+            val existingSession = database.sessionDataDao().getAllSessions().first().find {
                 it.eventType == eventType && it.vehicleId == vehicleId
             }
 
-            if (duplicate) {
+            if (existingSession != null) {
+                Log.d(TAG, "Session already exists")
+                Log.d(TAG, "Session id: ${existingSession.id}")
+                sessionid = existingSession.id
                 return@withContext
             }
 
@@ -346,10 +390,12 @@ class TimeAttackViewModel(
                 vehicleId = vehicleId,
                 description = "Lap timing session"
             )
-            sessionManager.getCurrentSessionId()
 
+            sessionid = sessionManager.getCurrentSessionId()!!
+            return@withContext
         }
     }
+
 
 
     // Vector math helper functions
