@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.trackpro"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.trackpro"
@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.androidx.ui.test.android)
     implementation(libs.androidx.material3.android)
     implementation(libs.androidx.graphics.core)
+
+    implementation(libs.androidx.runtime.livedata)
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")

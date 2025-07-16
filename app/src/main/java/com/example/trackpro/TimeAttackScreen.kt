@@ -1,7 +1,6 @@
-// TimeAttackScreen.kt
+// TimeAttackViewModel.kt (complete)
 package com.example.trackpro
 
-import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.res.Configuration
 import android.os.SystemClock
@@ -16,16 +15,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
@@ -34,7 +31,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trackpro.DataClasses.LapInfoData
 import com.example.trackpro.DataClasses.LapTimeData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
@@ -44,88 +40,76 @@ import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
 import com.example.trackpro.ManagerClasses.SessionManager
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import com.example.trackpro.ManagerClasses.TimeAttackManagers.CircuitTimingManager
+import com.example.trackpro.ManagerClasses.TimeAttackManagers.SprintTimingManager
+import com.example.trackpro.ManagerClasses.TimeAttackManagers.TimingManager
+import com.example.trackpro.ManagerClasses.TimeAttackManagers.TimingMode
+import com.example.trackpro.ManagerClasses.TimeAttackManagers.TrackGeometry
+import com.example.trackpro.ManagerClasses.TimeAttackManagers.TrackGeometry.calculateFinishLine
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.onFailure
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import kotlin.math.sqrt
 
-// Data and enums
-private enum class CrossingDirection { ENTERING, EXITING }
-private data class CrossingResult(val isValid: Boolean, val direction: CrossingDirection)
-private data class Point(val x: Double, val y: Double)
+// Add these imports at the top of the file
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 
-// ViewModel
 class TimeAttackViewModel(
     private val database: ESPDatabase,
     context: Context
 ) : ViewModel() {
     private var tcpClient: ESPTcpClient? = null
-
     private val config = JsonReader.loadConfig(context)
     private val ip = config.first
     private val port = config.second
-    private var hasStarted = false
-
-    private val _driverPosition = MutableStateFlow<LatLonOffset?>(null)
-    val driverPosition: StateFlow<LatLonOffset?> = _driverPosition.asStateFlow()
-
-    // Finish line state
-    private val _finishLine = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
-    val finishLine: StateFlow<List<TrackCoordinatesData>> = _finishLine.asStateFlow()
-
-    private val _fullTrack = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
-    val fullTrack: StateFlow<List<TrackCoordinatesData>> = _fullTrack.asStateFlow()
-
 
     // Timing state
-    private var lapStartTime = SystemClock.elapsedRealtime()
-    private var lastCrossTime = 0L
-    private var bestLapSeconds = Double.POSITIVE_INFINITY
+    private var timingManager: TimingManager? = null
+    private val _timingMode = MutableStateFlow<TimingMode>(TimingMode.Circuit)
+    val timingMode: StateFlow<TimingMode> = _timingMode.asStateFlow()
+
+    // Position tracking
+    private val _driverPosition = MutableStateFlow<LatLonOffset?>(null)
+    private val _fullTrack = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
+    private val _startLine = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
+    private val _finishLine = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
+
+    // Session state
+    private var _sessionId: Long = -1
+    private var _lapId: Long = -1
     private var previousGPSData: RawGPSData? = null
+    private val lapDataChannel = Channel<LapInfoData>(Channel.UNLIMITED)
 
-    // UI state
-    private val _currentLapTime = MutableStateFlow("00:00.00")
-    val currentLapTime: StateFlow<String> = _currentLapTime.asStateFlow()
-    private val _bestLap = MutableStateFlow("--:--.--")
-    val bestLap: StateFlow<String> = _bestLap.asStateFlow()
-    private val _lastLap = MutableStateFlow("--:--.--")
-    val lastLap: StateFlow<String> = _lastLap.asStateFlow()
-    private val _delta = MutableStateFlow(0.0)
-    val delta: StateFlow<Double> = _delta.asStateFlow()
-    private val _lapCount = MutableStateFlow(0)
-    val lapCount: StateFlow<Int> = _lapCount.asStateFlow()
-    private val _stintStart = MutableStateFlow(lapStartTime)
-    val stintStart: StateFlow<Long> = _stintStart.asStateFlow()
-    val lapDataChannel = Channel<LapInfoData>(capacity = Channel.UNLIMITED)
+    // Expose state to UI
+    val driverPosition: StateFlow<LatLonOffset?> = _driverPosition.asStateFlow()
+    val fullTrack: StateFlow<List<TrackCoordinatesData>> = _fullTrack.asStateFlow()
+    val startLine: StateFlow<List<TrackCoordinatesData>> = _startLine.asStateFlow()
+    val finishLine: StateFlow<List<TrackCoordinatesData>> = _finishLine.asStateFlow()
 
-    var sessionid: Long = -1
-    var _lapID: Long = -1
-    //var lap
-
-    fun loadTrack(trackId: Long) {
-        viewModelScope.launch {
-            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { coords ->
-                _fullTrack.value = coords
-                _finishLine.value = calculateFinishLine(coords)
-            }
-        }
-    }
+    // Expose timing state
+    val currentTime: StateFlow<String>
+        get() = timingManager?.currentTime ?: MutableStateFlow("00:00.00").asStateFlow()
+    val bestTime: StateFlow<String>
+        get() = timingManager?.bestTime ?: MutableStateFlow("--:--.--").asStateFlow()
+    val lastTime: StateFlow<String>
+        get() = timingManager?.lastTime ?: MutableStateFlow("--:--.--").asStateFlow()
+    val delta: StateFlow<Double> get() = timingManager?.delta ?: MutableStateFlow(0.0).asStateFlow()
+    val eventCount: StateFlow<Int>
+        get() = timingManager?.eventCount ?: MutableStateFlow(0).asStateFlow()
+    val stintStart: StateFlow<Long>
+        get() = timingManager?.stintStart ?: MutableStateFlow(
+            SystemClock.elapsedRealtime()
+        ).asStateFlow()
 
     init {
         startTcpClient()
-        startLapDataConsumer(viewModelScope)
+        startLapDataConsumer()
     }
 
     private fun startTcpClient() = viewModelScope.launch {
@@ -134,7 +118,9 @@ class TimeAttackViewModel(
                 serverAddress = ip,
                 port = port,
                 onMessageReceived = { data -> handleGpsUpdate(data) },
-                onConnectionStatusChanged = { connected -> if (!connected) resetTiming() }
+                onConnectionStatusChanged = { connected ->
+                    if (!connected) timingManager?.reset()
+                }
             )
             tcpClient = client
             client.connect()
@@ -145,203 +131,87 @@ class TimeAttackViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        tcpClient?.disconnect()  // Add this method to your ESPTcpClient if needed
-        resetTiming()
-        Log.d(TAG, "TimeAttackViewModel cleared, TCP connection closed")
+        tcpClient?.disconnect()
+        timingManager?.reset()
+        Log.d(TAG, "ViewModel cleared")
     }
 
+    //WORKS
+    // Updated ViewModel section
+    fun loadTrack(trackId: Long, mode: TimingMode) {
+        _timingMode.value = mode
+        viewModelScope.launch {
+            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { coords ->
+                _fullTrack.value = coords
 
-    private fun handleGpsUpdate(current: RawGPSData) {
-        val now = SystemClock.elapsedRealtime()
+                when (mode) {
+                    TimingMode.Circuit -> {
+                        _finishLine.value = calculateFinishLine(coords)
+                        _startLine.value = emptyList()
 
-        previousGPSData?.let { prev ->
-            checkFinishLineCrossing(prev, current)?.let { crossing ->
-                Log.d(
-                    TAG,
-                    "Crossing detected: valid=${crossing.isValid}, dir=${crossing.direction}"
-                )
+                        val manager = CircuitTimingManager(_finishLine.value)
+                        timingManager = manager
 
-                if (crossing.isValid && now - lastCrossTime > 5000) {
-                    if (!hasStarted) {
-                        hasStarted = true
-                        Log.d(
-                            TAG,
-                            "First valid crossing detected, marking session started but NOT counting lap."
-                        )
-                        lastCrossTime = now
-                        lapStartTime = now
-                        return  // Don't count the first lap
+                        viewModelScope.launch {
+                            manager.lapCompletedChannel.consumeAsFlow().collect {
+                                handleCompletedLap(it)
+                            }
+                        }
                     }
 
-                    val lapMs = now - lapStartTime
-                    Log.d(TAG, "Lap crossed: duration=${lapMs}ms")
+                    TimingMode.Sprint -> {
+                        val (start, finish) = TrackGeometry.calculateSprintLines(coords)
+                        _startLine.value = start
+                        _finishLine.value = finish
 
+                        val manager = SprintTimingManager(start, finish)
+                        timingManager = manager
 
-                    updateLapTimes(lapMs)
-                    lastCrossTime = now
-                    lapStartTime = now
-                    _lapCount.value += 1
-
-                    val lapTimeData = LapTimeData(
-                        sessionid = sessionid,
-                        lapnumber = _lapCount.value,
-                        laptime = formatLapTime(lapMs)
-                    )
-                    Log.d(TAG,"Lap time data: $lapTimeData")
-
-                    val newLapIdDeferred = CompletableDeferred<Long>()
-
-                    viewModelScope.launch(Dispatchers.IO) {
-                        val result = addLapToSession(lapTimeData)
-                        Log.d(TAG, "Insert result ID: $result")
-                        _lapID = result
-                        newLapIdDeferred.complete(result)
+                        viewModelScope.launch {
+                            manager.sprintCompletedChannel.consumeAsFlow().collect {
+                                handleCompletedSprint(it)
+                            }
+                        }
                     }
-
-                    // Wait until lap ID is updated before queuing more GPS
-                    viewModelScope.launch {
-                        val newLapId = newLapIdDeferred.await()
-                        Log.d(TAG, "Lap ID ready: $newLapId")
-                    }
-
-
                 }
             }
         }
+    }
 
-        _currentLapTime.value = formatLapTime(now - lapStartTime)
+
+    //WORKS
+    private fun handleGpsUpdate(current: RawGPSData) {
+        timingManager?.handleGpsUpdate(previousGPSData, current)
         _driverPosition.value = LatLonOffset(lat = current.latitude, lon = current.longitude)
         previousGPSData = current
-
-        if (_lapID != -1L) {
-            val lapInfoData = LapInfoData(
-                lapid = _lapID,
-                lat = current.latitude,
-                lon = current.longitude,
-                spd = current.speed,
-                alt = current.altitude,
-                latgforce = null,
-                longforce = null
-            )
-
-            // Send it to the buffered channel (non-blocking)
-            lapDataChannel.trySend(lapInfoData).onFailure {
-                Log.e("LapInsert", "Failed to queue lap data: ${it?.message}")
-            }
-        }
+        processLapData(current)
     }
 
-    private fun updateLapTimes(lapMs: Long) {
-        val seconds = lapMs / 1000.0
-        _delta.value = if (bestLapSeconds.isFinite()) seconds - bestLapSeconds else 0.0
-        if (seconds < bestLapSeconds) {
-            bestLapSeconds = seconds
-            _bestLap.value = formatLapTime(lapMs)
-        }
-        _lastLap.value = formatLapTime(lapMs)
-    }
+    //WORKS
+    private fun processLapData(current: RawGPSData) {
+        if (_lapId == -1L) return
 
-    private fun resetTiming() {
-        lapStartTime = SystemClock.elapsedRealtime()
-        lastCrossTime = 0L
-        hasStarted = false  // Reset session state
-        _stintStart.value = lapStartTime
-        _lapCount.value = 0
-    }
-
-    private fun formatLapTime(millis: Long) = String.format(
-        "%02d:%02d.%02d",
-        (millis / 60000),
-        ((millis % 60000) / 1000),
-        ((millis % 1000) / 10)
-    )
-
-    private fun checkFinishLineCrossing(prev: RawGPSData, curr: RawGPSData): CrossingResult? {
-        val finishLine = _finishLine.value
-        if (finishLine.size < 2) return null
-
-        // Convert to vectors for easier calculations
-        val prevPos = Vector(prev.latitude, prev.longitude)
-        val currPos = Vector(curr.latitude, curr.longitude)
-        val lineStart = Vector(finishLine[0].latitude, finishLine[0].longitude)
-        val lineEnd = Vector(finishLine[1].latitude, finishLine[1].longitude)
-
-        // Check for intersection
-        val intersection = findIntersection(prevPos, currPos, lineStart, lineEnd)
-
-        if (intersection != null) {
-            // Determine crossing direction (which side of the line we're crossing to)
-            val crossingDirection = determineCrossingDirection(prevPos, currPos, lineStart, lineEnd)
-            return CrossingResult(true, crossingDirection)
-        }
-
-        return null
-    }
-
-    private fun calculateFinishLine(track: List<TrackCoordinatesData>): List<TrackCoordinatesData> {
-        val startPoint = track.find { it.isStartPoint } ?: run {
-            Log.w(TAG, "No start point found, using first two points as fallback")
-            return if (track.size >= 2) listOf(track[0], track[1]) else track
-        }
-
-        // Find nearby points to determine track direction
-        val nearbyPoints = track.filter {
-            it.id in (startPoint.id - 5)..(startPoint.id + 5) && it.id != startPoint.id
-        }.take(10)
-
-        if (nearbyPoints.isEmpty()) {
-            Log.w(TAG, "Not enough points near start, using first two points")
-            return if (track.size >= 2) listOf(track[0], track[1]) else track
-        }
-
-        // Calculate average direction vector from nearby points
-        val avgDirection = nearbyPoints.fold(Vector(0.0, 0.0)) { acc, point ->
-            acc + Vector(point.longitude - startPoint.longitude,
-                point.latitude - startPoint.latitude)
-        } * (1.0 / nearbyPoints.size)
-
-        // Create perpendicular vector (rotated 90 degrees)
-        val perpendicular = Vector(-avgDirection.y, avgDirection.x).normalized()
-
-        // Scale to 8-16 meters
-        val lineLength = 12.0 / 111320.0  // 12 meters in degrees (adjust as needed)
-        val scaledPerpendicular = perpendicular * lineLength
-
-        // Create finish line endpoints
-        return listOf(
-            TrackCoordinatesData(
-                id = -1,
-                trackId = startPoint.trackId,
-                latitude = startPoint.latitude - scaledPerpendicular.y,
-                longitude = startPoint.longitude - scaledPerpendicular.x,
-                altitude = startPoint.altitude,
-                isStartPoint = false
-            ),
-            TrackCoordinatesData(
-                id = -2,
-                trackId = startPoint.trackId,
-                latitude = startPoint.latitude + scaledPerpendicular.y,
-                longitude = startPoint.longitude + scaledPerpendicular.x,
-                altitude = startPoint.altitude,
-                isStartPoint = false
-            )
+        val lapInfoData = LapInfoData(
+            lapid = _lapId,
+            lat = current.latitude,
+            lon = current.longitude,
+            spd = current.speed,
+            alt = current.altitude,
+            latgforce = null,
+            longforce = null
         )
+
+        lapDataChannel.trySend(lapInfoData).onFailure {
+            Log.e("LapInsert", "Failed to queue lap data: ${it?.message}")
+        }
     }
 
-    private suspend fun addLapToSession(lapTimeData: LapTimeData) : Long
-    {
-        val result = database.lapTimeDataDAO().insert(lapTimeData)
-        Log.d(TAG, "Insert result ID: $result")
-        return result
-
-    }
-
-    private fun startLapDataConsumer(scope: CoroutineScope) {
-        scope.launch(Dispatchers.IO) {
+    //WORKS
+    private fun startLapDataConsumer() {
+        viewModelScope.launch(Dispatchers.IO) {
             for (lapData in lapDataChannel) {
                 try {
-                    addDataToLap(lapData)
-                    Log.d("LapInsert", "Lap info added: $lapData")
+                    database.lapInfoDataDAO().insert(lapData)
                 } catch (e: Exception) {
                     Log.e("LapInsert", "Failed to insert lap data", e)
                 }
@@ -349,126 +219,107 @@ class TimeAttackViewModel(
         }
     }
 
-    fun flushPendingLapData() {
-        lapDataChannel.close() // triggers the consumer to finish
-    }
 
+    private fun handleCompletedLap(lapMs: Long) {
+        viewModelScope.launch {
+            if (_sessionId == -1L) {
+                Log.e(TAG, "Session not created, cannot save lap")
+                return@launch
+            }
 
-    //Creates lap and returns its id
-    suspend fun addDataToLap(data: LapInfoData) {
-        withContext(Dispatchers.IO) {
-            database.lapInfoDataDAO().insert(data)
+            val lapTimeData = LapTimeData(
+                sessionid = _sessionId,
+                lapnumber = eventCount.value,
+                laptime = formatLapTime(lapMs)
+            )
+
+            _lapId = withContext(Dispatchers.IO) {
+                database.lapTimeDataDAO().insert(lapTimeData)
+            }
+
+            Log.d(TAG, "Lap time saved: $lapTimeData")
         }
     }
 
+    private fun handleCompletedSprint(sprintMs: Long) {
+        viewModelScope.launch {
+            if (_sessionId == -1L) {
+                Log.e(TAG, "Session not created, cannot save sprint")
+                return@launch
+            }
 
-    // Creates a new lap timing session
-    //Name: track name + date
+            val sprintData = LapTimeData(
+                sessionid = _sessionId,
+                lapnumber = eventCount.value,
+                laptime = formatLapTime(sprintMs)
+            )
 
+            _lapId = withContext(Dispatchers.IO) {
+                database.lapTimeDataDAO().insert(sprintData)
+            }
+
+            Log.d(TAG, "Sprint time saved: $sprintData")
+        }
+    }
+
+    private fun formatLapTime(millis: Long) = String.format(
+        "%02d:%02d.%02d",
+        millis / 60000,
+        (millis % 60000) / 1000,
+        (millis % 1000) / 10
+    )
+
+    //WORKS
     suspend fun createSession(trackId: Long, vehicleId: Long) {
-        val sessionManager = SessionManager.getInstance(database)
-
-        return withContext(Dispatchers.IO) {
-            val track = database.trackMainDao().getTrack(trackId).firstOrNull() ?: return@withContext
+        withContext(Dispatchers.IO) {
+            val sessionManager = SessionManager.getInstance(database)
+            val track =
+                database.trackMainDao().getTrack(trackId).firstOrNull() ?: return@withContext
             val trackName = track.trackName
             val todayFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
             val eventType = "$trackName - $todayFormatted"
+
+            Log.d("createSession", "eventType: $eventType, vehicleId: $vehicleId")
 
             val existingSession = database.sessionDataDao().getAllSessions().first().find {
                 it.eventType == eventType && it.vehicleId == vehicleId
             }
 
-            if (existingSession != null) {
-                Log.d(TAG, "Session already exists")
-                Log.d(TAG, "Session id: ${existingSession.id}")
-                sessionid = existingSession.id
-                return@withContext
+
+            _sessionId = existingSession?.id ?: run {
+                sessionManager.startSession(
+                    eventType = eventType,
+                    vehicleId = vehicleId,
+                    description = "${timingMode.value} session"
+                )
+                sessionManager.getCurrentSessionId()!!
             }
+            _lapId = trackId
 
-            sessionManager.startSession(
-                eventType = eventType,
-                vehicleId = vehicleId,
-                description = "Lap timing session"
-            )
 
-            sessionid = sessionManager.getCurrentSessionId()!!
-            return@withContext
+            Log.d("createSession", "Session created with id: $_sessionId")
+
         }
     }
 
-
-
-    // Vector math helper functions
-    private data class Vector(val x: Double, val y: Double) {
-        operator fun plus(v: Vector) = Vector(x + v.x, y + v.y)
-        operator fun minus(v: Vector) = Vector(x - v.x, y - v.y)
-        operator fun times(scalar: Double) = Vector(x * scalar, y * scalar)
-        fun cross(v: Vector) = x * v.y - y * v.x
-        fun length() = sqrt(x * x + y * y)
-        fun normalized() = this * (1.0 / length())
+    fun resetSession() {
+        timingManager?.reset()
+        _lapId = -1
     }
 
-    private fun findIntersection(
-        a1: Vector, a2: Vector,  // Path segment
-        b1: Vector, b2: Vector   // Finish line segment
-    ): Vector? {
-        val r = a2 - a1
-        val s = b2 - b1
-        val rxs = r.cross(s)
-        val qmp = b1 - a1
-        val qpxr = qmp.cross(r)
-
-        // If segments are parallel or collinear
-        if (rxs == 0.0) return null
-
-        val t = qmp.cross(s) / rxs
-        val u = qpxr / rxs
-
-        // If intersection is within both segments
-        if (t in 0.0..1.0 && u in 0.0..1.0) {
-            return a1 + r * t
-        }
-        return null
-    }
-
-    private fun determineCrossingDirection(
-        prevPos: Vector, currPos: Vector,
-        lineStart: Vector, lineEnd: Vector
-    ): CrossingDirection {
-        val pathVector = currPos - prevPos
-        val lineVector = lineEnd - lineStart
-
-        // Calculate cross product to determine relative direction
-        val cross = pathVector.cross(lineVector)
-
-        // If cross product is positive, path is crossing in one direction
-        // If negative, it's crossing in the opposite direction
-        return if (cross > 0) CrossingDirection.ENTERING else CrossingDirection.EXITING
-    }
-
-
-}
-
-// ViewModel Factory
-class TimeAttackViewModelFactory(
-    private val context: Context,
-    private val database: ESPDatabase
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(TimeAttackViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return TimeAttackViewModel(database, context) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
+    companion object {
+        private const val TAG = "TimeAttackViewModel"
     }
 }
 
-// Composable UI
+
+// TimeAttackScreen.kt (complete composable)
 @Composable
 fun TimeAttackScreenView(
     database: ESPDatabase,
     trackId: Long?,
     vehicleId: Long?,
+    // timingMode: TimingMode, Passed from navigation
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -476,45 +327,55 @@ fun TimeAttackScreenView(
         factory = TimeAttackViewModelFactory(context, database)
     )
 
+    // Collect state
+    val currentTime by vm.currentTime.collectAsState()
+    val bestTime by vm.bestTime.collectAsState()
+    val lastTime by vm.lastTime.collectAsState()
+    val delta by vm.delta.collectAsState()
+    val eventCount by vm.eventCount.collectAsState()
+    val stintStart by vm.stintStart.collectAsState()
+    val fullTrack by vm.fullTrack.collectAsState()
+    val finishLine by vm.finishLine.collectAsState()
+    val startLine by vm.startLine.collectAsState()
+    val driver by vm.driverPosition.collectAsState()
+    val timingMode by vm.timingMode.collectAsState()
+
+    // Calculate lines to show based on mode
+    val linesToShow = remember {
+        if (timingMode is TimingMode.Sprint) {
+            startLine + finishLine
+        } else {
+            finishLine
+        }
+    }
+
+    // Initialize track and session
     LaunchedEffect(trackId) {
         if (trackId != null && vehicleId != null) {
-            vm.loadTrack(trackId)
+            vm.loadTrack(trackId, timingMode)
             vm.createSession(trackId, vehicleId)
         }
     }
 
-
-    val currentLap by vm.currentLapTime.collectAsState()
-    val bestLap by vm.bestLap.collectAsState()
-    val delta by vm.delta.collectAsState()
-    val lapCount by vm.lapCount.collectAsState()
-    val stintStart by vm.stintStart.collectAsState()
-
-    val deltaColor = if (delta < 0) Color.Green else Color.Red
-
-    val fullTrack by vm.fullTrack.collectAsState()
-    val finishLine by vm.finishLine.collectAsState()
-    val driver by vm.driverPosition.collectAsState()
-
-
+    // UI based on orientation
     when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> LandscapeLayout(
-            currentLap = currentLap,
+            timingMode = timingMode,
+            currentTime = currentTime,
             delta = delta,
-            deltaColor = deltaColor,
-            bestLap = bestLap,
-            lapCount = lapCount,
+            bestTime = bestTime,
+            eventCount = eventCount,
             stintStart = stintStart
         )
 
         else -> PortraitLayout(
-            currentLap = currentLap,
+            timingMode = timingMode,
+            currentTime = currentTime,
             delta = delta,
-            deltaColor = deltaColor,
-            bestLap = bestLap,
-            lapCount = lapCount,
+            bestTime = bestTime,
+            eventCount = eventCount,
             stintStart = stintStart,
-            gpsPoints = fullTrack + finishLine,
+            gpsPoints = fullTrack + linesToShow,
             driver = driver ?: LatLonOffset(0.0, 0.0)
         )
     }
@@ -522,13 +383,16 @@ fun TimeAttackScreenView(
 
 @Composable
 private fun LandscapeLayout(
-    currentLap: String,
+    timingMode: TimingMode,
+    currentTime: String,
     delta: Double,
-    deltaColor: Color,
-    bestLap: String,
-    lapCount: Int,
+    bestTime: String,
+    eventCount: Int,
     stintStart: Long
 ) {
+    val deltaColor = if (delta < 0) Color.Green else Color.Red
+    val eventName = if (timingMode is TimingMode.Circuit) "Laps" else "Runs"
+
     Row(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -536,9 +400,10 @@ private fun LandscapeLayout(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            LapTimeDisplay(time = currentLap, color = deltaColor, size = 68.sp)
+            ModeIndicator(timingMode)
+            LapTimeDisplay(time = currentTime, color = deltaColor, size = 68.sp)
             DeltaDisplay(delta = delta, size = 28.sp)
-            ReferenceLapDisplay(bestLap = bestLap)
+            ReferenceTimeDisplay(bestTime = bestTime)
         }
         Column(
             modifier = Modifier
@@ -547,45 +412,69 @@ private fun LandscapeLayout(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             BigDeltaDisplay(delta = delta)
-            StintInfoDisplay(stintStart = stintStart, lapCount = lapCount)
+            StintInfoDisplay(
+                stintStart = stintStart,
+                eventCount = eventCount,
+                eventName = eventName
+            )
         }
     }
 }
 
 @Composable
 private fun PortraitLayout(
-    currentLap: String,
+    timingMode: TimingMode,
+    currentTime: String,
     delta: Double,
-    deltaColor: Color,
-    bestLap: String,
-    lapCount: Int,
+    bestTime: String,
+    eventCount: Int,
     stintStart: Long,
     gpsPoints: List<TrackCoordinatesData>,
     driver: LatLonOffset
 ) {
+    val deltaColor = if (delta < 0) Color.Green else Color.Red
+    val eventName = if (timingMode is TimingMode.Circuit) "Laps" else "Runs"
+
     Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.weight(1f)) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                LapTimeDisplay(time = currentLap, color = deltaColor, size = 56.sp)
-                DeltaDisplay(delta = delta, size = 24.sp)
-                ReferenceLapDisplay(bestLap = bestLap)
-            }
+        Column(modifier = Modifier.padding(16.dp)) {
+            ModeIndicator(timingMode)
+            LapTimeDisplay(time = currentTime, color = deltaColor, size = 56.sp)
+            DeltaDisplay(delta = delta, size = 24.sp)
+            ReferenceTimeDisplay(bestTime = bestTime)
         }
+
         Box(modifier = Modifier.weight(1f)) {
             Column(modifier = Modifier.padding(16.dp)) {
-               // BigDeltaDisplay(delta = delta)
-                StintInfoDisplay(stintStart = stintStart, lapCount = lapCount)
+                StintInfoDisplay(
+                    stintStart = stintStart,
+                    eventCount = eventCount,
+                    eventName = eventName
+                )
             }
         }
         Box(modifier = Modifier.weight(1f))
         {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                // Draw the track, start line, and animated dot
-                drawTrack(gpsPoints, 32f,driver)
-
+                drawTrack(gpsPoints, 32f, driver)
             }
         }
     }
+}
+
+@Composable
+private fun ModeIndicator(timingMode: TimingMode) {
+    val (text, color) = when (timingMode) {
+        is TimingMode.Circuit -> "CIRCUIT MODE" to Color.Blue
+        is TimingMode.Sprint -> "SPRINT MODE" to Color.Red
+    }
+
+    Text(
+        text = text,
+        color = color,
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
 }
 
 @Composable
@@ -631,30 +520,33 @@ private fun BigDeltaDisplay(
 }
 
 @Composable
-private fun ReferenceLapDisplay(
-    bestLap: String
+private fun ReferenceTimeDisplay(
+    bestTime: String
 ) {
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
-        Text(text = "REFERENCE LAP", color = Color.Gray, fontSize = 18.sp)
-        Text(text = bestLap, fontSize = 32.sp, color = Color.LightGray)
+        Text(text = "BEST TIME", color = Color.Gray, fontSize = 18.sp)
+        Text(text = bestTime, fontSize = 32.sp, color = Color.LightGray)
     }
 }
 
 @Composable
 private fun StintInfoDisplay(
     stintStart: Long,
-    lapCount: Int
+    eventCount: Int,
+    eventName: String
 ) {
-    var stintTime by rememberSaveable { mutableStateOf("00:00:00") }
+    var stintTime by remember { mutableStateOf("00:00:00") }
+
     LaunchedEffect(stintStart) {
         while (true) {
-            delay(100L)
+            delay(100)
             stintTime = formatDuration(SystemClock.elapsedRealtime() - stintStart)
         }
     }
+
     Column {
         Text(text = "Stint: $stintTime", fontSize = 20.sp, color = Color.DarkGray)
-        Text(text = "Laps: $lapCount", fontSize = 20.sp, color = Color.DarkGray)
+        Text(text = "$eventName: $eventCount", fontSize = 20.sp, color = Color.DarkGray)
     }
 }
 
@@ -664,3 +556,17 @@ private fun formatDuration(millis: Long): String = String.format(
     (millis % 3600000) / 60000,
     (millis % 60000) / 1000
 )
+
+// ViewModel Factory
+class TimeAttackViewModelFactory(
+    private val context: Context,
+    private val database: ESPDatabase
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(TimeAttackViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return TimeAttackViewModel(database, context) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}

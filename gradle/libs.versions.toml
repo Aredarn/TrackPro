@@ -5,6 +5,8 @@ material3Android = "1.3.1"
 generativeai = "0.9.0"
 uiTestAndroid = "1.5.1"
 graphicsCore = "1.0.3"
+workRuntimeKtx = "2.10.2"
+runtimeLivedata = "1.8.3"
 
 
 [libraries]
@@ -13,6 +15,8 @@ androidx-material3-android = { group = "androidx.compose.material3", name = "mat
 generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "generativeai" }
 androidx-ui-test-android = { group = "androidx.compose.ui", name = "ui-test-android", version.ref = "uiTestAndroid" }
 androidx-graphics-core = { group = "androidx.graphics", name = "graphics-core", version.ref = "graphicsCore" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
+androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtimeLivedata" }
 
 [plugins]
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

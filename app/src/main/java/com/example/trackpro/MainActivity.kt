@@ -27,6 +27,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.trackpro.ManagerClasses.TimeAttackManagers.TimingMode
 import com.example.trackpro.ViewModels.SessionViewModel
 import com.example.trackpro.ViewModels.SessionViewModelFactory
 import com.example.trackpro.ViewModels.TrackViewModel
@@ -137,6 +138,7 @@ class MainActivity : ComponentActivity() {
                     composable(
                         route = "timeattack/{vehicleId}/{trackId}"
                     ) { backStackEntry ->
+
                         val vehicleId = backStackEntry.arguments?.getString("vehicleId")?.toLongOrNull() ?: -1L
                         val trackId = backStackEntry.arguments?.getString("trackId")?.toLongOrNull() ?: -1L
 
