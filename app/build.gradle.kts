@@ -100,6 +100,8 @@ dependencies {
 
     implementation(platform("androidx.compose:compose-bom:2024.03.00")) // Update to latest BOM
 
+    implementation ("com.google.code.gson:gson:2.10.1")
+
 }
 
 
