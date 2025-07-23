@@ -23,6 +23,4 @@ interface TrackMainDataDAO {
 
     @Query("UPDATE track_main_data SET totalLength = :length WHERE trackId = :trackId")
     suspend fun updateTotalLength(trackId: Long, length: Double)
-
-
 }
