@@ -3,6 +3,7 @@
     "trackName": "Pannonia-ring",
     "totalLength": 4.740,
     "country": "Hungary",
+    "type": "Circuit",
     "coordinates": [
       {
         "lat": 47.305300,
@@ -230,6 +231,7 @@
     "trackName": "Nordschleife",
     "totalLength": 20.80,
     "country": "Germany",
+    "type": "Sprint",
     "coordinates": [
       {
         "lat": 50.345397,

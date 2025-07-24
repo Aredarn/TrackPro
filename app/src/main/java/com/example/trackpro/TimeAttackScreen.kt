@@ -139,6 +139,9 @@ class TimeAttackViewModel(
     //WORKS
     // Updated ViewModel section
     fun loadTrack(trackId: Long, mode: TimingMode) {
+
+
+
         _timingMode.value = mode
         viewModelScope.launch {
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { coords ->
@@ -352,10 +355,20 @@ fun TimeAttackScreenView(
     // Initialize track and session
     LaunchedEffect(trackId) {
         if (trackId != null && vehicleId != null) {
-            vm.loadTrack(trackId, timingMode)
+            val track = withContext(Dispatchers.IO) {
+                database.trackMainDao().getTrack(trackId).firstOrNull()
+            }
+
+            val mode = when (track?.type?.lowercase()) {
+                "sprint" -> TimingMode.Sprint
+                else -> TimingMode.Circuit
+            }
+
+            vm.loadTrack(trackId, mode)
             vm.createSession(trackId, vehicleId)
         }
     }
+
 
     // UI based on orientation
     when (LocalConfiguration.current.orientation) {

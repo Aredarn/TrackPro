@@ -88,7 +88,8 @@ abstract class ESPDatabase : RoomDatabase() {
                                             TrackMainData(
                                                 trackName = track.trackName,
                                                 totalLength = track.totalLength,
-                                                country = track.country
+                                                country = track.country,
+                                                type = track.type
                                             )
                                         )
 

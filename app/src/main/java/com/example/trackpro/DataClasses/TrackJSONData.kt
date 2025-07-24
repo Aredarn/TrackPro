@@ -5,6 +5,7 @@ data class TrackJson(
     val trackName: String,
     val totalLength: Double?,
     val country: String,
+    val type: String,
     val coordinates: List<LatLon>
 )
 

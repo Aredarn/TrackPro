@@ -10,5 +10,6 @@ data class TrackMainData (
     val trackId: Long = 0,
     val trackName: String,
     val totalLength: Double? = null,
-    val country: String
+    val country: String,
+    val type: String
 )

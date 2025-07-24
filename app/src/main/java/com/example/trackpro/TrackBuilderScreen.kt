@@ -59,7 +59,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
-
+import androidx.compose.material3.RadioButton
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 
 class TrackBuilderScreen : ComponentActivity()
 {
@@ -172,6 +174,8 @@ fun TrackBuilderScreen(
     var showDialog by remember { mutableStateOf(false) }
     var showStartBuilderButton by remember { mutableStateOf(false) }
 
+    var trackMode by remember { mutableStateOf("Circuit") }
+
 
     fun startBatchInsert() {
         insertJob = coroutineScope.launch(Dispatchers.IO) {
@@ -274,12 +278,9 @@ fun TrackBuilderScreen(
             Button(
                 onClick = {
                     isSessionActive = !isSessionActive
-                    Log.d("Button","Inside button click")
-
                     if (isSessionActive) {
                         coroutineScope.launch(Dispatchers.IO) {
-                            trackID = startTrackBuilder(database, trackname, countryname)
-                            Log.d("TrckID:", "" + trackID)
+                            trackID = startTrackBuilder(database, trackname, countryname, trackMode)
                             withContext(Dispatchers.Main) {
                                 startBatchInsert()
                             }
@@ -324,6 +325,26 @@ fun TrackBuilderScreen(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
             )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("Select Track Mode", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(
+                selected = trackMode == "Circuit",
+                onClick = { trackMode = "Circuit" }
+            )
+            Text("Circuit")
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            RadioButton(
+                selected = trackMode == "Sprint",
+                onClick = { trackMode = "Sprint" }
+            )
+            Text("Sprint")
         }
 
 
@@ -423,9 +444,9 @@ fun TrackInfoAlert(
 }
 
 
-suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countryname: String):Long
+suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countryname: String, trackType: String):Long
 {
-    val track = TrackMainData(trackName = trackName, country = countryname)
+    val track = TrackMainData(trackName = trackName, country = countryname, type = trackType)
     val id = database.trackMainDao().insertTrackMainDataDAO(track)
     return id
 }
