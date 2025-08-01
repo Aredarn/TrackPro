@@ -112,6 +112,9 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
         }
     }
 }
+
+
+
 @Composable
 fun TrackCard(
     vehicle: VehicleInformationData,
@@ -216,11 +219,7 @@ fun TrackCard(
     }
 }
 
-
 suspend fun DeleteVehicle(context: Context, database: ESPDatabase, vehicleId: Long)
 {
     database.vehicleInformationDAO().deleteVehicle(vehicleId)
-
 }
-
-

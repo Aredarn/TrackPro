@@ -1322,5 +1322,14 @@
         "lon": 6.968372
       }
     ]
+  },
+  {
+    "trackName": "Euro-ring",
+    "totalLength": 2.75,
+    "country": "Hungary",
+    "type": "Circuit",
+    "coordinates": [
+      
+    ]
   }
 ]
