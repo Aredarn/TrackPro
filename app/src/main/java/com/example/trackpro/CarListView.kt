@@ -104,10 +104,8 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
 
                             }
                         )
-
                     }
                 }
-
             }
         }
     }

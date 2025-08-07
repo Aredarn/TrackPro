@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material.icons.Icons
@@ -42,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -70,7 +72,6 @@ class TimeAttackListView: ComponentActivity()
 fun TimeAttackListViewScreen(navController: NavController, viewModel: SessionViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val database = remember { ESPDatabase.getInstance(context) }
 
     val allSessions by viewModel.sessions.collectAsState()
     val trackSessions = allSessions.filter { it.eventType != "DragSession" }
@@ -119,46 +120,55 @@ fun TimeAttackListViewScreen(navController: NavController, viewModel: SessionVie
 
 
 
-
 @Composable
 fun TrackSessionCard(
     session: SessionData,
     navController: NavController,
-    onDelete: (VehicleInformationData) -> Unit  // Add this callback to handle deletion
+    onDelete: (SessionData) -> Unit  // Assume you meant to delete the session
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 10.dp)
-            .clickable {
-                navController.navigate("vehicle/${session.id}")
-            },
+            .clickable { navController.navigate("vehicle/${session.id}") },
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(20.dp)) {
-
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                // Title
                 Text(
-                    text = "${session.eventType}",
+                    text = session.eventType,
                     style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        lineHeight = 28.sp
-                    )
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Divider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 1.dp,
-                    modifier = Modifier.padding(vertical = 6.dp)
+                // Metadata section (can be expanded with more info)
+                Text(
+                    text = "Date: ${session.startTime}",
+                    style = MaterialTheme.typography.bodyMedium
                 )
 
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Divider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Example of a container for additional details
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -168,23 +178,27 @@ fun TrackSessionCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    Text(
+                        text = "Vehicle ID: ${session.id}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
 
-            // Delete Button (red X) at the top-right corner
-            /*IconButton(
-                onClick = { onDelete(vehicle) },
+            // Delete button (top-right)
+            IconButton(
+                onClick = { onDelete(session) },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .size(24.dp)
+                    .size(28.dp)
+                    .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Delete Vehicle",
-                    tint = Color.Red
+                    contentDescription = "Delete Session",
+                    tint = MaterialTheme.colorScheme.error
                 )
-            }*/
+            }
         }
     }
 }

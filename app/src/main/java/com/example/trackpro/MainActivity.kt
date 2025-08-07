@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
                 viewModel(factory = SessionViewModelFactory(applicationContext))
             val trackViewModel: TrackViewModel =
                 viewModel(factory = TrackViewModelFactory(applicationContext))
-            val vehicleFULLViewModel : VehicleFULLViewModel =
+            val vehicleFULLViewModel: VehicleFULLViewModel =
                 viewModel(factory = VehicleFULLViewModelFactory(applicationContext))
 
             TrackProTheme {
@@ -64,9 +64,10 @@ class MainActivity : ComponentActivity() {
                             onNavigateToTrackListScreen = { navController.navigate("tracklist") },
                             onNavigateToTrackBuilder = { navController.navigate("trackbuilder") },
                             onNavigateToDragTimesList = { navController.navigate("dragsessions") },
-                            onNavigateToVehicleCreatorScreen = { navController.navigate("createvehicle") } ,
-                            onNavigateToVehicleList = {navController.navigate("vehicles")},
-                            onNavigateToTrackVehicleSelector = {navController.navigate("trackandvehicle")}
+                            onNavigateToVehicleCreatorScreen = { navController.navigate("createvehicle") },
+                            onNavigateToVehicleList = { navController.navigate("vehicles") },
+                            onNavigateToTrackVehicleSelector = { navController.navigate("trackandvehicle") },
+                            onNavigateToTimeAttackListView = { navController.navigate("timeattacklist") }
                         )
                     }
                     composable("drag") {
@@ -139,8 +140,10 @@ class MainActivity : ComponentActivity() {
                         route = "timeattack/{vehicleId}/{trackId}"
                     ) { backStackEntry ->
 
-                        val vehicleId = backStackEntry.arguments?.getString("vehicleId")?.toLongOrNull() ?: -1L
-                        val trackId = backStackEntry.arguments?.getString("trackId")?.toLongOrNull() ?: -1L
+                        val vehicleId =
+                            backStackEntry.arguments?.getString("vehicleId")?.toLongOrNull() ?: -1L
+                        val trackId =
+                            backStackEntry.arguments?.getString("trackId")?.toLongOrNull() ?: -1L
 
                         TimeAttackScreenView(
                             vehicleId = vehicleId,
@@ -152,6 +155,10 @@ class MainActivity : ComponentActivity() {
 
                     composable(route = "trackandvehicle") {
                         TrackVehicleSelectorScreenWrapper(navController = navController)
+                    }
+                    composable(route = "timeattacklist")
+                    {
+                        TimeAttackListViewScreen(navController = navController, viewModel = sessionViewModel)
                     }
 
                 }
@@ -172,7 +179,8 @@ fun MainScreen(
     onNavigateToDragTimesList: () -> Unit,
     onNavigateToVehicleCreatorScreen: () -> Unit,
     onNavigateToVehicleList: () -> Unit,
-    onNavigateToTrackVehicleSelector:() -> Unit
+    onNavigateToTrackVehicleSelector: () -> Unit,
+    onNavigateToTimeAttackListView: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -203,6 +211,14 @@ fun MainScreen(
                             onNavigateToDragTimesList()
                         }
                     )
+                    NavigationDrawerItem(
+                        label = { Text("My track sessions") },
+                        selected = false,
+                        onClick = {
+                            onNavigateToTimeAttackListView()
+                        }
+                    )
+
                     NavigationDrawerItem(
                         label = { Text("My tracks") },
                         selected = false,
@@ -327,17 +343,47 @@ fun MainScreen(
                 }
 
                 // 🏁 Race Mode
-                RacingButton(Icons.Default.RocketLaunch, "Drag Screen", onNavigateToDragRace, colorRaceMode, Color.White)
-                RacingButton(Icons.Default.FlagCircle, "Lap Timing", onNavigateToTrackVehicleSelector, colorRaceMode, Color.White)
+                RacingButton(
+                    Icons.Default.RocketLaunch,
+                    "Drag Screen",
+                    onNavigateToDragRace,
+                    colorRaceMode,
+                    Color.White
+                )
+                RacingButton(
+                    Icons.Default.FlagCircle,
+                    "Lap Timing",
+                    onNavigateToTrackVehicleSelector,
+                    colorRaceMode,
+                    Color.White
+                )
 
                 // 🔧 Vehicle Setup
-                RacingButton(Icons.Default.CarRepair, "Add Your Vehicle", onNavigateToVehicleCreatorScreen, colorVehicle, Color.White)
+                RacingButton(
+                    Icons.Default.CarRepair,
+                    "Add Your Vehicle",
+                    onNavigateToVehicleCreatorScreen,
+                    colorVehicle,
+                    Color.White
+                )
 
                 // 🛠 Track Management
-                RacingButton(Icons.Default.Timelapse, "Track Builder", onNavigateToTrackBuilder, colorTrack, Color.White)
+                RacingButton(
+                    Icons.Default.Timelapse,
+                    "Track Builder",
+                    onNavigateToTrackBuilder,
+                    colorTrack,
+                    Color.White
+                )
 
                 // 📡 Connectivity
-                RacingButton(Icons.Default.Wifi, "ESP Connection", onNavigateToESPTestScreen, colorESP, Color.White)
+                RacingButton(
+                    Icons.Default.Wifi,
+                    "ESP Connection",
+                    onNavigateToESPTestScreen,
+                    colorESP,
+                    Color.White
+                )
             }
 
         }
@@ -357,7 +403,8 @@ fun MainScreenPreview() {
             onNavigateToDragTimesList = {},
             onNavigateToVehicleCreatorScreen = {},
             onNavigateToVehicleList = {},
-            onNavigateToTrackVehicleSelector = {}
+            onNavigateToTrackVehicleSelector = {},
+            onNavigateToTimeAttackListView = {}
         )
     }
 }

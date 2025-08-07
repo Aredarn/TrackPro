@@ -14,3 +14,9 @@ build/
 .externalNativeBuild
 .cxx
 local.properties
+/.idea/AndroidProjectSystem.xml
+/.idea/deploymentTargetSelector.xml
+/.kotlin/errors/errors-1739365639121.log
+/.kotlin/errors/errors-1746010788178.log
+/.kotlin/errors/errors-1747138928359.log
+/.idea/runConfigurations.xml
