@@ -32,10 +32,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.DataClasses.SessionData
-import com.example.trackpro.DataClasses.VehicleInformationData
 import com.example.trackpro.ViewModels.SessionViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -60,16 +58,13 @@ class TimeAttackListView: ComponentActivity()
     {
         super.onCreate(savedInstanceState)
         setContent{
-
         }
     }
 }
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimeAttackListViewScreen(navController: NavController, viewModel: SessionViewModel) {
+fun TimeAttackListViewScreen(navController: NavController, viewModel: SessionViewModel,database: ESPDatabase) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -106,19 +101,14 @@ fun TimeAttackListViewScreen(navController: NavController, viewModel: SessionVie
                                     "🚀 Vehicle deleted successfully!",
                                     Toast.LENGTH_SHORT
                                 ).show()
-
                             }
                         )
-
                     }
                 }
-
             }
         }
     }
 }
-
-
 
 @Composable
 fun TrackSessionCard(

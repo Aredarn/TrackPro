@@ -131,6 +131,16 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(
+                        route = "timeattacklistitem/{sessionid}",
+                        arguments = listOf(navArgument("sessionid") { type = NavType.LongType })
+                    ) { backStackEntry ->
+                        val sessionid = backStackEntry.arguments?.getLong("sessionid") ?: 0L
+                        TimeAttackListItem(
+                            onBack = { navController.popBackStack() },
+                            sessionid = sessionid
+                        )
+                    }
+                    composable(
                         route = "createvehicle"
                     )
                     {
@@ -158,7 +168,7 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(route = "timeattacklist")
                     {
-                        TimeAttackListViewScreen(navController = navController, viewModel = sessionViewModel)
+                        TimeAttackListViewScreen(navController = navController, viewModel = sessionViewModel,database = database)
                     }
 
                 }
