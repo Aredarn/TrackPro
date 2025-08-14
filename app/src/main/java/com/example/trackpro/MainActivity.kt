@@ -135,9 +135,10 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("sessionid") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val sessionid = backStackEntry.arguments?.getLong("sessionid") ?: 0L
-                        TimeAttackListItem(
-                            onBack = { navController.popBackStack() },
-                            sessionid = sessionid
+                        TimeAttackListItemScreen(
+                            navController = navController,
+                            database = database,
+                            sessionId = sessionid,
                         )
                     }
                     composable(

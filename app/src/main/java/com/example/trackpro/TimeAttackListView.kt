@@ -120,7 +120,7 @@ fun TrackSessionCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 10.dp)
-            .clickable { navController.navigate("vehicle/${session.id}") },
+            .clickable { navController.navigate("timeattacklistitem/${session.id}") },
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)

@@ -24,6 +24,3 @@ data class LapInfoData(
     val latgforce: Double?,
     val longforce: Double?
 )
-
-
-// NEM VÁLTOZIK A LAPID CROSSING UTÁN!!!!!!!!!!!!!!!!!!
