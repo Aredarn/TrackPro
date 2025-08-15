@@ -169,7 +169,7 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(route = "timeattacklist")
                     {
-                        TimeAttackListViewScreen(navController = navController, viewModel = sessionViewModel,database = database)
+                        TimeAttackListViewScreen(navController = navController, viewModel = sessionViewModel,vehicleViewModel = vehicleFULLViewModel,database = database)
                     }
 
                 }

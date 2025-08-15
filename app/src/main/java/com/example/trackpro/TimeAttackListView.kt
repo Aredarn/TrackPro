@@ -47,8 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.DataClasses.SessionData
+import com.example.trackpro.DataClasses.VehicleInformationData
 import com.example.trackpro.ViewModels.SessionViewModel
+import com.example.trackpro.ViewModels.VehicleFULLViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 
@@ -64,12 +68,13 @@ class TimeAttackListView: ComponentActivity()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimeAttackListViewScreen(navController: NavController, viewModel: SessionViewModel,database: ESPDatabase) {
+fun TimeAttackListViewScreen(navController: NavController, viewModel: SessionViewModel,vehicleViewModel: VehicleFULLViewModel,database: ESPDatabase) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     val allSessions by viewModel.sessions.collectAsState()
     val trackSessions = allSessions.filter { it.eventType != "DragSession" }
+    val vehicles = vehicleViewModel.vehicles.collectAsState().value
 
     Scaffold (
         topBar = { TopAppBar(title = { Text("Your track sessions") }) }
@@ -90,15 +95,16 @@ fun TimeAttackListViewScreen(navController: NavController, viewModel: SessionVie
                     items(trackSessions) { session ->
                         TrackSessionCard (
                             session = session,
+                            vehicle = vehicles.find { it.vehicleId == session.vehicleId }!! ,
                             navController = navController,
                             onDelete = { vehicleToDelete ->
                                 scope.launch(Dispatchers.IO)
                                 {
-                                    //DeleteVehicle(context, database, vehicleToDelete.vehicleId)
+                                    //DeleteSession(context, database, vehicleToDelete.vehicleId)
                                 }
                                 Toast.makeText(
                                     context,
-                                    "🚀 Vehicle deleted successfully!",
+                                    "🚀 Session deleted successfully!",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -113,6 +119,7 @@ fun TimeAttackListViewScreen(navController: NavController, viewModel: SessionVie
 @Composable
 fun TrackSessionCard(
     session: SessionData,
+    vehicle: VehicleInformationData,
     navController: NavController,
     onDelete: (SessionData) -> Unit  // Assume you meant to delete the session
 ) {
@@ -144,14 +151,6 @@ fun TrackSessionCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Metadata section (can be expanded with more info)
-                Text(
-                    text = "Date: ${session.startTime}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Divider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -169,8 +168,8 @@ fun TrackSessionCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Vehicle ID: ${session.id}",
-                        style = MaterialTheme.typography.bodySmall
+                        text = "${vehicle.manufacturer} ${vehicle.model}   (${vehicle.year})",
+                        style = MaterialTheme.typography.headlineSmall
                     )
                 }
             }
@@ -180,8 +179,8 @@ fun TrackSessionCard(
                 onClick = { onDelete(session) },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(28.dp)
-                    .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
+                    .size(20.dp)
+                    .background(Color.White.copy(alpha = 0.5f), shape = CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,

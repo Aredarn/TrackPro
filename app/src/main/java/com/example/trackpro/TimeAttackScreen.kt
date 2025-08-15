@@ -15,14 +15,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
@@ -31,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trackpro.DataClasses.LapInfoData
 import com.example.trackpro.DataClasses.LapTimeData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
@@ -46,19 +49,21 @@ import com.example.trackpro.ManagerClasses.TimeAttackManagers.TimingManager
 import com.example.trackpro.ManagerClasses.TimeAttackManagers.TimingMode
 import com.example.trackpro.ManagerClasses.TimeAttackManagers.TrackGeometry
 import com.example.trackpro.ManagerClasses.TimeAttackManagers.TrackGeometry.calculateFinishLine
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.onFailure
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-
-// Add these imports at the top of the file
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 class TimeAttackViewModel(
     private val database: ESPDatabase,
@@ -133,15 +138,17 @@ class TimeAttackViewModel(
         super.onCleared()
         tcpClient?.disconnect()
         timingManager?.reset()
+        GlobalScope.launch(Dispatchers.IO) {
+            endSession(database)
+            Log.d(TAG, "endSession completed")
+        }
+
         Log.d(TAG, "ViewModel cleared")
     }
 
     //WORKS
     // Updated ViewModel section
     fun loadTrack(trackId: Long, mode: TimingMode) {
-
-
-
         _timingMode.value = mode
         viewModelScope.launch {
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { coords ->
@@ -240,7 +247,6 @@ class TimeAttackViewModel(
                 database.lapTimeDataDAO().insert(lapTimeData)
             }
 
-            Log.d(TAG, "Lap time saved: $lapTimeData")
         }
     }
 
@@ -276,8 +282,7 @@ class TimeAttackViewModel(
     suspend fun createSession(trackId: Long, vehicleId: Long) {
         withContext(Dispatchers.IO) {
             val sessionManager = SessionManager.getInstance(database)
-            val track =
-                database.trackMainDao().getTrack(trackId).firstOrNull() ?: return@withContext
+            val track = database.trackMainDao().getTrack(trackId).firstOrNull() ?: return@withContext
             val trackName = track.trackName
             val todayFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
             val eventType = "$trackName - $todayFormatted"
@@ -304,6 +309,17 @@ class TimeAttackViewModel(
 
         }
     }
+
+    suspend fun endSession(database: ESPDatabase) {
+        Log.d("In end", "In end")
+        val sessionManager = SessionManager.getInstance(database)
+
+        withContext(Dispatchers.IO) {
+            Log.d("In end", sessionManager.getCurrentSessionId().toString())
+            sessionManager.endSession()
+        }
+    }
+
 
     fun resetSession() {
         timingManager?.reset()
