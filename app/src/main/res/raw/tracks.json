@@ -228,18 +228,14 @@
     ]
   },
   {
-    "trackName": "Nordschleife",
-    "totalLength": 20.80,
+    "trackName": "Nordschleife - BTG",
+    "totalLength": 19.80,
     "country": "Germany",
     "type": "Sprint",
     "coordinates": [
       {
-        "lat": 50.345397,
-        "lon": 6.964457
-      },
-      {
-        "lat": 50.3439256,
-        "lon": 6.9609668
+        "lat": 50.343567,
+        "lon": 6.960073
       },
       {
         "lat": 50.3431563,
@@ -1314,12 +1310,8 @@
         "lon": 6.9832441
       },
       {
-        "lat": 50.3500245,
-        "lon": 6.9762865
-      },
-      {
-        "lat": 50.346916,
-        "lon": 6.968372
+        "lat": 50.351752,
+        "lon": 6.980775
       }
     ]
   },
