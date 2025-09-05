@@ -26,3 +26,15 @@ Future plans:
 - Online leaderboard
 - Data-to-video
 - Checkpoint time stat / sprint race
+
+Main menu:
+
+GPS Connection testing:
+
+Add your own car:
+
+Drag-time screen:
+
+Lap timer screen:
+
+Lap builder screen:
