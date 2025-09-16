@@ -31,6 +31,17 @@ Future plans:
 Main menu:
 
 GPS Connection testing:
+  This page is responsible for testing the connection between the ESP's Wifi and the Application.
+  The proper software and hardware is required for the ESP whic can be found here: https://github.com/Aredarn/TrackPro_ESP
+  The following can be seen if the connection is successful and the ESP's GPS has position lock.
+    - Latitude
+    - Longitude
+    - Altitude (In meters)
+    - Satellites
+    - Speed (in kilometer/hour)
+    - Timestamp
+
+<img width="30%" height="30%" alt="Screenshot_20250905_153340" src="https://github.com/user-attachments/assets/860f2e4b-7771-43c5-9677-31df3f5fdffc" />
 
 Add your own car:
 
