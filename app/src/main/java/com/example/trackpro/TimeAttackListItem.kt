@@ -1,9 +1,13 @@
 package com.example.trackpro
 
+import DarkColors
+import LightColors
+import TrackProTheme
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,29 +34,42 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import androidx.room.Room
 import com.example.trackpro.DataClasses.LapTimeData
 import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.DataClasses.VehicleInformationData
+import com.example.trackpro.theme.Teal
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class TimeAttackListItem :ComponentActivity()
-{
-    override fun onCreate(savedInstanceState: Bundle?)
-    {
+class TimeAttackListItem : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent{
+        setContent {
+            TrackProTheme { // Wrap in your theme
+                TimeAttackListItemScreen(
+                    navController = rememberNavController(),
+                    database = Room.inMemoryDatabaseBuilder(
+                        LocalContext.current,
+                        ESPDatabase::class.java
+                    ).build(),
+                    sessionId = 1
+                )
+            }
         }
     }
 }
+
 
 @Composable
 fun TimeAttackListItemScreen(
@@ -69,7 +87,7 @@ fun TimeAttackListItemScreen(
         coroutineScope.launch {
             sessionData = database.sessionDataDao().getSessionById(sessionId)
             sessionData?.let {
-                vehicleData = database.vehicleInformationDAO().getVehicle(it.vehicleId).first() // Gets first emission
+                vehicleData = database.vehicleInformationDAO().getVehicle(it.vehicleId).first()
                 Log.d("SessionData", "Session: $sessionData")
 
                 lapTimes = database.lapTimeDataDAO().getLapsForSession(sessionId)
@@ -78,11 +96,9 @@ fun TimeAttackListItemScreen(
         }
     }
 
-
-
     if (sessionData == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = Teal)
         }
     } else {
         Column(
@@ -90,24 +106,20 @@ fun TimeAttackListItemScreen(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Session Info
             SessionInfoSection(sessionData!!)
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Vehicle Info
             vehicleData?.let { VehicleInfoSection(it) }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Summary
             if (lapTimes.isNotEmpty()) {
                 LapSummarySection(lapTimes)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Lap List
             LapListSection(lapTimes)
         }
     }
@@ -124,13 +136,20 @@ fun SessionInfoSection(session: SessionData) {
 
     Card(
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(Color(0xFFE8EAF6)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text("Event: ${session.eventType}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text("Start: $startTime", fontSize = 14.sp)
-            Text("Duration: $duration", fontSize = 14.sp)
+            Text("Event: ${session.eventType}",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface)
+            Text("Start: $startTime",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface)
+            Text("Duration: $duration",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -139,14 +158,20 @@ fun SessionInfoSection(session: SessionData) {
 fun VehicleInfoSection(vehicle: VehicleInformationData) {
     Card(
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(Color(0xFFF1F8E9)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(16.dp)) {
             Text("${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
-                fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text("Engine: ${vehicle.engineType} | ${vehicle.horsepower} HP", fontSize = 14.sp)
-            Text("Drivetrain: ${vehicle.drivetrain} | Weight: ${vehicle.weight} kg", fontSize = 14.sp)
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSecondary)
+            Text("Engine: ${vehicle.engineType} | ${vehicle.horsepower} HP",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSecondary)
+            Text("Drivetrain: ${vehicle.drivetrain} | Weight: ${vehicle.weight} kg",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSecondary)
         }
     }
 }
@@ -159,7 +184,7 @@ fun LapSummarySection(laps: List<LapTimeData>) {
 
     Card(
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(Color(0xFFFFF8E1)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -169,16 +194,16 @@ fun LapSummarySection(laps: List<LapTimeData>) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Best Lap", fontWeight = FontWeight.Bold)
-                Text(bestLap?.laptime ?: "--:--", fontSize = 16.sp)
+                Text("Best Lap", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                Text(bestLap?.laptime ?: "--:--", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Average", fontWeight = FontWeight.Bold)
-                Text(avgLapFormatted, fontSize = 16.sp)
+                Text("Average", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                Text(avgLapFormatted, fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Laps", fontWeight = FontWeight.Bold)
-                Text("${laps.size}", fontSize = 16.sp)
+                Text("Laps", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                Text("${laps.size}", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
@@ -192,7 +217,8 @@ fun LapListSection(laps: List<LapTimeData>) {
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp)
+                    .padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
             ) {
                 Row(
                     Modifier
@@ -200,27 +226,45 @@ fun LapListSection(laps: List<LapTimeData>) {
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Lap ${lap.lapnumber}", fontWeight = FontWeight.Bold)
-                    Text(lap.laptime, color = Color(0xFF388E3C))
+                    Text("Lap ${lap.lapnumber}",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground)
+                    Text(lap.laptime, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
     }
 }
 
-// Helper functions
+
+// Helpers
 fun String.toLapTimeMillis(): Long {
-    val parts = this.split(":", ".", limit = 3) // both delimiters as literals
+    val parts = this.split(":", ".", limit = 3)
     val minutes = parts.getOrNull(0)?.toLongOrNull() ?: 0L
     val seconds = parts.getOrNull(1)?.toLongOrNull() ?: 0L
     val millis  = parts.getOrNull(2)?.toLongOrNull() ?: 0L
     return minutes * 60_000 + seconds * 1_000 + millis
 }
 
-
 fun Long.toLapTimeString(): String {
     val minutes = this / 60_000
     val seconds = (this % 60_000) / 1_000
     val millis = this % 1_000
     return String.format("%02d:%02d.%03d", minutes, seconds, millis)
+}
+
+// Preview
+@Preview
+@Composable
+fun TimeAttackListItemPreviewScreen() {
+    val fakeDatabase = Room.inMemoryDatabaseBuilder(
+        LocalContext.current,
+        ESPDatabase::class.java
+    ).build()
+
+    TimeAttackListItemScreen(
+        navController = rememberNavController(),
+        database = fakeDatabase,
+        sessionId = 1
+    )
 }

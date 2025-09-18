@@ -1,5 +1,7 @@
 package com.example.trackpro
 
+import TimeAttackListViewScreen
+import TrackProTheme
 import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -16,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.trackpro.ui.theme.TrackProTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -134,13 +135,15 @@ class MainActivity : ComponentActivity() {
                         route = "timeattacklistitem/{sessionid}",
                         arguments = listOf(navArgument("sessionid") { type = NavType.LongType })
                     ) { backStackEntry ->
-                        val sessionid = backStackEntry.arguments?.getLong("sessionid") ?: 0L
-                        TimeAttackListItemScreen(
-                            navController = navController,
-                            database = database,
-                            sessionId = sessionid,
-                        )
+                        val sessionId = backStackEntry.arguments?.getLong("sessionid") ?: 0L
+
+                            TimeAttackListItemScreen(
+                                navController = navController,
+                                database = database,
+                                sessionId = sessionId
+                            )
                     }
+
                     composable(
                         route = "createvehicle"
                     )
@@ -306,7 +309,7 @@ fun MainScreen(
                     text = "Welcome to TRACKPRO",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = colorRaceMode
+                        color = MaterialTheme.colorScheme.onBackground
                     ),
                     modifier = Modifier.padding(8.dp)
                 )
