@@ -3,7 +3,7 @@ package com.example.trackpro.theme
 import androidx.compose.ui.graphics.Color
 
 
-val SoftCream = Color(0xFFEFFFFF)
+val SoftCream = Color(0xFFFDF7F7)
 val Celeste = Color(0xFFD6FFFD)
 val Teal = Color(0xFF3DA4A2)
 val DeepBlue = Color(0xFF1045A8)

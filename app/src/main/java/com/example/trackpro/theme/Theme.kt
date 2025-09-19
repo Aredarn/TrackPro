@@ -19,8 +19,8 @@ val LightColors = lightColorScheme(
     onSecondary = Color.White,
     background = SoftCream,
     onBackground = DarkNavy,
-    surface = Celeste,
-    onSurface = DarkNavy
+    surface = DeepBlue,
+    onSurface = SoftCream
 )
 
 // Dark theme color scheme
