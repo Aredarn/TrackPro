@@ -69,11 +69,11 @@ fun TimeAttackListViewScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Your track sessions", color = MaterialTheme.colorScheme.onBackground) },
+                    title = { Text("track sessions", color = MaterialTheme.colorScheme.onBackground, fontStyle = MaterialTheme.typography.titleLarge.fontStyle) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary
-                    )
+                    ),
                 )
             }
         ) { paddingValues ->
