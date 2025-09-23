@@ -19,7 +19,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Divider
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -106,16 +109,23 @@ fun TimeAttackListItemScreen(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            SessionInfoSection(sessionData!!)
 
-            Spacer(modifier = Modifier.height(12.dp))
 
-            vehicleData?.let { VehicleInfoSection(it) }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (lapTimes.isNotEmpty()) {
-                LapSummarySection(lapTimes)
+            if (sessionData != null && vehicleData != null) {
+                TimeAttackSessionDetails(
+                    session = sessionData!!,
+                    vehicle = vehicleData!!,
+                    laps = lapTimes
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -126,7 +136,49 @@ fun TimeAttackListItemScreen(
 }
 
 @Composable
-fun SessionInfoSection(session: SessionData) {
+fun TimeAttackSessionDetails(
+    session: SessionData,
+    vehicle: VehicleInformationData,
+    laps: List<LapTimeData>
+) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
+            // --- Session Info ---
+            SessionInfoContent(session)
+
+            Divider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+            )
+
+            // --- Vehicle Info ---
+            VehicleInfoContent(vehicle)
+
+            Divider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+            )
+
+            // --- Lap Summary ---
+            LapSummaryContent(laps)
+        }
+    }
+}
+
+@Composable
+private fun SessionInfoContent(session: SessionData) {
     val formatter = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
     val startTime = formatter.format(Date(session.startTime))
     val duration = session.endTime?.let {
@@ -134,77 +186,78 @@ fun SessionInfoSection(session: SessionData) {
         "${diff / 1000 / 60} min"
     } ?: "Ongoing"
 
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Text("Event: ${session.eventType}",
+    Column {
+        Text(
+            text = session.eventType,
+            style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onSurface)
-            Text("Start: $startTime",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface)
-            Text("Duration: $duration",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface)
-        }
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "Start • $startTime",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+            )
+        )
+        Text(
+            text = "Duration • $duration",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+            )
+        )
     }
 }
 
 @Composable
-fun VehicleInfoSection(vehicle: VehicleInformationData) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Text("${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
+private fun VehicleInfoContent(vehicle: VehicleInformationData) {
+    Column {
+        Text(
+            text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
+            style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onSecondary)
-            Text("Engine: ${vehicle.engineType} | ${vehicle.horsepower} HP",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSecondary)
-            Text("Drivetrain: ${vehicle.drivetrain} | Weight: ${vehicle.weight} kg",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSecondary)
-        }
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "Engine • ${vehicle.engineType} | ${vehicle.horsepower} HP",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+            )
+        )
+        Text(
+            text = "Drivetrain • ${vehicle.drivetrain} | ${vehicle.weight} kg",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+            )
+        )
     }
 }
 
 @Composable
-fun LapSummarySection(laps: List<LapTimeData>) {
+private fun LapSummaryContent(laps: List<LapTimeData>) {
     val bestLap = laps.minByOrNull { it.laptime.toLapTimeMillis() }
     val avgLap = laps.map { it.laptime.toLapTimeMillis() }.average().toLong()
     val avgLapFormatted = avgLap.toLapTimeString()
 
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        Row(
-            Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Best Lap", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
-                Text(bestLap?.laptime ?: "--:--", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Average", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
-                Text(avgLapFormatted, fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Laps", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
-                Text("${laps.size}", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
-            }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("🏁 Best Lap", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(bestLap?.laptime ?: "--:--", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("📊 Average", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(avgLapFormatted, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("🔢 Laps", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text("${laps.size}", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
