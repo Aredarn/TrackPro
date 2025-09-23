@@ -11,6 +11,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -147,7 +148,7 @@ fun TimeAttackSessionDetails(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(8.dp)
     ) {
         Column(
             modifier = Modifier
@@ -191,6 +192,7 @@ private fun SessionInfoContent(session: SessionData) {
             text = session.eventType,
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
         )
@@ -264,30 +266,75 @@ private fun LapSummaryContent(laps: List<LapTimeData>) {
 
 @Composable
 fun LapListSection(laps: List<LapTimeData>) {
-    LazyColumn {
+    if (laps.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "No laps recorded",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
+            )
+        }
+        return
+    }
+
+    val bestLap = laps.minByOrNull { it.laptime.toLapTimeMillis() }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 8.dp)
+    ) {
         items(laps) { lap ->
+            val isBestLap = lap.id == bestLap?.id
+
             Card(
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(2.dp),
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isBestLap)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    else
+                        MaterialTheme.colorScheme.surface
+                )
             ) {
                 Row(
                     Modifier
-                        .padding(12.dp)
+                        .padding(16.dp)
                         .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Lap ${lap.lapnumber}",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground)
-                    Text(lap.laptime, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Lap ${lap.lapnumber}",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = if (isBestLap) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isBestLap) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
+
+                        )
+                    )
+
+                    Text(
+                        lap.laptime,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = if (isBestLap) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isBestLap) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                        )
+                    )
                 }
             }
         }
     }
 }
+
 
 
 // Helpers
