@@ -74,12 +74,11 @@ fun TimeAttackListViewScreen(
     val tracks by trackViewModel.tracks.collectAsState()
 
 
-    Log.d("trackSessions", tracks.toString())
     TrackProTheme {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("track sessions", color = MaterialTheme.colorScheme.onBackground, fontStyle = MaterialTheme.typography.titleLarge.fontStyle) },
+                    title = { Text("TRACK SESSIONS", color = MaterialTheme.colorScheme.onBackground, fontStyle = MaterialTheme.typography.titleLarge.fontStyle) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary
@@ -175,7 +174,7 @@ fun TrackSessionCard(
             ),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF050505))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF808080))
     ) {
         Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Column(modifier = Modifier.fillMaxWidth()) {
