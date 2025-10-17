@@ -36,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
+import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.convertToLatLonOffsetList
@@ -59,7 +60,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
 
     val context = LocalContext.current
     val database = remember { ESPDatabase.getInstance(context) }
-    var coordinates by remember { mutableStateOf(emptyList<SmoothedGPSData>()) }
+    var coordinates: List<RawGPSData> by remember { mutableStateOf(emptyList<RawGPSData>()) }
     var coordinatesSimplified by remember { mutableStateOf(emptyList<LatLonOffset>()) }
     var dragTime by remember { mutableDoubleStateOf(-1.0) }
     val dragTimeClass = remember { DragTimeCalculation(sessionId, database) }
@@ -71,10 +72,10 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
 
     LaunchedEffect(sessionId) {
         scope.launch(Dispatchers.IO) {
-            val data = database.smoothedDataDao().getSmoothedGPSDataBySession(sessionId)
+            val data = database.rawGPSDataDao().getGPSDataBySession(sessionId)
 
             data.forEachIndexed { index, data ->
-                data.smoothedSpeed?.let { Entry(index.toFloat(), it) }
+                data.speed?.let { Entry(index.toFloat(), it) }
                     ?.let { dataPoints.add(it) }
             }
 

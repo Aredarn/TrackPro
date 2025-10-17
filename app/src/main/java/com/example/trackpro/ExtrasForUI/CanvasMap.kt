@@ -6,7 +6,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 
 data class LatLonOffset(val lat: Double, val lon: Double)
@@ -333,8 +332,12 @@ fun DrawScope.drawTrack(
 
 
 
-
+/*
 fun convertToLatLonOffsetList(data: List<SmoothedGPSData>): List<LatLonOffset> {
     return data.map { LatLonOffset(lat = it.latitude, lon = it.longitude) }
+}*/
+fun convertToLatLonOffsetList(data: List<com.example.trackpro.DataClasses.RawGPSData>): List<LatLonOffset> {
+    return data.map { LatLonOffset(lat = it.latitude, lon = it.longitude) }
 }
+
 

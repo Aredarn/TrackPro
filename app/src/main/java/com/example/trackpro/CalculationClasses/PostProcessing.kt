@@ -1,15 +1,11 @@
 package com.example.trackpro.CalculationClasses
 
-import android.nfc.Tag
 import android.util.Log
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.ESPDatabase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -19,7 +15,7 @@ class PostProcessing(val database: ESPDatabase) {
 
     suspend fun postProcessing(sessionId: Long) {
         // Step 1: Retrieve raw GPS data for the session
-        val sessionItems: List<RawGPSData> = database.rawGPSDataDao().getGPSDataBySession(sessionId.toInt())
+        val sessionItems: List<RawGPSData> = database.rawGPSDataDao().getGPSDataBySession(sessionId)
 
         // Step 2: Apply smoothing
         val windowSize = 15

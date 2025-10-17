@@ -248,7 +248,7 @@ fun DragRaceScreen(
                 coroutineScope.launch(Dispatchers.IO) {
                     espTcpClient?.disconnect()
                     stopBatchInsert()
-                    endSessionPostProcess(sessionID, database)
+                    //endSessionPostProcess(sessionID, database)
                 }
             } catch (e: IOException) {
                 e.printStackTrace()
@@ -435,10 +435,6 @@ fun DragRaceScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Button(onClick = onBack) {
-                Text("Back")
-            }
-
             Button(
                 onClick = {
                     if (!isSessionActive) {
