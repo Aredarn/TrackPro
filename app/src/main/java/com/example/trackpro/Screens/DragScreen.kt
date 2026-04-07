@@ -8,18 +8,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -36,41 +36,40 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
 import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ExtrasForUI.DropdownMenuFieldMulti
+import com.example.trackpro.ExtrasForUI.LatLonOffset
+import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.SessionManager
 import com.example.trackpro.ManagerClasses.toDataClass
+import com.example.trackpro.ViewModels.VehicleViewModel
+import com.example.trackpro.ViewModels.VehicleViewModelFactory
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
-import com.yourpackage.ui.components.SevenSegmentView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
-import com.example.trackpro.ViewModels.VehicleViewModel
-import com.example.trackpro.ViewModels.VehicleViewModelFactory
 
 
 class DragScreen : ComponentActivity() {
@@ -96,78 +95,63 @@ fun DragRaceScreen(
     onBack: () -> Unit,
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp
-
     var isSessionActive by rememberSaveable { mutableStateOf(false) }
     var sessionID by rememberSaveable { mutableLongStateOf(-1) }
-
     val isConnected = rememberSaveable { mutableStateOf(false) }
     val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
-    val rawJson = rememberSaveable { mutableStateOf("") }
-
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
     var lastTimestamp: Long? by rememberSaveable { mutableStateOf(null) }
-    var isReady: Boolean by rememberSaveable { mutableStateOf(false) }
+    var isReady by rememberSaveable { mutableStateOf(false) }
     var dragTime: Double? by rememberSaveable { mutableStateOf(null) }
     var quarterMileTime: Double? by rememberSaveable { mutableStateOf(null) }
-
     val dataPoints = remember { mutableStateListOf<Entry>() }
-    val context = LocalContext.current  // Get the Context in Compose
-    val (ip, port) = rememberSaveable { JsonReader.loadConfig(context) } // Load once & remember it
+    val context = LocalContext.current
+    val (ip, port) = rememberSaveable { JsonReader.loadConfig(context) }
     val coroutineScope = rememberCoroutineScope()
-    // Buffer list for batch inserts
-    val dataBuffer = mutableListOf<RawGPSData>()
-
-    // Coroutine job to handle periodic inserts
+    val dataBuffer = remember { mutableListOf<RawGPSData>() }
     var insertJob: Job? by remember { mutableStateOf(null) }
-
     var i = 0f
-
-    // Get the ViewModel using viewModel()
     val viewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
-    // Observe the state for vehicles and loadingState
     val vehicles by viewModel.vehicles.collectAsState(initial = emptyList())
     val loadingState by viewModel.loadingState.collectAsState()
-
     val selectedVehicle by rememberSaveable { mutableStateOf("") }
     var selectedVehicleId by rememberSaveable { mutableIntStateOf(-1) }
 
+    // Track path for map
+    val trackPath = remember { mutableStateListOf<LatLonOffset>() }
+    var driverPosition by remember { mutableStateOf(LatLonOffset(0.0, 0.0)) }
+
+    // Design tokens (same as TimeAttack)
+    val BgDeep      = Color(0xFF080A0F)
+    val BgCard      = Color(0xFF0E1117)
+    val BgElevated  = Color(0xFF151922)
+    val AccentRed   = Color(0xFFE8001C)
+    val AccentAmber = Color(0xFFFFC107)
+    val TextPrimary = Color(0xFFF0F2F5)
+    val TextMuted   = Color(0xFF6B7280)
+    val DeltaGood   = Color(0xFF00E676)
+    val SectorLine  = Color(0xFF1E2530)
 
     fun startBatchInsert() {
         insertJob = coroutineScope.launch(Dispatchers.IO) {
             while (isActive) {
                 delay(1000)
-
-                // Initialize safely outside the synchronized block
                 val dataToInsert: List<RawGPSData> = synchronized(dataBuffer) {
-                    if (dataBuffer.isNotEmpty()) {
-                        dataBuffer.toList().also { dataBuffer.clear() } // Copy & clear safely
-                    } else {
-                        emptyList() // Return an empty list if no data is available
-                    }
+                    if (dataBuffer.isNotEmpty()) dataBuffer.toList().also { dataBuffer.clear() }
+                    else emptyList()
                 }
-
                 if (dataToInsert.isNotEmpty()) {
                     try {
-                        Log.d(
-                            "BatchInsert",
-                            "Inserting ${dataToInsert.size} data points at ${System.currentTimeMillis()}"
-                        )
-                        database.rawGPSDataDao().insertAll(dataToInsert) // Safe call
-
+                        database.rawGPSDataDao().insertAll(dataToInsert)
                         val list = dataPoints.takeLast(5)
                         isReady = list.all { it.y <= 2 }
-
                     } catch (e: Exception) {
                         Log.e("Database", "Batch insert failed: ${e.message}")
                     }
                 }
-
-                // Keep only the latest 1000 points (UI-related)
                 withContext(Dispatchers.Main) {
                     synchronized(dataPoints) {
-                        while (dataPoints.size > 1000) {
-                            dataPoints.removeAt(0)
-                        }
+                        while (dataPoints.size > 1000) dataPoints.removeAt(0)
                     }
                 }
             }
@@ -183,23 +167,23 @@ fun DragRaceScreen(
 
     LaunchedEffect(Unit) {
         try {
-
             viewModel.fetchVehicles()
-
-            // Initialize ESPTcpClient
             startBatchInsert()
-
-            Log.d("trackpro ip",ip)
-            Log.d("trackpro", port.toString() + "")
             espTcpClient = ESPTcpClient(
                 serverAddress = ip,
                 port = port,
                 onMessageReceived = { data ->
-                    // Update state with received data
-                    gpsData.value = data.toDataClass()
-                    rawJson.value = data.toString()
+                    val parsed = data.toDataClass()
+                    gpsData.value = parsed
 
-                    // Only process and store data if session is active and connected
+                    // Always update map position
+                    parsed?.let { gps ->
+                        driverPosition = LatLonOffset(gps.latitude, gps.longitude)
+                        if (isSessionActive) {
+                            trackPath.add(LatLonOffset(gps.latitude, gps.longitude))
+                        }
+                    }
+
                     if (isSessionActive && isConnected.value) {
                         val derivedData = gpsData.value?.let {
                             RawGPSData(
@@ -212,30 +196,20 @@ fun DragRaceScreen(
                                 fixQuality = it.fixQuality
                             )
                         }
-
-                        derivedData?.let { data ->
-                            if (lastTimestamp == null || data.timestamp != lastTimestamp) {
-                                dataBuffer.add(data)
-                                lastTimestamp = data.timestamp
-
+                        derivedData?.let { d ->
+                            if (lastTimestamp == null || d.timestamp != lastTimestamp) {
+                                dataBuffer.add(d)
+                                lastTimestamp = d.timestamp
                                 coroutineScope.launch(Dispatchers.Main) {
-                                    data.speed?.let {
-                                        dataPoints.add(Entry(i, it))
-                                        i += 1
-                                    }
+                                    d.speed?.let { dataPoints.add(Entry(i++, it)) }
                                 }
-
                             }
                         }
                     }
                 },
-                onConnectionStatusChanged = { connected ->
-                    isConnected.value = connected
-                }
+                onConnectionStatusChanged = { isConnected.value = it }
             )
-            // Connect the client
             espTcpClient?.connect()
-
         } catch (e: Exception) {
             Log.e("LaunchedEffect", "Error: ${e.message}")
         } finally {
@@ -245,241 +219,463 @@ fun DragRaceScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            try {
-                coroutineScope.launch(Dispatchers.IO) {
-                    espTcpClient?.disconnect()
-                    stopBatchInsert()
-                    //endSessionPostProcess(sessionID, database)
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
+            coroutineScope.launch(Dispatchers.IO) {
+                espTcpClient?.disconnect()
+                stopBatchInsert()
             }
         }
     }
 
-    Column(
+    // ── UI ────────────────────────────────────────────────────
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .background(BgDeep)
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Drag Time",
-                style = MaterialTheme.typography.titleLarge
-            )
+        Column(modifier = Modifier.fillMaxSize()) {
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = if (isConnected.value) "Connected to ESP" else "Not Connected to ESP",
-                color = if (isConnected.value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-
-            // Show a loading state while vehicles are being fetched
-            if (loadingState) {
-                Text(text = "Loading vehicles...") // Show loading message
-            } else {
-                if (!isSessionActive) {
-                    // DropdownMenuFieldMulti will be displayed when vehicles are available
-                    if (vehicles.isNotEmpty()) {
-                        DropdownMenuFieldMulti(
-                            "Select car",
-                            vehicles,
-                            selectedVehicle
-                        ) { selectedVehicleId = it.toInt() }
-                    } else {
-                        Text(text = "No vehicles available") // Show a message if no vehicles are found
-                    }
-                }
-            }
-
-            if (isSessionActive) {
-                Text(text = if (isReady) "Go go GO" else "Wait")
-            }
-
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            //Diagram
+            // ── Top mode bar ──────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(2.dp, Color(0, 0, 0, 255))
-            )
-            {
+                    .background(AccentRed)
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "● DRAG MODE",
+                        color = Color.Black,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 3.sp
+                    )
+                    Text(
+                        text = if (isConnected.value) "LIVE" else "NO SIGNAL",
+                        color = if (isConnected.value) Color.Black else Color(0xFF330000),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp
+                    )
+                }
+            }
+
+            // ── Speed + readiness ─────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(BgCard)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "SPEED",
+                        color = TextMuted,
+                        fontSize = 10.sp,
+                        letterSpacing = 2.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = "${gpsData.value?.speed?.toInt() ?: 0}",
+                            color = if (isSessionActive) AccentRed else TextPrimary,
+                            fontSize = 80.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-2).sp,
+                            lineHeight = 80.sp
+                        )
+                        Text(
+                            text = " km/h",
+                            color = TextMuted,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                    }
+
+                    // Ready / Go indicator
+                    if (isSessionActive) {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    if (isReady) DeltaGood.copy(alpha = 0.15f)
+                                    else AccentAmber.copy(alpha = 0.15f),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = if (isReady) "⬛ READY — LAUNCH!" else "◌ WAITING FOR STANDSTILL",
+                                color = if (isReady) DeltaGood else AccentAmber,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+                }
+
+                // GPS fix indicator top-right
+                Column(
+                    modifier = Modifier.align(Alignment.TopEnd),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Text(
+                        text = "GPS",
+                        color = TextMuted,
+                        fontSize = 9.sp,
+                        letterSpacing = 2.sp
+                    )
+                    Text(
+                        text = if ((gpsData.value?.fixQuality ?: 0) > 0) "✓ FIX" else "✗ NO FIX",
+                        color = if ((gpsData.value?.fixQuality ?: 0) > 0) DeltaGood else AccentRed,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "ALT ${gpsData.value?.altitude?.toInt() ?: 0}m",
+                        color = TextMuted,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            Divider(color = SectorLine, thickness = 1.dp)
+
+            // ── Results row ───────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(BgElevated)
+                    .padding(horizontal = 24.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                ResultCell(
+                    label = "0–100 km/h",
+                    value = dragTime?.let { String.format("%.3fs", it) } ?: "—",
+                    valueColor = if (dragTime != null) DeltaGood else TextMuted
+                )
+                Box(modifier = Modifier
+                    .width(1.dp)
+                    .height(40.dp)
+                    .background(SectorLine))
+                ResultCell(
+                    label = "¼ MILE",
+                    value = quarterMileTime?.let { String.format("%.3fs", it) } ?: "—",
+                    valueColor = if (quarterMileTime != null) DeltaGood else TextMuted
+                )
+                Box(modifier = Modifier
+                    .width(1.dp)
+                    .height(40.dp)
+                    .background(SectorLine))
+                ResultCell(
+                    label = "DATA PTS",
+                    value = "${dataPoints.size}",
+                    valueColor = TextPrimary
+                )
+            }
+
+            Divider(color = SectorLine, thickness = 1.dp)
+
+            // ── Speed chart ───────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .background(BgCard)
+                    .padding(horizontal = 4.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "SPEED TRACE",
+                    color = TextMuted,
+                    fontSize = 9.sp,
+                    letterSpacing = 2.sp,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 12.dp, top = 6.dp)
+                )
                 AndroidView(
-                    factory = { context ->
-                        LineChart(context).apply {
+                    factory = { ctx ->
+                        LineChart(ctx).apply {
                             layoutParams = ViewGroup.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                 ViewGroup.LayoutParams.MATCH_PARENT
                             )
-
-                            // Customize the chart
                             xAxis.position = XAxis.XAxisPosition.BOTTOM
                             xAxis.setDrawGridLines(false)
+                            xAxis.textColor = android.graphics.Color.parseColor("#6B7280")
+                            axisLeft.textColor = android.graphics.Color.parseColor("#6B7280")
                             axisRight.isEnabled = false
                             description.isEnabled = false
+                            legend.isEnabled = false
+                            setBackgroundColor(android.graphics.Color.parseColor("#0E1117"))
+                            setGridBackgroundColor(android.graphics.Color.TRANSPARENT)
                         }
                     },
                     update = { chart ->
-                        val safeList = dataPoints.toList() // create snapshot
-
-                        val dataSet = LineDataSet(safeList, "Speed (km/h)").apply {
+                        val safeList = dataPoints.toList()
+                        val dataSet = LineDataSet(safeList, "Speed").apply {
                             setDrawValues(false)
                             setDrawCircles(false)
-                            lineWidth = 4f  // Increase line thickness
-                            color = 2  // Set a more visible color
-                            setDrawFilled(true)  // Fill area under the line
-                            fillColor = 230 // Semi-transparent fill
+                            lineWidth = 2.5f
+                            color = android.graphics.Color.parseColor("#E8001C")
+                            setDrawFilled(true)
+                            fillColor = android.graphics.Color.parseColor("#E8001C")
+                            fillAlpha = 30
                         }
-
-                        if (chart.data == null) {
-                            chart.data = LineData(dataSet)
-                        } else {
+                        if (chart.data == null) chart.data = LineData(dataSet)
+                        else {
                             chart.data.clearValues()
                             chart.data.addDataSet(dataSet)
                         }
-
                         chart.notifyDataSetChanged()
                         chart.postInvalidate()
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height((screenHeight / 2.1).dp)
-                        .border(14.dp, Color(0, 0, 255, 0))
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
+            Divider(color = SectorLine, thickness = 1.dp)
+
+            // ── Map ───────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(
-                        RoundedCornerShape(
-                            bottomStart = 20.dp,
-                            bottomEnd = 20.dp
-                        )
-                    ) // Clip only bottom corners
-                    .background(Color.White) // Box background color
-                    .padding(20.dp)
-            )
-
-            {
-                Column()
-                {
-                    /*
-                    Row(modifier = Modifier.fillMaxWidth() ) {
+                    .weight(1f)
+                    .background(BgCard)
+            ) {
+                DragMapView(
+                    trackPath = trackPath.toList(),
+                    driverPosition = driverPosition,
+                    modifier = Modifier.fillMaxSize()
+                )
+                if (trackPath.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            text = "Speed : ${gpsData.value?.speed ?: -1} Km/H",
-                            style = TextStyle(
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight(700))
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))*/
-
-
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "Acceleration (0-100): ${dragTime ?: -1} sec",
-                            style = TextStyle(
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight(700)
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "Quarter mile time: ${quarterMileTime?: -1} sec",
-                            style = TextStyle(
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight(700)
-                            )
+                            text = "MAP — START SESSION TO RECORD PATH",
+                            color = TextMuted,
+                            fontSize = 10.sp,
+                            letterSpacing = 2.sp
                         )
                     }
                 }
-
             }
 
+            Divider(color = SectorLine, thickness = 1.dp)
 
-        }
-
-        // A 7 segment display to show speed.
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(40.dp)
+            // ── Bottom controls ───────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(BgElevated)
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
             ) {
-                SevenSegmentView(
-                    number = gpsData.value?.speed?.toInt() ?: 0,
-                    digitsNumber = 3,
-                    segmentsSpace = 1.dp,
-                    segmentWidth = 8.dp,
-                    digitsSpace = 16.dp,
-                    activeColor = Color.Black,
-                    modifier = Modifier.height(100.dp)
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Button(
-                onClick = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Vehicle selector
                     if (!isSessionActive) {
-                        coroutineScope.launch {
-                            Log.d("CarID", selectedVehicleId.toString())
-
-                            if(selectedVehicleId == -1)
-                            {
-                                Toast.makeText(context, "⚠️ No car selected", Toast.LENGTH_SHORT).show()
-                                return@launch
+                        Box(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                            if (loadingState) {
+                                Text("Loading vehicles...", color = TextMuted, fontSize = 12.sp)
+                            } else if (vehicles.isNotEmpty()) {
+                                DropdownMenuFieldMulti(
+                                    "Select car",
+                                    vehicles,
+                                    selectedVehicle
+                                ) { selectedVehicleId = it.toInt() }
+                            } else {
+                                Text("No vehicles", color = TextMuted, fontSize = 12.sp)
                             }
-
-                            val id = startSession(database, selectedVehicleId.toLong())
-
-                            if (id == -1L) {
-                                Log.e("Session", "Invalid vehicle ID or failed to start session")
-                                return@launch
-                            }
-
-                            sessionID = id
-                            isSessionActive = true
-
-                            Log.d("session:", "Started with Id: $sessionID")
                         }
                     } else {
-                        coroutineScope.launch {
-                            isSessionActive = !isSessionActive
+                        Text(
+                            text = "● SESSION ACTIVE",
+                            color = AccentRed,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
 
-                            if (sessionID.toInt() != -1) {
-                                stopBatchInsert()
-                                endSession(database)
+                    // Start/Stop button
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                if (isSessionActive) Color(0xFF1A0005) else AccentRed,
+                                RoundedCornerShape(6.dp)
+                            )
+                            .border(
+                                1.dp,
+                                if (isSessionActive) AccentRed else Color.Transparent,
+                                RoundedCornerShape(6.dp)
+                            )
+                            .clickable {
+                                coroutineScope.launch {
+                                    if (!isSessionActive) {
+                                        if (selectedVehicleId == -1) {
+                                            Toast.makeText(context, "⚠️ No car selected", Toast.LENGTH_SHORT).show()
+                                            return@launch
+                                        }
+                                        val id = startSession(database, selectedVehicleId.toLong())
+                                        if (id == -1L) return@launch
+                                        sessionID = id
+                                        trackPath.clear()
+                                        isSessionActive = true
+                                    } else {
+                                        isSessionActive = false
+                                        if (sessionID != -1L) {
+                                            stopBatchInsert()
+                                            endSession(database)
+                                        }
+                                        dragTime = endSessionPostProcess(sessionID, database)
+                                        quarterMileTime = getQuarterMileTime(sessionID, database)
+                                    }
+                                }
                             }
-                            Log.d("isItFalse?", isSessionActive.toString())
-                            dragTime = endSessionPostProcess(sessionID, database)
-                            quarterMileTime = getQuarterMileTime(sessionID,database)
-                        }
+                            .padding(horizontal = 20.dp, vertical = 12.dp)
+                    ) {
+                        Text(
+                            text = if (isSessionActive) "■ STOP" else "▶ START",
+                            color = if (isSessionActive) AccentRed else Color.Black,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp
+                        )
                     }
                 }
-            ) {
-                Text(if (isSessionActive) "Stop Session" else "Start Session")
             }
         }
     }
+}
 
+// ── Result cell ────────────────────────────────────────────
+
+@Composable
+private fun ResultCell(label: String, value: String, valueColor: Color) {
+    val TextMuted = Color(0xFF6B7280)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = label, color = TextMuted, fontSize = 9.sp,
+            letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
+        Text(text = value, color = valueColor, fontSize = 22.sp,
+            fontWeight = FontWeight.Black)
+    }
+}
+
+// ── Drag map (records path, follows car) ───────────────────
+
+@Composable
+fun DragMapView(
+    trackPath: List<LatLonOffset>,
+    driverPosition: LatLonOffset,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var mapViewRef by remember { mutableStateOf<org.maplibre.android.maps.MapView?>(null) }
+    val driverSource = remember { mutableStateOf<org.maplibre.android.style.sources.GeoJsonSource?>(null) }
+    val pathSource = remember { mutableStateOf<org.maplibre.android.style.sources.GeoJsonSource?>(null) }
+    val mapReady = remember { mutableStateOf<org.maplibre.android.maps.MapLibreMap?>(null) }
+
+    // Update driver dot
+    LaunchedEffect(driverPosition) {
+        val src = driverSource.value ?: return@LaunchedEffect
+        if (driverPosition.lat == 0.0 && driverPosition.lon == 0.0) return@LaunchedEffect
+        val geojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${driverPosition.lon},${driverPosition.lat}]},"properties":{}}"""
+        src.setGeoJson(geojson)
+        mapReady.value?.animateCamera(
+            org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
+                org.maplibre.android.geometry.LatLng(driverPosition.lat, driverPosition.lon)
+            ), 200
+        )
+    }
+
+    // Update path line as car moves
+    LaunchedEffect(trackPath.size) {
+        val src = pathSource.value ?: return@LaunchedEffect
+        if (trackPath.size < 2) return@LaunchedEffect
+        val coords = trackPath.joinToString(",") { "[${it.lon},${it.lat}]" }
+        val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":[$coords]},"properties":{}}"""
+        src.setGeoJson(geojson)
+    }
+
+    AndroidView(
+        factory = { ctx ->
+            org.maplibre.android.MapLibre.getInstance(ctx)
+            org.maplibre.android.maps.MapView(ctx).also { mv ->
+                mapViewRef = mv
+                mv.onCreate(null)
+                mv.getMapAsync { map ->
+                    mapReady.value = map
+                    map.setStyle("https://tiles.openfreemap.org/styles/dark") { style ->
+                        map.uiSettings.isCompassEnabled = false
+                        map.uiSettings.isLogoEnabled = false
+                        map.uiSettings.isAttributionEnabled = false
+
+                        // Path source + layer
+                        val pSrc = org.maplibre.android.style.sources.GeoJsonSource(
+                            "drag-path-src",
+                            """{"type":"Feature","geometry":{"type":"LineString","coordinates":[]},"properties":{}}"""
+                        )
+                        style.addSource(pSrc)
+                        style.addLayer(
+                            org.maplibre.android.style.layers.LineLayer("drag-path-layer", "drag-path-src").apply {
+                                setProperties(
+                                    org.maplibre.android.style.layers.PropertyFactory.lineColor("#E8001C"),
+                                    org.maplibre.android.style.layers.PropertyFactory.lineWidth(3f),
+                                    org.maplibre.android.style.layers.PropertyFactory.lineCap(
+                                        org.maplibre.android.style.layers.Property.LINE_CAP_ROUND
+                                    )
+                                )
+                            }
+                        )
+                        pathSource.value = pSrc
+
+                        // Driver source + layer
+                        val dSrc = org.maplibre.android.style.sources.GeoJsonSource(
+                            "drag-driver-src",
+                            """{"type":"Feature","geometry":{"type":"Point","coordinates":[0,0]},"properties":{}}"""
+                        )
+                        style.addSource(dSrc)
+                        style.addLayer(
+                            org.maplibre.android.style.layers.CircleLayer("drag-driver-layer", "drag-driver-src").apply {
+                                setProperties(
+                                    org.maplibre.android.style.layers.PropertyFactory.circleColor("#FFFFFF"),
+                                    org.maplibre.android.style.layers.PropertyFactory.circleRadius(8f),
+                                    org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor("#E8001C"),
+                                    org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth(3f)
+                                )
+                            }
+                        )
+                        driverSource.value = dSrc
+                    }
+                }
+            }
+        },
+        update = {},
+        modifier = modifier
+    )
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> mapViewRef?.onStart()
+                Lifecycle.Event.ON_RESUME -> mapViewRef?.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapViewRef?.onPause()
+                Lifecycle.Event.ON_STOP -> mapViewRef?.onStop()
+                Lifecycle.Event.ON_DESTROY -> mapViewRef?.onDestroy()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 }
 
 
