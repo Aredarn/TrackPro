@@ -1,8 +1,7 @@
-package com.example.trackpro
+package com.example.trackpro.Screens.ListViewScreens
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -47,87 +46,96 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.trackpro.DataClasses.TrackMainData
-import com.example.trackpro.ViewModels.TrackViewModel
+import com.example.trackpro.DataClasses.VehicleInformationData
+import com.example.trackpro.ManagerClasses.ESPDatabase
+import com.example.trackpro.ViewModels.VehicleFULLViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class TrackListView : ComponentActivity() {
+class CarListView : ComponentActivity()
+{
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
+        setContent{
+
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
-    val tracks by viewModel.tracks.collectAsState()
+fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
+{
     val context = LocalContext.current
-    val database = remember { ESPDatabase.getInstance(context) }
+    val database = remember { ESPDatabase.Companion.getInstance(context) }
+
+    val vehicles by viewModel.vehicles.collectAsState()
     val scope = rememberCoroutineScope()
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Your recorded tracks") }) }
-    ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) {
-            if (tracks.isEmpty()) {
+    Scaffold (
+        topBar = { TopAppBar(title = { Text("Your saved vehicles") }) }
+    )
+    { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues))
+        {
+            if(vehicles.isEmpty())
+            {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
-                ) {
-                    Text("No tracks available", fontSize = 22.sp, color = Color.Gray)
+                ){
+                    Text("No vehicles available", fontSize = 22.sp, color = Color.Gray)
                 }
-            } else {
+            }
+            else
+            {
                 LazyColumn(modifier = Modifier.padding(16.dp))
                 {
-                    items(tracks) { track ->
+                    items(vehicles) { vehicle ->
                         TrackCard(
-                            track,
-                            navController,
-                            onDelete = { tracktodelete ->
+                            vehicle = vehicle,
+                            navController = navController,
+                            onDelete = { vehicleToDelete ->
                                 scope.launch(Dispatchers.IO)
                                 {
-                                    DeleteTrack(context, database, tracktodelete.trackId)
+                                    DeleteVehicle(context,database, vehicleToDelete.vehicleId)
                                 }
-                                Toast.makeText(context, "🚀 Track deleted successfully!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "🚀 Vehicle deleted successfully!", Toast.LENGTH_SHORT).show()
 
                             }
                         )
                     }
                 }
-
             }
         }
     }
 }
 
 
+
 @Composable
 fun TrackCard(
-    track: TrackMainData,
+    vehicle: VehicleInformationData,
     navController: NavController,
-    onDelete: (TrackMainData) -> Unit  // Callback for delete action
+    onDelete: (VehicleInformationData) -> Unit  // Add this callback to handle deletion
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 10.dp)
             .clickable {
-                Log.d("ID front?", track.trackId.toString())
-                navController.navigate("track/${track.trackId}")
+                navController.navigate("vehicle/${vehicle.vehicleId}")
             },
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(0.dp),
+        elevation = CardDefaults.cardElevation(0.dp),  // No shadow
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(20.dp)) {
 
-                // Header: Track name
+                // Header: Model and Manufacturer
                 Text(
-                    text = track.trackName,
+                    text = "${vehicle.model} ${vehicle.manufacturer}",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.SemiBold,
                         lineHeight = 28.sp
@@ -137,7 +145,7 @@ fun TrackCard(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "Country: ${track.country}",
+                    text = "Year: ${vehicle.year}",
                     style = MaterialTheme.typography.bodyMedium.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -162,28 +170,28 @@ fun TrackCard(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "${track.totalLength} km",
+                            text = "${vehicle.horsepower} Hp",
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Medium
                             ),
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Text(
-                            text = "Total Length",
+                            text = "Horsepower",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "0:00.000 ",//" ${track.lapRecord}",
+                            text = "${vehicle.torque} Nm",
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Medium
                             ),
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Text(
-                            text = "Lap Record",
+                            text = "Torque",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
@@ -191,9 +199,9 @@ fun TrackCard(
                 }
             }
 
-            // Red X delete button at top-right
+            // Delete Button (red X) at the top-right corner
             IconButton(
-                onClick = { onDelete(track) },
+                onClick = { onDelete(vehicle) },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
@@ -201,7 +209,7 @@ fun TrackCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Delete Track",
+                    contentDescription = "Delete Vehicle",
                     tint = Color.Red
                 )
             }
@@ -209,8 +217,7 @@ fun TrackCard(
     }
 }
 
-suspend fun DeleteTrack(context: Context, database: ESPDatabase, trackId: Long)
+suspend fun DeleteVehicle(context: Context, database: ESPDatabase, vehicleId: Long)
 {
-    database.trackMainDao().deleteTrack(trackId)
+    database.vehicleInformationDAO().deleteVehicle(vehicleId)
 }
-

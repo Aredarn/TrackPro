@@ -1,4 +1,4 @@
-package com.example.trackpro
+package com.example.trackpro.Screens
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ExtrasForUI.DropdownMenuFieldMulti
 import com.example.trackpro.ExtrasForUI.TrackDropdownMenu
 import com.example.trackpro.ViewModels.TrackViewModel
@@ -45,7 +45,7 @@ fun TrackVehicleSelectorScreenWrapper(navController: NavController) {
     val context = LocalContext.current
     val trackViewModel: TrackViewModel = viewModel(factory = TrackViewModelFactory(context))
 
-    val database = ESPDatabase.getInstance(context) // still needed for VehicleViewModel
+    val database = ESPDatabase.Companion.getInstance(context) // still needed for VehicleViewModel
 
     TrackVehicleSelectorScreen(
         database = database,

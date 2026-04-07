@@ -1,6 +1,6 @@
 package com.example.trackpro.CalculationClasses
 
-import com.example.trackpro.ESPDatabase
+import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import kotlinx.coroutines.runBlocking
 import kotlin.math.atan2

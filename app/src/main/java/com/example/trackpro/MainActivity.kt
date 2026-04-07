@@ -27,6 +27,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.trackpro.ManagerClasses.ESPDatabase
+import com.example.trackpro.Screens.ListViewScreens.CarListScreen
+import com.example.trackpro.Screens.ListViewScreens.DragTimesListView
+import com.example.trackpro.Screens.ListViewScreens.TimeAttackListViewScreen
+import com.example.trackpro.Screens.ListViewScreens.TrackListScreen
 import com.example.trackpro.ViewModels.SessionViewModel
 import com.example.trackpro.ViewModels.SessionViewModelFactory
 import com.example.trackpro.ViewModels.TrackViewModel
@@ -36,10 +41,13 @@ import com.example.trackpro.ViewModels.VehicleFULLViewModelFactory
 import com.example.trackpro.Screens.CarCreationScreen
 import com.example.trackpro.Screens.CarViewScreen
 import com.example.trackpro.Screens.DragRaceScreen
+import com.example.trackpro.Screens.ESPConnectionTestScreen
 import com.example.trackpro.Screens.GraphScreen
+import com.example.trackpro.Screens.ListViewScreens.ListItems.TimeAttackListItemScreen
 import com.example.trackpro.Screens.TimeAttackScreenView
 import com.example.trackpro.Screens.TrackBuilderScreen
 import com.example.trackpro.Screens.TrackScreen
+import com.example.trackpro.Screens.TrackVehicleSelectorScreenWrapper
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 
@@ -152,11 +160,11 @@ class MainActivity : ComponentActivity() {
                     ) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getLong("sessionid") ?: 0L
 
-                            TimeAttackListItemScreen(
-                                navController = navController,
-                                database = database,
-                                sessionId = sessionId
-                            )
+                        TimeAttackListItemScreen(
+                            navController = navController,
+                            database = database,
+                            sessionId = sessionId
+                        )
                     }
 
                     composable(
@@ -187,7 +195,13 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(route = "timeattacklist")
                     {
-                        TimeAttackListViewScreen(navController = navController, viewModel = sessionViewModel,vehicleViewModel = vehicleFULLViewModel, trackViewModel = trackViewModel, database = database)
+                        TimeAttackListViewScreen(
+                            navController = navController,
+                            viewModel = sessionViewModel,
+                            vehicleViewModel = vehicleFULLViewModel,
+                            trackViewModel = trackViewModel,
+                            database = database
+                        )
                     }
 
                 }

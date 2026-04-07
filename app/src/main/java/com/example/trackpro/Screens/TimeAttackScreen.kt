@@ -37,7 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trackpro.DataClasses.LapInfoData
 import com.example.trackpro.DataClasses.LapTimeData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
-import com.example.trackpro.ESPDatabase
+import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.drawTrack
 import com.example.trackpro.ManagerClasses.ESPTcpClient

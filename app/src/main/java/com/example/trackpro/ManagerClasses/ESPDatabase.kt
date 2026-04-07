@@ -1,7 +1,6 @@
-package com.example.trackpro
+package com.example.trackpro.ManagerClasses
 
 import android.content.Context
-import android.location.Location.distanceBetween
 import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
@@ -17,16 +16,16 @@ import com.example.trackpro.DAO.TrackCoordinatesDataDAO
 import com.example.trackpro.DAO.TrackMainDataDAO
 import com.example.trackpro.DAO.VehicleInformationDAO
 import com.example.trackpro.DataClasses.DerivedData
+import com.example.trackpro.DataClasses.LapInfoData
 import com.example.trackpro.DataClasses.LapTimeData
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
+import com.example.trackpro.DataClasses.TrackJson
 import com.example.trackpro.DataClasses.TrackMainData
 import com.example.trackpro.DataClasses.VehicleInformationData
-import com.example.trackpro.DataClasses.LapInfoData
-import com.example.trackpro.DataClasses.LatLon
-import com.example.trackpro.DataClasses.TrackJson
+import com.example.trackpro.R
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
@@ -67,7 +66,7 @@ abstract class ESPDatabase : RoomDatabase() {
                     ESPDatabase::class.java,
                     "esp_database"
                 )
-                    .addCallback(object : RoomDatabase.Callback() {
+                    .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
 
@@ -123,5 +122,3 @@ abstract class ESPDatabase : RoomDatabase() {
         }
     }
 }
-
-

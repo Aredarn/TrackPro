@@ -50,7 +50,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.room.Room
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
 import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.ESPDatabase
+import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ExtrasForUI.DropdownMenuFieldMulti
 import com.example.trackpro.ManagerClasses.ESPTcpClient
 import com.example.trackpro.ManagerClasses.JsonReader

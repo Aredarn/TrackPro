@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.trackpro.ESPDatabase
+import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.Models.VehiclePair
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

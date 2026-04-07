@@ -10,7 +10,7 @@ import com.example.trackpro.DAO.RawGPSDataDao
 import com.example.trackpro.DAO.SessionDataDao
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SessionData
-import com.example.trackpro.ESPDatabase
+import com.example.trackpro.ManagerClasses.ESPDatabase
 
 
 class SessionManager private constructor(

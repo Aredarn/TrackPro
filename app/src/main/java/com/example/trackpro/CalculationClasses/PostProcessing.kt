@@ -4,7 +4,7 @@ import android.util.Log
 import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.SmoothedGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
-import com.example.trackpro.ESPDatabase
+import com.example.trackpro.ManagerClasses.ESPDatabase
 import kotlinx.coroutines.flow.first
 import kotlin.math.atan2
 import kotlin.math.cos

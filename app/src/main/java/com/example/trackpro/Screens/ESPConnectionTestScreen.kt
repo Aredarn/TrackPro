@@ -1,4 +1,4 @@
-package com.example.trackpro
+package com.example.trackpro.Screens
 
 import android.graphics.Typeface
 import android.os.Bundle
@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
@@ -353,7 +354,7 @@ fun Speedometer(speed: Float) {
         )
 
         // Text Paint for numbers
-        val textPaint = androidx.compose.ui.graphics.Paint().asFrameworkPaint().apply {
+        val textPaint = Paint().asFrameworkPaint().apply {
             color = android.graphics.Color.WHITE
             textSize = 30f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)

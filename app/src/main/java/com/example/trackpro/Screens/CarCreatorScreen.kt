@@ -46,7 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.DataClasses.VehicleInformationData
-import com.example.trackpro.ESPDatabase
+import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ExtrasForUI.CustomTextField
 import com.example.trackpro.ExtrasForUI.DropdownMenuField
 import com.example.trackpro.ManagerClasses.JsonReader.loadJsonOptions

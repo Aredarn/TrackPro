@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
 import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.ESPDatabase
+import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.convertToLatLonOffsetList
 import com.example.trackpro.ExtrasForUI.drawTrack
