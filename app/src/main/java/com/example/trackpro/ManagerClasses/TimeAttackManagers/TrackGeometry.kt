@@ -1,6 +1,7 @@
 package com.example.trackpro.ManagerClasses.TimeAttackManagers
 
 import android.util.Log
+import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import kotlin.math.sqrt
 
@@ -116,32 +117,46 @@ object TrackGeometry {
 
     fun checkLineCrossing(
         prev: com.example.trackpro.ManagerClasses.RawGPSData,
-        curr: com.example.trackpro.ManagerClasses.RawGPSData,
+        curr: RawGPSData,
         line: List<TrackCoordinatesData>
     ): CrossingResult? {
         if (line.size < 2) return null
 
-        val prevPos = Vector(prev.latitude, prev.longitude)
-        val currPos = Vector(curr.latitude, curr.longitude)
-        val lineStart = Vector(line[0].latitude, line[0].longitude)
-        val lineEnd = Vector(line[1].latitude, line[1].longitude)
+        // Standardize to (X = Lon, Y = Lat)
+        val prevPos = Vector(prev.longitude, prev.latitude)
+        val currPos = Vector(curr.longitude, curr.latitude)
+        val lineStart = Vector(line[0].longitude, line[0].latitude)
+        val lineEnd = Vector(line[1].longitude, line[1].latitude)
 
         val intersection = findIntersection(prevPos, currPos, lineStart, lineEnd)
+
+        // Debug Log: If you see this in Logcat, the geometry is working!
+        if (intersection != null) {
+            Log.d("TrackGeometry", "INTERSECTION DETECTED at $intersection")
+        }
+
         return intersection?.let {
             CrossingResult(true, determineDirection(prevPos, currPos, lineStart, lineEnd))
         }
     }
 
     private fun findIntersection(a1: Vector, a2: Vector, b1: Vector, b2: Vector): Vector? {
-        val r = a2 - a1
-        val s = b2 - b1
+        val r = a2 - a1 // Car vector
+        val s = b2 - b1 // Finish line vector
         val rxs = r.cross(s)
-        if (rxs == 0.0) return null
+
+        // If rxs is 0, the lines are parallel and will never intersect
+        if (Math.abs(rxs) < 1e-10) return null
 
         val qmp = b1 - a1
         val t = qmp.cross(s) / rxs
         val u = qmp.cross(r) / rxs
-        return if (t in 0.0..1.0 && u in 0.0..1.0) a1 + r * t else null
+
+        // t is the "time" along the car's path (0.0 to 1.0)
+        // u is the "position" along the finish line (0.0 to 1.0)
+        return if (t in 0.0..1.0 && u in 0.0..1.0) {
+            a1 + r * t
+        } else null
     }
 
     private fun determineDirection(

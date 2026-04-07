@@ -2,10 +2,10 @@ package com.example.trackpro.ManagerClasses.TimeAttackManagers
 
 import android.location.Location
 import android.os.SystemClock
+import android.util.Log
 import com.example.trackpro.DataClasses.TrackCoordinatesData
-import com.example.trackpro.ManagerClasses.RawGPSData
+import com.example.trackpro.DataClasses.RawGPSData
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
 
 class SprintTimingManager(
     private val startLine: List<TrackCoordinatesData>,
@@ -20,51 +20,42 @@ class SprintTimingManager(
 
     val sprintCompletedChannel = Channel<Long>(Channel.UNLIMITED)
 
-    override fun handleGpsUpdate(prev: RawGPSData?, current: RawGPSData) {
+    override fun handleGpsUpdate(prev: com.example.trackpro.ManagerClasses.RawGPSData?, current: RawGPSData) {
         val now = SystemClock.elapsedRealtime()
+        if (prev == null) return
 
-        val currentLat = current.latitude
-        val currentLon = current.longitude
-
-        val startPoint = startLine.firstOrNull()
-        val finishPoint = finishLine.firstOrNull()
-
-        // Start logic
-        if (!hasStarted && startPoint != null && isWithinRadius(currentLat, currentLon, startPoint.latitude, startPoint.longitude, gateRadiusMeters)) {
-            sprintStartTime = now
-            hasStarted = true
-            hasFinished = false
-            _currentTime.value = formatTime(0)
+        // 1. START LOGIC: Only look for start if we haven't moved yet
+        if (!hasStarted) {
+            val startResult = TrackGeometry.checkLineCrossing(prev, current, startLine)
+            if (startResult != null && startResult.isValid) {
+                sprintStartTime = now
+                hasStarted = true
+                hasFinished = false
+                Log.d("SprintManager", "START LINE CROSSED")
+            }
         }
 
-        // Finish logic
-        if (hasStarted && !hasFinished && finishPoint != null &&
-            isWithinRadius(currentLat, currentLon, finishPoint.latitude, finishPoint.longitude, gateRadiusMeters)
-        ) {
-            val sprintMs = now - sprintStartTime
-            updateTimes(sprintMs)
-            _eventCount.value += 1
-            sprintCompletedChannel.trySend(sprintMs)
-            hasStarted = false
-            hasFinished = true
+        // 2. FINISH LOGIC: Only look for finish if we are currently running
+        else if (hasStarted && !hasFinished) {
+            val finishResult = TrackGeometry.checkLineCrossing(prev, current, finishLine)
+            if (finishResult != null && finishResult.isValid) {
+                val sprintMs = now - sprintStartTime
+                updateTimes(sprintMs)
+                _eventCount.value += 1
+                sprintCompletedChannel.trySend(sprintMs)
+
+                hasStarted = false // Reset for next run
+                hasFinished = true
+                Log.d("SprintManager", "FINISH LINE CROSSED: $sprintMs ms")
+            }
         }
 
-        // Update live current time if running
+        // 3. Live UI Update
         if (hasStarted && !hasFinished) {
             _currentTime.value = formatTime(now - sprintStartTime)
         }
     }
-
-    private fun isWithinRadius(
-        lat1: Double, lon1: Double,
-        lat2: Double, lon2: Double,
-        radiusMeters: Double
-    ): Boolean {
-        val results = FloatArray(1)
-        Location.distanceBetween(lat1, lon1, lat2, lon2, results)
-        return results[0] <= radiusMeters
-    }
-
+    
     private fun updateTimes(sprintMs: Long) {
         val seconds = sprintMs / 1000.0
         _delta.value = if (bestSprintSeconds.isFinite()) seconds - bestSprintSeconds else 0.0

@@ -2,6 +2,7 @@ package com.example.trackpro.ManagerClasses.TimeAttackManagers
 
 import android.os.SystemClock
 import kotlinx.coroutines.flow.MutableStateFlow
+import com.example.trackpro.DataClasses.RawGPSData
 
 sealed class TimingMode {
     object Circuit : TimingMode()
@@ -23,7 +24,7 @@ abstract class TimingManager {
     val eventCount get() = _eventCount
     val stintStart get() = _stintStart
 
-    abstract fun handleGpsUpdate(prev: com.example.trackpro.ManagerClasses.RawGPSData?, current: com.example.trackpro.ManagerClasses.RawGPSData)
+    abstract fun handleGpsUpdate(prev: com.example.trackpro.ManagerClasses.RawGPSData?, current: RawGPSData)
     abstract fun reset()
     abstract fun startNewEvent()
 

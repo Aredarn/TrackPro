@@ -34,4 +34,9 @@ interface LapTimeDataDAO {
     // Get total number of laps in a session
     @Query("SELECT COUNT(*) FROM lap_time_data WHERE sessionid = :sessionId")
     suspend fun getLapCountForSession(sessionId: Long): Int
+
+
+    @Query("UPDATE lap_time_data SET laptime = :time WHERE id = :lapId")
+    suspend fun updateLapTime(lapId: Long, time: String)
+
 }

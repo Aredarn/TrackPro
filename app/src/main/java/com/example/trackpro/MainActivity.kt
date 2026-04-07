@@ -186,7 +186,6 @@ class MainActivity : ComponentActivity() {
                             vehicleId = vehicleId,
                             trackId = trackId,
                             database = database,
-                            onBack = {}
                         )
                     }
 

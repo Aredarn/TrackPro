@@ -3,6 +3,7 @@ package com.example.trackpro.ManagerClasses.TimeAttackManagers
 import android.os.SystemClock
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import kotlinx.coroutines.channels.Channel
+import com.example.trackpro.DataClasses.RawGPSData
 
 class CircuitTimingManager(
     private val finishLine: List<TrackCoordinatesData>
@@ -13,7 +14,10 @@ class CircuitTimingManager(
     private var hasStarted = false
     val lapCompletedChannel = Channel<Long>(Channel.UNLIMITED)
 
-    override fun handleGpsUpdate(prev: com.example.trackpro.ManagerClasses.RawGPSData?, current: com.example.trackpro.ManagerClasses.RawGPSData) {
+    override fun handleGpsUpdate(
+        prev: com.example.trackpro.ManagerClasses.RawGPSData?,
+        current: RawGPSData
+    ) {
         val now = SystemClock.elapsedRealtime()
         prev?.let { prevData ->
             TrackGeometry.checkLineCrossing(prevData, current, finishLine)?.let { crossing ->
@@ -46,6 +50,7 @@ class CircuitTimingManager(
         }
         _lastTime.value = formatTime(lapMs)
     }
+
 
     override fun reset() {
         lapStartTime = SystemClock.elapsedRealtime()
