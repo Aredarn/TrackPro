@@ -7,23 +7,26 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -40,30 +43,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.room.Room
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
 import com.example.trackpro.CalculationClasses.PostProcessing
-import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.DataClasses.TrackMainData
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.drawTrack
-import com.example.trackpro.ManagerClasses.ESPTcpClient
-import com.example.trackpro.ManagerClasses.JsonReader
-import com.example.trackpro.ManagerClasses.toDataClass
+import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ui.theme.TrackProTheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
-import androidx.compose.material3.RadioButton
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.width
-import com.example.trackpro.ManagerClasses.ESPDatabase
-
+import org.maplibre.android.annotations.MarkerOptions
+import org.maplibre.android.annotations.PolylineOptions
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
+// Use Android's native Color for the polyline
+import android.graphics.Color as AndroidGraphicsColor
 class TrackBuilderScreen : ComponentActivity()
 {
     private lateinit var database: ESPDatabase
@@ -71,8 +70,7 @@ class TrackBuilderScreen : ComponentActivity()
     override fun onCreate(savedInstanceState: Bundle?)
     {
         super.onCreate(savedInstanceState)
-        database = ESPDatabase.Companion.getInstance(applicationContext)
-
+        database = ESPDatabase.getInstance(applicationContext)
 
         setContent{
             TrackBuilderScreen(
@@ -143,307 +141,237 @@ val gpsPoints = listOf(
     LatLonOffset(47.305300, 17.048138)
 )*/
 
+// ── Design tokens (Consistent with TimeAttack) ──────────────────────────
+private val BgDeep      = Color(0xFF080A0F)
+private val BgCard      = Color(0xFF0E1117)
+private val AccentRed   = Color(0xFFE8001C)
+private val TextPrimary = Color(0xFFF0F2F5)
+private val TextMuted   = Color(0xFF6B7280)
 
 @Composable
 fun TrackBuilderScreen(
     database: ESPDatabase,
     onBack: () -> Unit
 ) {
-    var isSessionActive by remember { mutableStateOf(false) }
-    var trackID by remember { mutableLongStateOf(-1) }
-    val isConnected = remember { mutableStateOf(false) }
-
-    val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
-    val gpsPointsList = remember { mutableStateListOf<TrackCoordinatesData>() }
-
-    val rawJson = remember { mutableStateOf("") }
     val context = LocalContext.current
-    var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
-    val (ip, port) = remember { JsonReader.loadConfig(context) }
-    var lastTimestamp: Long? by remember { mutableStateOf(null) }
-
-    val dataBuffer = remember { mutableListOf<TrackCoordinatesData>() }
-
     val coroutineScope = rememberCoroutineScope()
 
-    var insertJob: Job? = null
-    var i = 0f
-
-    var trackname by remember { mutableStateOf("") }
-    var countryname by remember { mutableStateOf("") }
-
-    var showDialog by remember { mutableStateOf(false) }
-    var showStartBuilderButton by remember { mutableStateOf(false) }
-
+    // State
+    var isLiveRecording by remember { mutableStateOf(false) }
+    var trackID by remember { mutableLongStateOf(-1) }
     var trackMode by remember { mutableStateOf("Circuit") }
+    var trackName by remember { mutableStateOf("") }
+    var countryName by remember { mutableStateOf("") }
 
+    // Track Points
+    val gpsPointsList = remember { mutableStateListOf<TrackCoordinatesData>() }
 
-    fun startBatchInsert() {
-        insertJob = coroutineScope.launch(Dispatchers.IO) {
-            while (isActive) {
-                delay(800)
-                if (dataBuffer.isNotEmpty()) {
-                    try {
-                        //Adds the track coordinates to the database
-                        database.trackCoordinatesDao().insertTrackPart(dataBuffer.toList())
+    // UI State
+    var showInfoDialog by remember { mutableStateOf(false) }
+    var builderType by remember { mutableStateOf(0) } // 0: Live GPS, 1: Manual Map
 
-                        //add the points to the gpsPoints which will be rendered on screen
-                        gpsPointsList.addAll(dataBuffer.toList())
+    Box(modifier = Modifier.fillMaxSize().background(BgDeep)) {
+        Column(modifier = Modifier.fillMaxSize()) {
 
-                        dataBuffer.clear()
-                    } catch (e: Exception) {
-                        Log.e("Database", "Insert failed ${e.message}")
-                    }
-                }
-            }
-        }
-    }
+            // ── Header ───────────────────────────────────────
+            HeaderSection(onBack)
 
-    fun stopBatchInsert() {
-        insertJob?.cancel()
-        dataBuffer.clear()
-        insertJob = null
-    }
+            // ── Control Panel ────────────────────────────────
+            Column(modifier = Modifier.padding(16.dp)) {
 
-    //Tester function. works with static data from Pannonia ring
-    /*
-     // Index to keep track of which point to add
-    var currentIndex by remember { mutableIntStateOf(0) }
-    suspend fun startAddingGpsPoints() {
-        // Loop to add points at intervals
-        while (currentIndex < gpsPoints.size-1) {
-            // Add the next point to the list
-            //gpsPointsList.add(gpsPoints[currentIndex])
-            // Increment the index to add the next point
-            currentIndex++
+                // Track Info Card
+                TrackInfoCard(trackName, countryName, trackMode) { showInfoDialog = true }
 
-            // Wait for 0.1 second before adding the next point
-            delay(100)
-        }
-    }*/
+                Spacer(modifier = Modifier.height(16.dp))
 
-    LaunchedEffect(Unit) {
+                // Mode Selector (Live vs Manual)
+                ModeToggle(builderType) { builderType = it }
 
-        //startAddingGpsPoints()
+                Spacer(modifier = Modifier.height(16.dp))
 
-        espTcpClient = ESPTcpClient(
-            serverAddress = ip,
-            port = port,
-            onMessageReceived = { data ->
-                gpsData.value = data.toDataClass()
-                rawJson.value = data.toString()
-
-                if (isSessionActive && isConnected.value && trackID > 0) {
-                    val derivedData = gpsData.value?.let {
-                        TrackCoordinatesData(
-                            trackId = trackID,
-                            latitude = it.latitude,
-                            longitude = it.longitude,
-                            altitude = it.altitude
-                        )
-                    }
-                    val timestamp = gpsData.value?.timestamp
-                    derivedData?.let { gpsdata ->
-
-                        if (lastTimestamp == null || timestamp != lastTimestamp) {
-                            dataBuffer.add(gpsdata)
-                            i += 1
-                            lastTimestamp = timestamp
-                        }
-                    }
-                }
-            },
-            onConnectionStatusChanged = { connected -> isConnected.value = connected }
-        )
-        espTcpClient?.connect()
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Track creator ", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Start driving from the finish line, make a full lap and save your track to use later for lap timing")
-        Spacer(modifier = Modifier.height(16.dp))
-
-        val buttonShape = RoundedCornerShape(12.dp)
-        val buttonColors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF2196F3),
-            contentColor = Color.White
-        )
-
-        if (showStartBuilderButton) {
-            Button(
-                onClick = {
-                    isSessionActive = !isSessionActive
-                    if (isSessionActive) {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            trackID = startTrackBuilder(database, trackname, countryname, trackMode)
-                            withContext(Dispatchers.Main) {
-                                startBatchInsert()
+                // Action Buttons
+                if (builderType == 0) {
+                    LiveControls(
+                        isRecording = isLiveRecording,
+                        onToggle = {
+                            if (!isLiveRecording) {
+                                if (trackName.isEmpty()) { showInfoDialog = true }
+                                else {
+                                    coroutineScope.launch {
+                                        trackID = startTrackBuilder(database, trackName, countryName, trackMode)
+                                        isLiveRecording = true
+                                    }
+                                }
+                            } else {
+                                coroutineScope.launch {
+                                    endTrackBuilder(context, trackID)
+                                    isLiveRecording = false
+                                    onBack()
+                                }
                             }
                         }
-                    } else {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            stopBatchInsert()
-                            endTrackBuilder(context, trackID)
-                            //postProc.processTrackPoints(trackId = trackID)
-                            trackID = -1
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                shape = buttonShape,
-                colors = buttonColors,
-                elevation = ButtonDefaults.buttonElevation(0.dp)
-            ) {
-                Text(
-                    if (isSessionActive) "Stop Track Builder" else "Start Track Builder",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = { showDialog = true },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = buttonShape,
-            colors = buttonColors,
-            elevation = ButtonDefaults.buttonElevation(0.dp)
-        ) {
-            Text(
-                "Enter Track Info",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text("Select Track Mode", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(
-                selected = trackMode == "Circuit",
-                onClick = { trackMode = "Circuit" }
-            )
-            Text("Circuit")
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            RadioButton(
-                selected = trackMode == "Sprint",
-                onClick = { trackMode = "Sprint" }
-            )
-            Text("Sprint")
-        }
-
-
-        // The track drawer BOX
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center // Center the canvas within the Box
-        ) {
-            // Canvas with a border
-            Box(
-                modifier = Modifier
-                    .border(
-                        width = 2.dp,
-                        color = Color.Black,
-                        shape = RoundedCornerShape(8.dp) // Optional rounded corners
                     )
-                    .aspectRatio(1f) // Make the canvas square
-                    .background(Color.LightGray) // Optional background for the canvas
+                } else {
+                    ManualControls(
+                        onUndo = { if (gpsPointsList.isNotEmpty()) gpsPointsList.removeAt(gpsPointsList.size - 1) },
+                        onSave = {
+                            coroutineScope.launch {
+                                val id = startTrackBuilder(database, trackName, countryName, trackMode)
+                                database.trackCoordinatesDao().insertTrackPart(gpsPointsList.map { it.copy(trackId = id) })
+                                endTrackBuilder(context, id)
+                                onBack()
+                            }
+                        },
+                        canSave = gpsPointsList.size > 1 && trackName.isNotEmpty()
+                    )
+                }
+            }
+
+            // ── Map/Preview Area ─────────────────────────────
+            Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp)
+                .background(BgCard, RoundedCornerShape(12.dp))
+                .border(1.dp, Color(0xFF1E2530), RoundedCornerShape(12.dp))
             ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    // Draw the track, start line, and animated dot
-                    drawTrack(gpsPointsList, 50f,1f )//,animationProgress)
+                if (builderType == 1) {
+                    // MapLibre for Manual Selection
+                    MapLibreBuilderView(
+                        points = gpsPointsList,
+                        onMapTap = { latLng ->
+                            gpsPointsList.add(
+                                TrackCoordinatesData(
+                                    trackId = 0, // Temp ID
+                                    latitude = latLng.latitude,
+                                    longitude = latLng.longitude,
+                                    altitude = 0.0
+                                )
+                            )
+                        }
+                    )
+                } else {
+                    // Existing Canvas Preview for Live GPS
+                    Canvas(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+                        drawTrack(gpsPointsList, 50f, 2f)
+                    }
                 }
             }
         }
     }
 
-    //
-    TrackInfoAlert(
-        showDialog = showDialog,
-        onDismiss = { showDialog = false },
-        onConfirm = { name, country ->
-            trackname = name
-            countryname = country
-            showStartBuilderButton = true
-        }
-    )
-
-    DisposableEffect(Unit) {
-        onDispose {
-            try {
-                coroutineScope.launch(Dispatchers.IO) {
-                    espTcpClient?.disconnect()
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
+    if (showInfoDialog) {
+        TrackInfoAlert(
+            onDismiss = { showInfoDialog = false },
+            onConfirm = { name, country, mode ->
+                trackName = name
+                countryName = country
+                trackMode = mode
+                showInfoDialog = false
             }
+        )
+    }
+}
+
+@Composable
+fun MapLibreBuilderView(
+    points: List<TrackCoordinatesData>,
+    onMapTap: (LatLng) -> Unit
+) {
+    var mapLibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
+
+    LaunchedEffect(points.size) {
+        mapLibreMap?.let { map ->
+            map.clear()
+
+            // 1. Add the Path Line
+            if (points.size >= 2) {
+                val latLngs = points.map { LatLng(it.latitude, it.longitude) }
+                map.addPolyline(
+                    PolylineOptions() // Corrected reference
+                        .addAll(latLngs)
+                        .color(AndroidGraphicsColor.parseColor("#E8001C"))
+                        .width(3f)
+                )
+            }
+
+            // 2. Add Markers
+            if (points.isNotEmpty()) {
+                // Start Marker
+                map.addMarker(
+                    MarkerOptions()
+                        .position(LatLng(points.first().latitude, points.first().longitude))
+                        .title("START")
+                )
+
+                // Current Last Point
+                if (points.size > 1) {
+                    map.addMarker(
+                        MarkerOptions()
+                            .position(LatLng(points.last().latitude, points.last().longitude))
+                            .title("END")
+                    )
+                }
+            }
+        }
+    }
+
+    AndroidView(
+        factory = { ctx ->
+            org.maplibre.android.MapLibre.getInstance(ctx)
+            MapView(ctx).apply {
+                getMapAsync { map ->
+                    mapLibreMap = map
+                    map.setStyle("https://tiles.openfreemap.org/styles/dark")
+
+                    map.addOnMapClickListener { latLng ->
+                        onMapTap(latLng)
+                        true;
+                    }
+                }
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Composable
+private fun TrackInfoCard(name: String, country: String, mode: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(BgCard, RoundedCornerShape(8.dp))
+            .border(1.dp, Color(0xFF1E2530), RoundedCornerShape(8.dp))
+            .padding(16.dp)
+    ) {
+        Column {
+            Text("TRACK CONFIGURATION", color = TextMuted, fontSize = 10.sp, letterSpacing = 2.sp)
+            Text(if (name.isEmpty()) "Unnamed Track" else "$name ($country)", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("MODE: ${mode.uppercase()}", color = AccentRed, fontSize = 12.sp, fontWeight = FontWeight.Black)
+        }
+        Button(
+            onClick = onClick,
+            modifier = Modifier.align(Alignment.CenterEnd),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2530))
+        ) {
+            Text("EDIT", color = TextPrimary)
         }
     }
 }
 
 @Composable
-fun TrackInfoAlert(
-    showDialog: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: (String, String) -> Unit
-) {
-    var trackName by remember { mutableStateOf("") }
-    var country by remember { mutableStateOf("") }
-
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text(text = "Enter Track Details") },
-            text = {
-                Column {
-                    TextField(
-                        value = trackName,
-                        onValueChange = { trackName = it },
-                        label = { Text("Track Name") }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    TextField(
-                        value = country,
-                        onValueChange = { country = it },
-                        label = { Text("Country") }
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    onConfirm(trackName, country)
-                    onDismiss()
-                }) {
-                    Text("Confirm")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+private fun ModeToggle(selected: Int, onSelect: (Int) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().background(BgCard, RoundedCornerShape(8.dp)).padding(4.dp)) {
+        val modes = listOf("LIVE GPS", "MANUAL MAP")
+        modes.forEachIndexed { index, label ->
+            Box(
+                modifier = Modifier.weight(1f).height(40.dp)
+                    .background(if (selected == index) AccentRed else Color.Transparent, RoundedCornerShape(6.dp))
+                    .padding(4.dp).clickable { onSelect(index) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(label, color = if (selected == index) Color.Black else TextMuted, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
-        )
+        }
     }
 }
-
 
 suspend fun startTrackBuilder(database: ESPDatabase, trackName: String, countryname: String, trackType: String):Long
 {
@@ -484,7 +412,115 @@ suspend fun endTrackBuilder(context: Context, trackId: Long) {
 }
 
 
+@Composable
+private fun HeaderSection(onBack: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TextButton(onClick = onBack) {
+            Text("← BACK", color = AccentRed, fontWeight = FontWeight.Bold)
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        Text("TRACK BUILDER", color = TextPrimary, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+    }
+}
 
+@Composable
+private fun LiveControls(isRecording: Boolean, onToggle: () -> Unit) {
+    Button(
+        onClick = onToggle,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isRecording) Color(0xFF330000) else Color(0xFF1E2530)
+        ),
+        //border = border(1.dp, if (isRecording) AccentRed else Color.Transparent, RoundedCornerShape(8.dp))
+    ) {
+        val label = if (isRecording) "STOP RECORDING" else "START GPS RECORDING"
+        val icon = if (isRecording) "■" else "●"
+        Text("$icon $label", color = if (isRecording) AccentRed else TextPrimary, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun ManualControls(onUndo: () -> Unit, onSave: () -> Unit, canSave: Boolean) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Button(
+            onClick = onUndo,
+            modifier = Modifier.weight(1f).height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2530)),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text("UNDO LAST", color = TextPrimary)
+        }
+        Button(
+            onClick = onSave,
+            enabled = canSave,
+            modifier = Modifier.weight(1f).height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = AccentRed,
+                disabledContainerColor = Color(0xFF2A1014)
+            ),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text("SAVE TRACK", color = if (canSave) Color.Black else TextMuted, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun TrackInfoAlert(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var country by remember { mutableStateOf("") }
+    var mode by remember { mutableStateOf("Circuit") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = BgCard,
+        title = { Text("Track Details", color = TextPrimary) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Track Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextField(
+                    value = country,
+                    onValueChange = { country = it },
+                    label = { Text("Country") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text("Timing Mode", color = TextMuted, fontSize = 12.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = mode == "Circuit", onClick = { mode = "Circuit" })
+                    Text("Circuit", color = TextPrimary)
+                    Spacer(Modifier.width(16.dp))
+                    RadioButton(selected = mode == "Sprint", onClick = { mode = "Sprint" })
+                    Text("Sprint", color = TextPrimary)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(name, country, mode) }) {
+                Text("DONE", color = AccentRed, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL", color = TextMuted)
+            }
+        }
+    )
+}
 
 
 @Preview(showBackground = true)

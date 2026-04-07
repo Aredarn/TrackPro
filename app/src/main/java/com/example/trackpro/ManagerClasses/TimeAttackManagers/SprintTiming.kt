@@ -10,7 +10,6 @@ import kotlinx.coroutines.channels.Channel
 class SprintTimingManager(
     private val startLine: List<TrackCoordinatesData>,
     private val finishLine: List<TrackCoordinatesData>,
-    private val gateRadiusMeters: Double = 10.0
 ) : TimingManager() {
 
     private var sprintStartTime = 0L
@@ -55,7 +54,7 @@ class SprintTimingManager(
             _currentTime.value = formatTime(now - sprintStartTime)
         }
     }
-    
+
     private fun updateTimes(sprintMs: Long) {
         val seconds = sprintMs / 1000.0
         _delta.value = if (bestSprintSeconds.isFinite()) seconds - bestSprintSeconds else 0.0
