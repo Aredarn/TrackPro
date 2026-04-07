@@ -300,7 +300,7 @@ class TimeAttackViewModel(
                 sessionManager.startSession(
                     eventType = eventType,
                     vehicleId = vehicleId,
-                    description = "${timingMode.value} session"
+                    trackId = trackId
                 )
                 sessionManager.getCurrentSessionId()!!
             }

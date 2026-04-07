@@ -104,10 +104,7 @@ fun TimeAttackListViewScreen(
                 } else {
                     LazyColumn(modifier = Modifier.padding(16.dp)) {
                         items(trackSessions) { session ->
-                            val track = tracks.find {
-                                val name = session.eventType.split(" ")
-                                it.trackName == name[0]
-                            }
+                            val track = tracks.find { it.trackId == session.trackId }
                             val vehicle = vehicles.find { it.vehicleId == session.vehicleId }
 
                             if (track != null && vehicle != null) {

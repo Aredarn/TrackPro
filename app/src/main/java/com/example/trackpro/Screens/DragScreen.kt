@@ -491,8 +491,7 @@ suspend fun startSession(database: ESPDatabase, selectedVehicleId: Long): Long {
     // Use suspendCoroutine to suspend until the session id is retrieved.
     withContext(Dispatchers.IO) {
         sessionManager.startSession(
-            "DragSession",
-            "Drag data session",
+            eventType = "Drag data session",
             vehicleId = selectedVehicleId
         )
         Log.d("In start", sessionManager.getCurrentSessionId().toString())

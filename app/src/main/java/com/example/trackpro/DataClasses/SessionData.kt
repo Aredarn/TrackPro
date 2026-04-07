@@ -15,9 +15,10 @@ import androidx.room.PrimaryKey
 )
 data class SessionData(
     @PrimaryKey(autoGenerate = true)
-    val id: Long  = 0,
-    val startTime: Long, // Session start time in milliseconds
-    val endTime: Long?, // Session end time (null if ongoing)
+    val id: Long = 0,
+    val startTime: Long,
+    val endTime: Long?,
     val eventType: String,
-    val vehicleId: Long
+    val vehicleId: Long,
+    val trackId: Long? = null  // null for drag sessions
 )

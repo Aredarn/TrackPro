@@ -60,10 +60,9 @@ class DragTimesList : ComponentActivity() {
 @Composable
 fun DragTimesListView(viewModel: SessionViewModel, navController: NavController) {
     val sessionList by viewModel.sessions.collectAsState()
+    val dragSessions = sessionList.filter { it.trackId == null }
     val sessionWithVehicleList by viewModel.sessionsWithVehicle.collectAsState()
-
-    Log.d("Cars:" ,sessionWithVehicleList.toString())
-    SessionListScreen(navController = navController, sessions = sessionList, sessionsWithVehicles = sessionWithVehicleList)
+    SessionListScreen(navController = navController, sessions = dragSessions, sessionsWithVehicles = sessionWithVehicleList)
 }
 
 
