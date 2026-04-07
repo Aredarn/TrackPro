@@ -1,6 +1,5 @@
 package com.example.trackpro
 
-import TimeAttackListViewScreen
 import TrackProTheme
 import android.app.Application
 import android.os.Bundle
@@ -28,17 +27,30 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.trackpro.ManagerClasses.TimeAttackManagers.TimingMode
 import com.example.trackpro.ViewModels.SessionViewModel
 import com.example.trackpro.ViewModels.SessionViewModelFactory
 import com.example.trackpro.ViewModels.TrackViewModel
 import com.example.trackpro.ViewModels.TrackViewModelFactory
 import com.example.trackpro.ViewModels.VehicleFULLViewModel
 import com.example.trackpro.ViewModels.VehicleFULLViewModelFactory
+import com.example.trackpro.Screens.CarCreationScreen
+import com.example.trackpro.Screens.CarViewScreen
+import com.example.trackpro.Screens.DragRaceScreen
+import com.example.trackpro.Screens.GraphScreen
+import com.example.trackpro.Screens.TimeAttackScreenView
+import com.example.trackpro.Screens.TrackBuilderScreen
+import com.example.trackpro.Screens.TrackScreen
 import kotlinx.coroutines.launch
+import org.maplibre.android.MapLibre
 
 class TrackProApp : Application() {
 
+    val database: ESPDatabase by lazy { ESPDatabase.getInstance(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        MapLibre.getInstance(this)
+    }
 }
 
 class MainActivity : ComponentActivity() {
@@ -47,7 +59,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
 
-            val database = ESPDatabase.getInstance(applicationContext)
+            val context = applicationContext
+            val app = context.applicationContext as TrackProApp
+            val database = app.database
+
             val sessionViewModel: SessionViewModel =
                 viewModel(factory = SessionViewModelFactory(applicationContext))
             val trackViewModel: TrackViewModel =

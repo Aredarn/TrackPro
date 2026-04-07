@@ -1,4 +1,4 @@
-package com.example.trackpro
+package com.example.trackpro.Screens
 
 import android.annotation.SuppressLint
 import android.view.ViewGroup
@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.trackpro.CalculationClasses.DragTimeCalculation
 import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.DataClasses.SmoothedGPSData
+import com.example.trackpro.ESPDatabase
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.convertToLatLonOffsetList
 import com.example.trackpro.ExtrasForUI.drawTrack
@@ -59,7 +59,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     val screenHeight = LocalConfiguration.current.screenHeightDp
 
     val context = LocalContext.current
-    val database = remember { ESPDatabase.getInstance(context) }
+    val database = remember { ESPDatabase.Companion.getInstance(context) }
     var coordinates: List<RawGPSData> by remember { mutableStateOf(emptyList<RawGPSData>()) }
     var coordinatesSimplified by remember { mutableStateOf(emptyList<LatLonOffset>()) }
     var dragTime by remember { mutableDoubleStateOf(-1.0) }
@@ -137,18 +137,100 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
                     0 -> {
-                        // First page: Canvas (Map/Track)
-                        Box(
+                        val mapContext = LocalContext.current
+                        var mapViewRef by remember { mutableStateOf<org.maplibre.android.maps.MapView?>(null) }
+
+                        AndroidView(
+                            factory = { ctx ->
+                                org.maplibre.android.MapLibre.getInstance(ctx)
+                                org.maplibre.android.maps.MapView(ctx).also { mv ->
+                                    mapViewRef = mv
+                                    mv.onCreate(null)
+                                    mv.getMapAsync { map ->
+                                        map.setStyle("https://tiles.openfreemap.org/styles/dark")
+                                    }
+                                }
+                            },
+                            update = { mv ->
+                                if (coordinatesSimplified.isNotEmpty()) {
+                                    mv.getMapAsync { map ->
+                                        map.setStyle("https://tiles.openfreemap.org/styles/dark") { style ->
+                                            // Convert your LatLonOffset list to MapLibre LatLng list
+                                            val points = coordinatesSimplified.map {
+                                                org.maplibre.android.geometry.LatLng(it.lat, it.lon)
+                                            }
+
+                                            // Add the track as a GeoJSON line
+                                            val lineString = com.google.gson.JsonObject().apply {
+                                                addProperty("type", "Feature")
+                                                add("geometry", com.google.gson.JsonObject().apply {
+                                                    addProperty("type", "LineString")
+                                                    add("coordinates", com.google.gson.JsonArray().apply {
+                                                        points.forEach { pt ->
+                                                            add(com.google.gson.JsonArray().apply {
+                                                                add(pt.longitude)
+                                                                add(pt.latitude)
+                                                            })
+                                                        }
+                                                    })
+                                                })
+                                                add("properties", com.google.gson.JsonObject())
+                                            }
+
+                                            style.addSource(
+                                                org.maplibre.android.style.sources.GeoJsonSource(
+                                                    "track-source",
+                                                    lineString.toString()
+                                                )
+                                            )
+
+                                            style.addLayer(
+                                                org.maplibre.android.style.layers.LineLayer("track-layer", "track-source").apply {
+                                                    setProperties(
+                                                        org.maplibre.android.style.layers.PropertyFactory.lineColor("#FF0000"),
+                                                        org.maplibre.android.style.layers.PropertyFactory.lineWidth(3f),
+                                                        org.maplibre.android.style.layers.PropertyFactory.lineCap(
+                                                            org.maplibre.android.style.layers.Property.LINE_CAP_ROUND
+                                                        ),
+                                                        org.maplibre.android.style.layers.PropertyFactory.lineJoin(
+                                                            org.maplibre.android.style.layers.Property.LINE_JOIN_ROUND
+                                                        )
+                                                    )
+                                                }
+                                            )
+
+                                            // Fit camera to track bounds
+                                            val bounds = org.maplibre.android.geometry.LatLngBounds.Builder()
+                                                .includes(points)
+                                                .build()
+                                            map.easeCamera(
+                                                org.maplibre.android.camera.CameraUpdateFactory.newLatLngBounds(bounds, 64),
+                                                1000
+                                            )
+                                        }
+                                    }
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(1f)
-                                .border(2.dp, Color.Black, RoundedCornerShape(8.dp))
-                                .background(Color.LightGray)
-                                .padding(8.dp)
-                        ) {
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                drawTrack(coordinatesSimplified, margin, 1f)
+                        )
+
+                        // Forward lifecycle to MapView
+                        val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+                        androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+                            val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                                when (event) {
+                                    androidx.lifecycle.Lifecycle.Event.ON_START -> mapViewRef?.onStart()
+                                    androidx.lifecycle.Lifecycle.Event.ON_RESUME -> mapViewRef?.onResume()
+                                    androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> mapViewRef?.onPause()
+                                    androidx.lifecycle.Lifecycle.Event.ON_STOP -> mapViewRef?.onStop()
+                                    androidx.lifecycle.Lifecycle.Event.ON_DESTROY -> mapViewRef?.onDestroy()
+                                    else -> {}
+                                }
                             }
+                            lifecycleOwner.lifecycle.addObserver(observer)
+                            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                         }
                     }
                     1 -> {

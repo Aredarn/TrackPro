@@ -1,4 +1,4 @@
-package com.example.trackpro
+package com.example.trackpro.Screens
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
@@ -62,6 +62,7 @@ import java.io.IOException
 import androidx.compose.material3.RadioButton
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
+import com.example.trackpro.ESPDatabase
 
 class TrackBuilderScreen : ComponentActivity()
 {
@@ -70,7 +71,7 @@ class TrackBuilderScreen : ComponentActivity()
     override fun onCreate(savedInstanceState: Bundle?)
     {
         super.onCreate(savedInstanceState)
-        database = ESPDatabase.getInstance(applicationContext)
+        database = ESPDatabase.Companion.getInstance(applicationContext)
 
 
         setContent{
@@ -444,7 +445,7 @@ fun TrackInfoAlert(
 }
 
 
-suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countryname: String, trackType: String):Long
+suspend fun startTrackBuilder(database: ESPDatabase, trackName: String, countryname: String, trackType: String):Long
 {
     val track = TrackMainData(trackName = trackName, country = countryname, type = trackType)
     val id = database.trackMainDao().insertTrackMainDataDAO(track)
@@ -453,7 +454,7 @@ suspend fun startTrackBuilder(database: ESPDatabase,trackName: String,countrynam
 
 suspend fun endTrackBuilder(context: Context, trackId: Long) {
     Log.d("endTrackBuilder", "Inside")
-    val database = ESPDatabase.getInstance(context)
+    val database = ESPDatabase.Companion.getInstance(context)
     val postProcess = PostProcessing(database)
 
     // Explicitly wait and ensure the processed track data is retrieved

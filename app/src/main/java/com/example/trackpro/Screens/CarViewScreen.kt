@@ -1,4 +1,4 @@
-package com.example.trackpro
+package com.example.trackpro.Screens
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
@@ -9,11 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
@@ -33,6 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.DataClasses.VehicleInformationData
+import com.example.trackpro.ESPDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -47,7 +45,7 @@ class CarScreen : ComponentActivity()
 fun CarViewScreen(onBack: () -> Unit, vehicleId: Long)
 {
     val context = LocalContext.current
-    val database = remember { ESPDatabase.getInstance(context) }
+    val database = remember { ESPDatabase.Companion.getInstance(context) }
     val scope = rememberCoroutineScope()
 
     var vehicleInfo by remember { mutableStateOf<VehicleInformationData?>(null) }

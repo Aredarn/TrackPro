@@ -1,4 +1,6 @@
-import android.util.Log
+package com.example.trackpro
+
+import TrackProTheme
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -46,7 +48,6 @@ import androidx.navigation.NavController
 import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.DataClasses.TrackMainData
 import com.example.trackpro.DataClasses.VehicleInformationData
-import com.example.trackpro.ESPDatabase
 import com.example.trackpro.ViewModels.SessionViewModel
 import com.example.trackpro.ViewModels.TrackViewModel
 import com.example.trackpro.ViewModels.VehicleFULLViewModel
@@ -103,26 +104,31 @@ fun TimeAttackListViewScreen(
                 } else {
                     LazyColumn(modifier = Modifier.padding(16.dp)) {
                         items(trackSessions) { session ->
-                            TrackSessionCard(
-                                session = session,
-                                track = tracks.find {
-                                    val name = session.eventType.split(" ")
-                                    Log.d("name", name.toString())
-                                   it.trackName == name[0]
-                                }!!,
-                                vehicle = vehicles.find { it.vehicleId == session.vehicleId }!!,
-                                navController = navController,
-                                onDelete = { vehicleToDelete ->
-                                    scope.launch(Dispatchers.IO) {
-                                        // DeleteSession(context, database, vehicleToDelete.vehicleId)
+                            val track = tracks.find {
+                                val name = session.eventType.split(" ")
+                                it.trackName == name[0]
+                            }
+                            val vehicle = vehicles.find { it.vehicleId == session.vehicleId }
+
+                            if (track != null && vehicle != null) {
+                                TrackSessionCard(
+                                    session = session,
+                                    track = track,
+                                    vehicle = vehicle,
+                                    navController = navController,
+                                    onDelete = { sessionToDelete ->
+                                        scope.launch(Dispatchers.IO) {
+                                            // TODO: Implement session deletion
+                                            // viewModel.deleteSession(sessionToDelete)
+                                        }
+                                        Toast.makeText(
+                                            context,
+                                            "🚀 Session deleted successfully!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
-                                    Toast.makeText(
-                                        context,
-                                        "🚀 Session deleted successfully!",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }

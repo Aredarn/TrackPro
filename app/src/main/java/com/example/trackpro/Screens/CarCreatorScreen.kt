@@ -1,4 +1,4 @@
-package com.example.trackpro
+package com.example.trackpro.Screens
 
 import android.os.Bundle
 import android.widget.Toast
@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.DataClasses.VehicleInformationData
+import com.example.trackpro.ESPDatabase
 import com.example.trackpro.ExtrasForUI.CustomTextField
 import com.example.trackpro.ExtrasForUI.DropdownMenuField
 import com.example.trackpro.ManagerClasses.JsonReader.loadJsonOptions
@@ -59,7 +60,7 @@ class CarCreatorScreen : ComponentActivity()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        database = ESPDatabase.getInstance(applicationContext)
+        database = ESPDatabase.Companion.getInstance(applicationContext)
 
         setContent {
             CarCreationScreen(

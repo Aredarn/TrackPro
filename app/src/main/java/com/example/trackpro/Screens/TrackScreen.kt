@@ -1,4 +1,4 @@
-package com.example.trackpro
+package com.example.trackpro.Screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -20,7 +20,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.DataClasses.TrackMainData
+import com.example.trackpro.ESPDatabase
 import com.example.trackpro.ExtrasForUI.drawTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 fun TrackScreen(onBack: () -> Unit, trackId: Long) {
 
     val context = LocalContext.current
-    val database = remember { ESPDatabase.getInstance(context) }
+    val database = remember { ESPDatabase.Companion.getInstance(context) }
     TrackView(database, trackId)
 }
 

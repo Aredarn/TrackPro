@@ -2,8 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
-    id("kotlinx-serialization")
-    alias(libs.plugins.compose.compiler)
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -38,6 +37,9 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.10"
     }
     packaging {
         resources {
@@ -89,8 +91,8 @@ dependencies {
     testImplementation ("org.mockito.kotlin:mockito-kotlin:4.0.0")// Kotlin extension for Mockito
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2")  // for coroutine testing
 
-    implementation ("androidx.compose.material3:material3:<latest_version>")
-    implementation ("androidx.compose.material:material-icons-extended:<latest_version>")
+    implementation ("androidx.compose.material3:material3:1.2.1")
+    implementation ("androidx.compose.material:material-icons-extended:1.6.7")
 
 
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.0") // or the latest version)
@@ -101,6 +103,9 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.03.00")) // Update to latest BOM
 
     implementation ("com.google.code.gson:gson:2.10.1")
+
+    //MAP
+    implementation("org.maplibre.gl:android-sdk:11.11.0")
 
 }
 

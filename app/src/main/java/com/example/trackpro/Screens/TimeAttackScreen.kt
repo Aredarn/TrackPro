@@ -1,5 +1,5 @@
 // TimeAttackViewModel.kt (complete)
-package com.example.trackpro
+package com.example.trackpro.Screens
 
 import android.content.Context
 import android.content.res.Configuration
@@ -37,6 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trackpro.DataClasses.LapInfoData
 import com.example.trackpro.DataClasses.LapTimeData
 import com.example.trackpro.DataClasses.TrackCoordinatesData
+import com.example.trackpro.ESPDatabase
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.drawTrack
 import com.example.trackpro.ManagerClasses.ESPTcpClient
@@ -49,6 +50,7 @@ import com.example.trackpro.ManagerClasses.TimeAttackManagers.TimingManager
 import com.example.trackpro.ManagerClasses.TimeAttackManagers.TimingMode
 import com.example.trackpro.ManagerClasses.TimeAttackManagers.TrackGeometry
 import com.example.trackpro.ManagerClasses.TimeAttackManagers.TrackGeometry.calculateFinishLine
+import com.example.trackpro.TrackProApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
@@ -66,13 +68,15 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class TimeAttackViewModel(
-    private val database: ESPDatabase,
     context: Context
 ) : ViewModel() {
     private var tcpClient: ESPTcpClient? = null
     private val config = JsonReader.loadConfig(context)
     private val ip = config.first
     private val port = config.second
+
+    val app = context.applicationContext as TrackProApp
+    val database = app.database
 
     // Timing state
     private var timingManager: TimingManager? = null
@@ -146,7 +150,6 @@ class TimeAttackViewModel(
         Log.d(TAG, "ViewModel cleared")
     }
 
-    //WORKS
     // Updated ViewModel section
     fun loadTrack(trackId: Long, mode: TimingMode) {
         _timingMode.value = mode
@@ -229,7 +232,6 @@ class TimeAttackViewModel(
         }
     }
 
-
     private fun handleCompletedLap(lapMs: Long) {
         viewModelScope.launch {
             if (_sessionId == -1L) {
@@ -302,7 +304,7 @@ class TimeAttackViewModel(
                 )
                 sessionManager.getCurrentSessionId()!!
             }
-            _lapId = trackId
+            _lapId = -1L
 
 
             Log.d("createSession", "Session created with id: $_sessionId")
@@ -343,7 +345,7 @@ fun TimeAttackScreenView(
 ) {
     val context = LocalContext.current
     val vm: TimeAttackViewModel = viewModel(
-        factory = TimeAttackViewModelFactory(context, database)
+        factory = TimeAttackViewModelFactory(context)
     )
 
     // Collect state
@@ -589,12 +591,11 @@ private fun formatDuration(millis: Long): String = String.format(
 // ViewModel Factory
 class TimeAttackViewModelFactory(
     private val context: Context,
-    private val database: ESPDatabase
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TimeAttackViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return TimeAttackViewModel(database, context) as T
+            return TimeAttackViewModel(context) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
