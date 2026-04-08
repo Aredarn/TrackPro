@@ -19,14 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -40,11 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,11 +46,15 @@ import com.example.trackpro.ManagerClasses.JsonReader
 import com.example.trackpro.ManagerClasses.RawGPSData
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.onStart
 import java.io.IOException
-import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.Divider
+import androidx.compose.ui.unit.sp
+
 
 class ESPConnectionTest : ComponentActivity() {
 
@@ -78,83 +74,38 @@ class ESPConnectionTest : ComponentActivity() {
 fun ESPConnectionTestScreen() {
     val isConnected = remember { mutableStateOf(false) }
     val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
-    val rawJson = remember { mutableStateOf("") }
-
-    val context = LocalContext.current  // Get the Context in Compose
-    val (ip, port) = remember { JsonReader.loadConfig(context) } // Load once & remember it
-
+    val context = LocalContext.current
+    val (ip, port) = remember { JsonReader.loadConfig(context) }
     var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
-
-    // Channel to handle incoming GPS data efficiently
-    //val gpsChannel = remember { Channel<RawGPSData>(capacity = Channel.CONFLATED) }
     val gpsDataFlow = remember { MutableSharedFlow<RawGPSData>(extraBufferCapacity = 10) }
-    val updateRate = remember { mutableStateOf(0) }
 
-    fun calculateUiDelayFormatted(espTimestamp: Long): String {
+    // Design tokens
+    val BgDeep      = Color(0xFF080A0F)
+    val BgCard      = Color(0xFF0E1117)
+    val BgElevated  = Color(0xFF151922)
+    val AccentRed   = Color(0xFFE8001C)
+    val AccentGreen = Color(0xFF00C853)
+    val AccentAmber = Color(0xFFFFC107)
+    val TextPrimary = Color(0xFFF0F2F5)
+    val TextMuted   = Color(0xFF6B7280)
+    val SectorLine  = Color(0xFF1E2530)
+
+    fun calculateDelay(espTimestamp: Long): String {
+        if (espTimestamp == 0L) return "—"
         val now = System.currentTimeMillis()
-        if(espTimestamp == 0L || espTimestamp == null)
-        {
-            return "-1";
-        }
         val rawDelay = now - espTimestamp
-
-        val delay = if (abs(rawDelay) > 3_600_000) {
-            val adjustedEspTime = espTimestamp + 7_200_000 // Adjust for timezone drift
-            now - adjustedEspTime
-        } else {
-            rawDelay
-        }
-
-        return if (delay < 1000) {
-            // Less than 1 second: show in milliseconds
-            "${delay} ms"
-        } else {
-            // 1 second or more: show in seconds with 3 decimal places
-            String.format("%.3f s", delay / 1000.0)
-        }
+        val delay = if (kotlin.math.abs(rawDelay) > 3_600_000)
+            now - (espTimestamp + 7_200_000) else rawDelay
+        return if (delay < 1000) "${delay}ms" else String.format("%.3fs", delay / 1000.0)
     }
 
-
-
-    // Reusable Info Item
-    @Composable
-    fun InfoItem(icon: ImageVector, label: String, value: String) {
-        Column(
-            modifier = Modifier
-                .padding(4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "$label: $value",
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium)
-                )
-            }
-        }
-    }
-
-// 1. Connection Setup (runs once)
     LaunchedEffect(Unit) {
         try {
-            Log.d("trackpro ip",ip)
-            Log.d("trackpro", port.toString() + "")
             espTcpClient = ESPTcpClient(
                 serverAddress = ip,
                 port = port,
-                onMessageReceived = { data ->
-                    // Send data to Flow (thread-safe)
-                    gpsDataFlow.tryEmit(data)
-                },
-                onConnectionStatusChanged = { connected ->
-                    isConnected.value = connected
-                }
+                onMessageReceived = { data -> gpsDataFlow.tryEmit(data) },
+                onConnectionStatusChanged = { isConnected.value = it }
             )
             espTcpClient?.connect()
         } catch (e: Exception) {
@@ -162,244 +113,404 @@ fun ESPConnectionTestScreen() {
         }
     }
 
-// 2. Data Processing (UI updates)
     LaunchedEffect(Unit) {
-        Log.d("GPSFlow", "Starting data collection...")
-        gpsDataFlow
-            .onStart { Log.d("GPSFlow", "Flow active") }
-            .catch { e -> Log.e("GPSFlow", "Flow error", e) }
-            .collect { data ->
-                Log.d("TimeDebug", """
-            Raw GPS Time: ${data.timestamp}
-            System Now: ${System.currentTimeMillis()}
-        """.trimIndent())
-
-                // Update UI states (automatically dispatched to Main thread)
-                gpsData.value = data
-                rawJson.value = data.toString()
-                Log.d("GPSFlow", "UI updated with: $data")
-            }
+        gpsDataFlow.catch { e -> Log.e("GPSFlow", "Flow error", e) }
+            .collect { data -> gpsData.value = data }
     }
-
-
 
     DisposableEffect(Unit) {
-        onDispose {
-            try {
-                espTcpClient?.disconnect()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }
+        onDispose { try { espTcpClient?.disconnect() } catch (e: IOException) { e.printStackTrace() } }
     }
 
-    Column(
+    val speed = gpsData.value?.speed ?: 0f
+    val fix = (gpsData.value?.satellites ?: 0) > 0
+    val delay = calculateDelay(gpsData.value?.timestamp ?: 0L)
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .background(BgDeep)
     ) {
-        // Connection Status
-        Text(
-            text = "Connection Status (ESP WIFI): ${if (isConnected.value) "Connected" else "Disconnected"}",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = if (isConnected.value) Color(0xFF4CAF50) else Color(0xFFF44336)
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-
-            val delayText = calculateUiDelayFormatted(gpsData.value?.timestamp ?: 0L)
-            //val delayColor = if (delayText.toDouble() < 500) Color(0xFF4CAF50) else Color(0xFFF44336) // Green or Red
-
-            Text(
-                text = "Delay: ${delayText}",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Green
-                )
-            )
-        }
-
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // GPS Data Card
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.95f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = "Last GPS Data",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Latitude and Longitude
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    InfoItem(
-                        icon = Icons.Default.LocationOn,
-                        label = "Latitude",
-                        value = "${gpsData.value?.latitude ?: "0.000000"}"
+            // ── Top bar ───────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(if (isConnected.value) AccentGreen else AccentRed)
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isConnected.value) "● ESP CONNECTED" else "● ESP DISCONNECTED",
+                        color = Color.Black,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 3.sp
                     )
-                    InfoItem(
-                        icon = Icons.Default.LocationOn,
-                        label = "Longitude",
-                        value = "${gpsData.value?.longitude ?: "0.000000"}"
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Altitude and Satellites
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    InfoItem(
-                        icon = Icons.Default.Terrain,
-                        label = "Altitude",
-                        value = "${gpsData.value?.altitude ?: "0.000000"} m"
-                    )
-                    InfoItem(
-                        icon = Icons.Default.Satellite,
-                        label = "Satellites",
-                        value = "${gpsData.value?.satellites ?: "0"}"
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Speed and Timestamp
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    InfoItem(
-                        icon = Icons.Default.Speed,
-                        label = "Speed",
-                        value = "${gpsData.value?.speed ?: "0.00"} km/h"
-                    )
-                    InfoItem(
-                        icon = Icons.Default.AccessTimeFilled,
-                        label = "Timestamp",
-                        value = "${gpsData.value?.timestamp ?: "--:--:--"}"
+                    Text(
+                        text = "$ip:$port",
+                        color = Color.Black.copy(alpha = 0.6f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
 
+                // ── Speedometer ───────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(BgCard)
+                        .padding(top = 24.dp, bottom = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        StyledSpeedometer(
+                            speed = speed,
+                            accentRed = AccentRed,
+                            textPrimary = TextPrimary,
+                            textMuted = TextMuted
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "km/h",
+                            color = TextMuted,
+                            fontSize = 12.sp,
+                            letterSpacing = 3.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
 
-        // Raw JSON Card
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.LightGray.copy(alpha = 0.2f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Raw JSON Data:",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
-                )
+                Divider(color = SectorLine, thickness = 1.dp)
 
-                Spacer(modifier = Modifier.height(8.dp))
+                // ── Signal quality row ────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(BgElevated)
+                        .padding(horizontal = 24.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    SignalCell(
+                        label = "GPS FIX",
+                        value = if (fix) "ACQUIRED" else "SEARCHING",
+                        valueColor = if (fix) AccentGreen else AccentAmber,
+                        textMuted = TextMuted
+                    )
+                    VerticalDividerLine(SectorLine)
+                    SignalCell(
+                        label = "LATENCY",
+                        value = delay,
+                        valueColor = TextPrimary,
+                        textMuted = TextMuted
+                    )
+                    VerticalDividerLine(SectorLine)
+                    SignalCell(
+                        label = "SATELLITES",
+                        value = "${gpsData.value?.satellites ?: 0}",
+                        valueColor = if ((gpsData.value?.satellites ?: 0) >= 4)
+                            AccentGreen else AccentAmber,
+                        textMuted = TextMuted
+                    )
+                }
 
-                Text(
-                    text = rawJson.value.ifEmpty { "Waiting for data..." },
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.verticalScroll(rememberScrollState())
-                )
+                Divider(color = SectorLine, thickness = 1.dp)
+
+                // ── GPS data grid ─────────────────────────
+                SectionHeader("POSITION", TextMuted, SectorLine)
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(BgCard)
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    TelemetryRow(
+                        label = "LATITUDE",
+                        value = gpsData.value?.latitude?.let {
+                            String.format("%.6f°", it)
+                        } ?: "—",
+                        textPrimary = TextPrimary,
+                        textMuted = TextMuted
+                    )
+                    TelemetryRow(
+                        label = "LONGITUDE",
+                        value = gpsData.value?.longitude?.let {
+                            String.format("%.6f°", it)
+                        } ?: "—",
+                        textPrimary = TextPrimary,
+                        textMuted = TextMuted
+                    )
+                    TelemetryRow(
+                        label = "ALTITUDE",
+                        value = gpsData.value?.altitude?.let {
+                            String.format("%.1f m", it)
+                        } ?: "—",
+                        textPrimary = TextPrimary,
+                        textMuted = TextMuted
+                    )
+                    TelemetryRow(
+                        label = "SPEED",
+                        value = gpsData.value?.speed?.let {
+                            String.format("%.2f km/h", it)
+                        } ?: "—",
+                        textPrimary = TextPrimary,
+                        textMuted = TextMuted
+                    )
+                    TelemetryRow(
+                        label = "FIX QUALITY",
+                        value = when (gpsData.value?.satellites) {
+                            0 -> "NO FIX"
+                            1 -> "GPS FIX"
+                            2 -> "DGPS FIX"
+                            else -> "—"
+                        },
+                        textPrimary = if (fix) AccentGreen else AccentAmber,
+                        textMuted = TextMuted
+                    )
+                    TelemetryRow(
+                        label = "TIMESTAMP",
+                        value = gpsData.value?.timestamp?.let {
+                            val sdf = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.getDefault())
+                            sdf.format(java.util.Date(it))
+                        } ?: "—",
+                        textPrimary = TextPrimary,
+                        textMuted = TextMuted
+                    )
+                }
+
+                Divider(color = SectorLine, thickness = 1.dp)
+
+                // ── Raw data ──────────────────────────────
+                SectionHeader("RAW PACKET", TextMuted, SectorLine)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(BgCard)
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                    Text(
+                        text = gpsData.value?.toString() ?: "Waiting for data...",
+                        color = if (gpsData.value != null) AccentGreen else TextMuted,
+                        fontSize = 11.sp,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        lineHeight = 18.sp
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
 }
 
+// ── Styled speedometer ─────────────────────────────────────
+
 @Composable
-fun SpeedometerView(speed: Float) {
-    Canvas(modifier = Modifier.size(200.dp)) {
-        drawArc(
-            color = Color.Green,
-            startAngle = -90f,
-            sweepAngle = (speed / 100f) * 180f, // Adjust scale based on expected max speed
-            useCenter = false,
-            style = Stroke(8.dp.toPx())
-        )
-    }
-}
-
-
-
-// BMW wannabe gauge
-@Composable
-fun Speedometer(speed: Float) {
+fun StyledSpeedometer(
+    speed: Float,
+    accentRed: Color,
+    textPrimary: Color,
+    textMuted: Color
+) {
     val animatedSpeed by animateFloatAsState(
         targetValue = speed,
-        animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing)
+        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+        label = "speed"
     )
 
-    Canvas(modifier = Modifier.size(300.dp)) {
-        val centerX = size.width / 2f
-        val centerY = size.height / 1.2f  // Moves the center down to remove the lower part
-        val radius = size.minDimension / 2.2f
+    Box(
+        modifier = Modifier.size(260.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val radius = size.minDimension / 2f - 16.dp.toPx()
+            val startAngle = 135f
+            val sweepTotal = 270f
 
-        // Draw half-circle background
-        drawArc(
-            color = Color.Black,
-            startAngle = 180f,
-            sweepAngle = 180f,
-            useCenter = true, // Creates a half-circle shape
-            topLeft = Offset(centerX - radius, centerY - radius),
-            size = Size(radius * 2, radius * 2)
-        )
-
-        // Text Paint for numbers
-        val textPaint = Paint().asFrameworkPaint().apply {
-            color = android.graphics.Color.WHITE
-            textSize = 30f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            textAlign = android.graphics.Paint.Align.CENTER // Fix for Unresolved reference: Align
-        }
-
-        // Draw speed markings (every 20 km/h)
-        for (i in 0..13) { // 0 - 260 km/h (every 20 km/h)
-            val angle = Math.toRadians((180 + (i * 180f / 13)).toDouble()) // 0-260 mapped to 180°
-            val tickStart = radius * 0.75f
-            val tickEnd = radius * 0.9f
-
-            val startX = centerX + cos(angle).toFloat() * tickStart
-            val startY = centerY + sin(angle).toFloat() * tickStart
-            val endX = centerX + cos(angle).toFloat() * tickEnd
-            val endY = centerY + sin(angle).toFloat() * tickEnd
-
-            drawLine(
-                color = Color.White,
-                start = Offset(startX, startY),
-                end = Offset(endX, endY),
-                strokeWidth = 4f
+            // Background arc track
+            drawArc(
+                color = Color(0xFF1E2530),
+                startAngle = startAngle,
+                sweepAngle = sweepTotal,
+                useCenter = false,
+                topLeft = Offset(cx - radius, cy - radius),
+                size = Size(radius * 2, radius * 2),
+                style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
             )
 
-            // Draw speed labels (20, 40, ..., 260)
-            val text = (i * 20).toString()
-            val textX = centerX + cos(angle).toFloat() * (tickStart - 20)
-            val textY = centerY + sin(angle).toFloat() * (tickStart - 20) + 15 // Center text properly
-            drawContext.canvas.nativeCanvas.drawText(text, textX, textY, textPaint)
+            // Speed fill arc
+            val speedFraction = (animatedSpeed / 260f).coerceIn(0f, 1f)
+            if (speedFraction > 0f) {
+                // Color shifts from green → amber → red as speed increases
+                val arcColor = when {
+                    speedFraction < 0.5f -> Color(0xFF00C853)
+                    speedFraction < 0.8f -> Color(0xFFFFC107)
+                    else                 -> Color(0xFFE8001C)
+                }
+                drawArc(
+                    color = arcColor,
+                    startAngle = startAngle,
+                    sweepAngle = sweepTotal * speedFraction,
+                    useCenter = false,
+                    topLeft = Offset(cx - radius, cy - radius),
+                    size = Size(radius * 2, radius * 2),
+                    style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
+                )
+            }
+
+            // Tick marks every 20 km/h
+            val tickPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.parseColor("#6B7280")
+                strokeWidth = 2f
+                isAntiAlias = true
+            }
+            val labelPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.parseColor("#6B7280")
+                textSize = 22f
+                textAlign = android.graphics.Paint.Align.CENTER
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                isAntiAlias = true
+            }
+
+            for (i in 0..13) {
+                val fraction = i / 13f
+                val angle = Math.toRadians((startAngle + sweepTotal * fraction).toDouble())
+                val outerR = radius - 18.dp.toPx()
+                val innerR = radius - 28.dp.toPx()
+                val labelR = radius - 44.dp.toPx()
+
+                drawContext.canvas.nativeCanvas.drawLine(
+                    (cx + cos(angle) * innerR).toFloat(),
+                    (cy + sin(angle) * innerR).toFloat(),
+                    (cx + cos(angle) * outerR).toFloat(),
+                    (cy + sin(angle) * outerR).toFloat(),
+                    tickPaint
+                )
+
+                if (i % 2 == 0) {
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "${i * 20}",
+                        (cx + cos(angle) * labelR).toFloat(),
+                        (cy + sin(angle) * labelR).toFloat() + 8f,
+                        labelPaint
+                    )
+                }
+            }
+
+            // Needle
+            val needleFraction = (animatedSpeed / 260f).coerceIn(0f, 1f)
+            val needleAngle = Math.toRadians((startAngle + sweepTotal * needleFraction).toDouble())
+            val needleLength = radius - 32.dp.toPx()
+
+            // Needle glow (wider, semi-transparent)
+            drawLine(
+                color = Color(0xFFE8001C).copy(alpha = 0.2f),
+                start = Offset(cx, cy),
+                end = Offset(
+                    (cx + cos(needleAngle) * needleLength).toFloat(),
+                    (cy + sin(needleAngle) * needleLength).toFloat()
+                ),
+                strokeWidth = 10.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            // Needle sharp
+            drawLine(
+                color = Color(0xFFE8001C),
+                start = Offset(cx, cy),
+                end = Offset(
+                    (cx + cos(needleAngle) * needleLength).toFloat(),
+                    (cy + sin(needleAngle) * needleLength).toFloat()
+                ),
+                strokeWidth = 3.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+
+            // Center hub
+            drawCircle(color = Color(0xFF0E1117), radius = 10.dp.toPx(), center = Offset(cx, cy))
+            drawCircle(
+                color = Color(0xFFE8001C),
+                radius = 6.dp.toPx(),
+                center = Offset(cx, cy)
+            )
         }
 
-        // Draw needle
-        val needleAngle = Math.toRadians((180 + (animatedSpeed / 260f) * 180f).toDouble())
-        val needleLength = radius * 0.65f
-        val needleX = centerX + cos(needleAngle).toFloat() * needleLength
-        val needleY = centerY + sin(needleAngle).toFloat() * needleLength
-
-        drawLine(
-            color = Color.Red,
-            start = Offset(centerX, centerY),
-            end = Offset(needleX, needleY),
-            strokeWidth = 6.dp.toPx(),
-            cap = StrokeCap.Round
-        )
+        // Digital speed readout in center
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(60.dp))
+            Text(
+                text = "${animatedSpeed.toInt()}",
+                color = textPrimary,
+                fontSize = 52.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-1).sp
+            )
+        }
     }
+}
+
+// ── Sub-components ─────────────────────────────────────────
+
+@Composable
+private fun SectionHeader(title: String, textMuted: Color, sectorLine: Color) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF0A0C11))
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+    ) {
+        Text(title, color = textMuted, fontSize = 9.sp,
+            fontWeight = FontWeight.Black, letterSpacing = 3.sp)
+    }
+    Divider(color = sectorLine, thickness = 1.dp)
+}
+
+@Composable
+private fun TelemetryRow(label: String, value: String, textPrimary: Color, textMuted: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = textMuted, fontSize = 10.sp,
+            letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = textPrimary, fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+    }
+}
+
+@Composable
+private fun SignalCell(label: String, value: String, valueColor: Color, textMuted: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = textMuted, fontSize = 9.sp,
+            letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = valueColor, fontSize = 13.sp, fontWeight = FontWeight.Black)
+    }
+}
+
+@Composable
+private fun VerticalDividerLine(color: Color) {
+    Box(modifier = Modifier
+        .width(1.dp)
+        .height(36.dp)
+        .background(color))
 }
 
 @Preview(showBackground = true)
