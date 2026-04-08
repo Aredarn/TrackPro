@@ -1,4 +1,4 @@
-package com.example.trackpro.Screens.ListViewScreens.ListItems
+package com.example.trackpro.screens.listViewScreens.listItems
 
 import TrackProTheme
 import android.os.Bundle
@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -229,7 +229,7 @@ fun TimeAttackListItemScreen(
                             fontSize = 11.sp
                         )
                     }
-                    Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                    HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
                 }
 
                 // ── Key performance metrics
@@ -247,7 +247,7 @@ fun TimeAttackListItemScreen(
                         MetricColumn("WORST", worstMs.toLapTimeString(),
                             if (lapMillis.size > 1) TrackProColors.AccentRed else TrackProColors.TextPrimary, TrackProColors.TextMuted)
                     }
-                    Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                    HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
                 }
 
                 // ── Session stats row
@@ -300,7 +300,7 @@ fun TimeAttackListItemScreen(
                             textMuted = TrackProColors.TextMuted
                         )
                     }
-                    Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                    HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
                 }
 
                 // ── Lap-by-lap breakdown
@@ -493,7 +493,7 @@ private fun SectionHeader(title: String, textMuted: Color, sectorLine: Color) {
             letterSpacing = 3.sp
         )
     }
-    Divider(color = sectorLine, thickness = 1.dp)
+    HorizontalDivider(color = sectorLine, thickness = 1.dp)
 }
 
 @Composable

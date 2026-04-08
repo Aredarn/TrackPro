@@ -1,4 +1,4 @@
-package com.example.trackpro.Screens.ListViewScreens
+package com.example.trackpro.screens.listViewScreens
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.Models.DragSessionWithVehicle
 import com.example.trackpro.ViewModels.SessionViewModel
 import com.example.trackpro.ViewModels.SessionViewModelFactory

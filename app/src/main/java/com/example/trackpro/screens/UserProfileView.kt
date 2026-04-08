@@ -1,4 +1,4 @@
-package com.example.trackpro
+package com.example.trackpro.screens
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable

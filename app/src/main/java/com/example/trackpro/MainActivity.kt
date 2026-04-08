@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,26 +33,26 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.trackpro.ManagerClasses.ESPDatabase
-import com.example.trackpro.Screens.ListViewScreens.CarListScreen
-import com.example.trackpro.Screens.ListViewScreens.DragTimesListView
-import com.example.trackpro.Screens.ListViewScreens.TimeAttackListViewScreen
-import com.example.trackpro.Screens.ListViewScreens.TrackListScreen
+import com.example.trackpro.screens.listViewScreens.CarListScreen
+import com.example.trackpro.screens.listViewScreens.DragTimesListView
+import com.example.trackpro.screens.listViewScreens.TimeAttackListViewScreen
+import com.example.trackpro.screens.listViewScreens.TrackListScreen
 import com.example.trackpro.ViewModels.SessionViewModel
 import com.example.trackpro.ViewModels.SessionViewModelFactory
 import com.example.trackpro.ViewModels.TrackViewModel
 import com.example.trackpro.ViewModels.TrackViewModelFactory
 import com.example.trackpro.ViewModels.VehicleFULLViewModel
 import com.example.trackpro.ViewModels.VehicleFULLViewModelFactory
-import com.example.trackpro.Screens.CarCreationScreen
-import com.example.trackpro.Screens.ListViewScreens.ListItems.CarViewScreen
-import com.example.trackpro.Screens.DragRaceScreen
-import com.example.trackpro.Screens.ESPConnectionTestScreen
-import com.example.trackpro.Screens.ListViewScreens.ListItems.GraphScreen
-import com.example.trackpro.Screens.ListViewScreens.ListItems.TimeAttackListItemScreen
-import com.example.trackpro.Screens.TimeAttackScreenView
-import com.example.trackpro.Screens.TrackBuilderScreen
-import com.example.trackpro.Screens.TrackScreen
-import com.example.trackpro.Screens.TrackVehicleSelectorScreenWrapper
+import com.example.trackpro.screens.CarCreationScreen
+import com.example.trackpro.screens.listViewScreens.listItems.CarViewScreen
+import com.example.trackpro.screens.DragRaceScreen
+import com.example.trackpro.screens.ESPConnectionTestScreen
+import com.example.trackpro.screens.listViewScreens.listItems.GraphScreen
+import com.example.trackpro.screens.listViewScreens.listItems.TimeAttackListItemScreen
+import com.example.trackpro.screens.TimeAttackScreenView
+import com.example.trackpro.screens.TrackBuilderScreen
+import com.example.trackpro.screens.TrackScreen
+import com.example.trackpro.screens.TrackVehicleSelectorScreenWrapper
 import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
@@ -128,7 +129,7 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("vehicleid") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val vehicleId = backStackEntry.arguments?.getLong("vehicleid") ?: 0L
-                        CarViewScreen(onBack = { navController.popBackStack() }, vehicleId = vehicleId)
+                        CarViewScreen(vehicleId = vehicleId)
                     }
                     composable(
                         route = "timeattacklistitem/{sessionid}",
@@ -231,8 +232,11 @@ fun MainScreen(
                     )
                 }
 
-                Divider(color = TrackProColors.SectorLine, thickness = 1.dp,
-                    modifier = Modifier.padding(horizontal = 16.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    thickness = 1.dp,
+                    color = TrackProColors.SectorLine
+                )
 
                 DrawerSection(title = "MANAGEMENT") {
                     DrawerItem(
@@ -249,8 +253,11 @@ fun MainScreen(
                     )
                 }
 
-                Divider(color = TrackProColors.SectorLine, thickness = 1.dp,
-                    modifier = Modifier.padding(horizontal = 16.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    thickness = 1.dp,
+                    color = TrackProColors.SectorLine
+                )
 
                 DrawerSection(title = "SYSTEM") {
                     DrawerItem(
@@ -370,8 +377,11 @@ fun MainScreen(
                         fullWidth = true
                     )
 
-                    Divider(color = TrackProColors.SectorLine, thickness = 1.dp,
-                        modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        thickness = 1.dp,
+                        color = TrackProColors.SectorLine
+                    )
 
                     // Secondary actions — 2 column grid
                     Row(

@@ -1,4 +1,4 @@
-package com.example.trackpro.Screens
+package com.example.trackpro.screens
 
 import android.content.Context
 import android.content.res.Configuration

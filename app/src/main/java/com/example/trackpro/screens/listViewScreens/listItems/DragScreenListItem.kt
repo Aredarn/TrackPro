@@ -1,4 +1,4 @@
-package com.example.trackpro.Screens.ListViewScreens.ListItems
+package com.example.trackpro.screens.listViewScreens.listItems
 
 import android.annotation.SuppressLint
 import android.view.ViewGroup
@@ -40,6 +40,7 @@ import com.example.trackpro.DataClasses.RawGPSData
 import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.convertToLatLonOffsetList
+import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.ui.theme.TrackProTheme
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
@@ -74,15 +75,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     var quarterMileTime by remember { mutableDoubleStateOf(-1.0) }
     val dataPoints = remember { mutableListOf<Entry>() }
 
-    // Design tokens
-    val BgDeep     = Color(0xFF080A0F)
-    val BgCard     = Color(0xFF0E1117)
-    val BgElevated = Color(0xFF151922)
-    val AccentRed  = Color(0xFFE8001C)
-    val TextPrimary= Color(0xFFF0F2F5)
-    val TextMuted  = Color(0xFF6B7280)
-    val DeltaGood  = Color(0xFF00E676)
-    val SectorLine = Color(0xFF1E2530)
+
 
     LaunchedEffect(sessionId) {
         withContext(Dispatchers.IO) {
@@ -109,7 +102,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgDeep)
+            .background(TrackProColors.BgDeep)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -117,7 +110,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(AccentRed)
+                    .background(TrackProColors.AccentRed)
                     .padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
                 Text(
@@ -133,7 +126,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(BgCard)
+                    .background(TrackProColors.BgCard)
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -142,17 +135,17 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     StatRow(
                         label = "DURATION",
                         value = formatTime(totalTime),
-                        valueColor = TextPrimary,
-                        textMuted = TextMuted
+                        valueColor = TrackProColors.TextPrimary,
+                        textMuted = TrackProColors.TextMuted
                     )
                 }
                 StatRow(
                     label = "DISTANCE",
                     value = if (totalDist > 0) String.format("%.3f km", totalDist) else "—",
-                    valueColor = TextPrimary,
-                    textMuted = TextMuted
+                    valueColor = TrackProColors.TextPrimary,
+                    textMuted = TrackProColors.TextMuted
                 )
-                Divider(color = SectorLine, thickness = 1.dp)
+                Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -160,31 +153,31 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     StatColumn(
                         label = "0–100 km/h",
                         value = if (dragTime > 0) String.format("%.3fs", dragTime) else "—",
-                        valueColor = if (dragTime > 0) DeltaGood else TextMuted,
-                        textMuted = TextMuted
+                        valueColor = if (dragTime > 0) TrackProColors.DeltaGood else TrackProColors.TextMuted,
+                        textMuted = TrackProColors.TextMuted
                     )
                     StatColumn(
                         label = "¼ MILE",
                         value = if (quarterMileTime > 0) String.format("%.3fs", quarterMileTime) else "—",
-                        valueColor = if (quarterMileTime > 0) DeltaGood else TextMuted,
-                        textMuted = TextMuted
+                        valueColor = if (quarterMileTime > 0) TrackProColors.DeltaGood else TrackProColors.TextMuted,
+                        textMuted = TrackProColors.TextMuted
                     )
                     StatColumn(
                         label = "DATA PTS",
                         value = "${dataPoints.size}",
-                        valueColor = TextPrimary,
-                        textMuted = TextMuted
+                        valueColor = TrackProColors.TextPrimary,
+                        textMuted = TrackProColors.TextMuted
                     )
                 }
             }
 
-            Divider(color = SectorLine, thickness = 1.dp)
+            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Page indicator ────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(BgElevated)
+                    .background(TrackProColors.BgElevated)
                     .padding(horizontal = 24.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -193,14 +186,14 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     Box(
                         modifier = Modifier
                             .background(
-                                if (active) AccentRed else SectorLine,
+                                if (active) TrackProColors.AccentRed else TrackProColors.SectorLine,
                                 RoundedCornerShape(4.dp)
                             )
                             .padding(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = label,
-                            color = if (active) Color.Black else TextMuted,
+                            color = if (active) Color.Black else TrackProColors.TextMuted,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 2.sp
@@ -209,7 +202,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 }
             }
 
-            Divider(color = SectorLine, thickness = 1.dp)
+            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Pager ─────────────────────────────────────────
             HorizontalPager(
@@ -223,9 +216,9 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     )
                     1 -> SessionChartPage(
                         dataPoints = dataPoints,
-                        bgCard = BgCard,
-                        accentRed = AccentRed,
-                        textMuted = TextMuted,
+                        bgCard = TrackProColors.BgCard,
+                        accentRed = TrackProColors.AccentRed,
+                        textMuted = TrackProColors.TextMuted,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

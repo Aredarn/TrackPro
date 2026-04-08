@@ -1,4 +1,4 @@
-package com.example.trackpro.Screens
+package com.example.trackpro.screens
 
 import android.os.Bundle
 import android.widget.Toast

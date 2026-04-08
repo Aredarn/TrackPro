@@ -1,4 +1,4 @@
-package com.example.trackpro.Screens.ListViewScreens
+package com.example.trackpro.screens.listViewScreens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background

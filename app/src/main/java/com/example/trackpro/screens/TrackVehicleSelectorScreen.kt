@@ -1,4 +1,4 @@
-package com.example.trackpro.Screens
+package com.example.trackpro.screens
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,7 +56,7 @@ fun TrackVehicleSelectorScreenWrapper(navController: NavController) {
     val context = LocalContext.current
     val trackViewModel: TrackViewModel = viewModel(factory = TrackViewModelFactory(context))
 
-    val database = ESPDatabase.Companion.getInstance(context) // still needed for VehicleViewModel
+    val database = ESPDatabase.getInstance(context) // still needed for VehicleViewModel
 
     TrackVehicleSelectorScreen(
         database = database,
@@ -106,7 +106,7 @@ fun TrackVehicleSelectorScreen(
             // ── Track Selection Card ─────────────────────────
             SelectionCard(
                 label = "CIRCUIT",
-                title = if (selectedTrackName.isEmpty()) "Select Track" else selectedTrackName,
+                title = selectedTrackName.ifEmpty { "Select Track" },
                 isSet = selectedTrackId != -1L
             ) {
                 TrackDropdownMenu(
@@ -126,7 +126,7 @@ fun TrackVehicleSelectorScreen(
             // ── Vehicle Selection Card ───────────────────────
             SelectionCard(
                 label = "VEHICLE",
-                title = if (selectedVehicleName.isEmpty()) "Select Vehicle" else selectedVehicleName,
+                title = selectedVehicleName.ifEmpty { "Select Vehicle" },
                 isSet = selectedVehicleId != -1L
             ) {
                 if (vehicles.isNotEmpty()) {
@@ -153,7 +153,7 @@ fun TrackVehicleSelectorScreen(
                 enabled = canStart,
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = if (canStart) TrackProColors.AccentRed else Color(0xFF2A1014),
+                    containerColor  = if (canStart) TrackProColors.AccentRed else Color(0xFF2A1014),
                     contentColor = if (canStart) Color.White else TrackProColors.TextMuted
                 ),
                 shape = RoundedCornerShape(8.dp)
