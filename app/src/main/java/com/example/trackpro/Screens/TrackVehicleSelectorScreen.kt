@@ -40,6 +40,7 @@ import com.example.trackpro.ViewModels.TrackViewModel
 import com.example.trackpro.ViewModels.TrackViewModelFactory
 import com.example.trackpro.ViewModels.VehicleViewModel
 import com.example.trackpro.ViewModels.VehicleViewModelFactory
+import com.example.trackpro.theme.TrackProColors
 
 class TrackVehicleSelector : ComponentActivity() {
 
@@ -66,11 +67,6 @@ fun TrackVehicleSelectorScreenWrapper(navController: NavController) {
 
 
 // ── Design tokens (Consistent with your TrackBuilder) ──────────────────────────
-private val BgDeep      = Color(0xFF080A0F)
-private val BgCard      = Color(0xFF0E1117)
-private val AccentRed   = Color(0xFFE8001C)
-private val TextPrimary = Color(0xFFF0F2F5)
-private val TextMuted   = Color(0xFF6B7280)
 
 @Composable
 fun TrackVehicleSelectorScreen(
@@ -92,7 +88,7 @@ fun TrackVehicleSelectorScreen(
         vehicleViewModel.fetchVehicles()
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BgDeep)) {
+    Box(modifier = Modifier.fillMaxSize().background(TrackProColors.BgDeep)) {
         Column(
             modifier = Modifier.fillMaxSize().padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -100,7 +96,7 @@ fun TrackVehicleSelectorScreen(
             // ── Header ───────────────────────────────────────
             Text(
                 "SESSION SETUP",
-                color = TextPrimary,
+                color = TrackProColors.TextPrimary,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 2.sp,
@@ -143,7 +139,7 @@ fun TrackVehicleSelectorScreen(
                         selectedVehicleName = vehicles.find { it.vehicleId == id }?.manufacturerAndModel ?: "" // Adjust 'name' to your vehicle field
                     }
                 } else {
-                    Text("No vehicles found in garage", color = AccentRed, fontSize = 12.sp)
+                    Text("No vehicles found in garage", color = TrackProColors.AccentRed, fontSize = 12.sp)
                 }
             }
 
@@ -157,8 +153,8 @@ fun TrackVehicleSelectorScreen(
                 enabled = canStart,
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = if (canStart) AccentRed else Color(0xFF2A1014),
-                    contentColor = if (canStart) Color.White else TextMuted
+                    backgroundColor = if (canStart) TrackProColors.AccentRed else Color(0xFF2A1014),
+                    contentColor = if (canStart) Color.White else TrackProColors.TextMuted
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -183,12 +179,12 @@ fun SelectionCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BgCard, RoundedCornerShape(12.dp))
-            .border(1.dp, if (isSet) AccentRed.copy(alpha = 0.5f) else Color(0xFF1E2530), RoundedCornerShape(12.dp))
+            .background(TrackProColors.BgCard, RoundedCornerShape(12.dp))
+            .border(1.dp, if (isSet) TrackProColors.AccentRed.copy(alpha = 0.5f) else Color(0xFF1E2530), RoundedCornerShape(12.dp))
             .padding(16.dp)
     ) {
-        Text(label, color = if (isSet) AccentRed else TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        Text(title, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
+        Text(label, color = if (isSet) TrackProColors.AccentRed else TrackProColors.TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text(title, color = TrackProColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
         Spacer(modifier = Modifier.height(8.dp))
         content()
     }

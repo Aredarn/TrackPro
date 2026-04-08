@@ -39,10 +39,10 @@ import com.example.trackpro.ViewModels.TrackViewModelFactory
 import com.example.trackpro.ViewModels.VehicleFULLViewModel
 import com.example.trackpro.ViewModels.VehicleFULLViewModelFactory
 import com.example.trackpro.Screens.CarCreationScreen
-import com.example.trackpro.Screens.CarViewScreen
+import com.example.trackpro.Screens.ListViewScreens.ListItems.CarViewScreen
 import com.example.trackpro.Screens.DragRaceScreen
 import com.example.trackpro.Screens.ESPConnectionTestScreen
-import com.example.trackpro.Screens.GraphScreen
+import com.example.trackpro.Screens.ListViewScreens.ListItems.GraphScreen
 import com.example.trackpro.Screens.ListViewScreens.ListItems.TimeAttackListItemScreen
 import com.example.trackpro.Screens.TimeAttackScreenView
 import com.example.trackpro.Screens.TrackBuilderScreen
@@ -66,7 +66,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-
             val context = applicationContext
             val app = context.applicationContext as TrackProApp
             val database = app.database

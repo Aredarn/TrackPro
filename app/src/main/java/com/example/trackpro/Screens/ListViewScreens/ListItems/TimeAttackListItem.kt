@@ -2,9 +2,10 @@ package com.example.trackpro.Screens.ListViewScreens.ListItems
 
 import TrackProTheme
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,26 +16,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Divider
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -43,13 +41,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
+import com.example.trackpro.DataClasses.LapInfoData
 import com.example.trackpro.DataClasses.LapTimeData
 import com.example.trackpro.DataClasses.SessionData
 import com.example.trackpro.DataClasses.VehicleInformationData
 import com.example.trackpro.ManagerClasses.ESPDatabase
-import com.example.trackpro.theme.Teal
+import com.example.trackpro.theme.TrackProColors
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -79,257 +79,442 @@ fun TimeAttackListItemScreen(
     database: ESPDatabase,
     sessionId: Long
 ) {
-    val coroutineScope = rememberCoroutineScope()
-
     var sessionData by remember { mutableStateOf<SessionData?>(null) }
     var vehicleData by remember { mutableStateOf<VehicleInformationData?>(null) }
     var lapTimes by remember { mutableStateOf<List<LapTimeData>>(emptyList()) }
+    // GPS data per lap — map of lapNumber -> list of GPS points for that lap
+    var lapGpsData by remember { mutableStateOf<Map<Int, List<LapInfoData>>>(emptyMap()) }
+    var isLoading by remember { mutableStateOf(true) }
+
 
     LaunchedEffect(sessionId) {
-        coroutineScope.launch {
+        withContext(Dispatchers.IO) {
             sessionData = database.sessionDataDao().getSessionById(sessionId)
-            sessionData?.let {
-                vehicleData = database.vehicleInformationDAO().getVehicle(it.vehicleId).first()
-                Log.d("SessionData", "Session: $sessionData")
-
+            sessionData?.let { session ->
+                vehicleData = database.vehicleInformationDAO().getVehicle(session.vehicleId).first()
                 lapTimes = database.lapTimeDataDAO().getLapsForSession(sessionId)
-                Log.d("LapTimes", "Lap Times: $lapTimes")
+                // Load GPS points for each lap for speed analysis
+                val gpsMap = mutableMapOf<Int, List<LapInfoData>>()
+                lapTimes.forEach { lap ->
+                    gpsMap[lap.lapnumber] = database.lapInfoDataDAO().getLapData(lap.id)
+                }
+                lapGpsData = gpsMap
             }
+            withContext(Dispatchers.Main) { isLoading = false }
         }
     }
 
-    if (sessionData == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Teal)
-        }
-    } else {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-
-
-            if (sessionData != null && vehicleData != null) {
-                TimeAttackSessionDetails(
-                    session = sessionData!!,
-                    vehicle = vehicleData!!,
-                    laps = lapTimes
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(TrackProColors.BgDeep)
+    ) {
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = TrackProColors.AccentGreen,
+                        modifier = Modifier.size(36.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.height(12.dp))
+                    Text("LOADING SESSION", color = TrackProColors.TextMuted,
+                        fontSize = 10.sp, letterSpacing = 3.sp)
                 }
             }
+        } else if (sessionData == null) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("SESSION NOT FOUND", color = TrackProColors.TextMuted,
+                    fontSize = 12.sp, letterSpacing = 3.sp)
+            }
+        } else {
+            val session = sessionData!!
+            val vehicle = vehicleData
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // Derived analytics
+            val lapMillis = lapTimes.map { it.laptime.toLapTimeMillis() }
+            val bestLap = lapTimes.minByOrNull { it.laptime.toLapTimeMillis() }
+            val worstLap = lapTimes.maxByOrNull { it.laptime.toLapTimeMillis() }
+            val bestMs = lapMillis.minOrNull() ?: 0L
+            val avgMs = if (lapMillis.isNotEmpty()) lapMillis.average().toLong() else 0L
+            val worstMs = lapMillis.maxOrNull() ?: 0L
+            val sessionDuration = session.endTime?.let { it - session.startTime } ?: 0L
+            // Consistency: std deviation of lap times as % of best lap (lower = more consistent)
+            val consistency = if (lapMillis.size > 1) {
+                val mean = lapMillis.average()
+                val stdDev = Math.sqrt(lapMillis.map { (it - mean) * (it - mean) }.average())
+                val pct = (stdDev / mean * 100)
+                String.format("%.1f%%", pct)
+            } else "—"
+            // Top speed per lap from GPS
+            val topSpeedOverall = lapGpsData.values.flatten()
+                .mapNotNull { it.spd }.maxOrNull() ?: 0f
+            val topSpeedPerLap = lapTimes.associate { lap ->
+                lap.lapnumber to (lapGpsData[lap.lapnumber]?.mapNotNull { it.spd }?.maxOrNull() ?: 0f)
+            }
+            // Improvement trend: compare first half avg vs second half avg
+            val trend = if (lapMillis.size >= 4) {
+                val half = lapMillis.size / 2
+                val firstHalfAvg = lapMillis.take(half).average()
+                val secondHalfAvg = lapMillis.drop(half).average()
+                val diff = secondHalfAvg - firstHalfAvg
+                when {
+                    diff < -500 -> "IMPROVING ↑"
+                    diff > 500  -> "FADING ↓"
+                    else        -> "CONSISTENT →"
+                }
+            } else "—"
+            val trendColor = when {
+                trend.contains("IMPROVING") -> TrackProColors.AccentGreen
+                trend.contains("FADING")    ->TrackProColors.AccentRed
+                else                        -> TrackProColors.AccentAmber
+            }
 
-            LapListSection(lapTimes)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                // ── Top bar
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(TrackProColors.AccentGreen)
+                            .padding(horizontal = 20.dp, vertical = 6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("● SESSION DETAIL", color = Color.Black, fontSize = 11.sp,
+                                fontWeight = FontWeight.Black, letterSpacing = 3.sp)
+                            Text("${lapTimes.size} LAPS", color = Color.Black,
+                                fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                        }
+                    }
+                }
+
+                // ── Session + vehicle header
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(TrackProColors.BgCard)
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = session.eventType,
+                            color = TrackProColors.TextPrimary,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-0.5).sp
+                        )
+                        if (vehicle != null) {
+                            Text(
+                                text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
+                                color = TrackProColors.TextMuted,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${vehicle.engineType} · ${vehicle.horsepower}hp · ${vehicle.drivetrain}",
+                                color = TrackProColors.TextMuted.copy(alpha = 0.7f),
+                                fontSize = 11.sp
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        val formatter = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+                        Text(
+                            text = formatter.format(Date(session.startTime)),
+                            color = TrackProColors.TextMuted,
+                            fontSize = 11.sp
+                        )
+                    }
+                    Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                }
+
+                // ── Key performance metrics
+                item {
+                    SectionHeader("KEY METRICS", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(TrackProColors.BgCard)
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        MetricColumn("BEST LAP", bestLap?.laptime ?: "—", TrackProColors.AccentGreen, TrackProColors.TextMuted)
+                        MetricColumn("AVERAGE", avgMs.toLapTimeString(), TrackProColors.TextPrimary, TrackProColors.TextMuted)
+                        MetricColumn("WORST", worstMs.toLapTimeString(),
+                            if (lapMillis.size > 1) TrackProColors.AccentRed else TrackProColors.TextPrimary, TrackProColors.TextMuted)
+                    }
+                    Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                }
+
+                // ── Session stats row
+                item {
+                    SectionHeader("SESSION STATS", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(TrackProColors.BgCard)
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StatRowItem(
+                            label = "TOTAL SESSION TIME",
+                            value = sessionDuration.toLapTimeString(),
+                            textPrimary = TrackProColors.TextPrimary,
+                            textMuted = TrackProColors.TextMuted
+                        )
+                        StatRowItem(
+                            label = "TOP SPEED (SESSION)",
+                            value = String.format("%.1f km/h", topSpeedOverall),
+                            textPrimary = TrackProColors.TextPrimary,
+                            textMuted = TrackProColors.TextMuted
+                        )
+                        StatRowItem(
+                            label = "LAP COUNT",
+                            value = "${lapTimes.size}",
+                            textPrimary = TrackProColors.TextPrimary,
+                            textMuted = TrackProColors.TextMuted
+                        )
+                        StatRowItem(
+                            label = "CONSISTENCY (σ)",
+                            value = consistency,
+                            textPrimary = if (consistency != "—" &&
+                                consistency.replace("%","").toDoubleOrNull()?.let { it < 1.0 } == true)
+                                TrackProColors.AccentGreen else TrackProColors.TextPrimary,
+                            textMuted = TrackProColors.TextMuted
+                        )
+                        StatRowItem(
+                            label = "GAP: BEST → WORST",
+                            value = if (lapMillis.size > 1)
+                                "+${(worstMs - bestMs).toLapTimeString()}" else "—",
+                            textPrimary = TrackProColors.TextPrimary,
+                            textMuted = TrackProColors.TextMuted
+                        )
+                        StatRowItem(
+                            label = "PERFORMANCE TREND",
+                            value = trend,
+                            textPrimary = trendColor,
+                            textMuted = TrackProColors.TextMuted
+                        )
+                    }
+                    Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                }
+
+                // ── Lap-by-lap breakdown
+                item {
+                    SectionHeader("LAP BREAKDOWN", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                }
+
+                if (lapTimes.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("NO LAPS RECORDED", color = TrackProColors.TextMuted,
+                                fontSize = 11.sp, letterSpacing = 3.sp)
+                        }
+                    }
+                } else {
+                    items(lapTimes) { lap ->
+                        val isBest = lap.id == bestLap?.id
+                        val isWorst = lap.id == worstLap?.id && lapTimes.size > 1
+                        val lapMs = lap.laptime.toLapTimeMillis()
+                        val deltaMs = lapMs - bestMs
+                        val topSpeed = topSpeedPerLap[lap.lapnumber] ?: 0f
+
+                        LapRow(
+                            lap = lap,
+                            isBest = isBest,
+                            isWorst = isWorst,
+                            deltaMs = deltaMs,
+                            topSpeed = topSpeed,
+                            bgCard = TrackProColors.BgCard,
+                            bgElevated = TrackProColors.BgElevated,
+                            accentGreen = TrackProColors.AccentGreen,
+                            accentRed = TrackProColors.AccentRed,
+                            accentAmber = TrackProColors.AccentAmber,
+                            textPrimary = TrackProColors.TextPrimary,
+                            textMuted = TrackProColors.TextMuted,
+                            sectorLine = TrackProColors.SectorLine
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
+// ── Lap row ────────────────────────────────────────────────
+
 @Composable
-fun TimeAttackSessionDetails(
-    session: SessionData,
-    vehicle: VehicleInformationData,
-    laps: List<LapTimeData>
+private fun LapRow(
+    lap: LapTimeData,
+    isBest: Boolean,
+    isWorst: Boolean,
+    deltaMs: Long,
+    topSpeed: Float,
+    bgCard: Color,
+    bgElevated: Color,
+    accentGreen: Color,
+    accentRed: Color,
+    accentAmber: Color,
+    textPrimary: Color,
+    textMuted: Color,
+    sectorLine: Color
 ) {
-    Card(
-        shape = RoundedCornerShape(10.dp),
-        elevation = CardDefaults.cardElevation(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    val accentColor = when {
+        isBest  -> accentGreen
+        isWorst -> accentRed
+        else    -> textMuted
+    }
+    val badge = when {
+        isBest  -> "BEST"
+        isWorst -> "SLOW"
+        else    -> "LAP"
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(4.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .background(
+                if (isBest) accentGreen.copy(alpha = 0.05f) else bgCard,
+                RoundedCornerShape(8.dp)
+            )
+            .border(
+                width = if (isBest) 1.dp else 0.dp,
+                color = if (isBest) accentGreen.copy(alpha = 0.3f) else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // --- Session Info ---
-            SessionInfoContent(session)
-
-            Divider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-            )
-
-            // --- Vehicle Info ---
-            VehicleInfoContent(vehicle)
-
-            Divider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-            )
-
-            // --- Lap Summary ---
-            LapSummaryContent(laps)
-        }
-    }
-}
-
-@Composable
-private fun SessionInfoContent(session: SessionData) {
-    val formatter = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
-    val startTime = formatter.format(Date(session.startTime))
-    val duration = session.endTime?.let {
-        val diff = it - session.startTime
-        "${diff / 1000 / 60} min"
-    } ?: "Ongoing"
-
-    Column {
-        Text(
-            text = session.eventType,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "Start • $startTime",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-            )
-        )
-        Text(
-            text = "Duration • $duration",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-            )
-        )
-    }
-}
-
-@Composable
-private fun VehicleInfoContent(vehicle: VehicleInformationData) {
-    Column {
-        Text(
-            text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "Engine • ${vehicle.engineType} | ${vehicle.horsepower} HP",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-            )
-        )
-        Text(
-            text = "Drivetrain • ${vehicle.drivetrain} | ${vehicle.weight} kg",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-            )
-        )
-    }
-}
-
-@Composable
-private fun LapSummaryContent(laps: List<LapTimeData>) {
-    val bestLap = laps.minByOrNull { it.laptime.toLapTimeMillis() }
-    val avgLap = laps.map { it.laptime.toLapTimeMillis() }.average().toLong()
-    val avgLapFormatted = avgLap.toLapTimeString()
-
-    Row(
-        Modifier
-            .fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("🏁 Best Lap", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            Text(bestLap?.laptime ?: "--:--", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("📊 Average", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            Text(avgLapFormatted, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("🔢 Laps", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            Text("${laps.size}", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
-        }
-    }
-}
-
-@Composable
-fun LapListSection(laps: List<LapTimeData>) {
-    if (laps.isEmpty()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "No laps recorded",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                )
-            )
-        }
-        return
-    }
-
-    val bestLap = laps.minByOrNull { it.laptime.toLapTimeMillis() }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(vertical = 8.dp)
-    ) {
-        items(laps) { lap ->
-            val isBestLap = lap.id == bestLap?.id
-
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(2.dp),
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isBestLap)
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                    else
-                        MaterialTheme.colorScheme.surface
-                )
+            // Left: lap number + badge
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Text(
+                    text = String.format("%02d", lap.lapnumber),
+                    color = accentColor,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Box(
+                    modifier = Modifier
+                        .background(accentColor.copy(alpha = 0.15f), RoundedCornerShape(3.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
-                    Text(
-                        "Lap ${lap.lapnumber}",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = if (isBestLap) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isBestLap) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
+                    Text(badge, color = accentColor, fontSize = 8.sp,
+                        fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                }
+            }
 
-                        )
+            // Center: top speed
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("TOP SPEED", color = textMuted, fontSize = 8.sp,
+                    letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (topSpeed > 0) String.format("%.0f", topSpeed) else "—",
+                    color = textPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (topSpeed > 0) {
+                    Text("km/h", color = textMuted, fontSize = 8.sp)
+                }
+            }
+
+            // Right: lap time + delta
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = lap.laptime,
+                    color = accentColor,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-0.5).sp
+                )
+                if (!isBest && deltaMs > 0) {
+                    Text(
+                        text = "+${deltaMs.toLapTimeString()}",
+                        color = accentRed.copy(alpha = 0.8f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
-
+                } else if (isBest) {
                     Text(
-                        lap.laptime,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = if (isBestLap) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isBestLap) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface
-                        )
+                        text = "REFERENCE",
+                        color = accentGreen.copy(alpha = 0.7f),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
                     )
                 }
             }
         }
+
+        // Left accent bar
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .width(3.dp)
+                .height(40.dp)
+                .background(accentColor, RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp))
+        )
+    }
+}
+
+// ── Shared sub-components ──────────────────────────────────
+
+@Composable
+private fun SectionHeader(title: String, textMuted: Color, sectorLine: Color) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF0A0C11))
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = title,
+            color = textMuted,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 3.sp
+        )
+    }
+    Divider(color = sectorLine, thickness = 1.dp)
+}
+
+@Composable
+private fun MetricColumn(label: String, value: String, valueColor: Color, textMuted: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = textMuted, fontSize = 9.sp,
+            letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = valueColor, fontSize = 19.sp, fontWeight = FontWeight.Black)
+    }
+}
+
+@Composable
+private fun StatRowItem(label: String, value: String, textPrimary: Color, textMuted: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = textMuted, fontSize = 10.sp,
+            letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 }
 

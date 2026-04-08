@@ -3,127 +3,283 @@ package com.example.trackpro.Screens
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Divider
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.trackpro.DataClasses.TrackCoordinatesData
 import com.example.trackpro.DataClasses.TrackMainData
 import com.example.trackpro.ManagerClasses.ESPDatabase
 import com.example.trackpro.ExtrasForUI.drawTrack
+import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-
 @Composable
 fun TrackScreen(onBack: () -> Unit, trackId: Long) {
-
     val context = LocalContext.current
-    val database = remember { ESPDatabase.Companion.getInstance(context) }
+    val database = remember { ESPDatabase.getInstance(context) }
     TrackView(database, trackId)
 }
 
 @Composable
 fun TrackView(database: ESPDatabase, trackId: Long) {
-
-    val scope = rememberCoroutineScope()
-    // Use a state to hold the list of track parts, so Compose tracks changes
     val trackParts = remember { mutableStateListOf<TrackCoordinatesData>() }
     val trackInfo = remember {
         mutableStateOf(
             TrackMainData(
-                trackId = 0L,
-                trackName = "Default Track",
-                totalLength = 0.0,
-                country = "Unknown",
-                type = "Circuit"
+                trackId = 0L, trackName = "Loading...",
+                totalLength = 0.0, country = "", type = "Circuit"
             )
         )
     }
 
-
     LaunchedEffect(trackId) {
-        scope.launch(Dispatchers.IO) {
-            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { trackparts ->
+        launch(Dispatchers.IO) {
+            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { parts ->
                 trackParts.clear()
-                trackParts.addAll(trackparts)
+                trackParts.addAll(parts)
             }
         }
-
-        scope.launch(Dispatchers.IO) {
+        launch(Dispatchers.IO) {
             database.trackMainDao().getTrack(trackId).collect { track ->
                 trackInfo.value = track
             }
         }
     }
 
-
-    val margin = 16f // Margin for the track within the box in pixels
-
-    Text(
-        text = "Track Overview",
-        style = MaterialTheme.typography.headlineSmall,
-        modifier = Modifier.padding(bottom = 8.dp)
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(trackInfo.value.trackName)
-            Text("Total Distance: ${trackInfo.value.totalLength} km")
-            Text("Country: ${trackInfo.value.country}")
-            Text("Track type: ${trackInfo.value.type}")
-        }
-    }
-
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center // Center the canvas within the Box
+            .background(TrackProColors.BgDeep)
     ) {
-        // Canvas with a border
-                Box(
-            modifier = Modifier
-                .border(
-                    width = 2.dp,
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            // ── Top bar ───────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(TrackProColors.AccentGreen)
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "● TRACK OVERVIEW",
                     color = Color.Black,
-                    shape = RoundedCornerShape(8.dp)
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 3.sp
                 )
-                .aspectRatio(1f) // Make the canvas square
-                .background(Color.LightGray)
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                // Draw the track, start line, and animated dot
+            }
+
+            // ── Track info card ───────────────────────────────
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(TrackProColors.BgCard)
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = trackInfo.value.trackName,
+                    color = TrackProColors.TextPrimary,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-0.5).sp
+                )
+                Text(
+                    text = "${trackInfo.value.country} · ${trackInfo.value.type}",
+                    color = TrackProColors.TextMuted,
+                    fontSize = 12.sp,
+                    letterSpacing = 1.sp
+                )
+                Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TrackStatCol(
+                        label = "LENGTH",
+                        value = "${trackInfo.value.totalLength ?: "?"} km",
+                        textPrimary = TrackProColors.TextPrimary,
+                        textMuted = TrackProColors.TextMuted
+                    )
+                    TrackStatCol(
+                        label = "TYPE",
+                        value = trackInfo.value.type.uppercase(),
+                        textPrimary = TrackProColors.TextPrimary,
+                        textMuted = TrackProColors.TextMuted
+                    )
+                    TrackStatCol(
+                        label = "CORNERS",
+                        value = "${trackParts.size}",
+                        textPrimary = TrackProColors.TextPrimary,
+                        textMuted = TrackProColors.TextMuted
+                    )
+                }
+            }
+
+            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+
+            // ── Map ───────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .background(TrackProColors.BgCard)
+            ) {
                 if (trackParts.isNotEmpty()) {
-                    drawTrack(trackParts, margin, 1f)
+                    TrackStaticMapView(
+                        trackParts = trackParts,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                color = TrackProColors.AccentGreen,
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text("LOADING TRACK DATA", color = TrackProColors.TextMuted,
+                                fontSize = 10.sp, letterSpacing = 2.sp)
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TrackStatCol(label: String, value: String, textPrimary: Color, textMuted: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = textMuted, fontSize = 9.sp,
+            letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Black)
+    }
+}
+
+@Composable
+fun TrackStaticMapView(
+    trackParts: List<TrackCoordinatesData>,
+    modifier: Modifier = Modifier
+) {
+    var mapViewRef by remember { mutableStateOf<org.maplibre.android.maps.MapView?>(null) }
+    val trackDrawn = remember { mutableStateOf(false) }
+
+    AndroidView(
+        factory = { ctx ->
+            org.maplibre.android.MapLibre.getInstance(ctx)
+            org.maplibre.android.maps.MapView(ctx).also { mv ->
+                mapViewRef = mv
+                mv.onCreate(null)
+                mv.getMapAsync { map ->
+                    map.setStyle("https://tiles.openfreemap.org/styles/dark") { style ->
+                        map.uiSettings.setAllGesturesEnabled(true)
+                        map.uiSettings.isCompassEnabled = false
+                        map.uiSettings.isLogoEnabled = false
+                        map.uiSettings.isAttributionEnabled = false
+
+                        val coords = trackParts.joinToString(",") {
+                            "[${it.longitude},${it.latitude}]"
+                        }
+                        // Close the loop for circuit
+                        val first = trackParts.first()
+                        val closed = "$coords,[${first.longitude},${first.latitude}]"
+                        val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":[$closed]},"properties":{}}"""
+
+                        val src = org.maplibre.android.style.sources.GeoJsonSource("track-static-src", geojson)
+                        style.addSource(src)
+                        style.addLayer(
+                            org.maplibre.android.style.layers.LineLayer("track-static-layer", "track-static-src").apply {
+                                setProperties(
+                                    org.maplibre.android.style.layers.PropertyFactory.lineColor("#00C853"),
+                                    org.maplibre.android.style.layers.PropertyFactory.lineWidth(3f),
+                                    org.maplibre.android.style.layers.PropertyFactory.lineCap(
+                                        org.maplibre.android.style.layers.Property.LINE_CAP_ROUND
+                                    )
+                                )
+                            }
+                        )
+
+                        // Start/finish marker
+                        val startGeojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${first.longitude},${first.latitude}]},"properties":{}}"""
+                        style.addSource(org.maplibre.android.style.sources.GeoJsonSource("start-src", startGeojson))
+                        style.addLayer(
+                            org.maplibre.android.style.layers.CircleLayer("start-layer", "start-src").apply {
+                                setProperties(
+                                    org.maplibre.android.style.layers.PropertyFactory.circleColor("#E8001C"),
+                                    org.maplibre.android.style.layers.PropertyFactory.circleRadius(8f),
+                                    org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor("#FFFFFF"),
+                                    org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth(2f)
+                                )
+                            }
+                        )
+
+                        val bounds = org.maplibre.android.geometry.LatLngBounds.Builder()
+                            .includes(trackParts.map {
+                                org.maplibre.android.geometry.LatLng(it.latitude, it.longitude)
+                            })
+                            .build()
+                        map.easeCamera(
+                            org.maplibre.android.camera.CameraUpdateFactory.newLatLngBounds(bounds, 64), 800
+                        )
+                        trackDrawn.value = true
+                    }
+                }
+            }
+        },
+        update = {},
+        modifier = modifier
+    )
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> mapViewRef?.onStart()
+                Lifecycle.Event.ON_RESUME -> mapViewRef?.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapViewRef?.onPause()
+                Lifecycle.Event.ON_STOP -> mapViewRef?.onStop()
+                Lifecycle.Event.ON_DESTROY -> mapViewRef?.onDestroy()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 }

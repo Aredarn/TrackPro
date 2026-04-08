@@ -59,6 +59,7 @@ import com.example.trackpro.ManagerClasses.SessionManager
 import com.example.trackpro.ManagerClasses.toDataClass
 import com.example.trackpro.ViewModels.VehicleViewModel
 import com.example.trackpro.ViewModels.VehicleViewModelFactory
+import com.example.trackpro.theme.TrackProColors
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
@@ -122,15 +123,6 @@ fun DragRaceScreen(
     var driverPosition by remember { mutableStateOf(LatLonOffset(0.0, 0.0)) }
 
     // Design tokens (same as TimeAttack)
-    val BgDeep      = Color(0xFF080A0F)
-    val BgCard      = Color(0xFF0E1117)
-    val BgElevated  = Color(0xFF151922)
-    val AccentRed   = Color(0xFFE8001C)
-    val AccentAmber = Color(0xFFFFC107)
-    val TextPrimary = Color(0xFFF0F2F5)
-    val TextMuted   = Color(0xFF6B7280)
-    val DeltaGood   = Color(0xFF00E676)
-    val SectorLine  = Color(0xFF1E2530)
 
     fun startBatchInsert() {
         insertJob = coroutineScope.launch(Dispatchers.IO) {
@@ -230,7 +222,7 @@ fun DragRaceScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgDeep)
+            .background(TrackProColors.BgDeep)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -238,7 +230,7 @@ fun DragRaceScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(AccentRed)
+                    .background(TrackProColors.AccentRed)
                     .padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
                 Row(
@@ -267,13 +259,13 @@ fun DragRaceScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(BgCard)
+                    .background(TrackProColors.BgCard)
                     .padding(horizontal = 24.dp, vertical = 16.dp)
             ) {
                 Column {
                     Text(
                         text = "SPEED",
-                        color = TextMuted,
+                        color = TrackProColors.TextMuted,
                         fontSize = 10.sp,
                         letterSpacing = 2.sp,
                         fontWeight = FontWeight.Bold
@@ -281,7 +273,7 @@ fun DragRaceScreen(
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
                             text = "${gpsData.value?.speed?.toInt() ?: 0}",
-                            color = if (isSessionActive) AccentRed else TextPrimary,
+                            color = if (isSessionActive) TrackProColors.AccentRed else TrackProColors.TextPrimary,
                             fontSize = 80.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = (-2).sp,
@@ -289,7 +281,7 @@ fun DragRaceScreen(
                         )
                         Text(
                             text = " km/h",
-                            color = TextMuted,
+                            color = TrackProColors.TextMuted,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 12.dp)
@@ -301,15 +293,15 @@ fun DragRaceScreen(
                         Box(
                             modifier = Modifier
                                 .background(
-                                    if (isReady) DeltaGood.copy(alpha = 0.15f)
-                                    else AccentAmber.copy(alpha = 0.15f),
+                                    if (isReady) TrackProColors.DeltaGood.copy(alpha = 0.15f)
+                                    else TrackProColors.AccentAmber.copy(alpha = 0.15f),
                                     RoundedCornerShape(4.dp)
                                 )
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text(
                                 text = if (isReady) "⬛ READY — LAUNCH!" else "◌ WAITING FOR STANDSTILL",
-                                color = if (isReady) DeltaGood else AccentAmber,
+                                color = if (isReady) TrackProColors.DeltaGood else TrackProColors.AccentAmber,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp
@@ -325,72 +317,72 @@ fun DragRaceScreen(
                 ) {
                     Text(
                         text = "GPS",
-                        color = TextMuted,
+                        color = TrackProColors.TextMuted,
                         fontSize = 9.sp,
                         letterSpacing = 2.sp
                     )
                     Text(
                         text = if ((gpsData.value?.fixQuality ?: 0) > 0) "✓ FIX" else "✗ NO FIX",
-                        color = if ((gpsData.value?.fixQuality ?: 0) > 0) DeltaGood else AccentRed,
+                        color = if ((gpsData.value?.fixQuality ?: 0) > 0) TrackProColors.DeltaGood else TrackProColors.AccentRed,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "ALT ${gpsData.value?.altitude?.toInt() ?: 0}m",
-                        color = TextMuted,
+                        color = TrackProColors.TextMuted,
                         fontSize = 11.sp
                     )
                 }
             }
 
-            Divider(color = SectorLine, thickness = 1.dp)
+            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Results row ───────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(BgElevated)
+                    .background(TrackProColors.BgElevated)
                     .padding(horizontal = 24.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 ResultCell(
                     label = "0–100 km/h",
                     value = dragTime?.let { String.format("%.3fs", it) } ?: "—",
-                    valueColor = if (dragTime != null) DeltaGood else TextMuted
+                    valueColor = if (dragTime != null) TrackProColors.DeltaGood else TrackProColors.TextMuted
                 )
                 Box(modifier = Modifier
                     .width(1.dp)
                     .height(40.dp)
-                    .background(SectorLine))
+                    .background(TrackProColors.SectorLine))
                 ResultCell(
                     label = "¼ MILE",
                     value = quarterMileTime?.let { String.format("%.3fs", it) } ?: "—",
-                    valueColor = if (quarterMileTime != null) DeltaGood else TextMuted
+                    valueColor = if (quarterMileTime != null) TrackProColors.DeltaGood else TrackProColors.TextMuted
                 )
                 Box(modifier = Modifier
                     .width(1.dp)
                     .height(40.dp)
-                    .background(SectorLine))
+                    .background(TrackProColors.SectorLine))
                 ResultCell(
                     label = "DATA PTS",
                     value = "${dataPoints.size}",
-                    valueColor = TextPrimary
+                    valueColor = TrackProColors.TextPrimary
                 )
             }
 
-            Divider(color = SectorLine, thickness = 1.dp)
+            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Speed chart ───────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(160.dp)
-                    .background(BgCard)
+                    .background(TrackProColors.BgCard)
                     .padding(horizontal = 4.dp, vertical = 4.dp)
             ) {
                 Text(
                     text = "SPEED TRACE",
-                    color = TextMuted,
+                    color = TrackProColors.TextMuted,
                     fontSize = 9.sp,
                     letterSpacing = 2.sp,
                     modifier = Modifier
@@ -438,14 +430,14 @@ fun DragRaceScreen(
                 )
             }
 
-            Divider(color = SectorLine, thickness = 1.dp)
+            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Map ───────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(BgCard)
+                    .background(TrackProColors.BgCard)
             ) {
                 DragMapView(
                     trackPath = trackPath.toList(),
@@ -456,7 +448,7 @@ fun DragRaceScreen(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             text = "MAP — START SESSION TO RECORD PATH",
-                            color = TextMuted,
+                            color = TrackProColors.TextMuted,
                             fontSize = 10.sp,
                             letterSpacing = 2.sp
                         )
@@ -464,13 +456,13 @@ fun DragRaceScreen(
                 }
             }
 
-            Divider(color = SectorLine, thickness = 1.dp)
+            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Bottom controls ───────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(BgElevated)
+                    .background(TrackProColors.BgElevated)
                     .padding(horizontal = 24.dp, vertical = 12.dp)
             ) {
                 Row(
@@ -482,7 +474,7 @@ fun DragRaceScreen(
                     if (!isSessionActive) {
                         Box(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                             if (loadingState) {
-                                Text("Loading vehicles...", color = TextMuted, fontSize = 12.sp)
+                                Text("Loading vehicles...", color = TrackProColors.TextMuted, fontSize = 12.sp)
                             } else if (vehicles.isNotEmpty()) {
                                 DropdownMenuFieldMulti(
                                     "Select car",
@@ -490,13 +482,13 @@ fun DragRaceScreen(
                                     selectedVehicle
                                 ) { selectedVehicleId = it.toInt() }
                             } else {
-                                Text("No vehicles", color = TextMuted, fontSize = 12.sp)
+                                Text("No vehicles", color = TrackProColors.TextMuted, fontSize = 12.sp)
                             }
                         }
                     } else {
                         Text(
                             text = "● SESSION ACTIVE",
-                            color = AccentRed,
+                            color = TrackProColors.AccentRed,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 2.sp,
@@ -508,12 +500,12 @@ fun DragRaceScreen(
                     Box(
                         modifier = Modifier
                             .background(
-                                if (isSessionActive) Color(0xFF1A0005) else AccentRed,
+                                if (isSessionActive) Color(0xFF1A0005) else TrackProColors.AccentRed,
                                 RoundedCornerShape(6.dp)
                             )
                             .border(
                                 1.dp,
-                                if (isSessionActive) AccentRed else Color.Transparent,
+                                if (isSessionActive) TrackProColors.AccentRed else Color.Transparent,
                                 RoundedCornerShape(6.dp)
                             )
                             .clickable {
@@ -543,7 +535,7 @@ fun DragRaceScreen(
                     ) {
                         Text(
                             text = if (isSessionActive) "■ STOP" else "▶ START",
-                            color = if (isSessionActive) AccentRed else Color.Black,
+                            color = if (isSessionActive) TrackProColors.AccentRed else Color.Black,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 2.sp

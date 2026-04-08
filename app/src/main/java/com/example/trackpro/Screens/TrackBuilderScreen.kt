@@ -52,6 +52,7 @@ import com.example.trackpro.DataClasses.TrackMainData
 import com.example.trackpro.ExtrasForUI.LatLonOffset
 import com.example.trackpro.ExtrasForUI.drawTrack
 import com.example.trackpro.ManagerClasses.ESPDatabase
+import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.ui.theme.TrackProTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -141,13 +142,6 @@ val gpsPoints = listOf(
     LatLonOffset(47.305300, 17.048138)
 )*/
 
-// ── Design tokens (Consistent with TimeAttack) ──────────────────────────
-private val BgDeep      = Color(0xFF080A0F)
-private val BgCard      = Color(0xFF0E1117)
-private val AccentRed   = Color(0xFFE8001C)
-private val TextPrimary = Color(0xFFF0F2F5)
-private val TextMuted   = Color(0xFF6B7280)
-
 @Composable
 fun TrackBuilderScreen(
     database: ESPDatabase,
@@ -170,7 +164,7 @@ fun TrackBuilderScreen(
     var showInfoDialog by remember { mutableStateOf(false) }
     var builderType by remember { mutableStateOf(0) } // 0: Live GPS, 1: Manual Map
 
-    Box(modifier = Modifier.fillMaxSize().background(BgDeep)) {
+    Box(modifier = Modifier.fillMaxSize().background(TrackProColors.BgDeep)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ── Header ───────────────────────────────────────
@@ -229,7 +223,7 @@ fun TrackBuilderScreen(
 
             // ── Map/Preview Area ─────────────────────────────
             Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp)
-                .background(BgCard, RoundedCornerShape(12.dp))
+                .background(TrackProColors.BgCard, RoundedCornerShape(12.dp))
                 .border(1.dp, Color(0xFF1E2530), RoundedCornerShape(12.dp))
             ) {
                 if (builderType == 1) {
@@ -337,37 +331,37 @@ private fun TrackInfoCard(name: String, country: String, mode: String, onClick: 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BgCard, RoundedCornerShape(8.dp))
+            .background(TrackProColors.BgCard, RoundedCornerShape(8.dp))
             .border(1.dp, Color(0xFF1E2530), RoundedCornerShape(8.dp))
             .padding(16.dp)
     ) {
         Column {
-            Text("TRACK CONFIGURATION", color = TextMuted, fontSize = 10.sp, letterSpacing = 2.sp)
-            Text(if (name.isEmpty()) "Unnamed Track" else "$name ($country)", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text("MODE: ${mode.uppercase()}", color = AccentRed, fontSize = 12.sp, fontWeight = FontWeight.Black)
+            Text("TRACK CONFIGURATION", color = TrackProColors.TextMuted, fontSize = 10.sp, letterSpacing = 2.sp)
+            Text(if (name.isEmpty()) "Unnamed Track" else "$name ($country)", color = TrackProColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("MODE: ${mode.uppercase()}", color = TrackProColors.AccentRed, fontSize = 12.sp, fontWeight = FontWeight.Black)
         }
         Button(
             onClick = onClick,
             modifier = Modifier.align(Alignment.CenterEnd),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2530))
         ) {
-            Text("EDIT", color = TextPrimary)
+            Text("EDIT", color = TrackProColors.TextPrimary)
         }
     }
 }
 
 @Composable
 private fun ModeToggle(selected: Int, onSelect: (Int) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().background(BgCard, RoundedCornerShape(8.dp)).padding(4.dp)) {
+    Row(modifier = Modifier.fillMaxWidth().background(TrackProColors.BgCard, RoundedCornerShape(8.dp)).padding(4.dp)) {
         val modes = listOf("LIVE GPS", "MANUAL MAP")
         modes.forEachIndexed { index, label ->
             Box(
                 modifier = Modifier.weight(1f).height(40.dp)
-                    .background(if (selected == index) AccentRed else Color.Transparent, RoundedCornerShape(6.dp))
+                    .background(if (selected == index) TrackProColors.AccentRed else Color.Transparent, RoundedCornerShape(6.dp))
                     .padding(4.dp).clickable { onSelect(index) },
                 contentAlignment = Alignment.Center
             ) {
-                Text(label, color = if (selected == index) Color.Black else TextMuted, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(label, color = if (selected == index) Color.Black else TrackProColors.TextMuted, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
     }
@@ -421,10 +415,10 @@ private fun HeaderSection(onBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextButton(onClick = onBack) {
-            Text("← BACK", color = AccentRed, fontWeight = FontWeight.Bold)
+            Text("← BACK", color = TrackProColors.AccentRed, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.weight(1f))
-        Text("TRACK BUILDER", color = TextPrimary, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+        Text("TRACK BUILDER", color = TrackProColors.TextPrimary, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
     }
 }
 
@@ -441,7 +435,7 @@ private fun LiveControls(isRecording: Boolean, onToggle: () -> Unit) {
     ) {
         val label = if (isRecording) "STOP RECORDING" else "START GPS RECORDING"
         val icon = if (isRecording) "■" else "●"
-        Text("$icon $label", color = if (isRecording) AccentRed else TextPrimary, fontWeight = FontWeight.Bold)
+        Text("$icon $label", color = if (isRecording) TrackProColors.AccentRed else TrackProColors.TextPrimary, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -454,19 +448,19 @@ private fun ManualControls(onUndo: () -> Unit, onSave: () -> Unit, canSave: Bool
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2530)),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text("UNDO LAST", color = TextPrimary)
+            Text("UNDO LAST", color = TrackProColors.TextPrimary)
         }
         Button(
             onClick = onSave,
             enabled = canSave,
             modifier = Modifier.weight(1f).height(56.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = AccentRed,
+                containerColor = TrackProColors.AccentRed,
                 disabledContainerColor = Color(0xFF2A1014)
             ),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text("SAVE TRACK", color = if (canSave) Color.Black else TextMuted, fontWeight = FontWeight.Bold)
+            Text("SAVE TRACK", color = if (canSave) Color.Black else TrackProColors.TextMuted, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -482,8 +476,8 @@ fun TrackInfoAlert(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = BgCard,
-        title = { Text("Track Details", color = TextPrimary) },
+        containerColor = TrackProColors.BgCard,
+        title = { Text("Track Details", color = TrackProColors.TextPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 TextField(
@@ -499,24 +493,24 @@ fun TrackInfoAlert(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Text("Timing Mode", color = TextMuted, fontSize = 12.sp)
+                Text("Timing Mode", color = TrackProColors.TextMuted, fontSize = 12.sp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = mode == "Circuit", onClick = { mode = "Circuit" })
-                    Text("Circuit", color = TextPrimary)
+                    Text("Circuit", color = TrackProColors.TextPrimary)
                     Spacer(Modifier.width(16.dp))
                     RadioButton(selected = mode == "Sprint", onClick = { mode = "Sprint" })
-                    Text("Sprint", color = TextPrimary)
+                    Text("Sprint", color = TrackProColors.TextPrimary)
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name, country, mode) }) {
-                Text("DONE", color = AccentRed, fontWeight = FontWeight.Bold)
+                Text("DONE", color = TrackProColors.AccentRed, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = TextMuted)
+                Text("CANCEL", color = TrackProColors.TextMuted)
             }
         }
     )
