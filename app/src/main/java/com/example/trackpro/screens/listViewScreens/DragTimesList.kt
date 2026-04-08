@@ -34,9 +34,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.trackpro.Models.DragSessionWithVehicle
-import com.example.trackpro.ViewModels.SessionViewModel
-import com.example.trackpro.ViewModels.SessionViewModelFactory
+import com.example.trackpro.models.DragSessionWithVehicle
+import com.example.trackpro.viewModels.SessionViewModel
+import com.example.trackpro.viewModels.SessionViewModelFactory
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

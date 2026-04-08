@@ -45,9 +45,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.trackpro.ManagerClasses.ESPTcpClient
-import com.example.trackpro.ManagerClasses.JsonReader
-import com.example.trackpro.ManagerClasses.RawGPSData
+import com.example.trackpro.managerClasses.ESPTcpClient
+import com.example.trackpro.managerClasses.JsonReader
+import com.example.trackpro.managerClasses.RawGPSData
 import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.catch

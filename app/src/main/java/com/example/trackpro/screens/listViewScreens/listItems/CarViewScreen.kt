@@ -29,8 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.trackpro.DataClasses.VehicleInformationData
-import com.example.trackpro.ManagerClasses.ESPDatabase
+import com.example.trackpro.dataClasses.VehicleInformationData
+import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

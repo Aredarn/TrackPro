@@ -45,9 +45,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.trackpro.DataClasses.VehicleInformationData
-import com.example.trackpro.ManagerClasses.ESPDatabase
-import com.example.trackpro.ViewModels.VehicleFULLViewModel
+import com.example.trackpro.dataClasses.VehicleInformationData
+import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.viewModels.VehicleFULLViewModel
 import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

@@ -45,11 +45,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.trackpro.DataClasses.VehicleInformationData
-import com.example.trackpro.ManagerClasses.ESPDatabase
-import com.example.trackpro.ExtrasForUI.CustomTextField
-import com.example.trackpro.ExtrasForUI.DropdownMenuField
-import com.example.trackpro.ManagerClasses.JsonReader.loadJsonOptions
+import com.example.trackpro.dataClasses.VehicleInformationData
+import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.extrasForUI.CustomTextField
+import com.example.trackpro.extrasForUI.DropdownMenuField
+import com.example.trackpro.managerClasses.JsonReader.loadJsonOptions
 import kotlinx.coroutines.launch
 
 

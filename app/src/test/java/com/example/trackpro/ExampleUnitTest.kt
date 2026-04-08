@@ -1,9 +1,9 @@
 package com.example.trackpro
 
-import com.example.trackpro.CalculationClasses.DragTimeCalculation
-import com.example.trackpro.DataClasses.RawGPSData
-import com.example.trackpro.DAO.RawGPSDataDao
-import com.example.trackpro.ManagerClasses.ESPDatabase
+import com.example.trackpro.calculationClasses.DragTimeCalculation
+import com.example.trackpro.dataClasses.RawGPSData
+import com.example.trackpro.dao.RawGPSDataDao
+import com.example.trackpro.managerClasses.ESPDatabase
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.mock

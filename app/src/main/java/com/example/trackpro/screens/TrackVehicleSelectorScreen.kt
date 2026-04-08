@@ -33,13 +33,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.trackpro.ExtrasForUI.DropdownMenuFieldMulti
-import com.example.trackpro.ExtrasForUI.TrackDropdownMenu
-import com.example.trackpro.ManagerClasses.ESPDatabase
-import com.example.trackpro.ViewModels.TrackViewModel
-import com.example.trackpro.ViewModels.TrackViewModelFactory
-import com.example.trackpro.ViewModels.VehicleViewModel
-import com.example.trackpro.ViewModels.VehicleViewModelFactory
+import com.example.trackpro.extrasForUI.DropdownMenuFieldMulti
+import com.example.trackpro.extrasForUI.TrackDropdownMenu
+import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.viewModels.TrackViewModel
+import com.example.trackpro.viewModels.TrackViewModelFactory
+import com.example.trackpro.viewModels.VehicleViewModel
+import com.example.trackpro.viewModels.VehicleViewModelFactory
 import com.example.trackpro.theme.TrackProColors
 
 class TrackVehicleSelector : ComponentActivity() {

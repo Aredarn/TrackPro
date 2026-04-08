@@ -41,11 +41,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
-import com.example.trackpro.DataClasses.LapInfoData
-import com.example.trackpro.DataClasses.LapTimeData
-import com.example.trackpro.DataClasses.SessionData
-import com.example.trackpro.DataClasses.VehicleInformationData
-import com.example.trackpro.ManagerClasses.ESPDatabase
+import com.example.trackpro.dataClasses.LapInfoData
+import com.example.trackpro.dataClasses.LapTimeData
+import com.example.trackpro.dataClasses.SessionData
+import com.example.trackpro.dataClasses.VehicleInformationData
+import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first

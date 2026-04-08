@@ -32,9 +32,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.example.trackpro.DataClasses.TrackCoordinatesData
-import com.example.trackpro.DataClasses.TrackMainData
-import com.example.trackpro.ManagerClasses.ESPDatabase
+import com.example.trackpro.dataClasses.TrackCoordinatesData
+import com.example.trackpro.dataClasses.TrackMainData
+import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
