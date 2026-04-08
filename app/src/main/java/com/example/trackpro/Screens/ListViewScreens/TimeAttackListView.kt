@@ -1,13 +1,13 @@
 package com.example.trackpro.Screens.ListViewScreens
 
-import TrackProTheme
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,15 +19,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,7 +31,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -69,64 +62,80 @@ fun TimeAttackListViewScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
     val allSessions by viewModel.sessions.collectAsState()
-    val trackSessions = allSessions.filter { it.eventType != "DragSession" }
+    val trackSessions = allSessions.filter { it.trackId != null }
     val vehicles = vehicleViewModel.vehicles.collectAsState().value
     val tracks by trackViewModel.tracks.collectAsState()
 
+    val BgDeep     = Color(0xFF080A0F)
+    val BgCard     = Color(0xFF0E1117)
+    val BgElevated = Color(0xFF151922)
+    val AccentGreen= Color(0xFF00C853)
+    val TextPrimary= Color(0xFFF0F2F5)
+    val TextMuted  = Color(0xFF6B7280)
+    val SectorLine = Color(0xFF1E2530)
 
-    TrackProTheme {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("TRACK SESSIONS", color = MaterialTheme.colorScheme.onBackground, fontStyle = MaterialTheme.typography.titleLarge.fontStyle) },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BgDeep)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(AccentGreen)
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("● TRACK SESSIONS", color = Color.Black, fontSize = 11.sp,
+                        fontWeight = FontWeight.Black, letterSpacing = 3.sp)
+                    Text("${trackSessions.size} SESSIONS", color = Color.Black,
+                        fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                }
             }
-        ) { paddingValues ->
-            Column(modifier = Modifier.padding(paddingValues)) {
-                if (trackSessions.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "No sessions available",
-                            fontSize = 22.sp,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                } else {
-                    LazyColumn(modifier = Modifier.padding(16.dp)) {
-                        items(trackSessions) { session ->
-                            val track = tracks.find { it.trackId == session.trackId }
-                            val vehicle = vehicles.find { it.vehicleId == session.vehicleId }
 
-                            if (track != null && vehicle != null) {
-                                TrackSessionCard(
-                                    session = session,
-                                    track = track,
-                                    vehicle = vehicle,
-                                    navController = navController,
-                                    onDelete = { sessionToDelete ->
-                                        scope.launch(Dispatchers.IO) {
-                                            // TODO: Implement session deletion
-                                            // viewModel.deleteSession(sessionToDelete)
-                                        }
-                                        Toast.makeText(
-                                            context,
-                                            "🚀 Session deleted successfully!",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+            if (trackSessions.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("NO TRACK SESSIONS", color = TextMuted,
+                            fontSize = 14.sp, letterSpacing = 3.sp, fontWeight = FontWeight.Black)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Complete a lap session to see it here",
+                            color = TextMuted.copy(alpha = 0.5f), fontSize = 12.sp)
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(trackSessions) { session ->
+                        val track = tracks.find { it.trackId == session.trackId }
+                        val vehicle = vehicles.find { it.vehicleId == session.vehicleId }
+                        if (track != null && vehicle != null) {
+                            TrackSessionCard(
+                                session = session,
+                                track = track,
+                                vehicle = vehicle,
+                                navController = navController,
+                                bgCard = BgCard,
+                                bgElevated = BgElevated,
+                                accentGreen = AccentGreen,
+                                textPrimary = TextPrimary,
+                                textMuted = TextMuted,
+                                sectorLine = SectorLine,
+                                onDelete = {
+                                    scope.launch(Dispatchers.IO) {
+                                        // TODO: viewModel.deleteSession(it)
                                     }
-                                )
-                            }
+                                }
+                            )
                         }
                     }
                 }
@@ -142,186 +151,128 @@ fun TrackSessionCard(
     vehicle: VehicleInformationData,
     track: TrackMainData,
     navController: NavController,
+    bgCard: Color,
+    bgElevated: Color,
+    accentGreen: Color,
+    textPrimary: Color,
+    textMuted: Color,
+    sectorLine: Color,
     onDelete: (SessionData) -> Unit
 ) {
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
+            containerColor = Color(0xFF0E1117),
+            titleContentColor = Color(0xFFF0F2F5),
+            textContentColor = Color(0xFF6B7280),
             confirmButton = {
-                TextButton(onClick = {
-                    onDelete(session)
-                    showDeleteDialog = false
-                }) {
-                    Text("Delete")
+                TextButton(onClick = { onDelete(session); showDeleteDialog = false }) {
+                    Text("DELETE", color = Color(0xFFE8001C), fontWeight = FontWeight.Black)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text("CANCEL", color = Color(0xFF6B7280))
                 }
             },
-            title = { Text("Delete Session?") },
-            text = { Text("Are you sure you want to delete this session?") }
+            title = { Text("Delete Session?", fontWeight = FontWeight.Black) },
+            text = { Text("This action cannot be undone.") }
         )
     }
 
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .background(bgCard, RoundedCornerShape(12.dp))
+            .border(1.dp, sectorLine, RoundedCornerShape(12.dp))
             .combinedClickable(
                 onClick = { navController.navigate("timeattacklistitem/${session.id}") },
                 onLongClick = { showDeleteDialog = true }
-            ),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF808080))
+            )
     ) {
-        Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                //Upper row
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "TRACK SESSION",
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.Green
-                        ),
-                        maxLines = 1,
-                        modifier = Modifier
-                            .background(
-                                color = Color(0xFF1B5E20), // darker green
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = Instant.ofEpochMilli(session.startTime)
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalTime()
-                                .format(timeFormatter),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Green
-                            ),
-                            maxLines = 1
-                        )
-                        Text(
-                            text = " – ",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Green
-                            )
-                        )
-                        Text(
-                            text = session.endTime?.let {
-                                Instant.ofEpochMilli(it)
-                                    .atZone(ZoneId.systemDefault())
-                                    .toLocalTime()
-                                    .format(timeFormatter)
-                            } ?: "Ongoing",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Green
-                            ),
-                            maxLines = 1
-                        )
-                    }
-                }
-
-                Divider(color = MaterialTheme.colorScheme.outline)
-                Spacer(modifier = Modifier.height(6.dp))
-
-                //middle row
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = track.trackName,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Text(
-                        text = "${track.country} • ${track.type}",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = Color.LightGray
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Text(
-                        text = "Total Length: ${track.totalLength ?: "N/A"} km",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        maxLines = 1
-                    )
-                }
-
-                Divider(color = MaterialTheme.colorScheme.outline)
-                Spacer(modifier = Modifier.height(6.dp))
-
-                //bottom row
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .padding(vertical = 6.dp, horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Text(
-                        text = "${vehicle.engineType} • ${vehicle.horsepower}hp • ${vehicle.drivetrain}",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-            }
-            /*
-            IconButton(
-                onClick = { onDelete(session) },
+        Column {
+            // Header
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
+                    .fillMaxWidth()
+                    .background(
+                        accentGreen.copy(alpha = 0.15f),
+                        RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Delete Session",
-                    tint = MaterialTheme.colorScheme.error
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("TRACK SESSION", color = accentGreen, fontSize = 9.sp,
+                        fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                    val date = Instant.ofEpochMilli(session.startTime)
+                        .atZone(ZoneId.systemDefault()).format(dateFormatter)
+                    Text(date, color = textMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Track name + meta
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    text = track.trackName,
+                    color = textPrimary,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-0.5).sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            }*/
+                Text(
+                    text = "${track.country} · ${track.type} · ${track.totalLength ?: "?"} km",
+                    color = textMuted,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Divider(color = sectorLine, thickness = 1.dp)
+
+            // Vehicle + time
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(bgElevated, RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
+                        color = textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("${vehicle.engineType} · ${vehicle.horsepower}hp · ${vehicle.drivetrain}",
+                        color = textMuted, fontSize = 11.sp,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    val startT = Instant.ofEpochMilli(session.startTime)
+                        .atZone(ZoneId.systemDefault()).toLocalTime().format(timeFormatter)
+                    val endT = session.endTime?.let {
+                        Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault())
+                            .toLocalTime().format(timeFormatter)
+                    } ?: "Ongoing"
+                    Text("$startT – $endT", color = accentGreen, fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold)
+                    Text("VIEW →", color = accentGreen.copy(alpha = 0.6f),
+                        fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                }
+            }
         }
     }
 }
