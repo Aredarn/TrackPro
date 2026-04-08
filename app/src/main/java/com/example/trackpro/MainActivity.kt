@@ -5,6 +5,9 @@ import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -48,13 +52,12 @@ import com.example.trackpro.Screens.TimeAttackScreenView
 import com.example.trackpro.Screens.TrackBuilderScreen
 import com.example.trackpro.Screens.TrackScreen
 import com.example.trackpro.Screens.TrackVehicleSelectorScreenWrapper
+import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 
 class TrackProApp : Application() {
-
     val database: ESPDatabase by lazy { ESPDatabase.getInstance(this) }
-
     override fun onCreate() {
         super.onCreate()
         MapLibre.getInstance(this)
@@ -64,12 +67,9 @@ class TrackProApp : Application() {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
-            val context = applicationContext
-            val app = context.applicationContext as TrackProApp
+            val app = applicationContext as TrackProApp
             val database = app.database
-
             val sessionViewModel: SessionViewModel =
                 viewModel(factory = SessionViewModelFactory(applicationContext))
             val trackViewModel: TrackViewModel =
@@ -94,14 +94,9 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("drag") {
-                        DragRaceScreen(
-                            database = database,
-                            onBack = { navController.popBackStack() }
-                        )
+                        DragRaceScreen(database = database, onBack = { navController.popBackStack() })
                     }
-                    composable("esptest") {
-                        ESPConnectionTestScreen()
-                    }
+                    composable("esptest") { ESPConnectionTestScreen() }
                     composable(
                         "track/{trackId}",
                         arguments = listOf(navArgument("trackId") { type = NavType.LongType })
@@ -110,37 +105,22 @@ class MainActivity : ComponentActivity() {
                         TrackScreen(onBack = { navController.popBackStack() }, trackId = trackId)
                     }
                     composable("dragsessions") {
-                        DragTimesListView(
-                            viewModel = sessionViewModel,
-                            navController = navController
-                        )
+                        DragTimesListView(viewModel = sessionViewModel, navController = navController)
                     }
-                    composable("vehicles")
-                    {
-                        CarListScreen(
-                            viewModel = vehicleFULLViewModel,
-                            navController = navController
-                        )
+                    composable("vehicles") {
+                        CarListScreen(viewModel = vehicleFULLViewModel, navController = navController)
                     }
                     composable(
                         route = "graph/{sessionId}",
                         arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
-                        GraphScreen(
-                            onBack = { navController.popBackStack() },
-                            sessionId = sessionId
-                        )
+                        GraphScreen(onBack = { navController.popBackStack() }, sessionId = sessionId)
                     }
-                    composable(
-                        route = "trackbuilder"
-                    ) {
+                    composable(route = "trackbuilder") {
                         TrackBuilderScreen(database, onBack = { navController.popBackStack() })
                     }
-                    composable(
-                        route = "tracklist"
-                    )
-                    {
+                    composable(route = "tracklist") {
                         TrackListScreen(navController = navController, viewModel = trackViewModel)
                     }
                     composable(
@@ -148,51 +128,31 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("vehicleid") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val vehicleId = backStackEntry.arguments?.getLong("vehicleid") ?: 0L
-                        CarViewScreen(
-                            onBack = { navController.popBackStack() },
-                            vehicleId = vehicleId
-                        )
+                        CarViewScreen(onBack = { navController.popBackStack() }, vehicleId = vehicleId)
                     }
                     composable(
                         route = "timeattacklistitem/{sessionid}",
                         arguments = listOf(navArgument("sessionid") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getLong("sessionid") ?: 0L
-
                         TimeAttackListItemScreen(
                             navController = navController,
                             database = database,
                             sessionId = sessionId
                         )
                     }
-
-                    composable(
-                        route = "createvehicle"
-                    )
-                    {
+                    composable(route = "createvehicle") {
                         CarCreationScreen(database) { }
                     }
-                    composable(
-                        route = "timeattack/{vehicleId}/{trackId}"
-                    ) { backStackEntry ->
-
-                        val vehicleId =
-                            backStackEntry.arguments?.getString("vehicleId")?.toLongOrNull() ?: -1L
-                        val trackId =
-                            backStackEntry.arguments?.getString("trackId")?.toLongOrNull() ?: -1L
-
-                        TimeAttackScreenView(
-                            vehicleId = vehicleId,
-                            trackId = trackId,
-                            database = database,
-                        )
+                    composable(route = "timeattack/{vehicleId}/{trackId}") { backStackEntry ->
+                        val vehicleId = backStackEntry.arguments?.getString("vehicleId")?.toLongOrNull() ?: -1L
+                        val trackId = backStackEntry.arguments?.getString("trackId")?.toLongOrNull() ?: -1L
+                        TimeAttackScreenView(vehicleId = vehicleId, trackId = trackId, database = database)
                     }
-
                     composable(route = "trackandvehicle") {
                         TrackVehicleSelectorScreenWrapper(navController = navController)
                     }
-                    composable(route = "timeattacklist")
-                    {
+                    composable(route = "timeattacklist") {
                         TimeAttackListViewScreen(
                             navController = navController,
                             viewModel = sessionViewModel,
@@ -201,16 +161,13 @@ class MainActivity : ComponentActivity() {
                             database = database
                         )
                     }
-
                 }
-
             }
         }
     }
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     onNavigateToDragRace: () -> Unit,
@@ -225,209 +182,390 @@ fun MainScreen(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
     ModalNavigationDrawer(
+        drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                drawerContainerColor = TrackProColors.BgCard,
+                drawerContentColor = TrackProColors.TextPrimary
+            ) {
+                // Drawer header
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(TrackProColors.AccentRed)
+                        .padding(horizontal = 24.dp, vertical = 20.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "TRACKPRO",
+                            color = Color.Black,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 4.sp
+                        )
+                        Text(
+                            text = "Performance Telemetry",
+                            color = Color.Black.copy(alpha = 0.7f),
+                            fontSize = 11.sp,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                DrawerSection(title = "SESSIONS") {
+                    DrawerItem(
+                        icon = Icons.Default.RocketLaunch,
+                        label = "Drag Sessions",
+                        tint = TrackProColors.AccentRed,
+                        onClick = { onNavigateToDragTimesList(); scope.launch { drawerState.close() } }
+                    )
+                    DrawerItem(
+                        icon = Icons.Default.FlagCircle,
+                        label = "Track Sessions",
+                        tint = TrackProColors.AccentGreen,
+                        onClick = { onNavigateToTimeAttackListView(); scope.launch { drawerState.close() } }
+                    )
+                }
+
+                Divider(color = TrackProColors.SectorLine, thickness = 1.dp,
+                    modifier = Modifier.padding(horizontal = 16.dp))
+
+                DrawerSection(title = "MANAGEMENT") {
+                    DrawerItem(
+                        icon = Icons.Default.Timelapse,
+                        label = "My Tracks",
+                        tint = TrackProColors.AccentAmber,
+                        onClick = { onNavigateToTrackListScreen(); scope.launch { drawerState.close() } }
+                    )
+                    DrawerItem(
+                        icon = Icons.Default.CarRepair,
+                        label = "My Vehicles",
+                        tint = TrackProColors.AccentAmber,
+                        onClick = { onNavigateToVehicleList(); scope.launch { drawerState.close() } }
+                    )
+                }
+
+                Divider(color = TrackProColors.SectorLine, thickness = 1.dp,
+                    modifier = Modifier.padding(horizontal = 16.dp))
+
+                DrawerSection(title = "SYSTEM") {
+                    DrawerItem(
+                        icon = Icons.Default.Wifi,
+                        label = "ESP Connection",
+                        tint = TrackProColors.TextMuted,
+                        onClick = { onNavigateToESPTestScreen(); scope.launch { drawerState.close() } }
+                    )
+                    DrawerItem(
+                        icon = Icons.Default.Settings,
+                        label = "Settings",
+                        tint = TrackProColors.TextMuted,
+                        onClick = { scope.launch { drawerState.close() } }
+                    )
+                }
+            }
+        }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(TrackProColors.BgDeep)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+
+                // ── Top bar ───────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(TrackProColors.BgCard)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu",
+                                tint = TrackProColors.TextPrimary)
+                        }
+                        Text(
+                            text = "TRACKPRO",
+                            color = TrackProColors.AccentRed,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 4.sp
+                        )
+                        // Spacer to balance the row
+                        Box(modifier = Modifier.size(48.dp))
+                    }
+                }
+
+                Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+
+                // ── Hero section ──────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(TrackProColors.BgCard)
+                        .padding(horizontal = 28.dp, vertical = 32.dp)
+                ) {
+                    Column {
+                        // Red accent line
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(3.dp)
+                                .background(TrackProColors.AccentRed)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = "READY TO\nBEAT RECORDS?",
+                            color = TrackProColors.TextPrimary,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-0.5).sp,
+                            lineHeight = 36.sp
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "GPS telemetry · Lap timing · Performance analysis",
+                            color = TrackProColors.TextMuted,
+                            fontSize = 12.sp,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+
+                Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+
+                // ── Action grid ───────────────────────────────
                 Column(
                     modifier = Modifier
-                        .padding(horizontal = 16.dp)
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "TrackPro",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.titleLarge
+
+                    // Primary racing actions — full width
+                    ActionCard(
+                        icon = Icons.Default.RocketLaunch,
+                        title = "DRAG TIMING",
+                        subtitle = "0–100 · ¼ mile · speed trace",
+                        accentColor = TrackProColors.AccentRed,
+                        onClick = onNavigateToDragRace,
+                        fullWidth = true
                     )
 
-                    Text(
-                        "",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("My drag sessions") },
-                        selected = false,
-                        onClick = {
-                            onNavigateToDragTimesList()
-                        }
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("My track sessions") },
-                        selected = false,
-                        onClick = {
-                            onNavigateToTimeAttackListView()
-                        }
+                    ActionCard(
+                        icon = Icons.Default.FlagCircle,
+                        title = "LAP TIMING",
+                        subtitle = "Circuit & sprint · live delta · best lap",
+                        accentColor = TrackProColors.AccentGreen,
+                        onClick = onNavigateToTrackVehicleSelector,
+                        fullWidth = true
                     )
 
-                    NavigationDrawerItem(
-                        label = { Text("My tracks") },
-                        selected = false,
-                        onClick = {
-                            onNavigateToTrackListScreen()
-                        }
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("My vehicles") },
-                        selected = false,
-                        onClick = {
-                            onNavigateToVehicleList()
-                        }
-                    )
+                    Divider(color = TrackProColors.SectorLine, thickness = 1.dp,
+                        modifier = Modifier.padding(vertical = 4.dp))
 
-                    Text(
-                        "Section 2",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("Settings") },
-                        selected = false,
-                        //icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
-                        onClick = { /* Handle click */ }
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("Help and feedback") },
-                        selected = false,
-                        //icon = {, contentDescription = null) },
-                        onClick = { /* Handle click */ },
-                    )
-                    Spacer(Modifier.height(12.dp))
-                }
-            }
-        },
-        drawerState = drawerState
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("") },
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                if (drawerState.isClosed) {
-                                    drawerState.open()
-                                } else {
-                                    drawerState.close()
-                                }
-                            }
-                        }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
-                        }
-                    }
-                )
-            }
-        ) { innerPadding ->
-            val colorRaceMode = Color(0xFF2B2F42)       // Steel Gray
-            val colorVehicle = Color(0xFF414770)        // Muted Indigo
-            val colorTrack = Color(0xFF3A3F58)          // Charcoal Blue
-            val colorESP = Color(0xFF2F4858)            // Dark Teal
-            val contentColor = Color.White
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "Welcome to TRACKPRO",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    ),
-                    modifier = Modifier.padding(8.dp)
-                )
-
-                Text(
-                    text = "Ready to beat records?",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                    ),
-                    modifier = Modifier.padding(4.dp)
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                val buttonModifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .padding(top = 12.dp)
-
-                val shape = RoundedCornerShape(14.dp)
-                val elevation = ButtonDefaults.elevatedButtonElevation(6.dp)
-
-                @Composable
-                fun RacingButton(
-                    icon: ImageVector,
-                    label: String,
-                    onClick: () -> Unit,
-                    background: Color,
-                    content: Color
-                ) {
-                    Button(
-                        onClick = onClick,
-                        modifier = buttonModifier,
-                        shape = shape,
-                        elevation = elevation,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = background,
-                            contentColor = content
-                        )
+                    // Secondary actions — 2 column grid
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(icon, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(label)
+                        Box(modifier = Modifier.weight(1f)) {
+                            ActionCard(
+                                icon = Icons.Default.CarRepair,
+                                title = "VEHICLES",
+                                subtitle = "Add & manage",
+                                accentColor = TrackProColors.AccentAmber,
+                                onClick = onNavigateToVehicleCreatorScreen,
+                                fullWidth = true
+                            )
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            ActionCard(
+                                icon = Icons.Default.Timelapse,
+                                title = "TRACK\nBUILDER",
+                                subtitle = "Define tracks",
+                                accentColor = TrackProColors.AccentAmber,
+                                onClick = onNavigateToTrackBuilder,
+                                fullWidth = true
+                            )
+                        }
                     }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            ActionCard(
+                                icon = Icons.Default.Wifi,
+                                title = "ESP\nCONNECT",
+                                subtitle = "Test connection",
+                                accentColor = TrackProColors.TextMuted,
+                                onClick = onNavigateToESPTestScreen,
+                                fullWidth = true
+                            )
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            ActionCard(
+                                icon = Icons.Default.Settings,
+                                title = "SETTINGS",
+                                subtitle = "Coming soon",
+                                accentColor = TrackProColors.TextMuted,
+                                onClick = { },
+                                fullWidth = true,
+                                disabled = true
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Version tag
+                    Text(
+                        text = "TrackPro · GPS Telemetry System",
+                        color = TrackProColors.TextMuted.copy(alpha = 0.4f),
+                        fontSize = 10.sp,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
                 }
+            }
+        }
+    }
+}
 
-                // 🏁 Race Mode
-                RacingButton(
-                    Icons.Default.RocketLaunch,
-                    "Drag Screen",
-                    onNavigateToDragRace,
-                    colorRaceMode,
-                    Color.White
-                )
-                RacingButton(
-                    Icons.Default.FlagCircle,
-                    "Lap Timing",
-                    onNavigateToTrackVehicleSelector,
-                    colorRaceMode,
-                    Color.White
-                )
+// ── Action card ────────────────────────────────────────────
 
-                // 🔧 Vehicle Setup
-                RacingButton(
-                    Icons.Default.CarRepair,
-                    "Add Your Vehicle",
-                    onNavigateToVehicleCreatorScreen,
-                    colorVehicle,
-                    Color.White
-                )
+@Composable
+private fun ActionCard(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    accentColor: Color,
+    onClick: () -> Unit,
+    fullWidth: Boolean = false,
+    disabled: Boolean = false
+) {
+    val alpha = if (disabled) 0.4f else 1f
 
-                // 🛠 Track Management
-                RacingButton(
-                    Icons.Default.Timelapse,
-                    "Track Builder",
-                    onNavigateToTrackBuilder,
-                    colorTrack,
-                    Color.White
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(TrackProColors.BgCard, RoundedCornerShape(10.dp))
+            .border(1.dp, TrackProColors.SectorLine, RoundedCornerShape(10.dp))
+            .then(if (!disabled) Modifier.clickable(onClick = onClick) else Modifier)
+    ) {
+        // Left accent bar
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .width(3.dp)
+                .height(if (fullWidth) 60.dp else 50.dp)
+                .background(
+                    accentColor.copy(alpha = alpha),
+                    RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)
                 )
+        )
 
-                // 📡 Connectivity
-                RacingButton(
-                    Icons.Default.Wifi,
-                    "ESP Connection",
-                    onNavigateToESPTestScreen,
-                    colorESP,
-                    Color.White
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = if (fullWidth) 18.dp else 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Icon box
+            Box(
+                modifier = Modifier
+                    .size(if (fullWidth) 44.dp else 36.dp)
+                    .background(accentColor.copy(alpha = 0.1f * alpha), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = accentColor.copy(alpha = alpha),
+                    modifier = Modifier.size(if (fullWidth) 22.dp else 18.dp)
                 )
             }
 
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = TrackProColors.TextPrimary.copy(alpha = alpha),
+                    fontSize = if (fullWidth) 14.sp else 12.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp,
+                    lineHeight = 16.sp
+                )
+                Text(
+                    text = subtitle,
+                    color = TrackProColors.TextMuted.copy(alpha = alpha),
+                    fontSize = 10.sp,
+                    letterSpacing = 0.5.sp
+                )
+            }
+
+            if (!disabled) {
+                Text(
+                    text = "→",
+                    color = accentColor.copy(alpha = 0.6f),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
         }
+    }
+}
+
+// ── Drawer helpers ─────────────────────────────────────────
+
+@Composable
+private fun DrawerSection(title: String, content: @Composable () -> Unit) {
+    Text(
+        text = title,
+        color = TrackProColors.TextMuted,
+        fontSize = 9.sp,
+        fontWeight = FontWeight.Black,
+        letterSpacing = 3.sp,
+        modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 6.dp)
+    )
+    content()
+}
+
+@Composable
+private fun DrawerItem(
+    icon: ImageVector,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(tint.copy(alpha = 0.1f), RoundedCornerShape(6.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(16.dp))
+        }
+        Text(label, color = TrackProColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }
 
