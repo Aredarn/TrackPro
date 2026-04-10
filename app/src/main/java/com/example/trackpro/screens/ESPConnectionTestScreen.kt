@@ -1,9 +1,6 @@
 package com.example.trackpro.screens
 
 import android.graphics.Typeface
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -42,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
-import com.example.trackpro.TrackProApp
 import com.example.trackpro.managerClasses.ESPTcpClient
 import com.example.trackpro.managerClasses.JsonReader
 import com.example.trackpro.theme.TrackProColors

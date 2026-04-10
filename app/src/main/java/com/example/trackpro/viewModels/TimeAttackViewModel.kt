@@ -83,6 +83,14 @@ class TimeAttackViewModel(
 
     init {
         startLapDataConsumer()
+
+        viewModelScope.launch {
+            app.espTcpClient.gpsFlow.collect { gps ->
+                gps?.let {
+                    handleGpsUpdate(it)
+                }
+            }
+        }
     }
 
 

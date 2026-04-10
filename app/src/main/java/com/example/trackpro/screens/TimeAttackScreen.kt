@@ -2,10 +2,7 @@ package com.example.trackpro.screens
 
 import android.content.Context
 import android.content.res.Configuration
-import android.os.Bundle
 import android.os.SystemClock
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -89,6 +87,7 @@ fun TimeAttackScreenView(
     // ── Wire GPS from shared client into ViewModel ─────────
     LaunchedEffect(gpsData) {
         gpsData?.let { vm.handleGpsUpdate(it) }
+        app.espTcpClient.connect()
     }
 
     // ── Init track + session ───────────────────────────────
@@ -133,6 +132,14 @@ fun TimeAttackScreenView(
             driver      = driverPos,
             isConnected = isConnected
         )
+    }
+
+    DisposableEffect(Unit) {
+        app.espTcpClient.connect()
+
+        onDispose {
+            app.espTcpClient.disconnect()
+        }
     }
 }
 
