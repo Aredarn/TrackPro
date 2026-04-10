@@ -58,19 +58,15 @@ import androidx.core.graphics.toColorInt
 
 
 class ESPConnectionTest : ComponentActivity() {
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ESPConnectionTestScreen()
         }
     }
-
-    override fun onDestroy() {
-        super.onDestroy()
-    }
 }
+
+
 @Composable
 fun ESPConnectionTestScreen() {
     val isConnected = remember { mutableStateOf(false) }
@@ -168,9 +164,7 @@ fun ESPConnectionTestScreen() {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         StyledSpeedometer(
                             speed = speed,
-                            accentRed = TrackProColors.AccentRed,
-                            textPrimary = TrackProColors.TextPrimary,
-                            textMuted =TrackProColors.TextMuted
+                            textPrimary = TrackProColors.TextPrimary
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -313,9 +307,7 @@ fun ESPConnectionTestScreen() {
 @Composable
 fun StyledSpeedometer(
     speed: Float,
-    accentRed: Color,
-    textPrimary: Color,
-    textMuted: Color
+    textPrimary: Color
 ) {
     val animatedSpeed by animateFloatAsState(
         targetValue = speed,

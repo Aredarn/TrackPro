@@ -34,6 +34,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.SessionManager
 import com.example.trackpro.screens.listViewScreens.CarListScreen
 import com.example.trackpro.screens.listViewScreens.DragTimesListView
 import com.example.trackpro.screens.listViewScreens.TimeAttackListViewScreen
@@ -53,15 +54,15 @@ import com.example.trackpro.screens.listViewScreens.listItems.TimeAttackListItem
 import com.example.trackpro.screens.TimeAttackScreenView
 import com.example.trackpro.screens.TrackBuilderScreen
 import com.example.trackpro.screens.TrackScreen
-import com.example.trackpro.screens.TrackVehicleSelectorScreenWrapper
+import com.example.trackpro.screens.TrackVehicleSelector
 import com.example.trackpro.theme.TrackProColors
-import com.example.trackpro.theme.TrackProColors.TextMuted
-import com.example.trackpro.theme.TrackProColors.TextPrimary
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 
 class TrackProApp : Application() {
     val database: ESPDatabase by lazy { ESPDatabase.getInstance(this) }
+    val sessionManager: SessionManager by lazy { SessionManager.getInstance(database) }
+
     override fun onCreate() {
         super.onCreate()
         MapLibre.getInstance(this)
@@ -72,12 +73,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+
             val app = applicationContext as TrackProApp
             val database = app.database
+
             val sessionViewModel: SessionViewModel =
                 viewModel(factory = SessionViewModelFactory(applicationContext))
             val trackViewModel: TrackViewModel =
-                viewModel(factory = TrackViewModelFactory(applicationContext))
+                viewModel(factory = TrackViewModelFactory(database))
             val vehicleFULLViewModel: VehicleFULLViewModel =
                 viewModel(factory = VehicleFULLViewModelFactory(applicationContext))
 
@@ -98,7 +101,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("drag") {
-                        DragRaceScreen(database = database, onBack = { navController.popBackStack() })
+                        DragRaceScreen(database = database)
                     }
                     composable("esptest") { ESPConnectionTestScreen() }
                     composable(
@@ -106,7 +109,7 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("trackId") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val trackId = backStackEntry.arguments?.getLong("trackId") ?: 0L
-                        TrackScreen(onBack = { navController.popBackStack() }, trackId = trackId)
+                        TrackScreen(trackId = trackId)
                     }
                     composable("dragsessions") {
                         DragTimesListView(viewModel = sessionViewModel, navController = navController)
@@ -146,7 +149,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(route = "createvehicle") {
-                        CarCreationScreen(database) { }
+                        CarCreationScreen(database)
                     }
                     composable(route = "timeattack/{vehicleId}/{trackId}") { backStackEntry ->
                         val vehicleId = backStackEntry.arguments?.getString("vehicleId")?.toLongOrNull() ?: -1L
@@ -154,7 +157,7 @@ class MainActivity : ComponentActivity() {
                         TimeAttackScreenView(vehicleId = vehicleId, trackId = trackId, database = database)
                     }
                     composable(route = "trackandvehicle") {
-                        TrackVehicleSelectorScreenWrapper(navController = navController)
+                        TrackVehicleSelector()
                     }
                     composable(route = "timeattacklist") {
                         TimeAttackListViewScreen(
@@ -170,7 +173,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 
 @Composable
 fun MainScreen(
@@ -314,7 +316,7 @@ fun MainScreen(
                     }
                 }
 
-                Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
                 // ── Hero section ──────────────────────────────
                 Box(
@@ -350,7 +352,7 @@ fun MainScreen(
                     }
                 }
 
-                Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
                 // ── Action grid ───────────────────────────────
                 Column(
@@ -519,7 +521,7 @@ private fun ActionCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    color = TextPrimary.copy(alpha = alpha),
+                    color = TrackProColors.TextPrimary.copy(alpha = alpha),
                     fontSize = titleSize,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 0.5.sp,  // reduced from 1.sp
@@ -528,7 +530,7 @@ private fun ActionCard(
                 )
                 Text(
                     text = subtitle,
-                    color = TextMuted.copy(alpha = alpha),
+                    color = TrackProColors.TextMuted.copy(alpha = alpha),
                     fontSize = subtitleSize,
                     letterSpacing = 0.sp,
                     maxLines = 2,

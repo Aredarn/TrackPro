@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Divider
-import androidx.compose.material.Text
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,15 +39,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
-import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.extrasForUI.LatLonOffset
+import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.ESPTcpClient
 import com.example.trackpro.managerClasses.JsonReader
 import com.example.trackpro.managerClasses.RawGPSData
-import com.example.trackpro.managerClasses.SessionManager
 import com.example.trackpro.managerClasses.timeAttackManagers.CircuitTimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.SprintTimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingManager
@@ -55,7 +55,6 @@ import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry.calculateFinishLine
 import com.example.trackpro.managerClasses.toDataClass
-import com.example.trackpro.TrackProApp
 import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -72,9 +71,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.internal.concurrent.formatDuration
 import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import org.maplibre.android.maps.Style
+
+
 class TimeAttackViewModel(
     context: Context
 ) : ViewModel() {
@@ -83,7 +84,7 @@ class TimeAttackViewModel(
     private val ip = config.first
     private val port = config.second
 
-    val app = context.applicationContext as TrackProApp
+    private val app = context.applicationContext as TrackProApp
     val database = app.database
 
     // Timing state
@@ -102,6 +103,8 @@ class TimeAttackViewModel(
     private var _lapId: Long = -1
     private var previousGPSData: RawGPSData? = null
     private val lapDataChannel = Channel<LapInfoData>(Channel.UNLIMITED)
+    private val sessionManager = app.sessionManager
+
 
     // Expose state to UI
     val driverPosition: StateFlow<LatLonOffset?> = _driverPosition.asStateFlow()
@@ -288,18 +291,13 @@ class TimeAttackViewModel(
     //WORKS
     suspend fun createSession(trackId: Long, vehicleId: Long) {
         withContext(Dispatchers.IO) {
-            val sessionManager = SessionManager.getInstance(database)
             val track = database.trackMainDao().getTrack(trackId).firstOrNull() ?: return@withContext
-            val trackName = track.trackName
             val todayFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
-            val eventType = "$trackName - $todayFormatted"
-
-            Log.d("createSession", "eventType: $eventType, vehicleId: $vehicleId")
+            val eventType = "${track.trackName} - $todayFormatted"
 
             val existingSession = database.sessionDataDao().getAllSessions().first().find {
                 it.eventType == eventType && it.vehicleId == vehicleId
             }
-
 
             _sessionId = existingSession?.id ?: run {
                 sessionManager.startSession(
@@ -310,9 +308,6 @@ class TimeAttackViewModel(
                 sessionManager.getCurrentSessionId()!!
             }
             _lapId = -1L
-
-
-            Log.d("createSession", "Session created with id: $_sessionId")
             startNewLap(lapNumber = 1)
         }
     }
@@ -329,12 +324,8 @@ class TimeAttackViewModel(
         }
     }
 
-    suspend fun endSession(database: ESPDatabase) {
-        Log.d("In end", "In end")
-        val sessionManager = SessionManager.getInstance(database)
-
+    suspend fun endSession() {
         withContext(Dispatchers.IO) {
-            Log.d("In end", sessionManager.getCurrentSessionId().toString())
             sessionManager.endSession()
         }
     }
@@ -513,7 +504,7 @@ private fun PortraitLayout(
                 }
             }
 
-            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Best / Last row ───────────────────────────
             Row(
@@ -530,7 +521,7 @@ private fun PortraitLayout(
                 StintCell(stintStart = stintStart)
             }
 
-            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Map ───────────────────────────────────────
             Box(
@@ -625,7 +616,7 @@ private fun LandscapeLayout(
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Divider(color = TrackProColors.SectorLine)
+                HorizontalDivider(color = TrackProColors.SectorLine)
                 Spacer(Modifier.height(16.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -634,7 +625,7 @@ private fun LandscapeLayout(
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Divider(color = TrackProColors.SectorLine)
+                HorizontalDivider(color = TrackProColors.SectorLine)
                 Spacer(Modifier.height(16.dp))
 
                 Row(

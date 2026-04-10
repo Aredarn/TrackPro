@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.managerClasses.ESPDatabase
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -20,10 +19,9 @@ class VehicleFULLViewModel(private val database: ESPDatabase) : ViewModel() {
     }
 
     private fun fetchVehicles() {
-
-        viewModelScope.launch(Dispatchers.IO){
-            database.vehicleInformationDAO().getAllVehicles().collect { vehicleList ->
-                _vehicles.value = vehicleList
+        viewModelScope.launch {
+            database.vehicleInformationDAO().getAllVehicles().collect {
+                _vehicles.value = it
             }
         }
     }

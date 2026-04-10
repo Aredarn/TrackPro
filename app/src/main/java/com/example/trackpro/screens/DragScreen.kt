@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -37,7 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -71,20 +70,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.core.graphics.toColorInt
+import com.example.trackpro.TrackProApp
 
 
 class DragScreen : ComponentActivity() {
-
-    private lateinit var database: ESPDatabase
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        database = ESPDatabase.Companion.getInstance(applicationContext)
-
         setContent {
             DragRaceScreen(
-                database = database,
-                onBack = { finish() }
+                database = (applicationContext as TrackProApp).database,
             )
         }
     }
@@ -93,9 +88,7 @@ class DragScreen : ComponentActivity() {
 @Composable
 fun DragRaceScreen(
     database: ESPDatabase,
-    onBack: () -> Unit,
 ) {
-    val screenHeight = LocalConfiguration.current.screenHeightDp
     var isSessionActive by rememberSaveable { mutableStateOf(false) }
     var sessionID by rememberSaveable { mutableLongStateOf(-1) }
     val isConnected = rememberSaveable { mutableStateOf(false) }
@@ -154,7 +147,6 @@ fun DragRaceScreen(
         endSession(database)
         insertJob?.cancel()
         dataBuffer.clear()
-        insertJob = null
     }
 
     LaunchedEffect(Unit) {
@@ -169,7 +161,7 @@ fun DragRaceScreen(
                     gpsData.value = parsed
 
                     // Always update map position
-                    parsed?.let { gps ->
+                    parsed.let { gps ->
                         driverPosition = LatLonOffset(gps.latitude, gps.longitude)
                         if (isSessionActive) {
                             trackPath.add(LatLonOffset(gps.latitude, gps.longitude))
@@ -191,7 +183,6 @@ fun DragRaceScreen(
                         derivedData?.let { d ->
                             if (lastTimestamp == null || d.timestamp != lastTimestamp) {
                                 dataBuffer.add(d)
-                                lastTimestamp = d.timestamp
                                 coroutineScope.launch(Dispatchers.Main) {
                                     d.speed?.let { dataPoints.add(Entry(i++, it)) }
                                 }
@@ -335,7 +326,7 @@ fun DragRaceScreen(
                 }
             }
 
-            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Results row ───────────────────────────────────
             Row(
@@ -370,7 +361,7 @@ fun DragRaceScreen(
                 )
             }
 
-            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Speed chart ───────────────────────────────────
             Box(
@@ -398,12 +389,12 @@ fun DragRaceScreen(
                             )
                             xAxis.position = XAxis.XAxisPosition.BOTTOM
                             xAxis.setDrawGridLines(false)
-                            xAxis.textColor = android.graphics.Color.parseColor("#6B7280")
-                            axisLeft.textColor = android.graphics.Color.parseColor("#6B7280")
+                            xAxis.textColor = "#6B7280".toColorInt()
+                            axisLeft.textColor = "#6B7280".toColorInt()
                             axisRight.isEnabled = false
                             description.isEnabled = false
                             legend.isEnabled = false
-                            setBackgroundColor(android.graphics.Color.parseColor("#0E1117"))
+                            setBackgroundColor("#0E1117".toColorInt())
                             setGridBackgroundColor(android.graphics.Color.TRANSPARENT)
                         }
                     },
@@ -413,9 +404,9 @@ fun DragRaceScreen(
                             setDrawValues(false)
                             setDrawCircles(false)
                             lineWidth = 2.5f
-                            color = android.graphics.Color.parseColor("#E8001C")
+                            color = "#E8001C".toColorInt()
                             setDrawFilled(true)
-                            fillColor = android.graphics.Color.parseColor("#E8001C")
+                            fillColor = "#E8001C".toColorInt()
                             fillAlpha = 30
                         }
                         if (chart.data == null) chart.data = LineData(dataSet)
@@ -430,7 +421,7 @@ fun DragRaceScreen(
                 )
             }
 
-            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Map ───────────────────────────────────────────
             Box(
@@ -456,7 +447,7 @@ fun DragRaceScreen(
                 }
             }
 
-            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Bottom controls ───────────────────────────────
             Box(
@@ -551,9 +542,9 @@ fun DragRaceScreen(
 
 @Composable
 private fun ResultCell(label: String, value: String, valueColor: Color) {
-    val TextMuted = Color(0xFF6B7280)
+    val textMuted = Color(0xFF6B7280)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, color = TextMuted, fontSize = 9.sp,
+        Text(text = label, color = textMuted, fontSize = 9.sp,
             letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
         Text(text = value, color = valueColor, fontSize = 22.sp,
             fontWeight = FontWeight.Black)
@@ -568,7 +559,6 @@ fun DragMapView(
     driverPosition: LatLonOffset,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     var mapViewRef by remember { mutableStateOf<org.maplibre.android.maps.MapView?>(null) }
     val driverSource = remember { mutableStateOf<org.maplibre.android.style.sources.GeoJsonSource?>(null) }
     val pathSource = remember { mutableStateOf<org.maplibre.android.style.sources.GeoJsonSource?>(null) }
@@ -683,7 +673,7 @@ suspend fun startSession(database: ESPDatabase, selectedVehicleId: Long): Long {
             vehicleId = selectedVehicleId
         )
         Log.d("In start", sessionManager.getCurrentSessionId().toString())
-        id = (sessionManager.getCurrentSessionId() ?: -1).toLong()
+        id = (sessionManager.getCurrentSessionId() ?: -1)
     }
 
     return id
@@ -722,8 +712,7 @@ fun DragScreenPreview() {
     ).build()
 
     DragRaceScreen(
-        database = fakeDatabase,
-        onBack = {}
+        database = fakeDatabase
     )
 }
 

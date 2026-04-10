@@ -27,42 +27,44 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.extrasForUI.DropdownMenuFieldMulti
 import com.example.trackpro.extrasForUI.TrackDropdownMenu
-import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.viewModels.TrackViewModel
 import com.example.trackpro.viewModels.TrackViewModelFactory
 import com.example.trackpro.viewModels.VehicleViewModel
 import com.example.trackpro.viewModels.VehicleViewModelFactory
-import com.example.trackpro.theme.TrackProColors
 
 class TrackVehicleSelector : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Get the database instance once
+        val database = (application as TrackProApp).database
+
         setContent {
+            val trackViewModel: TrackViewModel = viewModel(
+                factory = TrackViewModelFactory(database)
+            )
+            val vehicleViewModel: VehicleViewModel = viewModel(
+                factory = VehicleViewModelFactory(database)
+            )
+
+            TrackVehicleSelectorScreen(
+                trackViewModel = trackViewModel,
+                vehicleViewModel = vehicleViewModel,
+                navController = rememberNavController()
+            )
         }
     }
-}
-
-@Composable
-fun TrackVehicleSelectorScreenWrapper(navController: NavController) {
-    val context = LocalContext.current
-    val trackViewModel: TrackViewModel = viewModel(factory = TrackViewModelFactory(context))
-
-    val database = ESPDatabase.getInstance(context) // still needed for VehicleViewModel
-
-    TrackVehicleSelectorScreen(
-        database = database,
-        trackViewModel = trackViewModel,
-        navController = navController
-    )
 }
 
 
@@ -70,11 +72,10 @@ fun TrackVehicleSelectorScreenWrapper(navController: NavController) {
 
 @Composable
 fun TrackVehicleSelectorScreen(
-    database: ESPDatabase,
     trackViewModel: TrackViewModel,
+    vehicleViewModel: VehicleViewModel,
     navController: NavController
 ) {
-    val vehicleViewModel: VehicleViewModel = viewModel(factory = VehicleViewModelFactory(database))
     val vehicles by vehicleViewModel.vehicles.collectAsState()
     val tracks by trackViewModel.tracks.collectAsState()
 

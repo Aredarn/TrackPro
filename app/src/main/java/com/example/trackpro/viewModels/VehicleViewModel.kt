@@ -7,32 +7,29 @@ import androidx.lifecycle.viewModelScope
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.models.VehiclePair
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 
 class VehicleViewModel(private val database: ESPDatabase) : ViewModel() {
     private val _vehicles = MutableStateFlow<List<VehiclePair>>(emptyList())
-    val vehicles: StateFlow<List<VehiclePair>> = _vehicles
+    val vehicles = _vehicles.asStateFlow()
 
-    private val _loadingState = MutableStateFlow(true) // Track loading state
-    val loadingState: StateFlow<Boolean> = _loadingState
+    private val _loadingState = MutableStateFlow(true)
+    val loadingState = _loadingState.asStateFlow()
 
     fun fetchVehicles() {
         viewModelScope.launch {
-            _loadingState.value = true // Set loading state to true before fetching
-            Log.d("ViewModel", "Fetching vehicles...")
-
+            _loadingState.value = true
             try {
-                val fetchedVehicles = database.vehicleInformationDAO().getPairVehicles().first() // Collect the first value
-                _vehicles.value = fetchedVehicles
-                Log.d("ViewModel", "Fetched vehicles: ${_vehicles.value}")
+                // If you want live updates, change .first() to .collect { ... }
+                database.vehicleInformationDAO().getPairVehicles().collect { fetchedVehicles ->
+                    _vehicles.value = fetchedVehicles
+                    _loadingState.value = false
+                }
             } catch (e: Exception) {
-                Log.e("Error", "Fetching vehicles failed: ${e.message}")
-            } finally {
-                _loadingState.value = false // Set loading state to false after fetching
-                Log.d("ViewModel", "Loading state: ${_loadingState.value}")
+                Log.e("VehicleViewModel", "Error: ${e.message}")
+                _loadingState.value = false
             }
         }
     }
