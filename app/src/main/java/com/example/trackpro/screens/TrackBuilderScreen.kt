@@ -64,7 +64,6 @@ import org.maplibre.android.annotations.PolylineOptions
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
-import android.graphics.Color as AndroidGraphicsColor
 import androidx.core.graphics.toColorInt
 
 class TrackBuilderActivity : ComponentActivity() {

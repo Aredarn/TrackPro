@@ -1,73 +1,59 @@
 package com.example.trackpro.managerClasses
+
 import android.util.Log
+import com.example.trackpro.dataClasses.RawGPSData
 import convertToUnixTimestamp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
 
-// Simple RawGPSData data class to store the received GPS data
-@Serializable
-data class RawGPSData(
-    val latitude: Double,
-    val longitude: Double,
-    val altitude: Double?,
-    val speed: Float?,
-    val satellites: Int?,
-    val timestamp: Long
-)
-
-fun RawGPSData.toDataClass(): com.example.trackpro.dataClasses.RawGPSData {
-    return com.example.trackpro.dataClasses.RawGPSData(
-        sessionid = 0,  // Replace with the actual session ID as needed
-        latitude = this.latitude,
-        longitude = this.longitude,
-        altitude = this.altitude,
-        timestamp = this.timestamp,
-        speed = this.speed,
-        fixQuality = this.satellites
-    )
-}
-
-
 class ESPTcpClient(
     private val serverAddress: String,
-    private val port: Int,
-    private val onMessageReceived: (RawGPSData) -> Unit,  // Callback when new data is received
-    private val onConnectionStatusChanged: (Boolean) -> Unit  // Callback for connection status
+    private val port: Int
 ) {
+    // --- Observables (Singletons use these instead of callbacks) ---
+    private val _connectionStatus = MutableStateFlow(false)
+    val connectionStatus: StateFlow<Boolean> = _connectionStatus.asStateFlow()
+    private val _gpsFlow = MutableStateFlow<RawGPSData?>(null)
+    val gpsFlow: StateFlow<RawGPSData?> = _gpsFlow.asStateFlow()
 
+
+    // --- Internal State ---
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var socket: Socket? = null
     private var running = AtomicBoolean(false)
 
-    // Optimized JSON parser (initialize once)
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
         coerceInputValues = true
     }
 
-    // Recyclable buffer pool to avoid allocation overhead
-    private val bufferPool = BufferPool(256, 10)
+    private val bufferPool = BufferPool(512, 10)
 
-    // Start the connection to the server
+    // --- Core Methods ---
+
     fun connect() {
         if (running.getAndSet(true)) return
 
         scope.launch {
             try {
-                socket = Socket(serverAddress, port)
-                val inputStream = socket!!.getInputStream()
+                socket = Socket()
+                // 5-second timeout for the initial connection attempt
+                socket?.connect(InetSocketAddress(serverAddress, port), 5000)
 
-                onConnectionStatusChanged(true)
+                val inputStream = socket?.getInputStream() ?: throw Exception("Failed to get input stream")
+                _connectionStatus.value = true
 
                 val delimiter = "\n".toByteArray()
                 val reader = DelimitedInputStreamReader(inputStream, delimiter)
@@ -78,68 +64,76 @@ class ESPTcpClient(
                         val bytesRead = reader.read(buffer)
                         if (bytesRead > 0) {
                             processChunk(buffer, bytesRead)
+                        } else if (bytesRead == -1) {
+                            // Server closed connection
+                            break
                         }
                     } finally {
                         bufferPool.recycle(buffer)
                     }
                 }
             } catch (e: Exception) {
-                Log.e("ESPTcpClient", "Connection error: ${e.message}", e) // <--- ADD THIS
-                onConnectionStatusChanged(false)
-                disconnect()
+                Log.e("ESPTcpClient", "Connection error: ${e.message}")
+            } finally {
+                disconnectInternal()
             }
         }
-
     }
 
     private suspend fun processChunk(buffer: ByteArray, length: Int) {
         val message = buffer.decodeToString(0, length).trim()
         if (message.isNotEmpty()) {
-            // Offload parsing to separate coroutine to avoid blocking I/O thread
-            val parsed = withContext(Dispatchers.Default) {
-                parseGpsData(message)
+            withContext(Dispatchers.Default) {
+                try {
+                    val raw = json.decodeFromString<RawGPSDataRaw>(message)
+                    val parsed = RawGPSData(
+                        sessionid = 0L,
+                        latitude = raw.latitude,
+                        longitude = raw.longitude,
+                        altitude = raw.altitude,
+                        speed = raw.speed,
+                        fixQuality = raw.satellites,
+                        timestamp = convertToUnixTimestamp(raw.timestamp)
+                    )
+                    _gpsFlow.emit(parsed)
+                } catch (e: Exception) {
+                    Log.e("ESPTcpClient", "JSON Parse Error: ${e.message} for input: $message")
+                }
             }
-            onMessageReceived(parsed)
         }
     }
 
-    //@OptIn(ExperimentalSerializationApi::class)
-    private fun parseGpsData(data: String): RawGPSData {
-        return json.decodeFromString<RawGPSDataRaw>(data)
-            .let { raw ->
-                RawGPSData(
-                   latitude = raw.latitude,
-                    longitude = raw.longitude,
-                    altitude = raw.altitude,
-                    speed = raw.speed,
-                    satellites = raw.satellites,
-                    timestamp = convertToUnixTimestamp(raw.timestamp)
-                )
-            }
+
+    fun disconnect() {
+        running.set(false)
+        runCatching { socket?.close() }
+        _connectionStatus.value = false
+        scope.cancel()
     }
 
-    // Disconnect from the server
-    fun disconnect() {
+    private fun disconnectInternal() {
         try {
             socket?.close()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("ESPTcpClient", "Error closing socket: ${e.message}")
         }
-        onConnectionStatusChanged(false)
+        socket = null
+        running.set(false)
+        _connectionStatus.value = false
     }
 
-    // Temporary Data Class to Handle String Timestamps
+    // --- Helper Classes ---
+
     @Serializable
-    data class RawGPSDataRaw(
+    private data class RawGPSDataRaw(
         val latitude: Double,
         val longitude: Double,
-        val altitude: Double,
-        val speed: Float,
-        val satellites: Int,
+        val altitude: Double = 0.0,
+        val speed: Float = 0f,
+        val satellites: Int = 0,
         val timestamp: String
     )
 
-    // Helper class for message delimiting
     class DelimitedInputStreamReader(
         private val input: InputStream,
         private val delimiter: ByteArray
@@ -147,36 +141,43 @@ class ESPTcpClient(
         private val buffer = ByteArrayOutputStream()
 
         fun read(target: ByteArray): Int {
-            while (true) {
-                val byte = input.read()
-                if (byte == -1) return -1
+            try {
+                while (true) {
+                    val byte = input.read()
+                    if (byte == -1) return -1
 
-                buffer.write(byte)
+                    buffer.write(byte)
 
-                if (endsWithDelimiter()) {
-                    val data = buffer.toByteArray()
-                    val length = data.size - delimiter.size
-                    System.arraycopy(data, 0, target, 0, length)
-                    buffer.reset()
-                    return length
+                    if (endsWithDelimiter()) {
+                        val fullData = buffer.toByteArray()
+                        val length = fullData.size - delimiter.size
+
+                        // Ensure we don't overflow the target buffer
+                        val finalSize = if (length > target.size) target.size else length
+                        System.arraycopy(fullData, 0, target, 0, finalSize)
+
+                        buffer.reset()
+                        return finalSize
+                    }
+
+                    // Emergency flush if buffer gets too large (corrupt stream protection)
+                    if (buffer.size() > 2048) buffer.reset()
                 }
-
-                if (buffer.size() > 4096) {
-                    buffer.reset()
-                }
+            } catch (e: Exception) {
+                return -1
             }
         }
 
         private fun endsWithDelimiter(): Boolean {
             val data = buffer.toByteArray()
             if (data.size < delimiter.size) return false
-            return delimiter.indices.all { i ->
-                data[data.size - delimiter.size + i] == delimiter[i]
+            for (i in delimiter.indices) {
+                if (data[data.size - delimiter.size + i] != delimiter[i]) return false
             }
+            return true
         }
     }
 
-    // Buffer pooling to reduce GC pressure
     class BufferPool(private val bufferSize: Int, poolSize: Int) {
         private val pool = ArrayDeque<ByteArray>(poolSize).apply {
             repeat(poolSize) { add(ByteArray(bufferSize)) }
@@ -190,5 +191,4 @@ class ESPTcpClient(
             if (pool.size < 10) pool.addLast(buffer)
         }
     }
-
 }

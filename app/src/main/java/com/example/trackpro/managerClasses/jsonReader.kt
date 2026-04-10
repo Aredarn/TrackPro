@@ -2,6 +2,7 @@ package com.example.trackpro.managerClasses
 
 import android.content.Context
 import com.example.trackpro.R
+import com.example.trackpro.dataClasses.RawGPSData
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.json.JSONObject
@@ -43,4 +44,7 @@ object JsonReader {
         val transmissions: List<String>,
         val suspensionTypes: List<String>
     )
+
+
+
 }

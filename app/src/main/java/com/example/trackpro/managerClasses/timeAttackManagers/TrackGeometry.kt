@@ -116,7 +116,7 @@ object TrackGeometry {
 
 
     fun checkLineCrossing(
-        prev: com.example.trackpro.managerClasses.RawGPSData,
+        prev: RawGPSData,
         curr: RawGPSData,
         line: List<TrackCoordinatesData>
     ): CrossingResult? {

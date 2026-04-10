@@ -54,7 +54,7 @@ import com.example.trackpro.managerClasses.JsonReader.loadJsonOptions
 import kotlinx.coroutines.launch
 
 
-class CarCreatorScreen : ComponentActivity() {
+class CarCreator : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val database = (applicationContext as TrackProApp).database
