@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -54,6 +55,8 @@ import com.example.trackpro.screens.TrackBuilderScreen
 import com.example.trackpro.screens.TrackScreen
 import com.example.trackpro.screens.TrackVehicleSelectorScreenWrapper
 import com.example.trackpro.theme.TrackProColors
+import com.example.trackpro.theme.TrackProColors.TextMuted
+import com.example.trackpro.theme.TrackProColors.TextPrimary
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 
@@ -391,11 +394,11 @@ fun MainScreen(
                         Box(modifier = Modifier.weight(1f)) {
                             ActionCard(
                                 icon = Icons.Default.CarRepair,
-                                title = "VEHICLES",
-                                subtitle = "Add & manage",
+                                title = "ADD VEHICLES",
+                                subtitle = "Create your own vehicles",
                                 accentColor = TrackProColors.AccentAmber,
                                 onClick = onNavigateToVehicleCreatorScreen,
-                                fullWidth = true
+                                halfWidth  = true
                             )
                         }
                         Box(modifier = Modifier.weight(1f)) {
@@ -405,7 +408,7 @@ fun MainScreen(
                                 subtitle = "Define tracks",
                                 accentColor = TrackProColors.AccentAmber,
                                 onClick = onNavigateToTrackBuilder,
-                                fullWidth = true
+                                halfWidth  = true
                             )
                         }
                     }
@@ -421,7 +424,7 @@ fun MainScreen(
                                 subtitle = "Test connection",
                                 accentColor = TrackProColors.TextMuted,
                                 onClick = onNavigateToESPTestScreen,
-                                fullWidth = true
+                                halfWidth  = true
                             )
                         }
                         Box(modifier = Modifier.weight(1f)) {
@@ -431,7 +434,7 @@ fun MainScreen(
                                 subtitle = "Coming soon",
                                 accentColor = TrackProColors.TextMuted,
                                 onClick = { },
-                                fullWidth = true,
+                                halfWidth  = true,
                                 disabled = true
                             )
                         }
@@ -463,9 +466,15 @@ private fun ActionCard(
     accentColor: Color,
     onClick: () -> Unit,
     fullWidth: Boolean = false,
+    halfWidth: Boolean = false,  // new flag
     disabled: Boolean = false
 ) {
     val alpha = if (disabled) 0.4f else 1f
+    val iconSize = if (halfWidth) 16.dp else if (fullWidth) 22.dp else 18.dp
+    val iconBoxSize = if (halfWidth) 32.dp else if (fullWidth) 44.dp else 36.dp
+    val titleSize = if (halfWidth) 11.sp else if (fullWidth) 14.sp else 12.sp
+    val subtitleSize = if (halfWidth) 9.sp else 10.sp
+    val vertPadding = if (halfWidth) 14.dp else if (fullWidth) 18.dp else 14.dp
 
     Box(
         modifier = Modifier
@@ -479,7 +488,7 @@ private fun ActionCard(
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .width(3.dp)
-                .height(if (fullWidth) 60.dp else 50.dp)
+                .height(48.dp)
                 .background(
                     accentColor.copy(alpha = alpha),
                     RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)
@@ -489,14 +498,13 @@ private fun ActionCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = if (fullWidth) 18.dp else 14.dp),
+                .padding(horizontal = 16.dp, vertical = vertPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Icon box
             Box(
                 modifier = Modifier
-                    .size(if (fullWidth) 44.dp else 36.dp)
+                    .size(iconBoxSize)
                     .background(accentColor.copy(alpha = 0.1f * alpha), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
@@ -504,32 +512,35 @@ private fun ActionCard(
                     imageVector = icon,
                     contentDescription = title,
                     tint = accentColor.copy(alpha = alpha),
-                    modifier = Modifier.size(if (fullWidth) 22.dp else 18.dp)
+                    modifier = Modifier.size(iconSize)
                 )
             }
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    color = TrackProColors.TextPrimary.copy(alpha = alpha),
-                    fontSize = if (fullWidth) 14.sp else 12.sp,
+                    color = TextPrimary.copy(alpha = alpha),
+                    fontSize = titleSize,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp,
-                    lineHeight = 16.sp
+                    letterSpacing = 0.5.sp,  // reduced from 1.sp
+                    lineHeight = (titleSize.value + 2).sp,
+                    softWrap = true
                 )
                 Text(
                     text = subtitle,
-                    color = TrackProColors.TextMuted.copy(alpha = alpha),
-                    fontSize = 10.sp,
-                    letterSpacing = 0.5.sp
+                    color = TextMuted.copy(alpha = alpha),
+                    fontSize = subtitleSize,
+                    letterSpacing = 0.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            if (!disabled) {
+            if (!disabled && !halfWidth) {
                 Text(
                     text = "→",
                     color = accentColor.copy(alpha = 0.6f),
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Black
                 )
             }
