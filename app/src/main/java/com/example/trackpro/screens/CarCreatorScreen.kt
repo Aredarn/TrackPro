@@ -53,19 +53,6 @@ import com.example.trackpro.extrasForUI.DropdownMenuField
 import com.example.trackpro.managerClasses.JsonReader.loadJsonOptions
 import kotlinx.coroutines.launch
 
-
-class CarCreator : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val database = (applicationContext as TrackProApp).database
-        setContent {
-            CarCreationScreen(
-                database = database
-            )
-        }
-    }
-}
-
 @Composable
 fun CarCreationScreen(
     database: ESPDatabase

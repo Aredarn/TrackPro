@@ -53,18 +53,6 @@ import kotlinx.coroutines.withContext
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 
-
-// ── TimeAttackScreen.kt ───────────────────────────────────
-
-class TimeAttackActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            TimeAttackScreenView()
-        }
-    }
-}
-
 @Composable
 fun TimeAttackScreenView(
     trackId: Long? = null,

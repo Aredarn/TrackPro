@@ -66,18 +66,6 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import androidx.core.graphics.toColorInt
 
-class TrackBuilderActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            TrackBuilderScreen(
-                database = (applicationContext as TrackProApp).database,
-                onBack = { finish() }
-            )
-        }
-    }
-}
-
 @Composable
 fun TrackBuilderScreen(
     database: ESPDatabase,

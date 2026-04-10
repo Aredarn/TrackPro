@@ -42,33 +42,6 @@ import com.example.trackpro.viewModels.TrackViewModelFactory
 import com.example.trackpro.viewModels.VehicleViewModel
 import com.example.trackpro.viewModels.VehicleViewModelFactory
 
-class TrackVehicleSelector : ComponentActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // Get the database instance once
-        val database = (application as TrackProApp).database
-
-        setContent {
-            val trackViewModel: TrackViewModel = viewModel(
-                factory = TrackViewModelFactory(database)
-            )
-            val vehicleViewModel: VehicleViewModel = viewModel(
-                factory = VehicleViewModelFactory(database)
-            )
-
-            TrackVehicleSelectorScreen(
-                trackViewModel = trackViewModel,
-                vehicleViewModel = vehicleViewModel,
-                navController = rememberNavController()
-            )
-        }
-    }
-}
-
-
-// ── Design tokens (Consistent with your TrackBuilder) ──────────────────────────
 
 @Composable
 fun TrackVehicleSelectorScreen(

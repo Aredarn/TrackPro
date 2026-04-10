@@ -49,21 +49,6 @@ import com.example.trackpro.theme.TrackProColors
 import kotlin.math.cos
 import kotlin.math.sin
 
-
-class ESPConnectionTest : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val app = application as TrackProApp
-        val tcpClient = app.espTcpClient
-
-        setContent {
-            // Pass them to your Composable screens or ViewModels
-            ESPConnectionTestScreen(tcpClient)
-        }
-    }
-}
-
-
 @Composable
 fun ESPConnectionTestScreen(
     tcpClient: ESPTcpClient,

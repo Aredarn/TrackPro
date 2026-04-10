@@ -31,18 +31,6 @@ import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.*
 import kotlinx.coroutines.*
 
-class DragScreen : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            DragRaceScreen(
-                database = (applicationContext as TrackProApp).database,
-                sessionManager = (applicationContext as TrackProApp).sessionManager
-            )
-        }
-    }
-}
-
 @Composable
 fun DragRaceScreen(database: ESPDatabase, sessionManager: SessionManager) {
 
