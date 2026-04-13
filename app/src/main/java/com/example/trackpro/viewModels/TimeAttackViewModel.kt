@@ -83,14 +83,6 @@ class TimeAttackViewModel(
 
     init {
         startLapDataConsumer()
-
-        viewModelScope.launch {
-            app.espTcpClient.gpsFlow.collect { gps ->
-                gps?.let {
-                    handleGpsUpdate(it)
-                }
-            }
-        }
     }
 
 
@@ -143,13 +135,20 @@ class TimeAttackViewModel(
         }
     }
 
-    //WORKS
 
     internal fun handleGpsUpdate(current: RawGPSData) {
+        Log.d("TimeAttackViewModel", "handleGpsUpdate START - lat=${current.latitude}, lon=${current.longitude}")
+
         timingManager?.handleGpsUpdate(previousGPSData, current)
+
+        Log.d("TimeAttackViewModel", "Setting driver position to lat=${current.latitude}, lon=${current.longitude}")
         _driverPosition.value = LatLonOffset(lat = current.latitude, lon = current.longitude)
+        Log.d("TimeAttackViewModel", "Driver position set. Current value: ${_driverPosition.value}")
+
         previousGPSData = current
         processLapData(current)
+
+        Log.d("TimeAttackViewModel", "handleGpsUpdate END")
     }
 
     //WORKS

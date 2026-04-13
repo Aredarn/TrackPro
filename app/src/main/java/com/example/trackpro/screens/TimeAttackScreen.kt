@@ -3,6 +3,7 @@ package com.example.trackpro.screens
 import android.content.Context
 import android.content.res.Configuration
 import android.os.SystemClock
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -62,6 +63,9 @@ fun TimeAttackScreenView(
         factory = TimeAttackViewModelFactory(context)
     )
 
+    // Track if initialization is complete
+    var isInitialized by remember { mutableStateOf(false) }
+
     // ── Collect all state ──────────────────────────────────
     val isConnected by app.espTcpClient.connectionStatus.collectAsState()
     val gpsData     by app.espTcpClient.gpsFlow.collectAsState()
@@ -84,24 +88,71 @@ fun TimeAttackScreenView(
         }
     }
 
-    // ── Wire GPS from shared client into ViewModel ─────────
-    LaunchedEffect(gpsData) {
-        gpsData?.let { vm.handleGpsUpdate(it) }
-        app.espTcpClient.connect()
+    // In your TimeAttackScreenView, add this:
+    LaunchedEffect(driver) {
+        Log.d("TimeAttackScreen", "Driver StateFlow updated: $driver")
     }
 
-    // ── Init track + session ───────────────────────────────
+    LaunchedEffect(fullTrack.size) {
+        Log.d("TimeAttackScreen", "Full track size: ${fullTrack.size}")
+        if (fullTrack.isNotEmpty()) {
+            Log.d("TimeAttackScreen", "First point: ${fullTrack.first().latitude}, ${fullTrack.first().longitude}")
+        }
+    }
+
+    LaunchedEffect(startLine.size) {
+        Log.d("TimeAttackScreen", "Start line size: ${startLine.size}")
+    }
+
+    LaunchedEffect(finishLine.size) {
+        Log.d("TimeAttackScreen", "Finish line size: ${finishLine.size}")
+    }
+
+    // ── Init track + session FIRST ─────────────────────────
     LaunchedEffect(trackId) {
-        if (trackId == null || vehicleId == null) return@LaunchedEffect
-        val track = withContext(Dispatchers.IO) {
-            app.database.trackMainDao().getTrack(trackId).firstOrNull()
+        Log.d("TimeAttackScreen", "LaunchedEffect(trackId) triggered with trackId=$trackId, vehicleId=$vehicleId")
+        if (trackId == null || vehicleId == null) {
+            Log.w("TimeAttackScreen", "trackId or vehicleId is null, skipping initialization")
+            return@LaunchedEffect
         }
-        val mode = when (track?.type?.lowercase()) {
-            "sprint" -> TimingMode.Sprint
-            else     -> TimingMode.Circuit
+
+        try {
+            val track = withContext(Dispatchers.IO) {
+                app.database.trackMainDao().getTrack(trackId).firstOrNull()
+            }
+            Log.d("TimeAttackScreen", "Loaded track: ${track?.trackName}, type=${track?.type}")
+
+            val mode = when (track?.type?.lowercase()) {
+                "sprint" -> TimingMode.Sprint
+                else     -> TimingMode.Circuit
+            }
+            Log.d("TimeAttackScreen", "Setting timing mode: $mode")
+
+            vm.loadTrack(trackId, mode)
+            vm.createSession(trackId, vehicleId)
+
+            // Wait a bit to ensure session is written to DB
+            delay(100)
+
+            isInitialized = true
+            Log.d("TimeAttackScreen", "Initialization complete")
+        } catch (e: Exception) {
+            Log.e("TimeAttackScreen", "Initialization error: ${e.message}", e)
         }
-        vm.loadTrack(trackId, mode)
-        vm.createSession(trackId, vehicleId)
+    }
+
+    // ── Wire GPS from shared client into ViewModel (ONLY AFTER INIT) ─────────
+    LaunchedEffect(gpsData, isInitialized) {
+        if (!isInitialized) {
+            Log.d("TimeAttackScreen", "Skipping GPS update - not initialized yet")
+            return@LaunchedEffect
+        }
+
+        Log.d("TimeAttackScreen", "GPS data received: $gpsData")
+        gpsData?.let {
+            Log.d("TimeAttackScreen", "Passing GPS to ViewModel: lat=${it.latitude}, lon=${it.longitude}, speed=${it.speed}")
+            vm.handleGpsUpdate(it)
+        } ?: Log.w("TimeAttackScreen", "GPS data is null")
     }
 
     val gpsPoints = fullTrack + linesToShow
@@ -135,14 +186,15 @@ fun TimeAttackScreenView(
     }
 
     DisposableEffect(Unit) {
+        Log.d("TimeAttackScreen", "DisposableEffect - Connecting to ESP")
         app.espTcpClient.connect()
 
         onDispose {
+            Log.d("TimeAttackScreen", "DisposableEffect - Disconnecting from ESP")
             app.espTcpClient.disconnect()
         }
     }
 }
-
 // ── Portrait ───────────────────────────────────────────────
 
 @Composable
@@ -529,10 +581,18 @@ fun MapLibreTrackView(
 
     // 1. Only update the Driver Source (No Camera Movement)
     LaunchedEffect(driverPosition) {
-        val src = driverSource.value ?: return@LaunchedEffect
-        if (driverPosition.lat == 0.0 && driverPosition.lon == 0.0) return@LaunchedEffect
+        Log.d("MapLibreTrackView", "Driver position changed: ${driverPosition.lat}, ${driverPosition.lon}")
+        val src = driverSource.value ?: run {
+            Log.w("MapLibreTrackView", "Driver source is null!")
+            return@LaunchedEffect
+        }
+        if (driverPosition.lat == 0.0 && driverPosition.lon == 0.0) {
+            Log.w("MapLibreTrackView", "Driver position is 0,0, skipping")
+            return@LaunchedEffect
+        }
 
         val geojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${driverPosition.lon},${driverPosition.lat}]},"properties":{}}"""
+        Log.d("MapLibreTrackView", "Updating driver GeoJSON: $geojson")
         src.setGeoJson(geojson)
     }
 
