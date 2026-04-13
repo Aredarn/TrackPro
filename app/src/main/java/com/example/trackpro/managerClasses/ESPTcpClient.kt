@@ -3,12 +3,14 @@ package com.example.trackpro.managerClasses
 import android.util.Log
 import com.example.trackpro.dataClasses.RawGPSData
 import convertToUnixTimestamp
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
@@ -95,7 +97,7 @@ class ESPTcpClient(
                         fixQuality = raw.satellites,
                         timestamp = convertToUnixTimestamp(raw.timestamp)
                     )
-                    _gpsFlow.emit(parsed)
+                    _gpsFlow.value = parsed  // Use .value instead of .emit()
                 } catch (e: Exception) {
                     Log.e("ESPTcpClient", "JSON Parse Error: ${e.message} for input: $message")
                 }
@@ -108,7 +110,6 @@ class ESPTcpClient(
         running.set(false)
         runCatching { socket?.close() }
         _connectionStatus.value = false
-        scope.cancel()
     }
 
     private fun disconnectInternal() {
@@ -163,7 +164,7 @@ class ESPTcpClient(
                     // Emergency flush if buffer gets too large (corrupt stream protection)
                     if (buffer.size() > 2048) buffer.reset()
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 return -1
             }
         }
