@@ -18,7 +18,7 @@ class SprintTimingManager(
 
     val sprintCompletedChannel = Channel<Long>(Channel.UNLIMITED)
 
-    override fun handleGpsUpdate(prev: com.example.trackpro.managerClasses.RawGPSData?, current: RawGPSData) {
+    override fun handleGpsUpdate(prev: RawGPSData?, current: RawGPSData) {
         val now = SystemClock.elapsedRealtime()
         if (prev == null) return
 

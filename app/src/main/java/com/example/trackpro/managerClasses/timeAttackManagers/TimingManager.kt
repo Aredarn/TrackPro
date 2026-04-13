@@ -24,7 +24,7 @@ abstract class TimingManager {
     val eventCount get() = _eventCount
     val stintStart get() = _stintStart
 
-    abstract fun handleGpsUpdate(prev: com.example.trackpro.managerClasses.RawGPSData?, current: RawGPSData)
+    abstract fun handleGpsUpdate(prev: RawGPSData?, current: RawGPSData)
     abstract fun reset()
     abstract fun startNewEvent()
 

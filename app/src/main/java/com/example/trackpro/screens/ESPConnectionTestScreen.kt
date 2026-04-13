@@ -1,10 +1,6 @@
 package com.example.trackpro.screens
 
 import android.graphics.Typeface
-import android.os.Bundle
-import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -26,12 +22,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -42,79 +36,55 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.toColorInt
 import com.example.trackpro.managerClasses.ESPTcpClient
 import com.example.trackpro.managerClasses.JsonReader
-import com.example.trackpro.managerClasses.RawGPSData
 import com.example.trackpro.theme.TrackProColors
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.catch
-import java.io.IOException
 import kotlin.math.cos
 import kotlin.math.sin
-import androidx.core.graphics.toColorInt
 
-
-class ESPConnectionTest : ComponentActivity() {
-
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            ESPConnectionTestScreen()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-    }
-}
 @Composable
-fun ESPConnectionTestScreen() {
-    val isConnected = remember { mutableStateOf(false) }
-    val gpsData = remember { mutableStateOf<RawGPSData?>(null) }
+fun ESPConnectionTestScreen(
+    tcpClient: ESPTcpClient,
+) {
+    // 1. Observe the Flow from the Singleton Client
+    // collectAsStateWithLifecycle is preferred, but collectAsState works for basic use
+    val isConnected by tcpClient.connectionStatus.collectAsState(initial = false)
+    val gpsData by tcpClient.gpsFlow.collectAsState(initial = null)
+
     val context = LocalContext.current
-    val (ip, port) = remember { JsonReader.loadConfig(context) }
-    var espTcpClient: ESPTcpClient? by remember { mutableStateOf(null) }
-    val gpsDataFlow = remember { MutableSharedFlow<RawGPSData>(extraBufferCapacity = 10) }
+
+    // Load IP/Port just for display purposes
+    val config = remember { JsonReader.loadConfig(context) }
+    val ip = config.first
+    val port = config.second
 
     fun calculateDelay(espTimestamp: Long): String {
         if (espTimestamp == 0L) return "—"
         val now = System.currentTimeMillis()
         val rawDelay = now - espTimestamp
+        // Handle timezone/NTP sync offsets if needed
         val delay = if (kotlin.math.abs(rawDelay) > 3_600_000)
             now - (espTimestamp + 7_200_000) else rawDelay
-        return if (delay < 1000) "${delay}ms" else String.format("%.3fs", delay / 1000.0)
-    }
 
-    LaunchedEffect(Unit) {
-        try {
-            espTcpClient = ESPTcpClient(
-                serverAddress = ip,
-                port = port,
-                onMessageReceived = { data -> gpsDataFlow.tryEmit(data) },
-                onConnectionStatusChanged = { isConnected.value = it }
-            )
-            espTcpClient?.connect()
-        } catch (e: Exception) {
-            Log.e("ESPConnection", "TCP setup failed", e)
+        return when {
+            delay < 0 -> "0ms"
+            delay < 1000 -> "${delay}ms"
+            else -> String.format("%.3fs", delay / 1000.0)
         }
     }
 
+    // 2. Control Connection Lifecycle
+    // If you want the app to connect automatically when this screen opens:
     LaunchedEffect(Unit) {
-        gpsDataFlow.catch { e -> Log.e("GPSFlow", "Flow error", e) }
-            .collect { data -> gpsData.value = data }
+        tcpClient.connect()
     }
 
-    DisposableEffect(Unit) {
-        onDispose { try { espTcpClient?.disconnect() } catch (e: IOException) { e.printStackTrace() } }
-    }
-
-    val speed = gpsData.value?.speed ?: 0f
-    val fix = (gpsData.value?.satellites ?: 0) > 0
-    val delay = calculateDelay(gpsData.value?.timestamp ?: 0L)
+    val speed = gpsData?.speed ?: 0f
+    val fix = (gpsData?.fixQuality ?: 0) > 0
+    val delay = calculateDelay(gpsData?.timestamp ?: 0L)
 
     Box(
         modifier = Modifier
@@ -127,7 +97,7 @@ fun ESPConnectionTestScreen() {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(if (isConnected.value) TrackProColors.AccentGreen else TrackProColors.AccentRed)
+                    .background(if (isConnected) TrackProColors.AccentGreen else TrackProColors.AccentRed)
                     .padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
                 Row(
@@ -136,7 +106,7 @@ fun ESPConnectionTestScreen() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (isConnected.value) "● ESP CONNECTED" else "● ESP DISCONNECTED",
+                        text = if (isConnected) "● ESP CONNECTED" else "● ESP DISCONNECTED",
                         color = Color.Black,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
@@ -156,7 +126,6 @@ fun ESPConnectionTestScreen() {
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-
                 // ── Speedometer ───────────────────────────
                 Box(
                     modifier = Modifier
@@ -168,9 +137,7 @@ fun ESPConnectionTestScreen() {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         StyledSpeedometer(
                             speed = speed,
-                            accentRed = TrackProColors.AccentRed,
-                            textPrimary = TrackProColors.TextPrimary,
-                            textMuted =TrackProColors.TextMuted
+                            textPrimary = TrackProColors.TextPrimary
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -209,8 +176,8 @@ fun ESPConnectionTestScreen() {
                     VerticalDividerLine(TrackProColors.SectorLine)
                     SignalCell(
                         label = "SATELLITES",
-                        value = "${gpsData.value?.satellites ?: 0}",
-                        valueColor = if ((gpsData.value?.satellites ?: 0) >= 4)
+                        value = "${gpsData?.fixQuality ?: 0}",
+                        valueColor = if ((gpsData?.fixQuality ?: 0) >= 4)
                             TrackProColors.AccentGreen else TrackProColors.AccentAmber,
                         textMuted = TrackProColors.TextMuted
                     )
@@ -228,52 +195,25 @@ fun ESPConnectionTestScreen() {
                         .padding(horizontal = 24.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    TelemetryRow(
-                        label = "LATITUDE",
-                        value = gpsData.value?.latitude?.let {
-                            String.format("%.6f°", it)
-                        } ?: "—",
-                        textPrimary = TrackProColors.TextPrimary,
-                        textMuted = TrackProColors.TextMuted
-                    )
-                    TelemetryRow(
-                        label = "LONGITUDE",
-                        value = gpsData.value?.longitude?.let {
-                            String.format("%.6f°", it)
-                        } ?: "—",
-                        textPrimary = TrackProColors.TextPrimary,
-                        textMuted = TrackProColors.TextMuted
-                    )
-                    TelemetryRow(
-                        label = "ALTITUDE",
-                        value = gpsData.value?.altitude?.let {
-                            String.format("%.1f m", it)
-                        } ?: "—",
-                        textPrimary = TrackProColors.TextPrimary,
-                        textMuted = TrackProColors.TextMuted
-                    )
-                    TelemetryRow(
-                        label = "SPEED",
-                        value = gpsData.value?.speed?.let {
-                            String.format("%.2f km/h", it)
-                        } ?: "—",
-                        textPrimary = TrackProColors.TextPrimary,
-                        textMuted = TrackProColors.TextMuted
-                    )
+                    TelemetryRow(label = "LATITUDE", value = gpsData?.latitude?.let { String.format("%.6f°", it) } ?: "—", TrackProColors.TextPrimary, TrackProColors.TextMuted)
+                    TelemetryRow(label = "LONGITUDE", value = gpsData?.longitude?.let { String.format("%.6f°", it) } ?: "—", TrackProColors.TextPrimary, TrackProColors.TextMuted)
+                    TelemetryRow(label = "ALTITUDE", value = gpsData?.altitude?.let { String.format("%.1f m", it) } ?: "—", TrackProColors.TextPrimary, TrackProColors.TextMuted)
+                    TelemetryRow(label = "SPEED", value = gpsData?.speed?.let { String.format("%.2f km/h", it) } ?: "—", TrackProColors.TextPrimary, TrackProColors.TextMuted)
+
                     TelemetryRow(
                         label = "FIX QUALITY",
-                        value = when (gpsData.value?.satellites) {
+                        value = when (gpsData?.fixQuality) {
+                            null -> "—"
                             0 -> "NO FIX"
-                            1 -> "GPS FIX"
-                            2 -> "DGPS FIX"
-                            else -> "—"
+                            else -> if (fix) "3D FIX" else "SEARCHING"
                         },
                         textPrimary = if (fix) TrackProColors.AccentGreen else TrackProColors.AccentAmber,
                         textMuted = TrackProColors.TextMuted
                     )
+
                     TelemetryRow(
                         label = "TIMESTAMP",
-                        value = gpsData.value?.timestamp?.let {
+                        value = gpsData?.timestamp?.let {
                             val sdf = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.getDefault())
                             sdf.format(java.util.Date(it))
                         } ?: "—",
@@ -294,8 +234,8 @@ fun ESPConnectionTestScreen() {
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     Text(
-                        text = gpsData.value?.toString() ?: "Waiting for data...",
-                        color = if (gpsData.value != null) TrackProColors.AccentGreen else TrackProColors.TextMuted,
+                        text = gpsData?.toString() ?: "Waiting for data...",
+                        color = if (gpsData != null) TrackProColors.AccentGreen else TrackProColors.TextMuted,
                         fontSize = 11.sp,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                         lineHeight = 18.sp
@@ -307,15 +247,12 @@ fun ESPConnectionTestScreen() {
         }
     }
 }
-
 // ── Styled speedometer ─────────────────────────────────────
 
 @Composable
 fun StyledSpeedometer(
     speed: Float,
-    accentRed: Color,
-    textPrimary: Color,
-    textMuted: Color
+    textPrimary: Color
 ) {
     val animatedSpeed by animateFloatAsState(
         targetValue = speed,
@@ -503,8 +440,3 @@ private fun VerticalDividerLine(color: Color) {
         .background(color))
 }
 
-@Preview(showBackground = true)
-@Composable
-fun ESPConnectionTestPreview() {
-    ESPConnectionTestScreen()
-}

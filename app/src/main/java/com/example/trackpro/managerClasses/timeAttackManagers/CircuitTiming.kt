@@ -15,7 +15,7 @@ class CircuitTimingManager(
     val lapCompletedChannel = Channel<Long>(Channel.UNLIMITED)
 
     override fun handleGpsUpdate(
-        prev: com.example.trackpro.managerClasses.RawGPSData?,
+        prev: RawGPSData?,
         current: RawGPSData
     ) {
         val now = SystemClock.elapsedRealtime()

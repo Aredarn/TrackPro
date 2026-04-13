@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.extrasForUI.CustomTextField
@@ -52,30 +53,9 @@ import com.example.trackpro.extrasForUI.DropdownMenuField
 import com.example.trackpro.managerClasses.JsonReader.loadJsonOptions
 import kotlinx.coroutines.launch
 
-
-class CarCreatorScreen : ComponentActivity()
-{
-    private lateinit var database: ESPDatabase
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        database = ESPDatabase.Companion.getInstance(applicationContext)
-
-        setContent {
-            CarCreationScreen(
-             database = database,
-             onBack = { finish()}
-            )
-        }
-
-    }
-}
-
 @Composable
 fun CarCreationScreen(
-    database: ESPDatabase,
-    onBack: () -> Unit
+    database: ESPDatabase
 ) {
     val context = LocalContext.current
     val jsonOptions = remember { loadJsonOptions(context) }

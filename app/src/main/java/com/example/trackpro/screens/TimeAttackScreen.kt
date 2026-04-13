@@ -16,9 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Divider
-import androidx.compose.material.Text
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -37,338 +38,49 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.trackpro.dataClasses.LapInfoData
-import com.example.trackpro.dataClasses.LapTimeData
-import com.example.trackpro.dataClasses.TrackCoordinatesData
-import com.example.trackpro.managerClasses.ESPDatabase
-import com.example.trackpro.extrasForUI.LatLonOffset
-import com.example.trackpro.managerClasses.ESPTcpClient
-import com.example.trackpro.managerClasses.JsonReader
-import com.example.trackpro.managerClasses.RawGPSData
-import com.example.trackpro.managerClasses.SessionManager
-import com.example.trackpro.managerClasses.timeAttackManagers.CircuitTimingManager
-import com.example.trackpro.managerClasses.timeAttackManagers.SprintTimingManager
-import com.example.trackpro.managerClasses.timeAttackManagers.TimingManager
-import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
-import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry
-import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry.calculateFinishLine
-import com.example.trackpro.managerClasses.toDataClass
 import com.example.trackpro.TrackProApp
+import com.example.trackpro.dataClasses.TrackCoordinatesData
+import com.example.trackpro.extrasForUI.LatLonOffset
+import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.theme.TrackProColors
+import com.example.trackpro.viewModels.TimeAttackViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.internal.concurrent.formatDuration
 import org.maplibre.android.maps.MapView
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import org.maplibre.android.maps.Style
-class TimeAttackViewModel(
-    context: Context
-) : ViewModel() {
-    private var tcpClient: ESPTcpClient? = null
-    private val config = JsonReader.loadConfig(context)
-    private val ip = config.first
-    private val port = config.second
-
-    val app = context.applicationContext as TrackProApp
-    val database = app.database
-
-    // Timing state
-    private var timingManager: TimingManager? = null
-    private val _timingMode = MutableStateFlow<TimingMode>(TimingMode.Circuit)
-    val timingMode: StateFlow<TimingMode> = _timingMode.asStateFlow()
-
-    // Position tracking
-    private val _driverPosition = MutableStateFlow<LatLonOffset?>(null)
-    private val _fullTrack = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
-    private val _startLine = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
-    private val _finishLine = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
-
-    // Session state
-    private var _sessionId: Long = -1
-    private var _lapId: Long = -1
-    private var previousGPSData: RawGPSData? = null
-    private val lapDataChannel = Channel<LapInfoData>(Channel.UNLIMITED)
-
-    // Expose state to UI
-    val driverPosition: StateFlow<LatLonOffset?> = _driverPosition.asStateFlow()
-    val fullTrack: StateFlow<List<TrackCoordinatesData>> = _fullTrack.asStateFlow()
-    val startLine: StateFlow<List<TrackCoordinatesData>> = _startLine.asStateFlow()
-    val finishLine: StateFlow<List<TrackCoordinatesData>> = _finishLine.asStateFlow()
-
-    // Expose timing state
-    val currentTime: StateFlow<String>
-        get() = timingManager?.currentTime ?: MutableStateFlow("00:00.00").asStateFlow()
-    val bestTime: StateFlow<String>
-        get() = timingManager?.bestTime ?: MutableStateFlow("--:--.--").asStateFlow()
-    val lastTime: StateFlow<String>
-        get() = timingManager?.lastTime ?: MutableStateFlow("--:--.--").asStateFlow()
-    val delta: StateFlow<Double> get() = timingManager?.delta ?: MutableStateFlow(0.0).asStateFlow()
-    val eventCount: StateFlow<Int>
-        get() = timingManager?.eventCount ?: MutableStateFlow(0).asStateFlow()
-    val stintStart: StateFlow<Long>
-        get() = timingManager?.stintStart ?: MutableStateFlow(
-            SystemClock.elapsedRealtime()
-        ).asStateFlow()
-
-    init {
-        startTcpClient()
-        startLapDataConsumer()
-    }
-
-    private fun startTcpClient() = viewModelScope.launch {
-        runCatching {
-            val client = ESPTcpClient(
-                serverAddress = ip,
-                port = port,
-                onMessageReceived = { data -> handleGpsUpdate(data) },
-                onConnectionStatusChanged = { connected ->
-                    if (!connected) timingManager?.reset()
-                }
-            )
-            tcpClient = client
-            client.connect()
-        }.onFailure {
-            Log.e(TAG, "TCP connection failed", it)
-        }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        tcpClient?.disconnect()
-        timingManager?.reset()
-        GlobalScope.launch(Dispatchers.IO) {
-            endSession(database)
-            Log.d(TAG, "endSession completed")
-        }
-
-        Log.d(TAG, "ViewModel cleared")
-    }
-
-    // Updated ViewModel section
-    fun loadTrack(trackId: Long, mode: TimingMode) {
-        _timingMode.value = mode
-        viewModelScope.launch {
-            database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
-                .collect { coords ->
-                    _fullTrack.value = coords
-
-                    // Only init timing manager ONCE
-                    if (timingManager == null) {
-                        when (mode) {
-                            TimingMode.Circuit -> {
-                                _finishLine.value = calculateFinishLine(coords)
-                                _startLine.value = emptyList()
-                                val manager = CircuitTimingManager(_finishLine.value)
-                                timingManager = manager
-                                viewModelScope.launch {
-                                    manager.lapCompletedChannel.consumeAsFlow().collect {
-                                        handleCompletedLap(it)
-                                    }
-                                }
-                            }
-                            TimingMode.Sprint -> {
-                                val (start, finish) = TrackGeometry.calculateSprintLines(coords)
-                                _startLine.value = start
-                                _finishLine.value = finish
-                                val manager = SprintTimingManager(start, finish)
-                                timingManager = manager
-                                viewModelScope.launch {
-                                    manager.sprintCompletedChannel.consumeAsFlow().collect {
-                                        handleCompletedSprint(it)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-        }
-    }
-
-    //WORKS
-    private fun handleGpsUpdate(current: RawGPSData) {
-        timingManager?.handleGpsUpdate(previousGPSData, current.toDataClass() )
-        _driverPosition.value = LatLonOffset(lat = current.latitude, lon = current.longitude)
-        previousGPSData = current
-        processLapData(current)
-    }
-
-    //WORKS
-    private fun processLapData(current: RawGPSData) {
-        if (_sessionId == -1L) return
-
-        val lapInfoData = LapInfoData(
-            lapid = if (_lapId == -1L) 0 else _lapId, // Placeholder to handle nulls
-            lat = current.latitude,
-            lon = current.longitude,
-            spd = current.speed,
-            alt = current.altitude,
-            latgforce = null,
-            longforce = null
-        )
-
-        lapDataChannel.trySend(lapInfoData).onFailure {
-            Log.e("LapInsert", "Failed to queue lap data: ${it?.message}")
-        }
-    }
-
-    //WORKS
-    private fun startLapDataConsumer() {
-        viewModelScope.launch(Dispatchers.IO) {
-            for (lapData in lapDataChannel) {
-                try {
-                    database.lapInfoDataDAO().insert(lapData)
-                } catch (e: Exception) {
-                    Log.e("LapInsert", "Failed to insert lap data", e)
-                }
-            }
-        }
-    }
-
-    private fun handleCompletedLap(lapMs: Long) {
-        viewModelScope.launch {
-            if (_sessionId == -1L || _lapId == -1L) return@launch
-
-            val lapTimeStr = formatLapTime(lapMs)
-
-            withContext(Dispatchers.IO) {
-                // 1. "Close" the current lap with the final time
-                database.lapTimeDataDAO().updateLapTime(_lapId, lapTimeStr)
-
-                Log.d("TimeAttack", "Updated Lap ID $_lapId with time $lapTimeStr")
-            }
-
-            // 2. Immediately start the next lap so GPS points have a new ID to latch onto
-            // eventCount.value + 1 provides the next lap number
-            startNewLap(eventCount.value + 1)
-        }
-    }
-
-    private fun handleCompletedSprint(sprintMs: Long) {
-        viewModelScope.launch {
-            if (_sessionId == -1L) {
-                Log.e(TAG, "Session not created, cannot save sprint")
-                return@launch
-            }
-
-            val sprintData = LapTimeData(
-                sessionid = _sessionId,
-                lapnumber = eventCount.value,
-                laptime = formatLapTime(sprintMs)
-            )
-
-            _lapId = withContext(Dispatchers.IO) {
-                database.lapTimeDataDAO().insert(sprintData)
-            }
-
-            Log.d(TAG, "Sprint time saved: $sprintData")
-        }
-    }
-
-    private fun formatLapTime(millis: Long) = String.format(
-        "%02d:%02d.%02d",
-        millis / 60000,
-        (millis % 60000) / 1000,
-        (millis % 1000) / 10
-    )
-
-    //WORKS
-    suspend fun createSession(trackId: Long, vehicleId: Long) {
-        withContext(Dispatchers.IO) {
-            val sessionManager = SessionManager.getInstance(database)
-            val track = database.trackMainDao().getTrack(trackId).firstOrNull() ?: return@withContext
-            val trackName = track.trackName
-            val todayFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
-            val eventType = "$trackName - $todayFormatted"
-
-            Log.d("createSession", "eventType: $eventType, vehicleId: $vehicleId")
-
-            val existingSession = database.sessionDataDao().getAllSessions().first().find {
-                it.eventType == eventType && it.vehicleId == vehicleId
-            }
-
-
-            _sessionId = existingSession?.id ?: run {
-                sessionManager.startSession(
-                    eventType = eventType,
-                    vehicleId = vehicleId,
-                    trackId = trackId
-                )
-                sessionManager.getCurrentSessionId()!!
-            }
-            _lapId = -1L
-
-
-            Log.d("createSession", "Session created with id: $_sessionId")
-            startNewLap(lapNumber = 1)
-        }
-    }
-
-    private fun startNewLap(lapNumber: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val lapTimeData = LapTimeData(
-                sessionid = _sessionId,
-                lapnumber = lapNumber,
-                laptime = "IN PROGRESS"
-            )
-            _lapId = database.lapTimeDataDAO().insert(lapTimeData)
-            Log.d("TimeAttack", "Started recording for Lap $lapNumber with ID $_lapId")
-        }
-    }
-
-    suspend fun endSession(database: ESPDatabase) {
-        Log.d("In end", "In end")
-        val sessionManager = SessionManager.getInstance(database)
-
-        withContext(Dispatchers.IO) {
-            Log.d("In end", sessionManager.getCurrentSessionId().toString())
-            sessionManager.endSession()
-        }
-    }
-
-
-    companion object {
-        private const val TAG = "TimeAttackViewModel"
-    }
-}
-
-
-// TimeAttackScreen.kt (complete composable)
-// Replace everything from TimeAttackScreenView downward
 
 @Composable
 fun TimeAttackScreenView(
-    database: ESPDatabase,
-    trackId: Long?,
-    vehicleId: Long?,
+    trackId: Long? = null,
+    vehicleId: Long? = null,
 ) {
     val context = LocalContext.current
-    val vm: TimeAttackViewModel = viewModel(factory = TimeAttackViewModelFactory(context))
+    val app = context.applicationContext as TrackProApp
+    val vm: TimeAttackViewModel = viewModel(
+        factory = TimeAttackViewModelFactory(context)
+    )
 
-    val currentTime by vm.currentTime.collectAsState()
-    val bestTime by vm.bestTime.collectAsState()
-    val lastTime by vm.lastTime.collectAsState()
-    val delta by vm.delta.collectAsState()
-    val eventCount by vm.eventCount.collectAsState()
-    val stintStart by vm.stintStart.collectAsState()
-    val fullTrack by vm.fullTrack.collectAsState()
-    val finishLine by vm.finishLine.collectAsState()
-    val startLine by vm.startLine.collectAsState()
-    val driver by vm.driverPosition.collectAsState()
-    val timingMode by vm.timingMode.collectAsState()
+    // Track if initialization is complete
+    var isInitialized by remember { mutableStateOf(false) }
+
+    // ── Collect all state ──────────────────────────────────
+    val isConnected by app.espTcpClient.connectionStatus.collectAsState()
+    val gpsData     by app.espTcpClient.gpsFlow.collectAsState()
+
+    val currentTime  by vm.currentTime.collectAsState()
+    val bestTime     by vm.bestTime.collectAsState()
+    val lastTime     by vm.lastTime.collectAsState()
+    val delta        by vm.delta.collectAsState()
+    val eventCount   by vm.eventCount.collectAsState()
+    val stintStart   by vm.stintStart.collectAsState()
+    val fullTrack    by vm.fullTrack.collectAsState()
+    val finishLine   by vm.finishLine.collectAsState()
+    val startLine    by vm.startLine.collectAsState()
+    val driver       by vm.driverPosition.collectAsState()
+    val timingMode   by vm.timingMode.collectAsState()
 
     val linesToShow by remember(timingMode, startLine, finishLine) {
         derivedStateOf {
@@ -376,49 +88,117 @@ fun TimeAttackScreenView(
         }
     }
 
-    LaunchedEffect(trackId) {
-        if (trackId != null && vehicleId != null) {
-            val track = withContext(Dispatchers.IO) {
-                database.trackMainDao().getTrack(trackId).firstOrNull()
-            }
-            val mode = when (track?.type?.lowercase()) {
-                "sprint" -> TimingMode.Sprint
-                else -> TimingMode.Circuit
-            }
-            vm.loadTrack(trackId, mode)
-            vm.createSession(trackId, vehicleId)
+    // In your TimeAttackScreenView, add this:
+    LaunchedEffect(driver) {
+        Log.d("TimeAttackScreen", "Driver StateFlow updated: $driver")
+    }
+
+    LaunchedEffect(fullTrack.size) {
+        Log.d("TimeAttackScreen", "Full track size: ${fullTrack.size}")
+        if (fullTrack.isNotEmpty()) {
+            Log.d("TimeAttackScreen", "First point: ${fullTrack.first().latitude}, ${fullTrack.first().longitude}")
         }
     }
 
+    LaunchedEffect(startLine.size) {
+        Log.d("TimeAttackScreen", "Start line size: ${startLine.size}")
+    }
+
+    LaunchedEffect(finishLine.size) {
+        Log.d("TimeAttackScreen", "Finish line size: ${finishLine.size}")
+    }
+
+    // ── Init track + session FIRST ─────────────────────────
+    LaunchedEffect(trackId) {
+        Log.d("TimeAttackScreen", "LaunchedEffect(trackId) triggered with trackId=$trackId, vehicleId=$vehicleId")
+        if (trackId == null || vehicleId == null) {
+            Log.w("TimeAttackScreen", "trackId or vehicleId is null, skipping initialization")
+            return@LaunchedEffect
+        }
+
+        try {
+            val track = withContext(Dispatchers.IO) {
+                app.database.trackMainDao().getTrack(trackId).firstOrNull()
+            }
+            Log.d("TimeAttackScreen", "Loaded track: ${track?.trackName}, type=${track?.type}")
+
+            val mode = when (track?.type?.lowercase()) {
+                "sprint" -> TimingMode.Sprint
+                else     -> TimingMode.Circuit
+            }
+            Log.d("TimeAttackScreen", "Setting timing mode: $mode")
+
+            vm.loadTrack(trackId, mode)
+            vm.createSession(trackId, vehicleId)
+
+            // Wait a bit to ensure session is written to DB
+            delay(100)
+
+            isInitialized = true
+            Log.d("TimeAttackScreen", "Initialization complete")
+        } catch (e: Exception) {
+            Log.e("TimeAttackScreen", "Initialization error: ${e.message}", e)
+        }
+    }
+
+    // ── Wire GPS from shared client into ViewModel (ONLY AFTER INIT) ─────────
+    LaunchedEffect(gpsData, isInitialized) {
+        if (!isInitialized) {
+            Log.d("TimeAttackScreen", "Skipping GPS update - not initialized yet")
+            return@LaunchedEffect
+        }
+
+        Log.d("TimeAttackScreen", "GPS data received: $gpsData")
+        gpsData?.let {
+            Log.d("TimeAttackScreen", "Passing GPS to ViewModel: lat=${it.latitude}, lon=${it.longitude}, speed=${it.speed}")
+            vm.handleGpsUpdate(it)
+        } ?: Log.w("TimeAttackScreen", "GPS data is null")
+    }
+
+    val gpsPoints = fullTrack + linesToShow
+    val driverPos = driver ?: LatLonOffset(0.0, 0.0)
+
     when (LocalConfiguration.current.orientation) {
-        Configuration.ORIENTATION_LANDSCAPE -> LandscapeLayout(
-            timingMode = timingMode,
+        Configuration.ORIENTATION_LANDSCAPE -> TimeAttackLandscapeLayout(
+            timingMode  = timingMode,
             currentTime = currentTime,
-            bestTime = bestTime,
-            lastTime = lastTime,
-            delta = delta,
-            eventCount = eventCount,
-            stintStart = stintStart,
-            gpsPoints = fullTrack + linesToShow,
-            driver = driver ?: LatLonOffset(0.0, 0.0)
+            bestTime    = bestTime,
+            lastTime    = lastTime,
+            delta       = delta,
+            eventCount  = eventCount,
+            stintStart  = stintStart,
+            gpsPoints   = gpsPoints,
+            driver      = driverPos,
+            isConnected = isConnected
         )
-        else -> PortraitLayout(
-            timingMode = timingMode,
+        else -> TimeAttackPortraitLayout(
+            timingMode  = timingMode,
             currentTime = currentTime,
-            bestTime = bestTime,
-            lastTime = lastTime,
-            delta = delta,
-            eventCount = eventCount,
-            stintStart = stintStart,
-            gpsPoints = fullTrack + linesToShow,
-            driver = driver ?: LatLonOffset(0.0, 0.0)
+            bestTime    = bestTime,
+            lastTime    = lastTime,
+            delta       = delta,
+            eventCount  = eventCount,
+            stintStart  = stintStart,
+            gpsPoints   = gpsPoints,
+            driver      = driverPos,
+            isConnected = isConnected
         )
     }
-}
 
+    DisposableEffect(Unit) {
+        Log.d("TimeAttackScreen", "DisposableEffect - Connecting to ESP")
+        app.espTcpClient.connect()
+
+        onDispose {
+            Log.d("TimeAttackScreen", "DisposableEffect - Disconnecting from ESP")
+            app.espTcpClient.disconnect()
+        }
+    }
+}
+// ── Portrait ───────────────────────────────────────────────
 
 @Composable
-private fun PortraitLayout(
+fun TimeAttackPortraitLayout(
     timingMode: TimingMode,
     currentTime: String,
     bestTime: String,
@@ -427,11 +207,13 @@ private fun PortraitLayout(
     eventCount: Int,
     stintStart: Long,
     gpsPoints: List<TrackCoordinatesData>,
-    driver: LatLonOffset
+    driver: LatLonOffset,
+    isConnected: Boolean
 ) {
     val deltaColor = if (delta <= 0) TrackProColors.DeltaGood else TrackProColors.DeltaBad
-    val eventName = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
-    val modeColor = if (timingMode is TimingMode.Circuit) TrackProColors.AccentRed else TrackProColors.AccentAmber
+    val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
+    val modeColor  = if (timingMode is TimingMode.Circuit) TrackProColors.AccentRed else TrackProColors.AccentAmber
+    val modeLabel  = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
 
     Box(
         modifier = Modifier
@@ -440,21 +222,33 @@ private fun PortraitLayout(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // ── Top mode bar ──────────────────────────────
+            // ── Top bar ───────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(modeColor)
                     .padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
-                val modeLabel = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
-                Text(
-                    text = "● $modeLabel MODE",
-                    color = Color.Black,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 3.sp
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "● $modeLabel MODE",
+                        color = Color.Black,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 3.sp
+                    )
+                    Text(
+                        text = if (isConnected) "LIVE" else "NO SIGNAL",
+                        color = if (isConnected) Color.Black else Color.Black.copy(alpha = 0.5f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp
+                    )
+                }
             }
 
             // ── Main timer ────────────────────────────────
@@ -480,30 +274,29 @@ private fun PortraitLayout(
                         letterSpacing = (-1).sp,
                         lineHeight = 68.sp
                     )
-                    // Delta pill
-                    val deltaText = String.format("%+.3f", delta) + "s"
                     Box(
                         modifier = Modifier
-                            .background(
-                                deltaColor.copy(alpha = 0.15f),
-                                RoundedCornerShape(4.dp)
-                            )
+                            .background(deltaColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "Δ $deltaText",
+                            text = "Δ ${String.format("%+.3f", delta)}s",
                             color = deltaColor,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
-                // Lap counter — top right
                 Column(
                     modifier = Modifier.align(Alignment.TopEnd),
                     horizontalAlignment = Alignment.End
                 ) {
-                    Text(text = eventName, color = TrackProColors.TextMuted, fontSize = 10.sp, letterSpacing = 2.sp)
+                    Text(
+                        text = eventName,
+                        color = TrackProColors.TextMuted,
+                        fontSize = 10.sp,
+                        letterSpacing = 2.sp
+                    )
                     Text(
                         text = "$eventCount",
                         color = TrackProColors.TextPrimary,
@@ -513,9 +306,9 @@ private fun PortraitLayout(
                 }
             }
 
-            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
-            // ── Best / Last row ───────────────────────────
+            // ── Best / Last / Stint ───────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -523,14 +316,14 @@ private fun PortraitLayout(
                     .padding(horizontal = 24.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                TimeCell(label = "BEST", value = bestTime, valueColor = TrackProColors.DeltaGood)
-                VerticalDivider()
-                TimeCell(label = "LAST", value = lastTime, valueColor = TrackProColors.TextPrimary)
-                VerticalDivider()
-                StintCell(stintStart = stintStart)
+                LapTimeCell(label = "BEST", value = bestTime, valueColor = TrackProColors.DeltaGood)
+                SectorDivider()
+                LapTimeCell(label = "LAST", value = lastTime, valueColor = TrackProColors.TextPrimary)
+                SectorDivider()
+                StintTimerCell(stintStart = stintStart)
             }
 
-            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Map ───────────────────────────────────────
             Box(
@@ -547,14 +340,17 @@ private fun PortraitLayout(
                     )
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("AWAITING GPS SIGNAL", color = TrackProColors.TextMuted, fontSize = 12.sp, letterSpacing = 2.sp)
+                        Text(
+                            "AWAITING GPS SIGNAL",
+                            color = TrackProColors.TextMuted,
+                            fontSize = 12.sp,
+                            letterSpacing = 2.sp
+                        )
                     }
                 }
-
-                // Mode watermark overlay
                 Text(
                     text = if (timingMode is TimingMode.Circuit) "◎" else "▶",
-                    color = modeColor.copy(alpha = 0.08f),
+                    color = modeColor.copy(alpha = 0.06f),
                     fontSize = 180.sp,
                     modifier = Modifier.align(Alignment.Center)
                 )
@@ -563,8 +359,10 @@ private fun PortraitLayout(
     }
 }
 
+// ── Landscape ──────────────────────────────────────────────
+
 @Composable
-private fun LandscapeLayout(
+fun TimeAttackLandscapeLayout(
     timingMode: TimingMode,
     currentTime: String,
     bestTime: String,
@@ -573,21 +371,23 @@ private fun LandscapeLayout(
     eventCount: Int,
     stintStart: Long,
     gpsPoints: List<TrackCoordinatesData>,
-    driver: LatLonOffset
+    driver: LatLonOffset,
+    isConnected: Boolean
 ) {
     val deltaColor = if (delta <= 0) TrackProColors.DeltaGood else TrackProColors.DeltaBad
-    val eventName = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
-    val modeColor = if (timingMode is TimingMode.Circuit) TrackProColors.AccentRed else TrackProColors.AccentAmber
+    val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
+    val modeColor  = if (timingMode is TimingMode.Circuit) TrackProColors.AccentRed else TrackProColors.AccentAmber
+    val modeLabel  = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
 
     Row(
         modifier = Modifier
             .fillMaxSize()
             .background(TrackProColors.BgDeep)
     ) {
-        // Left panel — telemetry
+        // ── Left: telemetry panel ──────────────────────────
         Column(
             modifier = Modifier
-                .weight(0.45f)
+                .weight(0.42f)
                 .fillMaxSize()
                 .background(TrackProColors.BgCard)
         ) {
@@ -597,17 +397,37 @@ private fun LandscapeLayout(
                     .background(modeColor)
                     .padding(horizontal = 16.dp, vertical = 5.dp)
             ) {
-                val modeLabel = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
-                Text("● $modeLabel", color = Color.Black, fontSize = 10.sp,
-                    fontWeight = FontWeight.Black, letterSpacing = 3.sp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "● $modeLabel",
+                        color = Color.Black,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 3.sp
+                    )
+                    Text(
+                        if (isConnected) "LIVE" else "NO SIGNAL",
+                        color = Color.Black.copy(alpha = if (isConnected) 1f else 0.5f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
 
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = "CURRENT $eventName", color = TrackProColors.TextMuted, fontSize = 9.sp, letterSpacing = 2.sp)
+                Text(
+                    text = "CURRENT $eventName",
+                    color = TrackProColors.TextMuted,
+                    fontSize = 9.sp,
+                    letterSpacing = 2.sp
+                )
                 Text(
                     text = currentTime,
                     color = deltaColor,
-                    fontSize = 52.sp,
+                    fontSize = 48.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = (-1).sp
                 )
@@ -619,22 +439,22 @@ private fun LandscapeLayout(
                     Text(
                         text = "Δ ${String.format("%+.3f", delta)}s",
                         color = deltaColor,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Divider(color = TrackProColors.SectorLine)
+                HorizontalDivider(color = TrackProColors.SectorLine)
                 Spacer(Modifier.height(16.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                    TimeCell(label = "BEST", value = bestTime, valueColor = TrackProColors.DeltaGood)
-                    TimeCell(label = "LAST", value = lastTime, valueColor = TrackProColors.TextPrimary)
+                Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    LapTimeCell(label = "BEST", value = bestTime, valueColor = TrackProColors.DeltaGood)
+                    LapTimeCell(label = "LAST", value = lastTime, valueColor = TrackProColors.TextPrimary)
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Divider(color = TrackProColors.SectorLine)
+                HorizontalDivider(color = TrackProColors.SectorLine)
                 Spacer(Modifier.height(16.dp))
 
                 Row(
@@ -642,13 +462,18 @@ private fun LandscapeLayout(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    StintCell(stintStart = stintStart)
+                    StintTimerCell(stintStart = stintStart)
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(eventName, color = TrackProColors.TextMuted, fontSize = 9.sp, letterSpacing = 2.sp)
+                        Text(
+                            eventName,
+                            color = TrackProColors.TextMuted,
+                            fontSize = 9.sp,
+                            letterSpacing = 2.sp
+                        )
                         Text(
                             "$eventCount",
                             color = modeColor,
-                            fontSize = 42.sp,
+                            fontSize = 38.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
@@ -656,10 +481,10 @@ private fun LandscapeLayout(
             }
         }
 
-        // Right panel — map
+        // ── Right: map ─────────────────────────────────────
         Box(
             modifier = Modifier
-                .weight(0.55f)
+                .weight(0.58f)
                 .fillMaxSize()
                 .background(TrackProColors.BgDeep)
         ) {
@@ -671,42 +496,71 @@ private fun LandscapeLayout(
                 )
             } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("AWAITING GPS", color = TrackProColors.TextMuted, fontSize = 11.sp, letterSpacing = 2.sp)
+                    Text(
+                        "AWAITING GPS",
+                        color = TrackProColors.TextMuted,
+                        fontSize = 11.sp,
+                        letterSpacing = 2.sp
+                    )
                 }
             }
         }
     }
 }
 
-// ── Reusable sub-components ────────────────────────────────
+// ── Shared sub-components ──────────────────────────────────
 
 @Composable
-private fun TimeCell(label: String, value: String, valueColor: Color) {
+private fun LapTimeCell(label: String, value: String, valueColor: Color) {
     Column {
-        Text(text = label, color = TrackProColors.TextMuted, fontSize = 9.sp,
-            letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-        Text(text = value, color = valueColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = label,
+            color = TrackProColors.TextMuted,
+            fontSize = 9.sp,
+            letterSpacing = 2.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = value,
+            color = valueColor,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
 @Composable
-private fun StintCell(stintStart: Long) {
+private fun StintTimerCell(stintStart: Long) {
     var stintTime by remember { mutableStateOf("00:00:00") }
     LaunchedEffect(stintStart) {
         while (true) {
-            delay(100)
-            stintTime = formatDuration(SystemClock.elapsedRealtime() - stintStart)
+            delay(500)
+            val elapsed = SystemClock.elapsedRealtime() - stintStart
+            val h = elapsed / 3_600_000
+            val m = (elapsed % 3_600_000) / 60_000
+            val s = (elapsed % 60_000) / 1_000
+            stintTime = String.format("%02d:%02d:%02d", h, m, s)
         }
     }
     Column {
-        Text(text = "STINT", color = TrackProColors.TextMuted, fontSize = 9.sp,
-            letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-        Text(text = stintTime, color = TrackProColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = "STINT",
+            color = TrackProColors.TextMuted,
+            fontSize = 9.sp,
+            letterSpacing = 2.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = stintTime,
+            color = TrackProColors.TextPrimary,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
 @Composable
-private fun VerticalDivider() {
+private fun SectorDivider() {
     Box(
         modifier = Modifier
             .width(1.dp)
@@ -714,6 +568,7 @@ private fun VerticalDivider() {
             .background(TrackProColors.SectorLine)
     )
 }
+// ── Reusable sub-components ────────────────────────────────
 
 @Composable
 fun MapLibreTrackView(
@@ -726,10 +581,18 @@ fun MapLibreTrackView(
 
     // 1. Only update the Driver Source (No Camera Movement)
     LaunchedEffect(driverPosition) {
-        val src = driverSource.value ?: return@LaunchedEffect
-        if (driverPosition.lat == 0.0 && driverPosition.lon == 0.0) return@LaunchedEffect
+        Log.d("MapLibreTrackView", "Driver position changed: ${driverPosition.lat}, ${driverPosition.lon}")
+        val src = driverSource.value ?: run {
+            Log.w("MapLibreTrackView", "Driver source is null!")
+            return@LaunchedEffect
+        }
+        if (driverPosition.lat == 0.0 && driverPosition.lon == 0.0) {
+            Log.w("MapLibreTrackView", "Driver position is 0,0, skipping")
+            return@LaunchedEffect
+        }
 
         val geojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${driverPosition.lon},${driverPosition.lat}]},"properties":{}}"""
+        Log.d("MapLibreTrackView", "Updating driver GeoJSON: $geojson")
         src.setGeoJson(geojson)
     }
 

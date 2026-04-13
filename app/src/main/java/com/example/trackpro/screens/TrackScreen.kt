@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Divider
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.managerClasses.ESPDatabase
@@ -39,10 +40,12 @@ import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+
 @Composable
-fun TrackScreen(onBack: () -> Unit, trackId: Long) {
+fun TrackScreen(trackId: Long) {
     val context = LocalContext.current
-    val database = remember { ESPDatabase.getInstance(context) }
+    val app = context.applicationContext as TrackProApp
+    val database = app.database
     TrackView(database, trackId)
 }
 
@@ -116,7 +119,7 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
                     fontSize = 12.sp,
                     letterSpacing = 1.sp
                 )
-                Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -142,7 +145,7 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
                 }
             }
 
-            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
             // ── Map ───────────────────────────────────────────
             Box(

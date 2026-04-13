@@ -29,6 +29,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.room.Room
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.calculationClasses.DragTimeCalculation
 import com.example.trackpro.calculationClasses.PostProcessing
 import com.example.trackpro.dataClasses.TrackCoordinatesData
@@ -62,85 +64,7 @@ import org.maplibre.android.annotations.PolylineOptions
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
-// Use Android's native Color for the polyline
-import android.graphics.Color as AndroidGraphicsColor
-class TrackBuilderScreen : ComponentActivity()
-{
-    private lateinit var database: ESPDatabase
-
-    override fun onCreate(savedInstanceState: Bundle?)
-    {
-        super.onCreate(savedInstanceState)
-        database = ESPDatabase.getInstance(applicationContext)
-
-        setContent{
-            TrackBuilderScreen(
-                database, onBack = {finish()}
-            )
-        }
-
-    }
-}
-
-/*
-val gpsPoints = listOf(
-    LatLonOffset(47.305300, 17.048138),
-    LatLonOffset(47.302270, 17.049691),
-    LatLonOffset(47.301004, 17.048439),
-    LatLonOffset(47.300890, 17.048053),
-    LatLonOffset(47.301029, 17.047764),
-    LatLonOffset(47.302883, 17.046380),
-    LatLonOffset(47.302997, 17.046187),
-    LatLonOffset(47.303095, 17.045789),
-    LatLonOffset(47.303422, 17.043212),
-    LatLonOffset(47.303258, 17.042779),
-    LatLonOffset(47.302997, 17.042706),
-    LatLonOffset(47.300882, 17.045801),
-    LatLonOffset(47.300572, 17.045994),
-    LatLonOffset(47.300237, 17.045910),
-    LatLonOffset(47.299959, 17.045356),
-    LatLonOffset(47.299992, 17.044838),
-    LatLonOffset(47.301160, 17.040972),
-    LatLonOffset(47.301486, 17.040623),
-    LatLonOffset(47.301846, 17.040563),
-    LatLonOffset(47.302744, 17.041346),
-    LatLonOffset(47.302981, 17.041382),
-    LatLonOffset(47.303307, 17.041213),
-    LatLonOffset(47.303724, 17.040515),
-    LatLonOffset(47.303887, 17.039732),
-    LatLonOffset(47.303691, 17.037420),
-    LatLonOffset(47.303691, 17.037046),
-    LatLonOffset(47.304508, 17.035324),
-    LatLonOffset(47.304696, 17.035192),
-    LatLonOffset(47.304851, 17.035276),
-    LatLonOffset(47.305349, 17.036324),
-    LatLonOffset(47.305373, 17.036757),
-    LatLonOffset(47.305210, 17.037335),
-    LatLonOffset(47.304843, 17.037733),
-    LatLonOffset(47.304638, 17.038239),
-    LatLonOffset(47.304565, 17.038624),
-    LatLonOffset(47.304508, 17.043248),
-    LatLonOffset(47.304451, 17.043513),
-    LatLonOffset(47.304075, 17.044344),
-    LatLonOffset(47.304026, 17.044549),
-    LatLonOffset(47.304059, 17.044838),
-    LatLonOffset(47.304181, 17.045151),
-    LatLonOffset(47.304393, 17.045187),
-    LatLonOffset(47.304557, 17.045139),
-    LatLonOffset(47.305594, 17.044380),
-    LatLonOffset(47.306631, 17.042670),
-    LatLonOffset(47.306778, 17.042550),
-    LatLonOffset(47.306958, 17.042550),
-    LatLonOffset(47.307137, 17.042622),
-    LatLonOffset(47.308574, 17.044501),
-    LatLonOffset(47.308648, 17.044730),
-    LatLonOffset(47.308721, 17.045585),
-    LatLonOffset(47.308615, 17.046054),
-    LatLonOffset(47.308436, 17.046392),
-    LatLonOffset(47.306092, 17.047740),
-    LatLonOffset(47.304973, 17.048282),
-    LatLonOffset(47.305300, 17.048138)
-)*/
+import androidx.core.graphics.toColorInt
 
 @Composable
 fun TrackBuilderScreen(
@@ -162,7 +86,7 @@ fun TrackBuilderScreen(
 
     // UI State
     var showInfoDialog by remember { mutableStateOf(false) }
-    var builderType by remember { mutableStateOf(0) } // 0: Live GPS, 1: Manual Map
+    var builderType by remember { mutableIntStateOf(0) } // 0: Live GPS, 1: Manual Map
 
     Box(modifier = Modifier.fillMaxSize().background(TrackProColors.BgDeep)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -253,12 +177,11 @@ fun TrackBuilderScreen(
 
     if (showInfoDialog) {
         TrackInfoAlert(
-            onDismiss = { showInfoDialog = false },
+            onDismiss = { },
             onConfirm = { name, country, mode ->
                 trackName = name
                 countryName = country
                 trackMode = mode
-                showInfoDialog = false
             }
         )
     }
@@ -281,7 +204,7 @@ fun MapLibreBuilderView(
                 map.addPolyline(
                     PolylineOptions() // Corrected reference
                         .addAll(latLngs)
-                        .color(AndroidGraphicsColor.parseColor("#E8001C"))
+                        .color("#E8001C".toColorInt())
                         .width(3f)
                 )
             }
@@ -317,7 +240,7 @@ fun MapLibreBuilderView(
 
                     map.addOnMapClickListener { latLng ->
                         onMapTap(latLng)
-                        true;
+                        true
                     }
                 }
             }
@@ -376,7 +299,7 @@ suspend fun startTrackBuilder(database: ESPDatabase, trackName: String, countryn
 
 suspend fun endTrackBuilder(context: Context, trackId: Long) {
     Log.d("endTrackBuilder", "Inside")
-    val database = ESPDatabase.Companion.getInstance(context)
+    val database = ESPDatabase.getInstance(context)
     val postProcess = PostProcessing(database)
 
     // Explicitly wait and ensure the processed track data is retrieved

@@ -11,12 +11,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// ViewModel to handle session data retrieval
 class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
     private val _sessions = MutableStateFlow<List<SessionData>>(emptyList())
-    private val _sessionsWithVehicles = MutableStateFlow<List<DragSessionWithVehicle>>(emptyList())
-
     val sessions = _sessions.asStateFlow()
+
+    private val _sessionsWithVehicles = MutableStateFlow<List<DragSessionWithVehicle>>(emptyList())
     val sessionsWithVehicle = _sessionsWithVehicles.asStateFlow()
 
     init {
@@ -25,15 +24,10 @@ class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
 
     private fun fetchSessions() {
         viewModelScope.launch {
-            database.sessionDataDao().getAllSessions().collect { sessionList ->
-                _sessions.value = sessionList
-            }
+            database.sessionDataDao().getAllSessions().collect { _sessions.value = it }
         }
-
         viewModelScope.launch {
-            database.sessionDataDao().getAllSessionsWithVehicles().collect { sessionsWithVehicle ->
-                _sessionsWithVehicles.value = sessionsWithVehicle
-            }
+            database.sessionDataDao().getAllSessionsWithVehicles().collect { _sessionsWithVehicles.value = it }
         }
     }
 }

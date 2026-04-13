@@ -8,60 +8,99 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.CarRepair
+import androidx.compose.material.icons.filled.FlagCircle
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Timelapse
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.ESPTcpClient
+import com.example.trackpro.managerClasses.JsonReader
+import com.example.trackpro.managerClasses.SessionManager
+import com.example.trackpro.screens.CarCreationScreen
+import com.example.trackpro.screens.DragRaceScreen
+import com.example.trackpro.screens.ESPConnectionTestScreen
+import com.example.trackpro.screens.TimeAttackScreenView
+import com.example.trackpro.screens.TrackBuilderScreen
+import com.example.trackpro.screens.TrackScreen
+import com.example.trackpro.screens.TrackVehicleSelectorScreen
 import com.example.trackpro.screens.listViewScreens.CarListScreen
 import com.example.trackpro.screens.listViewScreens.DragTimesListView
 import com.example.trackpro.screens.listViewScreens.TimeAttackListViewScreen
 import com.example.trackpro.screens.listViewScreens.TrackListScreen
+import com.example.trackpro.screens.listViewScreens.listItems.CarViewScreen
+import com.example.trackpro.screens.listViewScreens.listItems.GraphScreen
+import com.example.trackpro.screens.listViewScreens.listItems.TimeAttackListItemScreen
+import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.viewModels.SessionViewModel
 import com.example.trackpro.viewModels.SessionViewModelFactory
 import com.example.trackpro.viewModels.TrackViewModel
 import com.example.trackpro.viewModels.TrackViewModelFactory
 import com.example.trackpro.viewModels.VehicleFULLViewModel
 import com.example.trackpro.viewModels.VehicleFULLViewModelFactory
-import com.example.trackpro.screens.CarCreationScreen
-import com.example.trackpro.screens.listViewScreens.listItems.CarViewScreen
-import com.example.trackpro.screens.DragRaceScreen
-import com.example.trackpro.screens.ESPConnectionTestScreen
-import com.example.trackpro.screens.listViewScreens.listItems.GraphScreen
-import com.example.trackpro.screens.listViewScreens.listItems.TimeAttackListItemScreen
-import com.example.trackpro.screens.TimeAttackScreenView
-import com.example.trackpro.screens.TrackBuilderScreen
-import com.example.trackpro.screens.TrackScreen
-import com.example.trackpro.screens.TrackVehicleSelectorScreenWrapper
-import com.example.trackpro.theme.TrackProColors
-import com.example.trackpro.theme.TrackProColors.TextMuted
-import com.example.trackpro.theme.TrackProColors.TextPrimary
+import com.example.trackpro.viewModels.VehicleViewModel
+import com.example.trackpro.viewModels.VehicleViewModelFactory
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 
 class TrackProApp : Application() {
-    val database: ESPDatabase by lazy { ESPDatabase.getInstance(this) }
+
+    // 1. Database Singleton
+    val database: ESPDatabase by lazy {
+        ESPDatabase.getInstance(this)
+    }
+
+    // 2. Session Manager (Depends on Database)
+    val sessionManager: SessionManager by lazy {
+        SessionManager.getInstance(database)
+    }
+
+    val espTcpClient: ESPTcpClient by lazy {
+        val config = JsonReader.loadConfig(this)
+        ESPTcpClient(serverAddress = config.first, port = config.second )
+    }
+
     override fun onCreate() {
         super.onCreate()
         MapLibre.getInstance(this)
@@ -71,16 +110,25 @@ class TrackProApp : Application() {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            val app = applicationContext as TrackProApp
-            val database = app.database
-            val sessionViewModel: SessionViewModel =
-                viewModel(factory = SessionViewModelFactory(applicationContext))
-            val trackViewModel: TrackViewModel =
-                viewModel(factory = TrackViewModelFactory(applicationContext))
-            val vehicleFULLViewModel: VehicleFULLViewModel =
-                viewModel(factory = VehicleFULLViewModelFactory(applicationContext))
 
+        val database = (application as TrackProApp).database
+        val sessionManager = (application as TrackProApp).sessionManager
+        val espTcpCLient = (application as TrackProApp).espTcpClient
+
+        val context = applicationContext
+
+
+        //FIX SO ALL 4 USE THE SAME
+        //DB params
+        val vehicleViewModel = VehicleViewModelFactory(database).create(VehicleViewModel::class.java)
+        val trackViewModel = TrackViewModelFactory(database).create(TrackViewModel::class.java)
+
+        //Conetext params:
+        val vehicleFULLViewModel = VehicleFULLViewModelFactory(context).create(VehicleFULLViewModel::class.java)
+        val sessionViewModel = SessionViewModelFactory(context).create(SessionViewModel::class.java)
+
+
+        setContent {
             TrackProTheme {
                 val navController = rememberNavController()
                 NavHost(navController = navController, startDestination = "main") {
@@ -98,15 +146,17 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("drag") {
-                        DragRaceScreen(database = database, onBack = { navController.popBackStack() })
+                        DragRaceScreen(database, sessionManager)
                     }
-                    composable("esptest") { ESPConnectionTestScreen() }
+                    composable("esptest") {
+                        ESPConnectionTestScreen(tcpClient = espTcpCLient)
+                    }
                     composable(
                         "track/{trackId}",
                         arguments = listOf(navArgument("trackId") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val trackId = backStackEntry.arguments?.getLong("trackId") ?: 0L
-                        TrackScreen(onBack = { navController.popBackStack() }, trackId = trackId)
+                        TrackScreen(trackId = trackId)
                     }
                     composable("dragsessions") {
                         DragTimesListView(viewModel = sessionViewModel, navController = navController)
@@ -146,15 +196,15 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(route = "createvehicle") {
-                        CarCreationScreen(database) { }
+                        CarCreationScreen(database)
                     }
                     composable(route = "timeattack/{vehicleId}/{trackId}") { backStackEntry ->
                         val vehicleId = backStackEntry.arguments?.getString("vehicleId")?.toLongOrNull() ?: -1L
                         val trackId = backStackEntry.arguments?.getString("trackId")?.toLongOrNull() ?: -1L
-                        TimeAttackScreenView(vehicleId = vehicleId, trackId = trackId, database = database)
+                        TimeAttackScreenView(vehicleId = vehicleId, trackId = trackId)
                     }
                     composable(route = "trackandvehicle") {
-                        TrackVehicleSelectorScreenWrapper(navController = navController)
+                        TrackVehicleSelectorScreen(trackViewModel = trackViewModel, vehicleViewModel, navController)
                     }
                     composable(route = "timeattacklist") {
                         TimeAttackListViewScreen(
@@ -170,7 +220,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 
 @Composable
 fun MainScreen(
@@ -314,7 +363,7 @@ fun MainScreen(
                     }
                 }
 
-                Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
                 // ── Hero section ──────────────────────────────
                 Box(
@@ -350,7 +399,7 @@ fun MainScreen(
                     }
                 }
 
-                Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
 
                 // ── Action grid ───────────────────────────────
                 Column(
@@ -519,7 +568,7 @@ private fun ActionCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    color = TextPrimary.copy(alpha = alpha),
+                    color = TrackProColors.TextPrimary.copy(alpha = alpha),
                     fontSize = titleSize,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 0.5.sp,  // reduced from 1.sp
@@ -528,7 +577,7 @@ private fun ActionCard(
                 )
                 Text(
                     text = subtitle,
-                    color = TextMuted.copy(alpha = alpha),
+                    color = TrackProColors.TextMuted.copy(alpha = alpha),
                     fontSize = subtitleSize,
                     letterSpacing = 0.sp,
                     maxLines = 2,

@@ -12,7 +12,7 @@ class SessionManager private constructor(
 
     private var currentSessionId: Long? = null
 
-    suspend fun startSession(eventType: String, vehicleId: Long, trackId: Long? = null) {
+    suspend fun startSession(eventType: String, vehicleId: Long, trackId: Long? = null) : Long {
         val session = SessionData(
             eventType = eventType,
             startTime = System.currentTimeMillis(),
@@ -22,6 +22,8 @@ class SessionManager private constructor(
             )
         currentSessionId = sessionDataDao.insertSession(session) // Insert session
         Log.e("SessionManager", "Inserted session with ID: $currentSessionId")
+
+        return currentSessionId ?: throw Exception("Failed to insert session")
     }
 
     // End the current session
