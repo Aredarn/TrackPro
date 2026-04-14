@@ -67,8 +67,8 @@ fun TimeAttackScreenView(
     var isInitialized by remember { mutableStateOf(false) }
 
     // ── Collect all state ──────────────────────────────────
-    val isConnected by app.espTcpClient.connectionStatus.collectAsState()
-    val gpsData     by app.espTcpClient.gpsFlow.collectAsState()
+    val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
+    val gpsData by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
 
     val currentTime  by vm.currentTime.collectAsState()
     val bestTime     by vm.bestTime.collectAsState()

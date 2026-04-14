@@ -57,7 +57,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.JsonReader
@@ -87,10 +86,7 @@ import com.example.trackpro.viewModels.VehicleFULLViewModel
 import com.example.trackpro.viewModels.VehicleFULLViewModelFactory
 import com.example.trackpro.viewModels.VehicleViewModel
 import com.example.trackpro.viewModels.VehicleViewModelFactory
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 
@@ -116,17 +112,6 @@ class TrackProApp : Application() {
             phoneProvider = phoneGpsProvider,
             useExternalGps = useExternalGps
         )
-    }
-
-    // ── Single source of truth ─────────────────────────────
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val activeGpsFlow: Flow<RawGPSData?> = useExternalGps.flatMapLatest { external ->
-        if (external) espTcpClient.gpsFlow else phoneGpsProvider.gpsFlow
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val connectionStatus: Flow<Boolean> = useExternalGps.flatMapLatest { external ->
-        if (external) espTcpClient.connectionStatus else phoneGpsProvider.connectionStatus
     }
 
     override fun onCreate() {
@@ -165,12 +150,7 @@ class MainActivity : ComponentActivity() {
 
         val database = (application as TrackProApp).database
         val sessionManager = (application as TrackProApp).sessionManager
-        val espTcpCLient = (application as TrackProApp).espTcpClient
-        val app = application as TrackProApp
         val context = applicationContext
-
-
-
 
         //FIX SO ALL 4 USE THE SAME
         //DB params

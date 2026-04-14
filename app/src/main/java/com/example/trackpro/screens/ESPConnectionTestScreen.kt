@@ -19,11 +19,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -41,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.example.trackpro.TrackProApp
-import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.JsonReader
 import com.example.trackpro.theme.TrackProColors
 import kotlin.math.cos
@@ -65,11 +62,7 @@ fun ESPConnectionTestScreen() {
     // 3. Derived UI values
     val speed = gpsData?.speed ?: 0f
     val fix = (gpsData?.fixQuality ?: 0) > 0
-    val speedColor = when {
-        speed < 50 -> TrackProColors.AccentGreen
-        speed < 120 -> TrackProColors.AccentAmber
-        else -> TrackProColors.AccentRed
-    }
+
 
     Box(
         modifier = Modifier

@@ -1,6 +1,5 @@
 package com.example.trackpro.managerClasses.gpsDataManagers
 
-import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

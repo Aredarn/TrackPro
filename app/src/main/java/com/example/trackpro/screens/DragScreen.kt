@@ -1,35 +1,58 @@
 package com.example.trackpro.screens
 
-import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.*
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.extrasForUI.DropdownMenuFieldMulti
 import com.example.trackpro.extrasForUI.LatLonOffset
-import com.example.trackpro.managerClasses.*
+import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.SessionManager
 import com.example.trackpro.theme.TrackProColors
-import com.example.trackpro.viewModels.*
+import com.example.trackpro.viewModels.VehicleViewModel
+import com.example.trackpro.viewModels.VehicleViewModelFactory
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.*
-import kotlinx.coroutines.*
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 @Composable
 fun DragRaceScreen(database: ESPDatabase, sessionManager: SessionManager) {
@@ -41,8 +64,9 @@ fun DragRaceScreen(database: ESPDatabase, sessionManager: SessionManager) {
     var isSessionActive by rememberSaveable { mutableStateOf(false) }
     var sessionID by rememberSaveable { mutableLongStateOf(-1) }
 
-    val isConnected by tcpClient.connectionStatus.collectAsState()
-    val gpsData by tcpClient.gpsFlow.collectAsState(initial = null)
+    val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
+    val gpsData by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
+
 
     var lastTimestamp by remember { mutableStateOf<Long?>(null) }
     var isReady by remember { mutableStateOf(false) }
