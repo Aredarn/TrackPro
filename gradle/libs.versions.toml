@@ -9,6 +9,7 @@ uiTestAndroid = "1.5.1"
 graphicsCore = "1.0.3"
 workRuntimeKtx = "2.10.2"
 runtimeLivedata = "1.8.3"
+playServicesLocation = "21.3.0"
 
 
 [libraries]
@@ -19,6 +20,7 @@ androidx-ui-test-android = { group = "androidx.compose.ui", name = "ui-test-andr
 androidx-graphics-core = { group = "androidx.graphics", name = "graphics-core", version.ref = "graphicsCore" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
 androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtimeLivedata" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

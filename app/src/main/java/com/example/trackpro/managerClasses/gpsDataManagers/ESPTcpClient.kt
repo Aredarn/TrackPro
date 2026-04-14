@@ -1,7 +1,8 @@
-package com.example.trackpro.managerClasses
+package com.example.trackpro.managerClasses.gpsDataManagers
 
 import android.util.Log
 import com.example.trackpro.dataClasses.RawGPSData
+import com.example.trackpro.models.GpsProvider
 import convertToUnixTimestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,12 +23,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ESPTcpClient(
     private val serverAddress: String,
     private val port: Int
-) {
+) : GpsProvider {
     // --- Observables (Singletons use these instead of callbacks) ---
     private val _connectionStatus = MutableStateFlow(false)
-    val connectionStatus: StateFlow<Boolean> = _connectionStatus.asStateFlow()
+    override val connectionStatus: StateFlow<Boolean> = _connectionStatus.asStateFlow()
     private val _gpsFlow = MutableStateFlow<RawGPSData?>(null)
-    val gpsFlow: StateFlow<RawGPSData?> = _gpsFlow.asStateFlow()
+    override val gpsFlow: StateFlow<RawGPSData?> = _gpsFlow.asStateFlow()
+
+    override fun start() = connect()
+
+    override fun stop() = disconnect()
 
 
     // --- Internal State ---
