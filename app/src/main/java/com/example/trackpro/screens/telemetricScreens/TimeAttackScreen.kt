@@ -1,4 +1,4 @@
-package com.example.trackpro.screens
+package com.example.trackpro.screens.telemetricScreens
 
 import android.content.Context
 import android.content.res.Configuration
@@ -45,12 +45,23 @@ import com.example.trackpro.extrasForUI.LatLonOffset
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.viewModels.TimeAttackViewModel
+import com.google.gson.JsonArray
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
+import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.sources.GeoJsonSource
 
 @Composable
 fun TimeAttackScreenView(
@@ -67,8 +78,8 @@ fun TimeAttackScreenView(
     var isInitialized by remember { mutableStateOf(false) }
 
     // ── Collect all state ──────────────────────────────────
-    val isConnected by app.espTcpClient.connectionStatus.collectAsState()
-    val gpsData     by app.espTcpClient.gpsFlow.collectAsState()
+    val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
+    val gpsData by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
 
     val currentTime  by vm.currentTime.collectAsState()
     val bestTime     by vm.bestTime.collectAsState()
@@ -576,8 +587,8 @@ fun MapLibreTrackView(
     driverPosition: LatLonOffset,
     modifier: Modifier = Modifier
 ) {
-    val driverSource = remember { mutableStateOf<org.maplibre.android.style.sources.GeoJsonSource?>(null) }
-    val mapReady = remember { mutableStateOf<org.maplibre.android.maps.MapLibreMap?>(null) }
+    val driverSource = remember { mutableStateOf<GeoJsonSource?>(null) }
+    val mapReady = remember { mutableStateOf<MapLibreMap?>(null) }
 
     // 1. Only update the Driver Source (No Camera Movement)
     LaunchedEffect(driverPosition) {
@@ -606,7 +617,7 @@ fun MapLibreTrackView(
 
     AndroidView(
         factory = { ctx ->
-            org.maplibre.android.MapLibre.getInstance(ctx)
+            MapLibre.getInstance(ctx)
             MapView(ctx).also { mv ->
                 mv.onCreate(null)
                 mv.getMapAsync { map ->
@@ -620,18 +631,18 @@ fun MapLibreTrackView(
                             fitCameraToTrack(map, gpsPoints) // Initial fit
                         }
 
-                        val src = org.maplibre.android.style.sources.GeoJsonSource(
+                        val src = GeoJsonSource(
                             "driver-src",
                             """{"type":"Feature","geometry":{"type":"Point","coordinates":[0,0]},"properties":{}}"""
                         )
                         style.addSource(src)
                         style.addLayer(
-                            org.maplibre.android.style.layers.CircleLayer("driver-layer", "driver-src").apply {
+                            CircleLayer("driver-layer", "driver-src").apply {
                                 setProperties(
-                                    org.maplibre.android.style.layers.PropertyFactory.circleColor("#FFFFFF"),
-                                    org.maplibre.android.style.layers.PropertyFactory.circleRadius(6f),
-                                    org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor("#E8001C"),
-                                    org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth(2f)
+                                    PropertyFactory.circleColor("#FFFFFF"),
+                                    PropertyFactory.circleRadius(6f),
+                                    PropertyFactory.circleStrokeColor("#E8001C"),
+                                    PropertyFactory.circleStrokeWidth(2f)
                                 )
                             }
                         )
@@ -644,16 +655,16 @@ fun MapLibreTrackView(
     )
 }
 
-private fun fitCameraToTrack(map: org.maplibre.android.maps.MapLibreMap, points: List<TrackCoordinatesData>) {
+private fun fitCameraToTrack(map: MapLibreMap, points: List<TrackCoordinatesData>) {
     if (points.isEmpty()) return
 
-    val boundsBuilder = org.maplibre.android.geometry.LatLngBounds.Builder()
+    val boundsBuilder = LatLngBounds.Builder()
     points.forEach {
-        boundsBuilder.include(org.maplibre.android.geometry.LatLng(it.latitude, it.longitude))
+        boundsBuilder.include(LatLng(it.latitude, it.longitude))
     }
 
     map.easeCamera(
-        org.maplibre.android.camera.CameraUpdateFactory.newLatLngBounds(
+        CameraUpdateFactory.newLatLngBounds(
             boundsBuilder.build(),
             100 // Padding in pixels from the edges of the view
         ), 1000 // Animation duration
@@ -665,9 +676,9 @@ private fun drawTrackOnStyle(
     style: Style,
     points: List<TrackCoordinatesData>
 ) {
-    val coords = com.google.gson.JsonArray().apply {
+    val coords = JsonArray().apply {
         points.forEach { pt ->
-            add(com.google.gson.JsonArray().apply {
+            add(JsonArray().apply {
                 add(pt.longitude)
                 add(pt.latitude)
             })
@@ -675,17 +686,17 @@ private fun drawTrackOnStyle(
     }
     val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":$coords},"properties":{}}"""
 
-    style.addSource(org.maplibre.android.style.sources.GeoJsonSource("track-src", geojson))
+    style.addSource(GeoJsonSource("track-src", geojson))
     style.addLayer(
-        org.maplibre.android.style.layers.LineLayer("track-layer", "track-src").apply {
+        LineLayer("track-layer", "track-src").apply {
             setProperties(
-                org.maplibre.android.style.layers.PropertyFactory.lineColor("#E8001C"),
-                org.maplibre.android.style.layers.PropertyFactory.lineWidth(3f),
-                org.maplibre.android.style.layers.PropertyFactory.lineCap(
-                    org.maplibre.android.style.layers.Property.LINE_CAP_ROUND
+                PropertyFactory.lineColor("#E8001C"),
+                PropertyFactory.lineWidth(3f),
+                PropertyFactory.lineCap(
+                    Property.LINE_CAP_ROUND
                 ),
-                org.maplibre.android.style.layers.PropertyFactory.lineJoin(
-                    org.maplibre.android.style.layers.Property.LINE_JOIN_ROUND
+                PropertyFactory.lineJoin(
+                    Property.LINE_JOIN_ROUND
                 )
             )
         }

@@ -28,6 +28,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -72,7 +73,10 @@ fun TrackBuilderScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val app = context.applicationContext as TrackProApp
     val coroutineScope = rememberCoroutineScope()
+
+    val gpsData by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
 
     // State
     var isLiveRecording by remember { mutableStateOf(false) }
@@ -88,40 +92,49 @@ fun TrackBuilderScreen(
     var showInfoDialog by remember { mutableStateOf(false) }
     var builderType by remember { mutableIntStateOf(0) } // 0: Live GPS, 1: Manual Map
 
+    LaunchedEffect(gpsData, isLiveRecording) {
+        if (isLiveRecording && builderType == 0) {
+            gpsData?.let { data ->
+                gpsPointsList.add(
+                    TrackCoordinatesData(
+                        trackId = trackID,
+                        latitude = data.latitude,
+                        longitude = data.longitude,
+                        altitude = data.altitude
+                    )
+                )
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(TrackProColors.BgDeep)) {
         Column(modifier = Modifier.fillMaxSize()) {
-
-            // ── Header ───────────────────────────────────────
             HeaderSection(onBack)
 
-            // ── Control Panel ────────────────────────────────
             Column(modifier = Modifier.padding(16.dp)) {
-
-                // Track Info Card
                 TrackInfoCard(trackName, countryName, trackMode) { showInfoDialog = true }
-
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Mode Selector (Live vs Manual)
                 ModeToggle(builderType) { builderType = it }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Action Buttons
                 if (builderType == 0) {
                     LiveControls(
                         isRecording = isLiveRecording,
                         onToggle = {
                             if (!isLiveRecording) {
-                                if (trackName.isEmpty()) { showInfoDialog = true }
-                                else {
+                                if (trackName.isEmpty()) {
+                                    showInfoDialog = true
+                                } else {
                                     coroutineScope.launch {
+                                        gpsPointsList.clear() // Clear old preview
                                         trackID = startTrackBuilder(database, trackName, countryName, trackMode)
                                         isLiveRecording = true
                                     }
                                 }
                             } else {
                                 coroutineScope.launch {
+                                    // Save the points collected in the list to the DB
+                                    database.trackCoordinatesDao().insertTrackPart(gpsPointsList)
                                     endTrackBuilder(context, trackID)
                                     isLiveRecording = false
                                     onBack()
@@ -145,28 +158,16 @@ fun TrackBuilderScreen(
                 }
             }
 
-            // ── Map/Preview Area ─────────────────────────────
+            // Map/Preview Area
             Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp)
                 .background(TrackProColors.BgCard, RoundedCornerShape(12.dp))
                 .border(1.dp, Color(0xFF1E2530), RoundedCornerShape(12.dp))
             ) {
                 if (builderType == 1) {
-                    // MapLibre for Manual Selection
-                    MapLibreBuilderView(
-                        points = gpsPointsList,
-                        onMapTap = { latLng ->
-                            gpsPointsList.add(
-                                TrackCoordinatesData(
-                                    trackId = 0, // Temp ID
-                                    latitude = latLng.latitude,
-                                    longitude = latLng.longitude,
-                                    altitude = 0.0
-                                )
-                            )
-                        }
-                    )
+                    MapLibreBuilderView(points = gpsPointsList, onMapTap = { latLng ->
+                        gpsPointsList.add(TrackCoordinatesData(trackId = 0L, latitude = latLng.latitude,longitude = latLng.longitude, altitude = latLng.altitude))
+                    })
                 } else {
-                    // Existing Canvas Preview for Live GPS
                     Canvas(modifier = Modifier.fillMaxSize().padding(20.dp)) {
                         drawTrack(gpsPointsList, 50f, 2f)
                     }
@@ -177,11 +178,12 @@ fun TrackBuilderScreen(
 
     if (showInfoDialog) {
         TrackInfoAlert(
-            onDismiss = { },
+            onDismiss = { showInfoDialog = false }, // FIX: Close dialog
             onConfirm = { name, country, mode ->
                 trackName = name
                 countryName = country
                 trackMode = mode
+                showInfoDialog = false // FIX: Close dialog
             }
         )
     }
@@ -330,7 +332,7 @@ suspend fun endTrackBuilder(context: Context, trackId: Long) {
 
 
 @Composable
-private fun HeaderSection(onBack: () -> Unit) {
+fun HeaderSection(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

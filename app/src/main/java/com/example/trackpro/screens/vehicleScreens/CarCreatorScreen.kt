@@ -1,9 +1,6 @@
-package com.example.trackpro.screens
+package com.example.trackpro.screens.vehicleScreens
 
-import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -45,7 +42,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.extrasForUI.CustomTextField
