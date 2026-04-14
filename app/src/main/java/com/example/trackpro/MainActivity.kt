@@ -63,10 +63,11 @@ import com.example.trackpro.managerClasses.JsonReader
 import com.example.trackpro.managerClasses.SessionManager
 import com.example.trackpro.managerClasses.gpsDataManagers.GpsManager
 import com.example.trackpro.managerClasses.gpsDataManagers.PhoneGpsProvider
-import com.example.trackpro.screens.CarCreationScreen
-import com.example.trackpro.screens.DragRaceScreen
+import com.example.trackpro.screens.vehicleScreens.CarCreationScreen
+import com.example.trackpro.screens.telemetricScreens.DragRaceScreen
 import com.example.trackpro.screens.ESPConnectionTestScreen
-import com.example.trackpro.screens.TimeAttackScreenView
+import com.example.trackpro.screens.SettingsScreen
+import com.example.trackpro.screens.telemetricScreens.TimeAttackScreenView
 import com.example.trackpro.screens.TrackBuilderScreen
 import com.example.trackpro.screens.TrackScreen
 import com.example.trackpro.screens.TrackVehicleSelectorScreen
@@ -157,7 +158,7 @@ class MainActivity : ComponentActivity() {
         val vehicleViewModel = VehicleViewModelFactory(database).create(VehicleViewModel::class.java)
         val trackViewModel = TrackViewModelFactory(database).create(TrackViewModel::class.java)
 
-        //Conetext params:
+        //Context params:
         val vehicleFULLViewModel = VehicleFULLViewModelFactory(context).create(VehicleFULLViewModel::class.java)
         val sessionViewModel = SessionViewModelFactory(context).create(SessionViewModel::class.java)
 
@@ -176,7 +177,8 @@ class MainActivity : ComponentActivity() {
                             onNavigateToVehicleCreatorScreen = { navController.navigate("createvehicle") },
                             onNavigateToVehicleList = { navController.navigate("vehicles") },
                             onNavigateToTrackVehicleSelector = { navController.navigate("trackandvehicle") },
-                            onNavigateToTimeAttackListView = { navController.navigate("timeattacklist") }
+                            onNavigateToTimeAttackListView = { navController.navigate("timeattacklist") },
+                            onNavigateToSettings = { navController.navigate("settings") }
                         )
                     }
                     composable("drag") {
@@ -249,6 +251,9 @@ class MainActivity : ComponentActivity() {
                             database = database
                         )
                     }
+                    composable(route = "settings") {
+                        SettingsScreen(onBack = { navController.popBackStack() })
+                    }
                 }
             }
         }
@@ -265,7 +270,8 @@ fun MainScreen(
     onNavigateToVehicleCreatorScreen: () -> Unit,
     onNavigateToVehicleList: () -> Unit,
     onNavigateToTrackVehicleSelector: () -> Unit,
-    onNavigateToTimeAttackListView: () -> Unit
+    onNavigateToTimeAttackListView: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -356,7 +362,7 @@ fun MainScreen(
                         icon = Icons.Default.Settings,
                         label = "Settings",
                         tint = TrackProColors.TextMuted,
-                        onClick = { scope.launch { drawerState.close() } }
+                        onClick = { onNavigateToSettings();scope.launch { drawerState.close() } }
                     )
                 }
             }
@@ -514,11 +520,10 @@ fun MainScreen(
                             ActionCard(
                                 icon = Icons.Default.Settings,
                                 title = "SETTINGS",
-                                subtitle = "Coming soon",
+                                subtitle = "Global settings",
                                 accentColor = TrackProColors.TextMuted,
-                                onClick = { },
+                                onClick = onNavigateToSettings,
                                 halfWidth  = true,
-                                disabled = true
                             )
                         }
                     }
@@ -688,7 +693,8 @@ fun MainScreenPreview() {
             onNavigateToVehicleCreatorScreen = {},
             onNavigateToVehicleList = {},
             onNavigateToTrackVehicleSelector = {},
-            onNavigateToTimeAttackListView = {}
+            onNavigateToTimeAttackListView = {},
+            onNavigateToSettings = {}
         )
     }
 }

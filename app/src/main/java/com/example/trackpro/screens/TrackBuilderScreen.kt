@@ -332,7 +332,7 @@ suspend fun endTrackBuilder(context: Context, trackId: Long) {
 
 
 @Composable
-private fun HeaderSection(onBack: () -> Unit) {
+fun HeaderSection(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

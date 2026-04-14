@@ -1,4 +1,4 @@
-package com.example.trackpro.screens
+package com.example.trackpro.screens.telemetricScreens
 
 import android.util.Log
 import android.view.ViewGroup
