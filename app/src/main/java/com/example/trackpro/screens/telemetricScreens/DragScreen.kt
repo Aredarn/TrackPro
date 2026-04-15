@@ -53,7 +53,6 @@ import org.maplibre.android.maps.MapView
 @Composable
 fun DragRaceScreen(database: ESPDatabase, sessionManager: SessionManager) {
     val app = LocalContext.current.applicationContext as TrackProApp
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     // --- GPS & CONNECTION STATE ---

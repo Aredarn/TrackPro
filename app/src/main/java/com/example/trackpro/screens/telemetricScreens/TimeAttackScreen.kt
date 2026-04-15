@@ -45,7 +45,6 @@ import com.example.trackpro.extrasForUI.LatLonOffset
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.viewModels.TimeAttackViewModel
-import com.google.gson.JsonArray
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
@@ -62,6 +61,10 @@ import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
+import kotlin.math.asin
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun TimeAttackScreenView(
@@ -99,31 +102,15 @@ fun TimeAttackScreenView(
         }
     }
 
-    // In your TimeAttackScreenView, add this:
-    LaunchedEffect(driver) {
-        Log.d("TimeAttackScreen", "Driver StateFlow updated: $driver")
-    }
-
-    LaunchedEffect(fullTrack.size) {
-        Log.d("TimeAttackScreen", "Full track size: ${fullTrack.size}")
-        if (fullTrack.isNotEmpty()) {
-            Log.d("TimeAttackScreen", "First point: ${fullTrack.first().latitude}, ${fullTrack.first().longitude}")
-        }
-    }
-
-    LaunchedEffect(startLine.size) {
-        Log.d("TimeAttackScreen", "Start line size: ${startLine.size}")
-    }
-
     LaunchedEffect(finishLine.size) {
         Log.d("TimeAttackScreen", "Finish line size: ${finishLine.size}")
+        //Finish line coords:
+        Log.d("TimeAttackScreen", "Finish line coords: $finishLine")
     }
 
     // ── Init track + session FIRST ─────────────────────────
     LaunchedEffect(trackId) {
-        Log.d("TimeAttackScreen", "LaunchedEffect(trackId) triggered with trackId=$trackId, vehicleId=$vehicleId")
         if (trackId == null || vehicleId == null) {
-            Log.w("TimeAttackScreen", "trackId or vehicleId is null, skipping initialization")
             return@LaunchedEffect
         }
 
@@ -131,13 +118,11 @@ fun TimeAttackScreenView(
             val track = withContext(Dispatchers.IO) {
                 app.database.trackMainDao().getTrack(trackId).firstOrNull()
             }
-            Log.d("TimeAttackScreen", "Loaded track: ${track?.trackName}, type=${track?.type}")
 
             val mode = when (track?.type?.lowercase()) {
                 "sprint" -> TimingMode.Sprint
                 else     -> TimingMode.Circuit
             }
-            Log.d("TimeAttackScreen", "Setting timing mode: $mode")
 
             vm.loadTrack(trackId, mode)
             vm.createSession(trackId, vehicleId)
@@ -146,7 +131,6 @@ fun TimeAttackScreenView(
             delay(100)
 
             isInitialized = true
-            Log.d("TimeAttackScreen", "Initialization complete")
         } catch (e: Exception) {
             Log.e("TimeAttackScreen", "Initialization error: ${e.message}", e)
         }
@@ -155,18 +139,15 @@ fun TimeAttackScreenView(
     // ── Wire GPS from shared client into ViewModel (ONLY AFTER INIT) ─────────
     LaunchedEffect(gpsData, isInitialized) {
         if (!isInitialized) {
-            Log.d("TimeAttackScreen", "Skipping GPS update - not initialized yet")
             return@LaunchedEffect
         }
 
-        Log.d("TimeAttackScreen", "GPS data received: $gpsData")
         gpsData?.let {
-            Log.d("TimeAttackScreen", "Passing GPS to ViewModel: lat=${it.latitude}, lon=${it.longitude}, speed=${it.speed}")
             vm.handleGpsUpdate(it)
         } ?: Log.w("TimeAttackScreen", "GPS data is null")
     }
 
-    val gpsPoints = fullTrack + linesToShow
+    val gpsPoints = fullTrack //+ linesToShow
     val driverPos = driver ?: LatLonOffset(0.0, 0.0)
 
     when (LocalConfiguration.current.orientation) {
@@ -180,7 +161,8 @@ fun TimeAttackScreenView(
             stintStart  = stintStart,
             gpsPoints   = gpsPoints,
             driver      = driverPos,
-            isConnected = isConnected
+            isConnected = isConnected,
+            linesToShow = linesToShow
         )
         else -> TimeAttackPortraitLayout(
             timingMode  = timingMode,
@@ -192,7 +174,8 @@ fun TimeAttackScreenView(
             stintStart  = stintStart,
             gpsPoints   = gpsPoints,
             driver      = driverPos,
-            isConnected = isConnected
+            isConnected = isConnected,
+            linesToShow = linesToShow
         )
     }
 
@@ -219,7 +202,8 @@ fun TimeAttackPortraitLayout(
     stintStart: Long,
     gpsPoints: List<TrackCoordinatesData>,
     driver: LatLonOffset,
-    isConnected: Boolean
+    isConnected: Boolean,
+    linesToShow : List<TrackCoordinatesData>
 ) {
     val deltaColor = if (delta <= 0) TrackProColors.DeltaGood else TrackProColors.DeltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
@@ -347,7 +331,8 @@ fun TimeAttackPortraitLayout(
                     MapLibreTrackView(
                         gpsPoints = gpsPoints,
                         driverPosition = driver,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        linesToShow
                     )
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -383,7 +368,8 @@ fun TimeAttackLandscapeLayout(
     stintStart: Long,
     gpsPoints: List<TrackCoordinatesData>,
     driver: LatLonOffset,
-    isConnected: Boolean
+    isConnected: Boolean,
+    linesToShow: List<TrackCoordinatesData>
 ) {
     val deltaColor = if (delta <= 0) TrackProColors.DeltaGood else TrackProColors.DeltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
@@ -503,7 +489,8 @@ fun TimeAttackLandscapeLayout(
                 MapLibreTrackView(
                     gpsPoints = gpsPoints,
                     driverPosition = driver,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    linesToShow
                 )
             } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -580,12 +567,12 @@ private fun SectorDivider() {
     )
 }
 // ── Reusable sub-components ────────────────────────────────
-
 @Composable
 fun MapLibreTrackView(
     gpsPoints: List<TrackCoordinatesData>,
     driverPosition: LatLonOffset,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    linesToShow: List<TrackCoordinatesData>
 ) {
     val driverSource = remember { mutableStateOf<GeoJsonSource?>(null) }
     val mapReady = remember { mutableStateOf<MapLibreMap?>(null) }
@@ -627,10 +614,11 @@ fun MapLibreTrackView(
                         map.uiSettings.setAllGesturesEnabled(false)
 
                         if (gpsPoints.isNotEmpty()) {
-                            drawTrackOnStyle(style, gpsPoints)
+                            drawTrackOnStyle(style, gpsPoints,linesToShow)
                             fitCameraToTrack(map, gpsPoints) // Initial fit
                         }
 
+                        // Driver position marker
                         val src = GeoJsonSource(
                             "driver-src",
                             """{"type":"Feature","geometry":{"type":"Point","coordinates":[0,0]},"properties":{}}"""
@@ -671,36 +659,211 @@ private fun fitCameraToTrack(map: MapLibreMap, points: List<TrackCoordinatesData
     )
 }
 
-
 private fun drawTrackOnStyle(
     style: Style,
-    points: List<TrackCoordinatesData>
+    trackPath: List<TrackCoordinatesData>,
+    timingLines: List<TrackCoordinatesData>
 ) {
-    val coords = JsonArray().apply {
-        points.forEach { pt ->
-            add(JsonArray().apply {
-                add(pt.longitude)
-                add(pt.latitude)
-            })
-        }
-    }
-    val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":$coords},"properties":{}}"""
+    if (trackPath.size < 2 || timingLines.size < 2) return
 
-    style.addSource(GeoJsonSource("track-src", geojson))
+    val start = timingLines.first()
+    val finish = timingLines.last()
+
+    // ── 1. Extract ONLY sprint segment ──
+    val sprintTrack = extractSprintSegment(trackPath, start, finish)
+
+    if (sprintTrack.size < 2) return
+
+    // ── 2. Draw TRACK (RED) ──
+    val trackCoords = sprintTrack.joinToString(",") {
+        "[${it.longitude},${it.latitude}]"
+    }
+
+    val trackGeoJson = """
+        {
+            "type":"Feature",
+            "geometry":{
+                "type":"LineString",
+                "coordinates":[ $trackCoords ]
+            },
+            "properties":{}
+        }
+    """.trimIndent()
+
+    style.addSource(GeoJsonSource("track-src", trackGeoJson))
+
     style.addLayer(
         LineLayer("track-layer", "track-src").apply {
             setProperties(
                 PropertyFactory.lineColor("#E8001C"),
                 PropertyFactory.lineWidth(3f),
-                PropertyFactory.lineCap(
-                    Property.LINE_CAP_ROUND
-                ),
-                PropertyFactory.lineJoin(
-                    Property.LINE_JOIN_ROUND
-                )
+                PropertyFactory.lineCap(Property.LINE_CAP_ROUND)
             )
         }
     )
+
+    // ── 3. START + FINISH markers (WHITE ONLY) ──
+    listOf(start, finish).forEachIndexed { index, point ->
+
+        val id = "marker-$index"
+
+        val geojson = """
+            {
+                "type":"Feature",
+                "geometry":{
+                    "type":"Point",
+                    "coordinates":[${point.longitude},${point.latitude}]
+                },
+                "properties":{}
+            }
+        """.trimIndent()
+
+        style.addSource(GeoJsonSource(id, geojson))
+
+        style.addLayer(
+            CircleLayer("$id-layer", id).apply {
+                setProperties(
+                    PropertyFactory.circleColor("#FFFFFF"),
+                    PropertyFactory.circleRadius(7f),
+                    PropertyFactory.circleStrokeColor("#E8001C"),
+                    PropertyFactory.circleStrokeWidth(2f)
+                )
+            }
+        )
+    }
+
+    // ── 4. Track boundaries ──
+    val trackWidthMeters = 3.5
+
+    val leftBoundary = calculateParallelLine(sprintTrack, -trackWidthMeters / 2)
+    val rightBoundary = calculateParallelLine(sprintTrack, trackWidthMeters / 2)
+
+    fun addBoundary(id: String, coords: List<Pair<Double, Double>>) {
+        if (coords.isEmpty()) return
+
+        val coordString = coords.joinToString(",") {
+            "[${it.first},${it.second}]"
+        }
+
+        val geojson = """
+            {
+                "type":"Feature",
+                "geometry":{
+                    "type":"LineString",
+                    "coordinates":[ $coordString ]
+                },
+                "properties":{}
+            }
+        """.trimIndent()
+
+        style.addSource(GeoJsonSource(id, geojson))
+
+        style.addLayer(
+            LineLayer("$id-layer", id).apply {
+                setProperties(
+                    PropertyFactory.lineColor("#FFFFFF"),
+                    PropertyFactory.lineWidth(2f),
+                    PropertyFactory.lineOpacity(0.4f),
+                    PropertyFactory.lineDasharray(arrayOf(2f, 2f))
+                )
+            }
+        )
+    }
+
+    addBoundary("left-boundary", leftBoundary)
+    addBoundary("right-boundary", rightBoundary)
+}
+
+private fun findClosestIndex(
+    track: List<TrackCoordinatesData>,
+    target: TrackCoordinatesData
+): Int {
+    return track.indices.minByOrNull { i ->
+        val dLat = track[i].latitude - target.latitude
+        val dLon = track[i].longitude - target.longitude
+        dLat * dLat + dLon * dLon
+    } ?: 0
+}
+
+private fun extractSprintSegment(
+    track: List<TrackCoordinatesData>,
+    start: TrackCoordinatesData,
+    finish: TrackCoordinatesData
+): List<TrackCoordinatesData> {
+
+    if (track.isEmpty()) return emptyList()
+
+    val startIndex = findClosestIndex(track, start)
+    val finishIndex = findClosestIndex(track, finish)
+
+    return if (startIndex <= finishIndex) {
+        track.subList(startIndex, finishIndex + 1)
+    } else {
+        track.subList(finishIndex, startIndex + 1)
+    }
+}
+
+// Helper function to calculate parallel lines for track boundaries
+private fun calculateParallelLine(
+    points: List<TrackCoordinatesData>,
+    offsetMeters: Double
+): List<Pair<Double, Double>> {
+    if (points.size < 2) return emptyList()
+
+    return points.mapIndexed { index, point ->
+        val bearing = when {
+            index == 0 -> {
+                // First point: use bearing to next point
+                calculateBearing(point, points[index + 1])
+            }
+            index == points.lastIndex -> {
+                // Last point: use bearing from previous point
+                calculateBearing(points[index - 1], point)
+            }
+            else -> {
+                // Middle points: average bearing
+                val bearingFrom = calculateBearing(points[index - 1], point)
+                val bearingTo = calculateBearing(point, points[index + 1])
+                (bearingFrom + bearingTo) / 2.0
+            }
+        }
+
+        // Calculate perpendicular offset (90 degrees to the right)
+        val perpBearing = bearing + 90.0
+        offsetPoint(point.latitude, point.longitude, offsetMeters, perpBearing)
+    }
+}
+
+private fun calculateBearing(from: TrackCoordinatesData, to: TrackCoordinatesData): Double {
+    val lat1 = Math.toRadians(from.latitude)
+    val lat2 = Math.toRadians(to.latitude)
+    val dLon = Math.toRadians(to.longitude - from.longitude)
+
+    val y = sin(dLon) * cos(lat2)
+    val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+    val bearing = Math.toDegrees(atan2(y, x))
+
+    return (bearing + 360) % 360
+}
+
+private fun offsetPoint(lat: Double, lon: Double, distanceMeters: Double, bearing: Double): Pair<Double, Double> {
+    val earthRadius = 6371000.0 // meters
+    val angularDistance = distanceMeters / earthRadius
+    val bearingRad = Math.toRadians(bearing)
+    val latRad = Math.toRadians(lat)
+    val lonRad = Math.toRadians(lon)
+
+    val newLatRad = asin(
+        sin(latRad) * cos(angularDistance) +
+                cos(latRad) * sin(angularDistance) * cos(bearingRad)
+    )
+
+    val newLonRad = lonRad + atan2(
+        sin(bearingRad) * sin(angularDistance) * cos(latRad),
+        cos(angularDistance) - sin(latRad) * sin(newLatRad)
+    )
+
+    return Pair(Math.toDegrees(newLonRad), Math.toDegrees(newLatRad))
 }
 
 
