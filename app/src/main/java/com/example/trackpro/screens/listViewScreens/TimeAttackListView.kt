@@ -132,7 +132,7 @@ fun TimeAttackListViewScreen(
                                 sectorLine = SectorLine,
                                 onDelete = {
                                     scope.launch(Dispatchers.IO) {
-                                        // TODO: viewModel.deleteSession(it)
+                                        viewModel.deleteSession(it)
                                     }
                                 }
                             )

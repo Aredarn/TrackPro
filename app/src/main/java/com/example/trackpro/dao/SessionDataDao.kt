@@ -1,6 +1,7 @@
 package com.example.trackpro.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -18,6 +19,14 @@ interface SessionDataDao {
     // Update a session
     @Update
     suspend fun updateSession(sessionData: SessionData)
+
+    @Delete
+    suspend fun delete(sessionData: SessionData)
+
+    @Query("DELETE FROM session_data WHERE id = :sessionId")
+    suspend fun deleteDragSession(sessionId: Long)
+
+
 
     // Get session by ID
     @Query("SELECT * FROM session_data WHERE id = :id")
@@ -44,7 +53,3 @@ interface SessionDataDao {
     fun getAllSessionsWithVehicles(): Flow<List<DragSessionWithVehicle>>
 
 }
-
-
-
-
