@@ -45,8 +45,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.toColorInt
 import androidx.room.Room
 import com.example.trackpro.TrackProApp
-import com.example.trackpro.calculationClasses.DragTimeCalculation
-import com.example.trackpro.calculationClasses.PostProcessing
+import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
+import com.example.trackpro.managerClasses.calculationClasses.PostProcessing
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.dataClasses.LatLonOffset

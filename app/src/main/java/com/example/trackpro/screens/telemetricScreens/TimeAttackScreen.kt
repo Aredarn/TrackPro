@@ -664,114 +664,116 @@ private fun drawTrackOnStyle(
     trackPath: List<TrackCoordinatesData>,
     timingLines: List<TrackCoordinatesData>
 ) {
-    if (trackPath.size < 2 || timingLines.size < 2) return
+    if (trackPath.size < 2) return
 
-    val start = timingLines.first()
-    val finish = timingLines.last()
+    // ── 1. Determine Drawing Mode ──
+    // Sprint logic usually has 4 points (2 for start, 2 for finish).
+    // Circuit logic usually has 2 points (just the finish line).
+    val isSprint = timingLines.size > 2
 
-    // ── 1. Extract ONLY sprint segment ──
-    val sprintTrack = extractSprintSegment(trackPath, start, finish)
+    val displayPath = if (isSprint) {
+        val start = timingLines.first()
+        val finish = timingLines.last()
+        extractSprintSegment(trackPath, start, finish)
+    } else {
+        // It's a Circuit: Draw the full path from the DB
+        trackPath
+    }
 
-    if (sprintTrack.size < 2) return
+    if (displayPath.size < 2) return
 
-    // ── 2. Draw TRACK (RED) ──
-    val trackCoords = sprintTrack.joinToString(",") {
+    // ── 2. Draw the Main Track Line ──
+    val trackCoords = displayPath.joinToString(",") {
         "[${it.longitude},${it.latitude}]"
     }
 
     val trackGeoJson = """
         {
             "type":"Feature",
-            "geometry":{
-                "type":"LineString",
-                "coordinates":[ $trackCoords ]
-            },
+            "geometry":{ "type":"LineString", "coordinates":[ $trackCoords ] },
             "properties":{}
         }
     """.trimIndent()
 
-    style.addSource(GeoJsonSource("track-src", trackGeoJson))
+    // Add Source (Remove old one if it exists to avoid crashes on update)
+    style.getSource("track-src")?.let { style.removeSource(it) }
+    style.getLayer("track-layer")?.let { style.removeLayer(it) }
 
+    style.addSource(GeoJsonSource("track-src", trackGeoJson))
     style.addLayer(
         LineLayer("track-layer", "track-src").apply {
             setProperties(
                 PropertyFactory.lineColor("#E8001C"),
-                PropertyFactory.lineWidth(3f),
-                PropertyFactory.lineCap(Property.LINE_CAP_ROUND)
+                PropertyFactory.lineWidth(4f),
+                PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+                PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND)
             )
         }
     )
 
-    // ── 3. START + FINISH markers (WHITE ONLY) ──
-    listOf(start, finish).forEachIndexed { index, point ->
+    // ── 3. Draw Track Boundaries ──
+    // Use the displayPath to calculate boundaries so they match the track
+    drawBoundaries(style, displayPath)
 
-        val id = "marker-$index"
+    // ── 4. Draw Start/Finish Markers ──
+    drawMarkers(style, timingLines)
+}
 
-        val geojson = """
-            {
-                "type":"Feature",
-                "geometry":{
-                    "type":"Point",
-                    "coordinates":[${point.longitude},${point.latitude}]
-                },
-                "properties":{}
-            }
-        """.trimIndent()
+private fun drawBoundaries(style: Style, path: List<TrackCoordinatesData>) {
+    val trackWidth = 4.0 // meters
+    val sides = listOf("left" to -trackWidth/2, "right" to trackWidth/2)
 
-        style.addSource(GeoJsonSource(id, geojson))
-
-        style.addLayer(
-            CircleLayer("$id-layer", id).apply {
-                setProperties(
-                    PropertyFactory.circleColor("#FFFFFF"),
-                    PropertyFactory.circleRadius(7f),
-                    PropertyFactory.circleStrokeColor("#E8001C"),
-                    PropertyFactory.circleStrokeWidth(2f)
-                )
-            }
-        )
-    }
-
-    // ── 4. Track boundaries ──
-    val trackWidthMeters = 3.5
-
-    val leftBoundary = calculateParallelLine(sprintTrack, -trackWidthMeters / 2)
-    val rightBoundary = calculateParallelLine(sprintTrack, trackWidthMeters / 2)
-
-    fun addBoundary(id: String, coords: List<Pair<Double, Double>>) {
-        if (coords.isEmpty()) return
-
-        val coordString = coords.joinToString(",") {
-            "[${it.first},${it.second}]"
-        }
+    sides.forEach { (side, offset) ->
+        val boundaryCoords = calculateParallelLine(path, offset)
+        val id = "$side-boundary"
 
         val geojson = """
             {
                 "type":"Feature",
                 "geometry":{
                     "type":"LineString",
-                    "coordinates":[ $coordString ]
-                },
-                "properties":{}
+                    "coordinates": ${boundaryCoords.map { "[${it.first}, ${it.second}]" }}
+                }
             }
         """.trimIndent()
 
+        style.getSource(id)?.let { style.removeSource(it) }
+        style.getLayer("$id-layer")?.let { style.removeLayer(it) }
+
         style.addSource(GeoJsonSource(id, geojson))
-
-        style.addLayer(
-            LineLayer("$id-layer", id).apply {
-                setProperties(
-                    PropertyFactory.lineColor("#FFFFFF"),
-                    PropertyFactory.lineWidth(2f),
-                    PropertyFactory.lineOpacity(0.4f),
-                    PropertyFactory.lineDasharray(arrayOf(2f, 2f))
-                )
-            }
-        )
+        style.addLayer(LineLayer("$id-layer", id).apply {
+            setProperties(
+                PropertyFactory.lineColor("#FFFFFF"),
+                PropertyFactory.lineWidth(1.5f),
+                PropertyFactory.lineOpacity(0.3f),
+                PropertyFactory.lineDasharray(arrayOf(2f, 2f))
+            )
+        })
     }
+}
 
-    addBoundary("left-boundary", leftBoundary)
-    addBoundary("right-boundary", rightBoundary)
+private fun drawMarkers(style: Style, timingLines: List<TrackCoordinatesData>) {
+    val markers = if (timingLines.size >= 4) {
+        listOf(timingLines[0], timingLines.last()) // Sprint: Show both
+    } else if (timingLines.isNotEmpty()) {
+        listOf(timingLines.first()) // Circuit: Show just the finish line
+    } else emptyList()
+
+    markers.forEachIndexed { i, pt ->
+        val id = "marker-$i"
+        val geojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${pt.longitude},${pt.latitude}]}}"""
+
+        style.getSource(id)?.let { style.removeSource(it) }
+        style.addSource(GeoJsonSource(id, geojson))
+        style.addLayer(CircleLayer("$id-layer", id).apply {
+            setProperties(
+                PropertyFactory.circleColor("#FFFFFF"),
+                PropertyFactory.circleRadius(6f),
+                PropertyFactory.circleStrokeWidth(2f),
+                PropertyFactory.circleStrokeColor("#E8001C")
+            )
+        })
+    }
 }
 
 private fun findClosestIndex(
@@ -865,7 +867,6 @@ private fun offsetPoint(lat: Double, lon: Double, distanceMeters: Double, bearin
 
     return Pair(Math.toDegrees(newLonRad), Math.toDegrees(newLatRad))
 }
-
 
 class TimeAttackViewModelFactory(
     private val context: Context,

@@ -35,7 +35,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.example.trackpro.calculationClasses.DragTimeCalculation
+import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.dataClasses.LatLonOffset

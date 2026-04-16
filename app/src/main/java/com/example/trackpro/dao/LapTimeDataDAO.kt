@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.example.trackpro.dataClasses.LapTimeData
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LapTimeDataDAO {
@@ -20,7 +21,7 @@ interface LapTimeDataDAO {
     suspend fun delete(lapTimeData: LapTimeData)
 
     // Get all laps for a specific session
-    @Query("SELECT * FROM lap_time_data WHERE sessionid = :sessionId ORDER BY lapnumber ASC")
+    @Query("SELECT * FROM lap_time_data WHERE sessionid = :sessionId")
     suspend fun getLapsForSession(sessionId: Long): List<LapTimeData>
 
     // Get a single lap by its ID
@@ -38,5 +39,17 @@ interface LapTimeDataDAO {
 
     @Query("UPDATE lap_time_data SET laptime = :time WHERE id = :lapId")
     suspend fun updateLapTime(lapId: Long, time: String)
+
+
+    @Query("""
+    SELECT * FROM lap_time_data 
+    WHERE sessionid = :sessionId 
+    AND laptime != 'IN PROGRESS' 
+    AND laptime != 'INVALID'
+    ORDER BY lapnumber ASC
+""")
+    fun getCompletedLapsForSession(sessionId: Long): Flow<List<LapTimeData>>
+
+
 
 }

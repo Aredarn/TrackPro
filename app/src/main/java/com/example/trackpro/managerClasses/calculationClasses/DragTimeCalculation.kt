@@ -1,4 +1,4 @@
-package com.example.trackpro.calculationClasses
+package com.example.trackpro.managerClasses.calculationClasses
 
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.dataClasses.LatLonOffset
