@@ -41,7 +41,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackCoordinatesData
-import com.example.trackpro.extrasForUI.LatLonOffset
+import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.viewModels.TimeAttackViewModel

@@ -38,8 +38,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.trackpro.calculationClasses.DragTimeCalculation
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.managerClasses.ESPDatabase
-import com.example.trackpro.extrasForUI.LatLonOffset
-import com.example.trackpro.extrasForUI.convertToLatLonOffsetList
+import com.example.trackpro.dataClasses.LatLonOffset
+import com.example.trackpro.dataClasses.convertToLatLonOffsetList
 import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.ui.theme.TrackProTheme
 import com.github.mikephil.charting.charts.LineChart

@@ -1,7 +1,6 @@
 package com.example.trackpro.screens
 import android.content.Context
 import android.util.Log
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,7 +49,7 @@ import com.example.trackpro.calculationClasses.DragTimeCalculation
 import com.example.trackpro.calculationClasses.PostProcessing
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
-import com.example.trackpro.extrasForUI.LatLonOffset
+import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.ui.theme.TrackProTheme

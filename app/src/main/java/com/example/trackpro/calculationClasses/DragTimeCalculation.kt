@@ -1,7 +1,7 @@
 package com.example.trackpro.calculationClasses
 
 import com.example.trackpro.managerClasses.ESPDatabase
-import com.example.trackpro.extrasForUI.LatLonOffset
+import com.example.trackpro.dataClasses.LatLonOffset
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.pow

@@ -10,7 +10,7 @@ import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
-import com.example.trackpro.extrasForUI.LatLonOffset
+import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.timeAttackManagers.CircuitTimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.SprintTimingManager
