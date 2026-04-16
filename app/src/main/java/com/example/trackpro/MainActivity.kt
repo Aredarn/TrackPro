@@ -87,6 +87,9 @@ import com.example.trackpro.viewModels.VehicleFULLViewModel
 import com.example.trackpro.viewModels.VehicleFULLViewModelFactory
 import com.example.trackpro.viewModels.VehicleViewModel
 import com.example.trackpro.viewModels.VehicleViewModelFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
@@ -95,7 +98,7 @@ class TrackProApp : Application() {
 
     val database: ESPDatabase by lazy { ESPDatabase.getInstance(this) }
     val sessionManager: SessionManager by lazy { SessionManager.getInstance(database) }
-
+    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     val espTcpClient: ESPTcpClient by lazy {
         val config = JsonReader.loadConfig(this)
         ESPTcpClient(serverAddress = config.first, port = config.second)
