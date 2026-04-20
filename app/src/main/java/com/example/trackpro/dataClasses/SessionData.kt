@@ -19,6 +19,6 @@ data class SessionData(
     val startTime: Long,
     val endTime: Long?,
     val eventType: String,
-    val vehicleId: Long,
-    val trackId: Long? = null  // null for drag sessions
+    val vehicleId: Long?,
+    val trackId: Long? = null
 )

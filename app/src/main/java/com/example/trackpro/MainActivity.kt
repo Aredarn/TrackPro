@@ -79,6 +79,8 @@ import com.example.trackpro.screens.listViewScreens.listItems.CarViewScreen
 import com.example.trackpro.screens.listViewScreens.listItems.GraphScreen
 import com.example.trackpro.screens.listViewScreens.listItems.TimeAttackListItemScreen
 import com.example.trackpro.theme.TrackProColors
+import com.example.trackpro.viewModels.DragSessionViewModel
+import com.example.trackpro.viewModels.DragSessionViewModelFactory
 import com.example.trackpro.viewModels.SessionViewModel
 import com.example.trackpro.viewModels.SessionViewModelFactory
 import com.example.trackpro.viewModels.TrackViewModel
@@ -164,6 +166,7 @@ class MainActivity : ComponentActivity() {
         //Context params:
         val vehicleFULLViewModel = VehicleFULLViewModelFactory(context).create(VehicleFULLViewModel::class.java)
         val sessionViewModel = SessionViewModelFactory(context).create(SessionViewModel::class.java)
+        val dragSessionViewModel = DragSessionViewModelFactory(context).create(DragSessionViewModel::class.java)
 
 
         setContent {
@@ -198,7 +201,7 @@ class MainActivity : ComponentActivity() {
                         TrackScreen(trackId = trackId)
                     }
                     composable("dragsessions") {
-                        DragTimesListView(viewModel = sessionViewModel, navController = navController)
+                        DragTimesListView(viewModel = dragSessionViewModel, navController = navController)
                     }
                     composable("vehicles") {
                         CarListScreen(viewModel = vehicleFULLViewModel, navController = navController)

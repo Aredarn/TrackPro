@@ -187,7 +187,7 @@ fun DragRaceScreen(database: ESPDatabase, sessionManager: SessionManager) {
                     .clickable {
                         scope.launch {
                             if (!isSessionActive) {
-                                sessionID = sessionManager.startSession("", -1) // Simplified for example
+                                sessionID = sessionManager.startSession("", null)
                                 isSessionActive = true
                                 dataPoints.clear()
                             } else {

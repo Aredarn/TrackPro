@@ -60,7 +60,6 @@ fun TimeAttackListViewScreen(
     vehicleViewModel: VehicleFULLViewModel,
     database: ESPDatabase
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val allSessions by viewModel.sessions.collectAsState()
     val trackSessions = allSessions.filter { it.trackId != null }

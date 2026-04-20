@@ -148,10 +148,10 @@ class TimeAttackViewModel(
     }
 
     private fun processLapData(current: RawGPSData) {
-        if (_sessionId == -1L) return
+        if (_sessionId == -1L || _lapId == -1L) return
 
         val lapInfoData = LapInfoData(
-            lapid = if (_lapId == -1L) 0 else _lapId,
+            lapid = _lapId,
             lat = current.latitude,
             lon = current.longitude,
             spd = current.speed,
@@ -257,14 +257,14 @@ class TimeAttackViewModel(
         }
     }
 
-    private fun startNewLap(lapNumber: Int) {
+    private suspend fun startNewLap(lapNumber: Int) {
         val lapTimeData = LapTimeData(
             sessionid = _sessionId,
             lapnumber = lapNumber,
             laptime = "IN PROGRESS"
         )
 
-        viewModelScope.launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             _lapId = database.lapTimeDataDAO().insert(lapTimeData)
             Log.d("TimeAttack", "Started Lap $lapNumber with ID $_lapId (status: IN PROGRESS)")
         }
