@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,12 +18,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -66,7 +73,7 @@ class DragTimesList : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun DragTimesListView(
     viewModel: DragSessionViewModel,
@@ -75,197 +82,129 @@ fun DragTimesListView(
     val scope = rememberCoroutineScope()
     val dragSessions by viewModel.dragSessions.collectAsState()
 
+    val groupedSessions = remember(dragSessions) {
+        dragSessions.groupBy { session ->
+            val date = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(session.startTime))
+            "$date | ${session.manufacturer} ${session.model}"
+        }
+    }
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(TrackProColors.BgDeep)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top Bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(TrackProColors.AccentRed)
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "● DRAG RUNS",
-                        color = Color.Black,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 3.sp
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            groupedSessions.forEach { (groupKey, sessions) ->
+                item(key = groupKey) {
+                    ExpandableSessionGroup(
+                        groupTitle = groupKey,
+                        sessions = sessions,
+                        navController = navController
                     )
-                    Text(
-                        text = "${dragSessions.size} RUNS",
-                        color = Color.Black,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
-                    )
-                }
-            }
-
-            if (dragSessions.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("NO DRAG RUNS", color = TrackProColors.TextMuted,
-                            fontSize = 14.sp, letterSpacing = 3.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Complete a drag session to see it here",
-                            color = TrackProColors.TextMuted.copy(alpha = 0.5f), fontSize = 12.sp)
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(dragSessions) { session ->
-                        DragSessionCard(
-                            session = session,
-                            navController = navController,
-                            bgCard = TrackProColors.BgCard,
-                            bgElevated = TrackProColors.BgElevated,
-                            accentRed = TrackProColors.AccentRed,
-                            textPrimary = TrackProColors.TextPrimary,
-                            textMuted = TrackProColors.TextMuted,
-                            sectorLine = TrackProColors.SectorLine,
-                            onDelete = { sessionToDelete ->
-                                scope.launch(Dispatchers.IO) {
-                                    viewModel.deleteSession(sessionToDelete)
-                                }
-                            }
-                        )
-                    }
                 }
             }
         }
     }
 }
-
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DragSessionCard(
-    session: DragSessionWithVehicle,
-    navController: NavController,
-    bgCard: Color,
-    bgElevated: Color,
-    accentRed: Color,
-    textPrimary: Color,
-    textMuted: Color,
-    sectorLine: Color,
-    onDelete: (DragSessionWithVehicle) -> Unit
+fun ExpandableSessionGroup(
+    groupTitle: String,
+    sessions: List<DragSessionWithVehicle>,
+    navController: NavController
 ) {
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var isExpanded by remember { mutableStateOf(false) }
 
-    // Reusable Delete Dialog
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            containerColor = Color(0xFF0E1117),
-            titleContentColor = Color(0xFFF0F2F5),
-            textContentColor = Color(0xFF6B7280),
-            confirmButton = {
-                TextButton(onClick = { onDelete(session); showDeleteDialog = false }) {
-                    Text("DELETE", color = accentRed, fontWeight = FontWeight.Black)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("CANCEL", color = textMuted)
-                }
-            },
-            title = { Text("Delete Run?", fontWeight = FontWeight.Black) },
-            text = { Text("This will permanently remove this drag record.") }
-        )
-    }
-
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(bgCard, RoundedCornerShape(12.dp))
-            .border(1.dp, sectorLine, RoundedCornerShape(12.dp))
-            .combinedClickable(
-                onClick = { navController.navigate("graph/${session.sessionId}") },
-                onLongClick = { showDeleteDialog = true }
+            .background(TrackProColors.BgCard, RoundedCornerShape(12.dp))
+            .border(
+                1.dp,
+                if (isExpanded) TrackProColors.AccentRed.copy(alpha = 0.5f) else TrackProColors.SectorLine,
+                RoundedCornerShape(12.dp)
             )
     ) {
-        Column {
-            // Header
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        accentRed.copy(alpha = 0.15f),
-                        RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
-                    )
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("DRAG RUN", color = accentRed, fontSize = 9.sp,
-                        fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                    val date = dateFormat.format(Date(session.startTime))
-                    Text(date, color = textMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            // Vehicle Details
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
+        // --- THE HEADER (Always Visible) ---
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { isExpanded = !isExpanded }
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${session.manufacturer} ${session.model}",
-                    color = textPrimary,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-0.5).sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "Production Year: ${session.year}",
-                    color = textMuted,
+                    groupTitle.uppercase(),
+                    color = if (isExpanded) TrackProColors.AccentRed else TrackProColors.TextPrimary,
                     fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    "${sessions.size} RUNS COMPLETED",
+                    color = TrackProColors.TextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
-            HorizontalDivider(color = sectorLine, thickness = 1.dp)
+            // Minimalist Toggle Icon
+            Text(
+                if (isExpanded) "CLOSE —" else "VIEW ALL +",
+                color = if (isExpanded) TrackProColors.AccentRed else TrackProColors.TextMuted,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black
+            )
+        }
 
-            // Times + Action
-            Row(
+        // --- THE CONTENT (Visible when Expanded) ---
+        if (isExpanded) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(bgElevated, RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    val startTime = timeFormat.format(Date(session.startTime))
-                    val endTime = session.endTime?.let { timeFormat.format(Date(it)) } ?: "—"
+                sessions.forEach { session ->
+                    val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(session.startTime))
 
-                    Text("TIME WINDOW", color = textMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                    Text("$startTime – $endTime", color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(TrackProColors.BgElevated, RoundedCornerShape(6.dp))
+                            .clickable { navController.navigate("graph/${session.sessionId}") }
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier.size(6.dp).background(TrackProColors.AccentRed, RoundedCornerShape(100))
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                "RUN AT $time",
+                                color = TrackProColors.TextPrimary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
 
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("VIEW →", color = accentRed,
-                        fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text(
+                            "DETAILS →",
+                            color = TrackProColors.TextMuted,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
                 }
             }
         }
