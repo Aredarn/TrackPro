@@ -50,93 +50,75 @@ class DragTimeCalculation(
     private var quarterMileSpeedResult: Float? = null
     private var halfMileTimeResult: Double? = null
 
-    /**
-     * Process GPS data in real-time and calculate drag metrics
-     * Call this method every time new GPS data arrives during a session
-     */
+    private var isReadyForRun: Boolean = false
+
     fun processRealtimeGPS(gpsData: RawGPSData, currentTimeMillis: Long): DragMetrics {
         val currentSpeed = gpsData.speed ?: 0f
 
-        // Update max speed
-        if (currentSpeed > maxSpeedRecorded) {
-            maxSpeedRecorded = currentSpeed
-        }
+        // --- 1. GLOBAL STATS ---
+        if (currentSpeed > maxSpeedRecorded) maxSpeedRecorded = currentSpeed
 
-        // Add GPS point for distance calculation
         gpsPoints.add(LatLonOffset(gpsData.latitude, gpsData.longitude))
-
-        // Calculate distance increment
         if (gpsPoints.size >= 2) {
-            val lastPoint = gpsPoints[gpsPoints.size - 2]
-            val currentPoint = gpsPoints[gpsPoints.size - 1]
-            val distanceIncrement = haversineDistance(
-                lastPoint.lat, lastPoint.lon,
-                currentPoint.lat, currentPoint.lon
-            )
-            totalDistanceMeters += distanceIncrement.toFloat()
+            val last = gpsPoints[gpsPoints.size - 2]
+            val dist = haversineDistance(last.lat, last.lon, gpsData.latitude, gpsData.longitude)
+            totalDistanceMeters += dist.toFloat()
         }
 
-        // Detect run start (speed crosses threshold from below)
-        if (!hasStartedRun && currentSpeed > zeroThreshold) {
+        // --- 2. STANDING START LOGIC ---
+        // If we are below threshold, we are "Ready" to perform a 0-X run
+        if (!hasStartedRun && currentSpeed <= zeroThreshold) {
+            isReadyForRun = true
+        }
+
+        // Trigger run start when we move
+        if (!hasStartedRun && isReadyForRun && currentSpeed > zeroThreshold) {
             hasStartedRun = true
             runStartTime = currentTimeMillis
         }
 
-        // Calculate metrics only after run has started
+        // Calculate Standing Metrics (Only if a valid run started)
         if (hasStartedRun) {
-            val elapsedMillis = currentTimeMillis - runStartTime
+            val elapsed = (currentTimeMillis - runStartTime) / 1000.0
 
-            // 0-60 km/h
-            if (time0to60Result == null && currentSpeed >= 60f) {
-                time0to60Result = elapsedMillis / 1000.0
-            }
+            if (time0to60Result == null && currentSpeed >= 60f) time0to60Result = elapsed
+            if (time0to100Result == null && currentSpeed >= 100f) time0to100Result = elapsed
+            if (time0to160Result == null && currentSpeed >= 160f) time0to160Result = elapsed
+            if (time0to200Result == null && currentSpeed >= 200f) time0to200Result = elapsed
 
-            // 0-100 km/h
-            if (time0to100Result == null && currentSpeed >= 100f) {
-                time0to100Result = elapsedMillis / 1000.0
-            }
-
-            // 0-160 km/h (0-100 mph)
-            if (time0to160Result == null && currentSpeed >= 160f) {
-                time0to160Result = elapsedMillis / 1000.0
-            }
-
-            // 0-200 km/h
-            if (time0to200Result == null && currentSpeed >= 200f) {
-                time0to200Result = elapsedMillis / 1000.0
-            }
-
-            // 50-150 km/h (elasticity test)
-            if (time50Timestamp == null && currentSpeed >= 50f) {
-                time50Timestamp = currentTimeMillis
-            }
-            if (time50to150Result == null && time50Timestamp != null && currentSpeed >= 150f) {
-                time50to150Result = (currentTimeMillis - time50Timestamp!!) / 1000.0
-            }
-
-            // 100-200 km/h (high-speed acceleration)
-            if (time100Timestamp == null && currentSpeed >= 100f) {
-                time100Timestamp = currentTimeMillis
-            }
-            if (time100to200Result == null && time100Timestamp != null && currentSpeed >= 200f) {
-                time100to200Result = (currentTimeMillis - time100Timestamp!!) / 1000.0
-            }
-
-            // Quarter mile (402.336 meters)
+            // Quarter Mile (Standing only)
             if (quarterMileTimeResult == null && totalDistanceMeters >= 402.336f) {
-                quarterMileTimeResult = elapsedMillis / 1000.0
+                quarterMileTimeResult = elapsed
                 quarterMileSpeedResult = currentSpeed
             }
+        }
 
-            // Half mile (804.672 meters)
-            if (halfMileTimeResult == null && totalDistanceMeters >= 804.672f) {
-                halfMileTimeResult = elapsedMillis / 1000.0
-            }
+        // --- 3. ROLLING METRICS LOGIC (Always Active) ---
+
+        // 50-150 km/h Logic
+        if (currentSpeed >= 50f && time50Timestamp == null) {
+            time50Timestamp = currentTimeMillis
+        } else if (currentSpeed < 45f && time50to150Result == null) {
+            // Reset if speed drops back down before completing the interval
+            time50Timestamp = null
+        }
+        if (time50Timestamp != null && time50to150Result == null && currentSpeed >= 150f) {
+            time50to150Result = (currentTimeMillis - time50Timestamp!!) / 1000.0
+        }
+
+        // 100-200 km/h Logic
+        if (currentSpeed >= 100f && time100Timestamp == null) {
+            time100Timestamp = currentTimeMillis
+        } else if (currentSpeed < 95f && time100to200Result == null) {
+            // Reset if speed drops back down before completing the interval
+            time100Timestamp = null
+        }
+        if (time100Timestamp != null && time100to200Result == null && currentSpeed >= 200f) {
+            time100to200Result = (currentTimeMillis - time100Timestamp!!) / 1000.0
         }
 
         return getCurrentMetrics()
     }
-
     /**
      * Get current metrics snapshot
      */
@@ -217,48 +199,17 @@ class DragTimeCalculation(
         return minTimeDiff?.div(1000) ?: -1.0
     }
 
-    /**
-     * Calculate quarter mile time from stored session data (post-session analysis)
-     */
-    suspend fun quarterMile(): Double {
-        val sessionItems = database.rawGPSDataDao().getGPSDataBySession(session)
+    fun calculateFullSessionMetrics(sessionData: List<RawGPSData>): DragMetrics {
+        resetRealtimeTracking()
 
-        if (sessionItems.isEmpty()) {
-            return -1.0
+        var lastMetrics = DragMetrics()
+        val sortedData = sessionData.sortedBy { it.timestamp }
+
+        sortedData.forEach { data ->
+            lastMetrics = processRealtimeGPS(data, data.timestamp)
         }
 
-        var minQuarterMileTime: Double? = null
-
-        for (i in sessionItems.indices) {
-            val currentSpeed = sessionItems[i].speed
-
-            if (currentSpeed != null && currentSpeed <= zeroThreshold) {
-                val startTime = sessionItems[i].timestamp
-                var totalDistance = 0.0
-
-                for (j in (i + 1) until sessionItems.size) {
-                    val prev = sessionItems[j - 1]
-                    val curr = sessionItems[j]
-
-                    val distance = haversineDistance(
-                        prev.latitude, prev.longitude,
-                        curr.latitude, curr.longitude
-                    )
-                    totalDistance += distance
-
-                    if (totalDistance >= 402.336) {
-                        val diff = curr.timestamp - startTime
-
-                        if (minQuarterMileTime == null || diff < minQuarterMileTime) {
-                            minQuarterMileTime = diff.toDouble()
-                        }
-                        break
-                    }
-                }
-            }
-        }
-
-        return minQuarterMileTime?.div(1000) ?: -1.0
+        return lastMetrics
     }
 
     /**
