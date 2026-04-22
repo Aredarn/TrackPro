@@ -20,13 +20,8 @@ interface SessionDataDao {
     @Update
     suspend fun updateSession(sessionData: SessionData)
 
-    @Delete
-    suspend fun delete(sessionData: SessionData)
-
     @Query("DELETE FROM session_data WHERE id = :sessionId")
-    suspend fun deleteDragSession(sessionId: Long)
-
-
+    suspend fun deleteSessionById(sessionId: Long)
 
     // Get session by ID
     @Query("SELECT * FROM session_data WHERE id = :id")
@@ -69,7 +64,7 @@ interface SessionDataDao {
     FROM session_data
     INNER JOIN vehicle_information_data 
     ON session_data.vehicleId = vehicle_information_data.vehicleId
-    WHERE session_data.trackId IS NOT NULL OR session_data.trackId != -1
+    WHERE session_data.trackId IS NOT NULL AND session_data.trackId != -1
 """)
     fun getAllTrackSessionsWithVehicles(): Flow<List<DragSessionWithVehicle>>
 

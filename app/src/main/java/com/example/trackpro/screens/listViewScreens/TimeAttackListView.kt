@@ -32,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,7 +40,6 @@ import androidx.navigation.NavController
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.dataClasses.VehicleInformationData
-import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.viewModels.SessionViewModel
 import com.example.trackpro.viewModels.TrackViewModel
 import com.example.trackpro.viewModels.VehicleFULLViewModel
@@ -58,7 +56,6 @@ fun TimeAttackListViewScreen(
     viewModel: SessionViewModel,
     trackViewModel: TrackViewModel,
     vehicleViewModel: VehicleFULLViewModel,
-    database: ESPDatabase
 ) {
     val scope = rememberCoroutineScope()
     val allSessions by viewModel.sessions.collectAsState()

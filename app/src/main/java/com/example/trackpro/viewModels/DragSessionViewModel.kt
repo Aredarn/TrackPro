@@ -8,7 +8,6 @@ import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.models.DragSessionWithVehicle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class DragSessionViewModel(private val database: ESPDatabase) : ViewModel() {
@@ -28,7 +27,7 @@ class DragSessionViewModel(private val database: ESPDatabase) : ViewModel() {
 
     fun deleteSession(session: DragSessionWithVehicle) {
         viewModelScope.launch {
-            database.sessionDataDao().deleteDragSession(session.sessionId)
+            database.sessionDataDao().deleteSessionById(session.sessionId)
         }
     }
 }

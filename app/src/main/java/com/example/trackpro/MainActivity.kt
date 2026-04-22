@@ -158,12 +158,10 @@ class MainActivity : ComponentActivity() {
         val sessionManager = (application as TrackProApp).sessionManager
         val context = applicationContext
 
-        //FIX SO ALL 4 USE THE SAME
-        //DB params
+
         val vehicleViewModel = VehicleViewModelFactory(database).create(VehicleViewModel::class.java)
         val trackViewModel = TrackViewModelFactory(database).create(TrackViewModel::class.java)
 
-        //Context params:
         val vehicleFULLViewModel = VehicleFULLViewModelFactory(context).create(VehicleFULLViewModel::class.java)
         val sessionViewModel = SessionViewModelFactory(context).create(SessionViewModel::class.java)
         val dragSessionViewModel = DragSessionViewModelFactory(context).create(DragSessionViewModel::class.java)
@@ -188,7 +186,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("drag") {
-                        DragRaceScreen(database, sessionManager)
+                        DragRaceScreen(database, sessionManager, vehicleFULLViewModel)
                     }
                     composable("esptest") {
                         ESPConnectionTestScreen()
@@ -254,7 +252,6 @@ class MainActivity : ComponentActivity() {
                             viewModel = sessionViewModel,
                             vehicleViewModel = vehicleFULLViewModel,
                             trackViewModel = trackViewModel,
-                            database = database
                         )
                     }
                     composable(route = "settings") {

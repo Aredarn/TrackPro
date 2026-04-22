@@ -33,16 +33,9 @@ class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
 
     fun deleteSession(session: SessionData) {
         viewModelScope.launch {
-            database.sessionDataDao().delete(session)
+            database.sessionDataDao().deleteSessionById(session.id)
         }
     }
-
-    fun deleteSession(session: DragSessionWithVehicle) {
-        viewModelScope.launch {
-            database.sessionDataDao().deleteDragSession(session.sessionId)
-        }
-    }
-
 }
 
 
