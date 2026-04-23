@@ -1,10 +1,6 @@
 package com.example.trackpro.screens
 import android.content.Context
-import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,14 +42,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.toColorInt
 import androidx.room.Room
 import com.example.trackpro.TrackProApp
-import com.example.trackpro.calculationClasses.DragTimeCalculation
-import com.example.trackpro.calculationClasses.PostProcessing
+import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
+import com.example.trackpro.managerClasses.calculationClasses.PostProcessing
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
-import com.example.trackpro.extrasForUI.LatLonOffset
-import com.example.trackpro.extrasForUI.drawTrack
+import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.ui.theme.TrackProTheme
@@ -65,7 +61,6 @@ import org.maplibre.android.annotations.PolylineOptions
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
-import androidx.core.graphics.toColorInt
 
 @Composable
 fun TrackBuilderScreen(
@@ -135,7 +130,8 @@ fun TrackBuilderScreen(
                                 coroutineScope.launch {
                                     // Save the points collected in the list to the DB
                                     database.trackCoordinatesDao().insertTrackPart(gpsPointsList)
-                                    endTrackBuilder(context, trackID)
+                                    val isLapTrack = (trackMode == "Circuit")
+                                    endTrackBuilder(context, trackID,isLapTrack)
                                     isLiveRecording = false
                                     onBack()
                                 }
@@ -149,7 +145,8 @@ fun TrackBuilderScreen(
                             coroutineScope.launch {
                                 val id = startTrackBuilder(database, trackName, countryName, trackMode)
                                 database.trackCoordinatesDao().insertTrackPart(gpsPointsList.map { it.copy(trackId = id) })
-                                endTrackBuilder(context, id)
+                                val isLapTrack = (trackMode == "Circuit")
+                                endTrackBuilder(context, id,isLapTrack)
                                 onBack()
                             }
                         },
@@ -163,27 +160,23 @@ fun TrackBuilderScreen(
                 .background(TrackProColors.BgCard, RoundedCornerShape(12.dp))
                 .border(1.dp, Color(0xFF1E2530), RoundedCornerShape(12.dp))
             ) {
-                if (builderType == 1) {
-                    MapLibreBuilderView(points = gpsPointsList, onMapTap = { latLng ->
+
+                    MapLibreBuilderView(trackMode,points = gpsPointsList, onMapTap = { latLng ->
                         gpsPointsList.add(TrackCoordinatesData(trackId = 0L, latitude = latLng.latitude,longitude = latLng.longitude, altitude = latLng.altitude))
                     })
-                } else {
-                    Canvas(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-                        drawTrack(gpsPointsList, 50f, 2f)
-                    }
-                }
+
             }
         }
     }
 
     if (showInfoDialog) {
         TrackInfoAlert(
-            onDismiss = { showInfoDialog = false }, // FIX: Close dialog
+            onDismiss = { showInfoDialog = false },
             onConfirm = { name, country, mode ->
                 trackName = name
                 countryName = country
                 trackMode = mode
-                showInfoDialog = false // FIX: Close dialog
+                showInfoDialog = false
             }
         )
     }
@@ -191,6 +184,7 @@ fun TrackBuilderScreen(
 
 @Composable
 fun MapLibreBuilderView(
+    trackMode: String,
     points: List<TrackCoordinatesData>,
     onMapTap: (LatLng) -> Unit
 ) {
@@ -212,20 +206,20 @@ fun MapLibreBuilderView(
             }
 
             // 2. Add Markers
+            // Inside MapLibreBuilderView, when adding markers:
             if (points.isNotEmpty()) {
-                // Start Marker
-                map.addMarker(
-                    MarkerOptions()
-                        .position(LatLng(points.first().latitude, points.first().longitude))
-                        .title("START")
+                // Start Marker is always there
+                map.addMarker(MarkerOptions()
+                    .position(LatLng(points.first().latitude, points.first().longitude))
+                    .title("START")
                 )
 
-                // Current Last Point
                 if (points.size > 1) {
-                    map.addMarker(
-                        MarkerOptions()
-                            .position(LatLng(points.last().latitude, points.last().longitude))
-                            .title("END")
+                    val lastPoint = points.last()
+                    map.addMarker(MarkerOptions()
+                        .position(LatLng(lastPoint.latitude, lastPoint.longitude))
+                        // Change title based on intent
+                        .title(if (trackMode == "Circuit") "LAP COMPLETE" else "FINISH LINE")
                     )
                 }
             }
@@ -299,13 +293,14 @@ suspend fun startTrackBuilder(database: ESPDatabase, trackName: String, countryn
     return id
 }
 
-suspend fun endTrackBuilder(context: Context, trackId: Long) {
+suspend fun endTrackBuilder(context: Context, trackId: Long, isLapTrack: Boolean) {
     Log.d("endTrackBuilder", "Inside")
     val database = ESPDatabase.getInstance(context)
     val postProcess = PostProcessing(database)
 
+
     // Explicitly wait and ensure the processed track data is retrieved
-    val track: List<TrackCoordinatesData> = postProcess.processTrackPoints(trackId)
+    val track: List<TrackCoordinatesData> = postProcess.processTrackPoints(trackId,isLapTrack)
 
     if (track.isEmpty()) {
         Log.w("endTrackBuilder", "No track points found for trackId=$trackId! Aborting.")

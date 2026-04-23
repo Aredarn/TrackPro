@@ -10,7 +10,7 @@ import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
-import com.example.trackpro.extrasForUI.LatLonOffset
+import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.timeAttackManagers.CircuitTimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.SprintTimingManager
@@ -19,7 +19,6 @@ import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry.calculateFinishLine
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlin.collections.emptyList
 
 class TimeAttackViewModel(
     context: Context
@@ -59,7 +59,6 @@ class TimeAttackViewModel(
     private val lapDataChannel = Channel<LapInfoData>(Channel.UNLIMITED)
     private val sessionManager = app.sessionManager
 
-
     // Expose state to UI
     val driverPosition: StateFlow<LatLonOffset?> = _driverPosition.asStateFlow()
     val fullTrack: StateFlow<List<TrackCoordinatesData>> = _fullTrack.asStateFlow()
@@ -85,17 +84,15 @@ class TimeAttackViewModel(
         startLapDataConsumer()
     }
 
-
     override fun onCleared() {
         super.onCleared()
         tcpClient?.disconnect()
         timingManager?.reset()
-        GlobalScope.launch(Dispatchers.IO) {
+        app.applicationScope.launch(Dispatchers.IO) {
             endSession()
         }
     }
 
-    // Updated ViewModel section
     fun loadTrack(trackId: Long, mode: TimingMode) {
         _timingMode.value = mode
         viewModelScope.launch {
@@ -112,8 +109,8 @@ class TimeAttackViewModel(
                                 val manager = CircuitTimingManager(_finishLine.value)
                                 timingManager = manager
                                 viewModelScope.launch {
-                                    manager.lapCompletedChannel.consumeAsFlow().collect {
-                                        handleCompletedLap(it)
+                                    manager.lapCompletedChannel.consumeAsFlow().collect { lapMs ->
+                                        handleCompletedLap(lapMs)
                                     }
                                 }
                             }
@@ -124,8 +121,8 @@ class TimeAttackViewModel(
                                 val manager = SprintTimingManager(start, finish)
                                 timingManager = manager
                                 viewModelScope.launch {
-                                    manager.sprintCompletedChannel.consumeAsFlow().collect {
-                                        handleCompletedSprint(it)
+                                    manager.sprintCompletedChannel.consumeAsFlow().collect { sprintMs ->
+                                        handleCompletedSprint(sprintMs)
                                     }
                                 }
                             }
@@ -134,7 +131,6 @@ class TimeAttackViewModel(
                 }
         }
     }
-
 
     internal fun handleGpsUpdate(current: RawGPSData) {
         Log.d("TimeAttackViewModel", "handleGpsUpdate START - lat=${current.latitude}, lon=${current.longitude}")
@@ -151,12 +147,11 @@ class TimeAttackViewModel(
         Log.d("TimeAttackViewModel", "handleGpsUpdate END")
     }
 
-    //WORKS
     private fun processLapData(current: RawGPSData) {
-        if (_sessionId == -1L) return
+        if (_sessionId == -1L || _lapId == -1L) return
 
         val lapInfoData = LapInfoData(
-            lapid = if (_lapId == -1L) 0 else _lapId, // Placeholder to handle nulls
+            lapid = _lapId,
             lat = current.latitude,
             lon = current.longitude,
             spd = current.speed,
@@ -170,7 +165,6 @@ class TimeAttackViewModel(
         }
     }
 
-    //WORKS
     private fun startLapDataConsumer() {
         viewModelScope.launch(Dispatchers.IO) {
             for (lapData in lapDataChannel) {
@@ -184,38 +178,48 @@ class TimeAttackViewModel(
     }
 
     private fun handleCompletedLap(lapMs: Long) {
-        viewModelScope.launch {
-            if (_sessionId == -1L || _lapId == -1L) return@launch
+        viewModelScope.launch(Dispatchers.IO) {
+            if (_sessionId == -1L || _lapId == -1L) {
+                Log.w("TimeAttack", "Cannot complete lap: session or lap ID invalid")
+                return@launch
+            }
 
             val lapTimeStr = formatLapTime(lapMs)
 
-            withContext(Dispatchers.IO) {
-                // 1. "Close" the current lap with the final time
+            try {
+                // 1. Mark the current lap as COMPLETED
                 database.lapTimeDataDAO().updateLapTime(_lapId, lapTimeStr)
+                Log.d("TimeAttack", "Lap $_lapId COMPLETED with time $lapTimeStr")
 
-                Log.d("TimeAttack", "Updated Lap ID $_lapId with time $lapTimeStr")
+                // 2. For circuits, immediately start the next lap
+                if (_timingMode.value is TimingMode.Circuit) {
+                    val nextLapNumber = eventCount.value + 1
+                    startNewLap(nextLapNumber)
+                    Log.d("TimeAttack", "Started next lap: $nextLapNumber")
+                }
+            } catch (e: Exception) {
+                Log.e("TimeAttack", "Error completing lap: ${e.message}", e)
             }
-
-            // 2. Immediately start the next lap so GPS points have a new ID to latch onto
-            // eventCount.value + 1 provides the next lap number
-            startNewLap(eventCount.value + 1)
         }
     }
 
     private fun handleCompletedSprint(sprintMs: Long) {
-        viewModelScope.launch {
-            if (_sessionId == -1L) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (_sessionId == -1L || _lapId == -1L) {
+                Log.w("TimeAttack", "Cannot complete sprint: session or lap ID invalid")
                 return@launch
             }
 
-            val sprintData = LapTimeData(
-                sessionid = _sessionId,
-                lapnumber = eventCount.value,
-                laptime = formatLapTime(sprintMs)
-            )
+            val sprintTimeStr = formatLapTime(sprintMs)
 
-            _lapId = withContext(Dispatchers.IO) {
-                database.lapTimeDataDAO().insert(sprintData)
+            try {
+                // Mark the current sprint as COMPLETED
+                database.lapTimeDataDAO().updateLapTime(_lapId, sprintTimeStr)
+                Log.d("TimeAttack", "Sprint $_lapId COMPLETED with time $sprintTimeStr")
+
+                // Don't create a new lap for sprints - user manually starts each run
+            } catch (e: Exception) {
+                Log.e("TimeAttack", "Error completing sprint: ${e.message}", e)
             }
         }
     }
@@ -227,7 +231,6 @@ class TimeAttackViewModel(
         (millis % 1000) / 10
     )
 
-    //WORKS
     suspend fun createSession(trackId: Long, vehicleId: Long) {
         withContext(Dispatchers.IO) {
             val track = database.trackMainDao().getTrack(trackId).firstOrNull() ?: return@withContext
@@ -246,27 +249,53 @@ class TimeAttackViewModel(
                 )
                 sessionManager.getCurrentSessionId()!!
             }
-            _lapId = -1L
+
+            Log.d("TimeAttack", "Session created/resumed: $_sessionId")
+
+            // Start the first lap
             startNewLap(lapNumber = 1)
         }
     }
 
-    private fun startNewLap(lapNumber: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val lapTimeData = LapTimeData(
-                sessionid = _sessionId,
-                lapnumber = lapNumber,
-                laptime = "IN PROGRESS"
-            )
+    private suspend fun startNewLap(lapNumber: Int) {
+        val lapTimeData = LapTimeData(
+            sessionid = _sessionId,
+            lapnumber = lapNumber,
+            laptime = "IN PROGRESS"
+        )
+
+        withContext(Dispatchers.IO) {
             _lapId = database.lapTimeDataDAO().insert(lapTimeData)
-            Log.d("TimeAttack", "Started recording for Lap $lapNumber with ID $_lapId")
+            Log.d("TimeAttack", "Started Lap $lapNumber with ID $_lapId (status: IN PROGRESS)")
         }
     }
 
     suspend fun endSession() {
+        if (_sessionId == -1L) {
+            Log.d("TimeAttack", "No active session to end")
+            return
+        }
+
         withContext(Dispatchers.IO) {
-            sessionManager.endSession()
+            try {
+
+                val allLapsInSession = database.lapTimeDataDAO()
+                    .getLapsForSession(_sessionId)
+
+                val inProgressLaps = allLapsInSession.filter { it.laptime == "IN PROGRESS" }
+
+                inProgressLaps.forEach { lap ->
+                    database.lapTimeDataDAO().delete(lap)
+                }
+
+                Log.d("TimeAttack", "Session $_sessionId ended. Deleted ${inProgressLaps.size} incomplete laps.")
+
+                _sessionId = -1L
+                _lapId = -1L
+
+            } catch (e: Exception) {
+                Log.e("TimeAttack", "Error ending session: ${e.message}", e)
+            }
         }
     }
-
 }

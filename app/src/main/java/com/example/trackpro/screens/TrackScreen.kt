@@ -157,7 +157,9 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
                 if (trackParts.isNotEmpty()) {
                     TrackStaticMapView(
                         trackParts = trackParts,
+                        trackType = trackInfo.value.type,
                         modifier = Modifier.fillMaxSize()
+
                     )
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -190,6 +192,7 @@ private fun TrackStatCol(label: String, value: String, textPrimary: Color, textM
 @Composable
 fun TrackStaticMapView(
     trackParts: List<TrackCoordinatesData>,
+    trackType: String,
     modifier: Modifier = Modifier
 ) {
     var mapViewRef by remember { mutableStateOf<org.maplibre.android.maps.MapView?>(null) }
@@ -211,11 +214,16 @@ fun TrackStaticMapView(
                         val coords = trackParts.joinToString(",") {
                             "[${it.longitude},${it.latitude}]"
                         }
-                        // Close the loop for circuit
-                        val first = trackParts.first()
-                        val closed = "$coords,[${first.longitude},${first.latitude}]"
-                        val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":[$closed]},"properties":{}}"""
 
+                        // Only close the loop if it's a Circuit
+                        val finalCoordinates = if (trackType == "Circuit") {
+                            val first = trackParts.first()
+                            "$coords,[${first.longitude},${first.latitude}]"
+                        } else {
+                            coords // Keep it as an open line for Sprints
+                        }
+
+                        val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":[$finalCoordinates]},"properties":{}}"""
                         val src = org.maplibre.android.style.sources.GeoJsonSource("track-static-src", geojson)
                         style.addSource(src)
                         style.addLayer(
@@ -231,7 +239,8 @@ fun TrackStaticMapView(
                         )
 
                         // Start/finish marker
-                        val startGeojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${first.longitude},${first.latitude}]},"properties":{}}"""
+                        val startGeojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[$finalCoordinates}]},"properties":{}}"""
+
                         style.addSource(org.maplibre.android.style.sources.GeoJsonSource("start-src", startGeojson))
                         style.addLayer(
                             org.maplibre.android.style.layers.CircleLayer("start-layer", "start-src").apply {

@@ -1,6 +1,6 @@
 package com.example.trackpro
 
-import com.example.trackpro.calculationClasses.DragTimeCalculation
+import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.dao.RawGPSDataDao
 import com.example.trackpro.managerClasses.ESPDatabase

@@ -58,7 +58,7 @@ class TimeAttackListItem : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            TrackProTheme { // Wrap in your theme
+            TrackProTheme {
                 TimeAttackListItemScreen(
                     navController = rememberNavController(),
                     database = Room.inMemoryDatabaseBuilder(

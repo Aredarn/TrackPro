@@ -35,11 +35,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.example.trackpro.calculationClasses.DragTimeCalculation
+import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.managerClasses.ESPDatabase
-import com.example.trackpro.extrasForUI.LatLonOffset
-import com.example.trackpro.extrasForUI.convertToLatLonOffsetList
+import com.example.trackpro.dataClasses.LatLonOffset
+import com.example.trackpro.dataClasses.convertToLatLonOffsetList
+import com.example.trackpro.screens.telemetricScreens.DragMetricCard
+import com.example.trackpro.screens.telemetricScreens.DragMetricDisplay
 import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.ui.theme.TrackProTheme
 import com.github.mikephil.charting.charts.LineChart
@@ -69,30 +71,40 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     val database = remember { ESPDatabase.getInstance(context) }
     var coordinates by remember { mutableStateOf(emptyList<RawGPSData>()) }
     var coordinatesSimplified by remember { mutableStateOf(emptyList<LatLonOffset>()) }
+    val dragCalculator = remember { DragTimeCalculation(sessionId, database) }
     var dragTime by remember { mutableDoubleStateOf(-1.0) }
     val dragTimeClass = remember { DragTimeCalculation(sessionId, database) }
     var totalDist by remember { mutableDoubleStateOf(-1.0) }
     var quarterMileTime by remember { mutableDoubleStateOf(-1.0) }
     val dataPoints = remember { mutableListOf<Entry>() }
-
-
-
+    var metrics by remember { mutableStateOf(com.example.trackpro.managerClasses.calculationClasses.DragMetrics()) }
+    val calculator = remember { DragTimeCalculation(sessionId, database) }
     LaunchedEffect(sessionId) {
         withContext(Dispatchers.IO) {
             val data = database.rawGPSDataDao().getGPSDataBySession(sessionId)
+            if (data.isNotEmpty()) {
+                val results = calculator.calculateFullSessionMetrics(data)
+                withContext(Dispatchers.Main) {
+                    metrics = results
+                }
+            }
+            // Populate Chart Data
+            dataPoints.clear()
             data.forEachIndexed { index, d ->
                 d.speed?.let { dataPoints.add(Entry(index.toFloat(), it)) }
             }
+
             val simplifiedData = convertToLatLonOffsetList(data)
-            val dragTimeValue   = dragTimeClass.timeFromZeroToHundred()
-            val totalDistValue  = dragTimeClass.totalDistance(simplifiedData)
-            val quarterMile     = dragTimeClass.quarterMile()
+
+            // Calculate the full suite of metrics using the same logic as the live screen
+            val calculatedMetrics = dragCalculator.calculateFullSessionMetrics(data) // Assuming this method exists in your DragTimeCalculation
+            val totalDistValue = dragTimeClass.totalDistance(simplifiedData)
+
             withContext(Dispatchers.Main) {
-                coordinates          = data
+                coordinates = data
                 coordinatesSimplified = simplifiedData
-                dragTime             = dragTimeValue
-                totalDist            = totalDistValue
-                quarterMileTime      = quarterMile
+                metrics = calculatedMetrics
+                totalDist = totalDistValue
             }
         }
     }
@@ -145,6 +157,38 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     valueColor = TrackProColors.TextPrimary,
                     textMuted = TrackProColors.TextMuted
                 )
+
+                val performanceRows = listOf(
+                    listOf(
+                        DragMetricDisplay(
+                            "0-60",
+                            formatMetric(metrics.time0to60),
+                            "SEC",
+                            metrics.time0to60 != null
+                        ),
+                        DragMetricDisplay("0-100", formatMetric(metrics.time0to100), "SEC", metrics.time0to100 != null)
+                    ),
+                    listOf(
+                        DragMetricDisplay("0-160", formatMetric(metrics.time0to160), "SEC", metrics.time0to160 != null),
+                        DragMetricDisplay("100-200", formatMetric(metrics.time100to200), "SEC", metrics.time100to200 != null)
+                    ),
+                    listOf(
+                        DragMetricDisplay("1/4 MILE", formatMetric(metrics.quarterMileTime), "SEC", metrics.quarterMileTime != null),
+                        DragMetricDisplay("TRAP SPEED", metrics.quarterMileSpeed?.toInt()?.toString() ?: "—", "KM/H", metrics.quarterMileSpeed != null)
+                    )
+                )
+
+                performanceRows.forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        row.forEach { item ->
+                            DragMetricCard(item, modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+
                 Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -433,4 +477,8 @@ fun formatTime(milliseconds: Long): String {
     val millis = milliseconds % 1000
 
     return String.format("%02d:%02d.%02d", minutes, seconds, millis)
+}
+
+private fun formatMetric(value: Double?): String {
+    return value?.let { String.format("%.2f", it) } ?: "—"
 }

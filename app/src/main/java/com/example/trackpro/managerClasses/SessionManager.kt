@@ -12,7 +12,7 @@ class SessionManager private constructor(
 
     private var currentSessionId: Long? = null
 
-    suspend fun startSession(eventType: String, vehicleId: Long, trackId: Long? = null) : Long {
+    suspend fun startSession(eventType: String, vehicleId: Long?, trackId: Long? = null) : Long {
         val session = SessionData(
             eventType = eventType,
             startTime = System.currentTimeMillis(),

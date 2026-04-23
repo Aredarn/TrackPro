@@ -1,4 +1,4 @@
-package com.example.trackpro.calculationClasses
+package com.example.trackpro.managerClasses.calculationClasses
 
 import android.util.Log
 import com.example.trackpro.dataClasses.RawGPSData
@@ -24,7 +24,6 @@ class PostProcessing(val database: ESPDatabase) {
         // Step 3: Save smoothed data back to the database
         saveSmoothedData(smoothedData)
     }
-
 
     //------------------------------------//
     //------------------------------------//
@@ -94,26 +93,23 @@ class PostProcessing(val database: ESPDatabase) {
         database.smoothedDataDao().insertAll(smoothedData)
     }
 
-
     suspend fun processTrackPoints(
         trackId: Long,
-        minDistance: Double = 0.2,  // Minimum distance between points in meters
-        lapThreshold: Double = 50.0  // Distance to consider as completing a lap
+        isLapTrack: Boolean = false,
+        minDistance: Double = 0.2,
+        lapThreshold: Double = 50.0
     ): List<TrackCoordinatesData> {
-        Log.d("Ending","End track builder.")
+        Log.d("ProcessTrack", "Processing track $trackId (isLapTrack: $isLapTrack)")
 
         val rawPoints = database.trackCoordinatesDao()
             .getCoordinatesOfTrack(trackId)
             .first()
             .toMutableList()
 
-
-        if (rawPoints.isEmpty())
-        {
-            Log.d("list:", "No rawPoints found")
+        if (rawPoints.isEmpty()) {
+            Log.d("ProcessTrack", "No rawPoints found")
             return emptyList()
         }
-        Log.d("Trackpoints:",rawPoints.toString())
 
         // Step 1: Remove consecutive duplicates
         val deduplicated = rawPoints.distinct()
@@ -138,54 +134,43 @@ class PostProcessing(val database: ESPDatabase) {
             }
         }
 
-        // Step 3: Ensure proper start point
+        if (distanceFiltered.isEmpty()) return emptyList()
+
+        // Step 3: Find the start point
         val startPointIndex = distanceFiltered.indexOfFirst { it.isStartPoint }
-        val hasValidStart = startPointIndex != -1
+        val actualStartIndex = if (startPointIndex != -1) startPointIndex else 0
 
-        val withStartPoint = when {
-            distanceFiltered.isEmpty() -> return emptyList()
-            !hasValidStart -> {
-                // No start point found, mark first point as start
-                val first = distanceFiltered.first().copy(isStartPoint = true)
-                listOf(first) + distanceFiltered.drop(1).map { it.copy(isStartPoint = false) }
-            }
-            startPointIndex != 0 -> {
-                // Start point exists but not first, reorganize
-                val start = distanceFiltered[startPointIndex].copy(isStartPoint = true)
-                val before = distanceFiltered.subList(0, startPointIndex).map { it.copy(isStartPoint = false) }
-                val after = distanceFiltered.subList(startPointIndex + 1, distanceFiltered.size)
-                listOf(start) + before + after
-            }
-            else -> distanceFiltered  // Start point already correct
-        }
-
-        // Step 4: Detect and remove redundant laps
-        val startPoint = withStartPoint.first()
+        // Step 4: For LAP tracks only - detect lap completion
+        val startPoint = distanceFiltered[actualStartIndex]
         var lapEndIndex: Int? = null
 
-        withStartPoint.forEachIndexed { index, point ->
-            if (index > 0) {
+        if (isLapTrack) {
+            for (index in (actualStartIndex + 1) until distanceFiltered.size) {
+                val point = distanceFiltered[index]
                 val distanceFromStart = haversine(
                     startPoint.latitude, startPoint.longitude,
                     point.latitude, point.longitude
                 )
                 if (distanceFromStart <= lapThreshold) {
                     lapEndIndex = index
-                    return@forEachIndexed
+                    break
                 }
             }
         }
-        Log.d("ya:",withStartPoint.toString())
 
-        val finalProcessedList = lapEndIndex?.let { withStartPoint.subList(0, it + 1) } ?: withStartPoint
+        // Step 5: Extract the final track path
+        val finalProcessedList = if (lapEndIndex != null) {
+            // Lap completed - take from start to lap end
+            distanceFiltered.subList(actualStartIndex, lapEndIndex + 1)
+        } else {
+            // Sprint or incomplete lap - take all from start onwards
+            distanceFiltered.subList(actualStartIndex, distanceFiltered.size)
+        }
 
-        // Save the filtered result to DB
-        database.trackCoordinatesDao().deleteTrackCoordinates(trackId.toInt())
-        database.trackCoordinatesDao().insertTrack(finalProcessedList)
+        Log.d("ProcessTrack", "Processed ${finalProcessedList.size} points (Start: $actualStartIndex, End: $lapEndIndex)")
 
         return finalProcessedList
     }
-
     // Haversine distance calculation
     private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val R = 6371e3 // Earth radius in meters
