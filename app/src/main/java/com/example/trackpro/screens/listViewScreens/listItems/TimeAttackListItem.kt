@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -327,22 +328,25 @@ fun TimeAttackListItemScreen(
                         val lapMs = lap.laptime.toLapTimeMillis()
                         val deltaMs = lapMs - bestMs
                         val topSpeed = topSpeedPerLap[lap.lapnumber] ?: 0f
-
-                        LapRow(
-                            lap = lap,
-                            isBest = isBest,
-                            isWorst = isWorst,
-                            deltaMs = deltaMs,
-                            topSpeed = topSpeed,
-                            bgCard = TrackProColors.BgCard,
-                            bgElevated = TrackProColors.BgElevated,
-                            accentGreen = TrackProColors.AccentGreen,
-                            accentRed = TrackProColors.AccentRed,
-                            accentAmber = TrackProColors.AccentAmber,
-                            textPrimary = TrackProColors.TextPrimary,
-                            textMuted = TrackProColors.TextMuted,
-                            sectorLine = TrackProColors.SectorLine
-                        )
+                        Box(modifier = Modifier.clickable {
+                            navController.navigate("lap_detail/$sessionId/${lap.id}")
+                        }) {
+                            LapRow(
+                                lap = lap,
+                                isBest = isBest,
+                                isWorst = isWorst,
+                                deltaMs = deltaMs,
+                                topSpeed = topSpeed,
+                                bgCard = TrackProColors.BgCard,
+                                bgElevated = TrackProColors.BgElevated,
+                                accentGreen = TrackProColors.AccentGreen,
+                                accentRed = TrackProColors.AccentRed,
+                                accentAmber = TrackProColors.AccentAmber,
+                                textPrimary = TrackProColors.TextPrimary,
+                                textMuted = TrackProColors.TextMuted,
+                                sectorLine = TrackProColors.SectorLine
+                            )
+                        }
                     }
                 }
             }

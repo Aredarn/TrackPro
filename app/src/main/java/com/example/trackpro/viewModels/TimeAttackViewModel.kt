@@ -237,11 +237,8 @@ class TimeAttackViewModel(
             val todayFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
             val eventType = "${track.trackName} - $todayFormatted"
 
-            val existingSession = database.sessionDataDao().getAllSessions().first().find {
-                it.eventType == eventType && it.vehicleId == vehicleId
-            }
 
-            _sessionId = existingSession?.id ?: run {
+            _sessionId = run {
                 sessionManager.startSession(
                     eventType = eventType,
                     vehicleId = vehicleId,

@@ -75,6 +75,7 @@ import com.example.trackpro.screens.listViewScreens.CarListScreen
 import com.example.trackpro.screens.listViewScreens.DragTimesListView
 import com.example.trackpro.screens.listViewScreens.TimeAttackListViewScreen
 import com.example.trackpro.screens.listViewScreens.TrackListScreen
+import com.example.trackpro.screens.listViewScreens.lapDetail.LapDetailScreen
 import com.example.trackpro.screens.listViewScreens.listItems.CarViewScreen
 import com.example.trackpro.screens.listViewScreens.listItems.GraphScreen
 import com.example.trackpro.screens.listViewScreens.listItems.TimeAttackListItemScreen
@@ -256,6 +257,15 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(route = "settings") {
                         SettingsScreen(onBack = { navController.popBackStack() })
+                    }
+                    // In your NavHost setup
+                    composable("lap_detail/{sessionId}/{lapId}") { backStackEntry ->
+                        LapDetailScreen(
+                            navController = navController,
+                            database      = database,
+                            sessionId     = backStackEntry.arguments?.getString("sessionId")?.toLong() ?: -1L,
+                            primaryLapId  = backStackEntry.arguments?.getString("lapId")?.toLong()     ?: -1L
+                        )
                     }
                 }
             }
