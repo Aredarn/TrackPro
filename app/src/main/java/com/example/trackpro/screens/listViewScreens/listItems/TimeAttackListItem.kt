@@ -47,13 +47,14 @@ import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
+import com.example.trackpro.managerClasses.utilities.toLapTimeMillis
+import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 class TimeAttackListItem : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -223,9 +224,8 @@ fun TimeAttackListItemScreen(
                             )
                         }
                         Spacer(Modifier.height(4.dp))
-                        val formatter = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
                         Text(
-                            text = formatter.format(Date(session.startTime)),
+                            text = DateFormatterUtil.getDateTimeFormat().format(Date(session.startTime)),
                             color = TrackProColors.TextMuted,
                             fontSize = 11.sp
                         )
@@ -520,24 +520,6 @@ private fun StatRowItem(label: String, value: String, textPrimary: Color, textMu
             letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
         Text(value, color = textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
-}
-
-
-
-// Helpers
-fun String.toLapTimeMillis(): Long {
-    val parts = this.split(":", ".", limit = 3)
-    val minutes = parts.getOrNull(0)?.toLongOrNull() ?: 0L
-    val seconds = parts.getOrNull(1)?.toLongOrNull() ?: 0L
-    val millis  = parts.getOrNull(2)?.toLongOrNull() ?: 0L
-    return minutes * 60_000 + seconds * 1_000 + millis
-}
-
-fun Long.toLapTimeString(): String {
-    val minutes = this / 60_000
-    val seconds = (this % 60_000) / 1_000
-    val millis = this % 1_000
-    return String.format("%02d:%02d.%03d", minutes, seconds, millis)
 }
 
 // Preview

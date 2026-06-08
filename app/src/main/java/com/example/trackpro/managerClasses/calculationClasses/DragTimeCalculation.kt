@@ -3,6 +3,7 @@ package com.example.trackpro.managerClasses.calculationClasses
 import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.utilities.haversineDistance
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.pow
@@ -161,43 +162,6 @@ class DragTimeCalculation(
         halfMileTimeResult = null
     }
 
-    // ========== POST-SESSION ANALYSIS (LEGACY) ==========
-
-    /**
-     * Calculate 0-100 km/h from stored session data (post-session analysis)
-     */
-    suspend fun timeFromZeroToHundred(): Double {
-        val sessionItems = database.rawGPSDataDao().getGPSDataBySession(session)
-
-        if (sessionItems.isEmpty()) {
-            return -1.0
-        }
-
-        var minTimeDiff: Double? = null
-
-        for (i in sessionItems.indices) {
-            val currentSpeed = sessionItems[i].speed
-
-            if (currentSpeed != null && currentSpeed <= zeroThreshold) {
-                val startTime = sessionItems[i].timestamp
-
-                for (j in (i + 1) until sessionItems.size) {
-                    val candidateSpeed = sessionItems[j].speed
-
-                    if (candidateSpeed != null && candidateSpeed >= 100f) {
-                        val diff = sessionItems[j].timestamp - startTime
-
-                        if (minTimeDiff == null || diff < minTimeDiff) {
-                            minTimeDiff = diff.toDouble()
-                        }
-                        break
-                    }
-                }
-            }
-        }
-
-        return minTimeDiff?.div(1000) ?: -1.0
-    }
 
     fun calculateFullSessionMetrics(sessionData: List<RawGPSData>): DragMetrics {
         resetRealtimeTracking()
@@ -230,16 +194,5 @@ class DragTimeCalculation(
      * Calculate distance between two GPS points using Haversine formula
      * Returns distance in meters
      */
-    private fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val r = 6371000.0 // Earth radius in meters
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
 
-        val a = sin(dLat / 2).pow(2.0) +
-                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
-                sin(dLon / 2).pow(2.0)
-        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        return r * c // Distance in meters
-    }
 }

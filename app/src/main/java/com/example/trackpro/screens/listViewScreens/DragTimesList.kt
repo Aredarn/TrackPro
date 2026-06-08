@@ -37,13 +37,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
 import com.example.trackpro.models.DragSessionWithVehicle
 import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.viewModels.DragSessionViewModel
 import com.example.trackpro.viewModels.DragSessionViewModelFactory
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 class DragTimesList : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,7 +69,7 @@ fun DragTimesListView(
 
     val groupedSessions = remember(dragSessions) {
         dragSessions.groupBy { session ->
-            val date = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(session.startTime))
+            val date = DateFormatterUtil.getDateFormat().format(Date(session.startTime))
             "$date | ${session.manufacturer} ${session.model}"
         }
     }
@@ -159,7 +158,7 @@ fun ExpandableSessionGroup(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 sessions.forEach { session ->
-                    val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(session.startTime))
+                    val time = DateFormatterUtil.getTimeFormat().format(Date(session.startTime))
 
                     Row(
                         modifier = Modifier
