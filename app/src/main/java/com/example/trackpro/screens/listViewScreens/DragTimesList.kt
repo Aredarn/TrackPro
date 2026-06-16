@@ -31,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,18 +80,46 @@ fun DragTimesListView(
             .fillMaxSize()
             .background(TrackProTheme.colors.bgDeep)
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            groupedSessions.forEach { (groupKey, sessions) ->
-                item(key = groupKey) {
-                    ExpandableSessionGroup(
-                        groupTitle = groupKey,
-                        sessions = sessions,
-                        navController = navController
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.accentCyan)
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "● Drag RECORDS",
+                        color = Color.Black,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 3.sp
                     )
+                    Text(
+                        "${dragSessions.size} SESSIONS",
+                        color = Color.Black,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                groupedSessions.forEach { (groupKey, sessions) ->
+                    item(key = groupKey) {
+                        ExpandableSessionGroup(
+                            groupTitle = groupKey,
+                            sessions = sessions,
+                            navController = navController
+                        )
+                    }
                 }
             }
         }
