@@ -42,8 +42,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.LatLonOffset
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
-import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.viewModels.TimeAttackViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -205,15 +205,15 @@ fun TimeAttackPortraitLayout(
     isConnected: Boolean,
     linesToShow : List<TrackCoordinatesData>
 ) {
-    val deltaColor = if (delta <= 0) TrackProColors.DeltaGood else TrackProColors.DeltaBad
+    val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
-    val modeColor  = if (timingMode is TimingMode.Circuit) TrackProColors.AccentRed else TrackProColors.AccentAmber
+    val modeColor  = if (timingMode is TimingMode.Circuit) TrackProTheme.colors.accentCyan else TrackProTheme.colors.accentAmber
     val modeLabel  = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -250,13 +250,13 @@ fun TimeAttackPortraitLayout(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(TrackProColors.BgCard)
+                    .background(TrackProTheme.colors.bgCard)
                     .padding(horizontal = 24.dp, vertical = 20.dp)
             ) {
                 Column {
                     Text(
                         text = "CURRENT $eventName",
-                        color = TrackProColors.TextMuted,
+                        color = TrackProTheme.colors.textMuted,
                         fontSize = 10.sp,
                         letterSpacing = 2.sp,
                         fontWeight = FontWeight.Bold
@@ -288,44 +288,44 @@ fun TimeAttackPortraitLayout(
                 ) {
                     Text(
                         text = eventName,
-                        color = TrackProColors.TextMuted,
+                        color = TrackProTheme.colors.textMuted,
                         fontSize = 10.sp,
                         letterSpacing = 2.sp
                     )
                     Text(
                         text = "$eventCount",
-                        color = TrackProColors.TextPrimary,
+                        color = TrackProTheme.colors.textPrimary,
                         fontSize = 48.sp,
                         fontWeight = FontWeight.Black
                     )
                 }
             }
 
-            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
             // ── Best / Last / Stint ───────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(TrackProColors.BgElevated)
+                    .background(TrackProTheme.colors.bgElevated)
                     .padding(horizontal = 24.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                LapTimeCell(label = "BEST", value = bestTime, valueColor = TrackProColors.DeltaGood)
+                LapTimeCell(label = "BEST", value = bestTime, valueColor = TrackProTheme.colors.deltaGood)
                 SectorDivider()
-                LapTimeCell(label = "LAST", value = lastTime, valueColor = TrackProColors.TextPrimary)
+                LapTimeCell(label = "LAST", value = lastTime, valueColor = TrackProTheme.colors.textPrimary)
                 SectorDivider()
                 StintTimerCell(stintStart = stintStart)
             }
 
-            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
             // ── Map ───────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(TrackProColors.BgCard)
+                    .background(TrackProTheme.colors.bgCard)
             ) {
                 if (gpsPoints.isNotEmpty()) {
                     MapLibreTrackView(
@@ -338,7 +338,7 @@ fun TimeAttackPortraitLayout(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             "AWAITING GPS SIGNAL",
-                            color = TrackProColors.TextMuted,
+                            color = TrackProTheme.colors.textMuted,
                             fontSize = 12.sp,
                             letterSpacing = 2.sp
                         )
@@ -371,22 +371,22 @@ fun TimeAttackLandscapeLayout(
     isConnected: Boolean,
     linesToShow: List<TrackCoordinatesData>
 ) {
-    val deltaColor = if (delta <= 0) TrackProColors.DeltaGood else TrackProColors.DeltaBad
+    val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
-    val modeColor  = if (timingMode is TimingMode.Circuit) TrackProColors.AccentRed else TrackProColors.AccentAmber
+    val modeColor  = if (timingMode is TimingMode.Circuit) TrackProTheme.colors.accentCyan else TrackProTheme.colors.accentAmber
     val modeLabel  = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
 
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         // ── Left: telemetry panel ──────────────────────────
         Column(
             modifier = Modifier
                 .weight(0.42f)
                 .fillMaxSize()
-                .background(TrackProColors.BgCard)
+                .background(TrackProTheme.colors.bgCard)
         ) {
             Box(
                 modifier = Modifier
@@ -417,7 +417,7 @@ fun TimeAttackLandscapeLayout(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "CURRENT $eventName",
-                    color = TrackProColors.TextMuted,
+                    color = TrackProTheme.colors.textMuted,
                     fontSize = 9.sp,
                     letterSpacing = 2.sp
                 )
@@ -442,16 +442,16 @@ fun TimeAttackLandscapeLayout(
                 }
 
                 Spacer(Modifier.height(16.dp))
-                HorizontalDivider(color = TrackProColors.SectorLine)
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine)
                 Spacer(Modifier.height(16.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    LapTimeCell(label = "BEST", value = bestTime, valueColor = TrackProColors.DeltaGood)
-                    LapTimeCell(label = "LAST", value = lastTime, valueColor = TrackProColors.TextPrimary)
+                    LapTimeCell(label = "BEST", value = bestTime, valueColor = TrackProTheme.colors.deltaGood)
+                    LapTimeCell(label = "LAST", value = lastTime, valueColor = TrackProTheme.colors.textPrimary)
                 }
 
                 Spacer(Modifier.height(16.dp))
-                HorizontalDivider(color = TrackProColors.SectorLine)
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine)
                 Spacer(Modifier.height(16.dp))
 
                 Row(
@@ -463,7 +463,7 @@ fun TimeAttackLandscapeLayout(
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
                             eventName,
-                            color = TrackProColors.TextMuted,
+                            color = TrackProTheme.colors.textMuted,
                             fontSize = 9.sp,
                             letterSpacing = 2.sp
                         )
@@ -483,7 +483,7 @@ fun TimeAttackLandscapeLayout(
             modifier = Modifier
                 .weight(0.58f)
                 .fillMaxSize()
-                .background(TrackProColors.BgDeep)
+                .background(TrackProTheme.colors.bgDeep)
         ) {
             if (gpsPoints.isNotEmpty()) {
                 MapLibreTrackView(
@@ -496,7 +496,7 @@ fun TimeAttackLandscapeLayout(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         "AWAITING GPS",
-                        color = TrackProColors.TextMuted,
+                        color = TrackProTheme.colors.textMuted,
                         fontSize = 11.sp,
                         letterSpacing = 2.sp
                     )
@@ -513,7 +513,7 @@ private fun LapTimeCell(label: String, value: String, valueColor: Color) {
     Column {
         Text(
             text = label,
-            color = TrackProColors.TextMuted,
+            color = TrackProTheme.colors.textMuted,
             fontSize = 9.sp,
             letterSpacing = 2.sp,
             fontWeight = FontWeight.Bold
@@ -543,14 +543,14 @@ private fun StintTimerCell(stintStart: Long) {
     Column {
         Text(
             text = "STINT",
-            color = TrackProColors.TextMuted,
+            color = TrackProTheme.colors.textMuted,
             fontSize = 9.sp,
             letterSpacing = 2.sp,
             fontWeight = FontWeight.Bold
         )
         Text(
             text = stintTime,
-            color = TrackProColors.TextPrimary,
+            color = TrackProTheme.colors.textPrimary,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
@@ -563,7 +563,7 @@ private fun SectorDivider() {
         modifier = Modifier
             .width(1.dp)
             .height(40.dp)
-            .background(TrackProColors.SectorLine)
+            .background(TrackProTheme.colors.sectorLine)
     )
 }
 // ── Reusable sub-components ────────────────────────────────

@@ -39,8 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.example.trackpro.TrackProApp
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.JsonReader
-import com.example.trackpro.theme.TrackProColors
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -67,7 +67,7 @@ fun ESPConnectionTestScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -75,7 +75,7 @@ fun ESPConnectionTestScreen() {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(if (isConnected) TrackProColors.AccentGreen else TrackProColors.AccentRed)
+                    .background(if (isConnected) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentCyan)
                     .padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
                 Row(
@@ -114,19 +114,19 @@ fun ESPConnectionTestScreen() {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProColors.BgCard)
+                        .background(TrackProTheme.colors.bgCard)
                         .padding(top = 24.dp, bottom = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         StyledSpeedometer(
                             speed = speed,
-                            textPrimary = TrackProColors.TextPrimary
+                            textPrimary = TrackProTheme.colors.textPrimary
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = "km/h",
-                            color = TrackProColors.TextMuted,
+                            color = TrackProTheme.colors.textMuted,
                             fontSize = 12.sp,
                             letterSpacing = 3.sp,
                             fontWeight = FontWeight.Bold
@@ -134,79 +134,79 @@ fun ESPConnectionTestScreen() {
                     }
                 }
 
-                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
                 // ── Signal quality row ────────────────────
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProColors.BgElevated)
+                        .background(TrackProTheme.colors.bgElevated)
                         .padding(horizontal = 24.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     SignalCell(
                         label = "SOURCE",
                         value = if (useExternal) "ESP32" else "INTERNAL",
-                        valueColor = TrackProColors.TextPrimary,
-                        textMuted = TrackProColors.TextMuted
+                        valueColor = TrackProTheme.colors.textPrimary,
+                        textMuted = TrackProTheme.colors.textMuted
                     )
-                    VerticalDividerLine(TrackProColors.SectorLine)
+                    VerticalDividerLine(TrackProTheme.colors.sectorLine)
                     SignalCell(
                         label = "STATUS",
                         value = if (isConnected) "LIVE" else "OFFLINE",
-                        valueColor = if (isConnected) TrackProColors.AccentGreen else TrackProColors.AccentRed,
-                        textMuted = TrackProColors.TextMuted
+                        valueColor = if (isConnected) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentCyan,
+                        textMuted = TrackProTheme.colors.textMuted
                     )
-                    VerticalDividerLine(TrackProColors.SectorLine)
+                    VerticalDividerLine(TrackProTheme.colors.sectorLine)
                     SignalCell(
                         label = "FIX",
                         value = if (fix) "OK" else "WAIT",
-                        valueColor = if (fix) TrackProColors.AccentGreen else TrackProColors.AccentAmber,
-                        textMuted = TrackProColors.TextMuted
+                        valueColor = if (fix) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentAmber,
+                        textMuted = TrackProTheme.colors.textMuted
                     )
                 }
 
-                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
                 // ── Telemetry List ────────────────────────
-                SectionHeader("DATA STREAM", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                SectionHeader("DATA STREAM", com.example.trackpro.extrasForUI.TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProColors.BgCard)
+                        .background(TrackProTheme.colors.bgCard)
                         .padding(horizontal = 24.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     if (useExternal) {
-                        TelemetryRow("REMOTE IP", "$ip:$port", TrackProColors.TextPrimary, TrackProColors.TextMuted)
+                        TelemetryRow("REMOTE IP", "$ip:$port", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
                     }
-                    TelemetryRow("LATITUDE", gpsData?.latitude?.let { String.format("%.6f°", it) } ?: "—", TrackProColors.TextPrimary, TrackProColors.TextMuted)
-                    TelemetryRow("LONGITUDE", gpsData?.longitude?.let { String.format("%.6f°", it) } ?: "—", TrackProColors.TextPrimary, TrackProColors.TextMuted)
-                    TelemetryRow("ALTITUDE", gpsData?.altitude?.let { String.format("%.1f m", it) } ?: "—", TrackProColors.TextPrimary, TrackProColors.TextMuted)
+                    TelemetryRow("LATITUDE", gpsData?.latitude?.let { String.format("%.6f°", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
+                    TelemetryRow("LONGITUDE", gpsData?.longitude?.let { String.format("%.6f°", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
+                    TelemetryRow("ALTITUDE", gpsData?.altitude?.let { String.format("%.1f m", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
 
                     TelemetryRow(
                         "REFRESH",
                         if (useExternal) "20-25 Hz" else "1-5 Hz",
-                        if (useExternal) TrackProColors.AccentGreen else TrackProColors.AccentAmber,
-                        TrackProColors.TextMuted
+                        if (useExternal) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentAmber,
+                        TrackProTheme.colors.textMuted
                     )
                 }
 
-                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
                 // ── Raw Packet / Debug ────────────────────
-                SectionHeader("RAW PACKET", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                SectionHeader("RAW PACKET", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProColors.BgCard)
+                        .background(TrackProTheme.colors.bgCard)
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     Text(
                         text = gpsData?.toString() ?: "Awaiting data stream...",
-                        color = if (gpsData != null) TrackProColors.AccentGreen else TrackProColors.TextMuted,
+                        color = if (gpsData != null) TrackProTheme.colors.accentBlue else TrackProTheme.colors.textMuted,
                         fontSize = 10.sp,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                         lineHeight = 16.sp

@@ -1,6 +1,5 @@
 package com.example.trackpro.screens.listViewScreens.listItems
 
-import TrackProTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -46,14 +45,15 @@ import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
-import com.example.trackpro.theme.TrackProColors
+import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
+import com.example.trackpro.managerClasses.utilities.toLapTimeMillis
+import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 class TimeAttackListItem : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,21 +108,21 @@ fun TimeAttackListItemScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = TrackProColors.AccentGreen,
+                    CircularProgressIndicator(color = TrackProTheme.colors.accentBlue,
                         modifier = Modifier.size(36.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.height(12.dp))
-                    Text("LOADING SESSION", color = TrackProColors.TextMuted,
+                    Text("LOADING SESSION", color = TrackProTheme.colors.textMuted,
                         fontSize = 10.sp, letterSpacing = 3.sp)
                 }
             }
         } else if (sessionData == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("SESSION NOT FOUND", color = TrackProColors.TextMuted,
+                Text("SESSION NOT FOUND", color = TrackProTheme.colors.textMuted,
                     fontSize = 12.sp, letterSpacing = 3.sp)
             }
         } else {
@@ -163,9 +163,9 @@ fun TimeAttackListItemScreen(
                 }
             } else "—"
             val trendColor = when {
-                trend.contains("IMPROVING") -> TrackProColors.AccentGreen
-                trend.contains("FADING")    ->TrackProColors.AccentRed
-                else                        -> TrackProColors.AccentAmber
+                trend.contains("IMPROVING") -> TrackProTheme.colors.accentBlue
+                trend.contains("FADING")    ->TrackProTheme.colors.accentCyan
+                else                        -> TrackProTheme.colors.accentAmber
             }
 
             LazyColumn(
@@ -177,7 +177,7 @@ fun TimeAttackListItemScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(TrackProColors.AccentGreen)
+                            .background(TrackProTheme.colors.accentBlue)
                             .padding(horizontal = 20.dp, vertical = 6.dp)
                     ) {
                         Row(
@@ -198,13 +198,13 @@ fun TimeAttackListItemScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(TrackProColors.BgCard)
+                            .background(TrackProTheme.colors.bgCard)
                             .padding(horizontal = 24.dp, vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
                             text = session.eventType,
-                            color = TrackProColors.TextPrimary,
+                            color = TrackProTheme.colors.textPrimary,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = (-0.5).sp
@@ -212,101 +212,100 @@ fun TimeAttackListItemScreen(
                         if (vehicle != null) {
                             Text(
                                 text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
-                                color = TrackProColors.TextMuted,
+                                color = TrackProTheme.colors.textMuted,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "${vehicle.engineType} · ${vehicle.horsepower}hp · ${vehicle.drivetrain}",
-                                color = TrackProColors.TextMuted.copy(alpha = 0.7f),
+                                color = TrackProTheme.colors.textMuted.copy(alpha = 0.7f),
                                 fontSize = 11.sp
                             )
                         }
                         Spacer(Modifier.height(4.dp))
-                        val formatter = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
                         Text(
-                            text = formatter.format(Date(session.startTime)),
-                            color = TrackProColors.TextMuted,
+                            text = DateFormatterUtil.getDateTimeFormat().format(Date(session.startTime)),
+                            color = TrackProTheme.colors.textMuted,
                             fontSize = 11.sp
                         )
                     }
-                    HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                    HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                 }
 
                 // ── Key performance metrics
                 item {
-                    SectionHeader("KEY METRICS", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                    SectionHeader("KEY METRICS", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(TrackProColors.BgCard)
+                            .background(TrackProTheme.colors.bgCard)
                             .padding(horizontal = 24.dp, vertical = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        MetricColumn("BEST LAP", bestLap?.laptime ?: "—", TrackProColors.AccentGreen, TrackProColors.TextMuted)
-                        MetricColumn("AVERAGE", avgMs.toLapTimeString(), TrackProColors.TextPrimary, TrackProColors.TextMuted)
+                        MetricColumn("BEST LAP", bestLap?.laptime ?: "—", TrackProTheme.colors.accentBlue, TrackProTheme.colors.textMuted)
+                        MetricColumn("AVERAGE", avgMs.toLapTimeString(), TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
                         MetricColumn("WORST", worstMs.toLapTimeString(),
-                            if (lapMillis.size > 1) TrackProColors.AccentRed else TrackProColors.TextPrimary, TrackProColors.TextMuted)
+                            if (lapMillis.size > 1) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
                     }
-                    HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                    HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                 }
 
                 // ── Session stats row
                 item {
-                    SectionHeader("SESSION STATS", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                    SectionHeader("SESSION STATS", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(TrackProColors.BgCard)
+                            .background(TrackProTheme.colors.bgCard)
                             .padding(horizontal = 24.dp, vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         StatRowItem(
                             label = "TOTAL SESSION TIME",
                             value = sessionDuration.toLapTimeString(),
-                            textPrimary = TrackProColors.TextPrimary,
-                            textMuted = TrackProColors.TextMuted
+                            textPrimary = TrackProTheme.colors.textPrimary,
+                            textMuted = TrackProTheme.colors.textMuted
                         )
                         StatRowItem(
                             label = "TOP SPEED (SESSION)",
                             value = String.format("%.1f km/h", topSpeedOverall),
-                            textPrimary = TrackProColors.TextPrimary,
-                            textMuted = TrackProColors.TextMuted
+                            textPrimary = TrackProTheme.colors.textPrimary,
+                            textMuted = TrackProTheme.colors.textMuted
                         )
                         StatRowItem(
                             label = "LAP COUNT",
                             value = "${lapTimes.size}",
-                            textPrimary = TrackProColors.TextPrimary,
-                            textMuted = TrackProColors.TextMuted
+                            textPrimary = TrackProTheme.colors.textPrimary,
+                            textMuted = TrackProTheme.colors.textMuted
                         )
                         StatRowItem(
                             label = "CONSISTENCY (σ)",
                             value = consistency,
                             textPrimary = if (consistency != "—" &&
                                 consistency.replace("%","").toDoubleOrNull()?.let { it < 1.0 } == true)
-                                TrackProColors.AccentGreen else TrackProColors.TextPrimary,
-                            textMuted = TrackProColors.TextMuted
+                                TrackProTheme.colors.accentBlue else TrackProTheme.colors.textPrimary,
+                            textMuted = TrackProTheme.colors.textMuted
                         )
                         StatRowItem(
                             label = "GAP: BEST → WORST",
                             value = if (lapMillis.size > 1)
                                 "+${(worstMs - bestMs).toLapTimeString()}" else "—",
-                            textPrimary = TrackProColors.TextPrimary,
-                            textMuted = TrackProColors.TextMuted
+                            textPrimary = TrackProTheme.colors.textPrimary,
+                            textMuted = TrackProTheme.colors.textMuted
                         )
                         StatRowItem(
                             label = "PERFORMANCE TREND",
                             value = trend,
                             textPrimary = trendColor,
-                            textMuted = TrackProColors.TextMuted
+                            textMuted = TrackProTheme.colors.textMuted
                         )
                     }
-                    HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                    HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                 }
 
                 // ── Lap-by-lap breakdown
                 item {
-                    SectionHeader("LAP BREAKDOWN", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                    SectionHeader("LAP BREAKDOWN", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
                 }
 
                 if (lapTimes.isEmpty()) {
@@ -317,7 +316,7 @@ fun TimeAttackListItemScreen(
                                 .padding(32.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("NO LAPS RECORDED", color = TrackProColors.TextMuted,
+                            Text("NO LAPS RECORDED", color = TrackProTheme.colors.textMuted,
                                 fontSize = 11.sp, letterSpacing = 3.sp)
                         }
                     }
@@ -337,14 +336,14 @@ fun TimeAttackListItemScreen(
                                 isWorst = isWorst,
                                 deltaMs = deltaMs,
                                 topSpeed = topSpeed,
-                                bgCard = TrackProColors.BgCard,
-                                bgElevated = TrackProColors.BgElevated,
-                                accentGreen = TrackProColors.AccentGreen,
-                                accentRed = TrackProColors.AccentRed,
-                                accentAmber = TrackProColors.AccentAmber,
-                                textPrimary = TrackProColors.TextPrimary,
-                                textMuted = TrackProColors.TextMuted,
-                                sectorLine = TrackProColors.SectorLine
+                                bgCard = TrackProTheme.colors.bgCard,
+                                bgElevated = TrackProTheme.colors.bgElevated,
+                                accentGreen = TrackProTheme.colors.accentBlue,
+                                accentRed = TrackProTheme.colors.accentCyan,
+                                accentAmber = TrackProTheme.colors.accentAmber,
+                                textPrimary = TrackProTheme.colors.textPrimary,
+                                textMuted = TrackProTheme.colors.textMuted,
+                                sectorLine = TrackProTheme.colors.sectorLine
                             )
                         }
                     }
@@ -520,24 +519,6 @@ private fun StatRowItem(label: String, value: String, textPrimary: Color, textMu
             letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
         Text(value, color = textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
-}
-
-
-
-// Helpers
-fun String.toLapTimeMillis(): Long {
-    val parts = this.split(":", ".", limit = 3)
-    val minutes = parts.getOrNull(0)?.toLongOrNull() ?: 0L
-    val seconds = parts.getOrNull(1)?.toLongOrNull() ?: 0L
-    val millis  = parts.getOrNull(2)?.toLongOrNull() ?: 0L
-    return minutes * 60_000 + seconds * 1_000 + millis
-}
-
-fun Long.toLapTimeString(): String {
-    val minutes = this / 60_000
-    val seconds = (this % 60_000) / 1_000
-    val millis = this % 1_000
-    return String.format("%02d:%02d.%03d", minutes, seconds, millis)
 }
 
 // Preview

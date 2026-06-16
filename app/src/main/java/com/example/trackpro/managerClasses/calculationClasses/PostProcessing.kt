@@ -5,6 +5,7 @@ import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.dataClasses.SmoothedGPSData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.utilities.haversineDistance
 import kotlinx.coroutines.flow.first
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -123,7 +124,7 @@ class PostProcessing(val database: ESPDatabase) {
                 distanceFiltered.add(point)
                 lastKeptPoint = point
             } else {
-                val distance = haversine(
+                val distance = haversineDistance(
                     lastKeptPoint!!.latitude, lastKeptPoint!!.longitude,
                     point.latitude, point.longitude
                 )
@@ -147,7 +148,7 @@ class PostProcessing(val database: ESPDatabase) {
         if (isLapTrack) {
             for (index in (actualStartIndex + 1) until distanceFiltered.size) {
                 val point = distanceFiltered[index]
-                val distanceFromStart = haversine(
+                val distanceFromStart = haversineDistance(
                     startPoint.latitude, startPoint.longitude,
                     point.latitude, point.longitude
                 )
@@ -171,21 +172,4 @@ class PostProcessing(val database: ESPDatabase) {
 
         return finalProcessedList
     }
-    // Haversine distance calculation
-    private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val R = 6371e3 // Earth radius in meters
-        val φ1 = Math.toRadians(lat1)
-        val φ2 = Math.toRadians(lat2)
-        val Δφ = Math.toRadians(lat2 - lat1)
-        val Δλ = Math.toRadians(lon2 - lon1)
-
-        val a = sin(Δφ / 2) * sin(Δφ / 2) +
-                cos(φ1) * cos(φ2) *
-                sin(Δλ / 2) * sin(Δλ / 2)
-        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        return R * c
-    }
-
-
 }

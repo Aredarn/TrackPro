@@ -31,19 +31,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
 import com.example.trackpro.models.DragSessionWithVehicle
-import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.viewModels.DragSessionViewModel
 import com.example.trackpro.viewModels.DragSessionViewModelFactory
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 class DragTimesList : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,12 +65,11 @@ fun DragTimesListView(
     viewModel: DragSessionViewModel,
     navController: NavController
 ) {
-    val scope = rememberCoroutineScope()
     val dragSessions by viewModel.dragSessions.collectAsState()
 
     val groupedSessions = remember(dragSessions) {
         dragSessions.groupBy { session ->
-            val date = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(session.startTime))
+            val date = DateFormatterUtil.getDateFormat().format(Date(session.startTime))
             "$date | ${session.manufacturer} ${session.model}"
         }
     }
@@ -79,20 +78,48 @@ fun DragTimesListView(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            groupedSessions.forEach { (groupKey, sessions) ->
-                item(key = groupKey) {
-                    ExpandableSessionGroup(
-                        groupTitle = groupKey,
-                        sessions = sessions,
-                        navController = navController
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.accentCyan)
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "● Drag RECORDS",
+                        color = Color.Black,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 3.sp
                     )
+                    Text(
+                        "${dragSessions.size} SESSIONS",
+                        color = Color.Black,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                groupedSessions.forEach { (groupKey, sessions) ->
+                    item(key = groupKey) {
+                        ExpandableSessionGroup(
+                            groupTitle = groupKey,
+                            sessions = sessions,
+                            navController = navController
+                        )
+                    }
                 }
             }
         }
@@ -109,10 +136,10 @@ fun ExpandableSessionGroup(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProColors.BgCard, RoundedCornerShape(12.dp))
+            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
             .border(
                 1.dp,
-                if (isExpanded) TrackProColors.AccentRed.copy(alpha = 0.5f) else TrackProColors.SectorLine,
+                if (isExpanded) TrackProTheme.colors.accentCyan.copy(alpha = 0.5f) else TrackProTheme.colors.sectorLine,
                 RoundedCornerShape(12.dp)
             )
     ) {
@@ -128,14 +155,14 @@ fun ExpandableSessionGroup(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     groupTitle.uppercase(),
-                    color = if (isExpanded) TrackProColors.AccentRed else TrackProColors.TextPrimary,
+                    color = if (isExpanded) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textPrimary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.sp
                 )
                 Text(
                     "${sessions.size} RUNS COMPLETED",
-                    color = TrackProColors.TextMuted,
+                    color = TrackProTheme.colors.textMuted,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -143,7 +170,7 @@ fun ExpandableSessionGroup(
 
             Text(
                 if (isExpanded) "CLOSE —" else "VIEW ALL +",
-                color = if (isExpanded) TrackProColors.AccentRed else TrackProColors.TextMuted,
+                color = if (isExpanded) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textMuted,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black
             )
@@ -159,12 +186,12 @@ fun ExpandableSessionGroup(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 sessions.forEach { session ->
-                    val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(session.startTime))
+                    val time = DateFormatterUtil.getTimeFormat().format(Date(session.startTime))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(TrackProColors.BgElevated, RoundedCornerShape(6.dp))
+                            .background(TrackProTheme.colors.bgElevated, RoundedCornerShape(6.dp))
                             .clickable { navController.navigate("graph/${session.sessionId}") }
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -172,12 +199,12 @@ fun ExpandableSessionGroup(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
-                                Modifier.size(6.dp).background(TrackProColors.AccentRed, RoundedCornerShape(100))
+                                Modifier.size(6.dp).background(TrackProTheme.colors.accentCyan, RoundedCornerShape(100))
                             )
                             Spacer(Modifier.width(12.dp))
                             Text(
                                 "RUN AT $time",
-                                color = TrackProColors.TextPrimary,
+                                color = TrackProTheme.colors.textPrimary,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -185,7 +212,7 @@ fun ExpandableSessionGroup(
 
                         Text(
                             "DETAILS →",
-                            color = TrackProColors.TextMuted,
+                            color = TrackProTheme.colors.textMuted,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black
                         )

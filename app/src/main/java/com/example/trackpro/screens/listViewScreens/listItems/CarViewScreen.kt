@@ -30,8 +30,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.dataClasses.VehicleInformationData
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
-import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -54,18 +54,18 @@ fun CarViewScreen(vehicleId: Long) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         if (vehicleInfo == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(
-                        color = TrackProColors.AccentAmber,
+                        color = TrackProTheme.colors.accentAmber,
                         modifier = Modifier.size(36.dp),
                         strokeWidth = 2.dp
                     )
                     Spacer(Modifier.height(12.dp))
-                    Text("LOADING VEHICLE", color = TrackProColors.TextMuted,
+                    Text("LOADING VEHICLE", color = TrackProTheme.colors.textMuted,
                         fontSize = 10.sp, letterSpacing = 3.sp)
                 }
             }
@@ -77,7 +77,7 @@ fun CarViewScreen(vehicleId: Long) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProColors.AccentAmber)
+                        .background(TrackProTheme.colors.accentAmber)
                         .padding(horizontal = 20.dp, vertical = 6.dp)
                 ) {
                     Text(
@@ -96,34 +96,34 @@ fun CarViewScreen(vehicleId: Long) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(TrackProColors.BgCard)
+                                .background(TrackProTheme.colors.bgCard)
                                 .padding(horizontal = 24.dp, vertical = 20.dp)
                         ) {
                             Text(
                                 text = "${vehicle.manufacturer} ${vehicle.model}",
-                                color = TrackProColors.TextPrimary,
+                                color = TrackProTheme.colors.textPrimary,
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = (-0.5).sp
                             )
                             Text(
                                 text = "${vehicle.year}",
-                                color = TrackProColors.TextMuted,
+                                color = TrackProTheme.colors.textMuted,
                                 fontSize = 14.sp,
                                 letterSpacing = 1.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                     }
 
                     // ── Performance stats ─────────────────
                     item {
-                        VehicleSectionHeader("PERFORMANCE", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                        VehicleSectionHeader("PERFORMANCE", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(TrackProColors.BgCard)
+                                .background(TrackProTheme.colors.bgCard)
                                 .padding(horizontal = 24.dp, vertical = 16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -131,25 +131,25 @@ fun CarViewScreen(vehicleId: Long) {
                                 label = "POWER",
                                 value = "${vehicle.horsepower}",
                                 unit = "hp",
-                                accentColor = TrackProColors.AccentAmber,
-                                textMuted = TrackProColors.TextMuted
+                                accentColor = TrackProTheme.colors.accentAmber,
+                                textMuted = TrackProTheme.colors.textMuted
                             )
                             VehicleStatCol(
                                 label = "TORQUE",
                                 value = vehicle.torque?.toString() ?: "—",
                                 unit = "Nm",
-                                accentColor = TrackProColors.AccentAmber,
-                                textMuted = TrackProColors.TextMuted
+                                accentColor = TrackProTheme.colors.accentAmber,
+                                textMuted = TrackProTheme.colors.textMuted
                             )
                             VehicleStatCol(
                                 label = "WEIGHT",
                                 value = "${vehicle.weight}",
                                 unit = "kg",
-                                accentColor = TrackProColors.AccentAmber,
-                                textMuted = TrackProColors.TextMuted
+                                accentColor = TrackProTheme.colors.accentAmber,
+                                textMuted = TrackProTheme.colors.textMuted
                             )
                         }
-                        HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                     }
 
                     // ── Speed stats ───────────────────────
@@ -157,7 +157,7 @@ fun CarViewScreen(vehicleId: Long) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(TrackProColors.BgElevated)
+                                .background(TrackProTheme.colors.bgElevated)
                                 .padding(horizontal = 24.dp, vertical = 16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -165,64 +165,64 @@ fun CarViewScreen(vehicleId: Long) {
                                 label = "TOP SPEED",
                                 value = vehicle.topSpeed?.toString() ?: "—",
                                 unit = "km/h",
-                                accentColor = TrackProColors.AccentAmber,
-                                textMuted = TrackProColors.TextMuted
+                                accentColor = TrackProTheme.colors.accentAmber,
+                                textMuted = TrackProTheme.colors.textMuted
                             )
                             VehicleStatCol(
                                 label = "0–100",
                                 value = vehicle.acceleration?.toString() ?: "—",
                                 unit = "sec",
-                                accentColor = TrackProColors.AccentAmber,
-                                textMuted = TrackProColors.TextMuted
+                                accentColor = TrackProTheme.colors.accentAmber,
+                                textMuted = TrackProTheme.colors.textMuted
                             )
                             VehicleStatCol(
                                 label = "DRIVETRAIN",
                                 value = vehicle.drivetrain,
                                 unit = "",
-                                accentColor = TrackProColors.AccentAmber,
-                                textMuted = TrackProColors.TextMuted
+                                accentColor = TrackProTheme.colors.accentAmber,
+                                textMuted = TrackProTheme.colors.textMuted
                             )
                         }
-                        HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                     }
 
                     // ── Mechanical details ────────────────
                     item {
-                        VehicleSectionHeader("MECHANICAL", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                        VehicleSectionHeader("MECHANICAL", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
                     }
                     item {
                         VehicleInfoRow("ENGINE TYPE", vehicle.engineType,
-                            TrackProColors.TextPrimary, TrackProColors.TextMuted, TrackProColors.SectorLine, TrackProColors.BgCard)
+                            TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                     }
                     item {
                         VehicleInfoRow("TRANSMISSION", vehicle.transmission,
-                            TrackProColors.TextPrimary, TrackProColors.TextMuted, TrackProColors.SectorLine, TrackProColors.BgCard)
+                            TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                     }
                     item {
                         VehicleInfoRow("FUEL TYPE", vehicle.fuelType,
-                            TrackProColors.TextPrimary, TrackProColors.TextMuted, TrackProColors.SectorLine, TrackProColors.BgCard)
+                            TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                     }
                     vehicle.fuelCapacity?.let {
                         item {
                             VehicleInfoRow("FUEL CAPACITY", "$it L",
-                                TrackProColors.TextPrimary, TrackProColors.TextMuted, TrackProColors.SectorLine, TrackProColors.BgCard)
+                                TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                         }
                     }
                     vehicle.suspensionType?.let {
                         item {
                             VehicleInfoRow("SUSPENSION", it,
-                                TrackProColors.TextPrimary, TrackProColors.TextMuted, TrackProColors.SectorLine, TrackProColors.BgCard)
+                                TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                         }
                     }
 
                     // ── Tyres ─────────────────────────────
                     item {
-                        HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
-                        VehicleSectionHeader("TYRES & SETUP", TrackProColors.TextMuted, TrackProColors.SectorLine)
+                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                        VehicleSectionHeader("TYRES & SETUP", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
                     }
                     item {
                         VehicleInfoRow("TYRE TYPE", vehicle.tireType,
-                            TrackProColors.TextPrimary, TrackProColors.TextMuted, TrackProColors.SectorLine, TrackProColors.BgCard)
+                            TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                     }
 
                     item { Spacer(Modifier.height(24.dp)) }

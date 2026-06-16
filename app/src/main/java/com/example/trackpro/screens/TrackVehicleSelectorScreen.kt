@@ -36,7 +36,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.extrasForUI.DropdownMenuFieldMulti
 import com.example.trackpro.extrasForUI.TrackDropdownMenu
-import com.example.trackpro.theme.TrackProColors
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.viewModels.TrackViewModel
 import com.example.trackpro.viewModels.TrackViewModelFactory
 import com.example.trackpro.viewModels.VehicleViewModel
@@ -62,7 +62,7 @@ fun TrackVehicleSelectorScreen(
         vehicleViewModel.fetchVehicles()
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(TrackProColors.BgDeep)) {
+    Box(modifier = Modifier.fillMaxSize().background(TrackProTheme.colors.bgDeep)) {
         Column(
             modifier = Modifier.fillMaxSize().padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -70,7 +70,7 @@ fun TrackVehicleSelectorScreen(
             // ── Header ───────────────────────────────────────
             Text(
                 "SESSION SETUP",
-                color = TrackProColors.TextPrimary,
+                color = TrackProTheme.colors.textPrimary,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 2.sp,
@@ -113,7 +113,7 @@ fun TrackVehicleSelectorScreen(
                         selectedVehicleName = vehicles.find { it.vehicleId == id }?.manufacturerAndModel ?: "" // Adjust 'name' to your vehicle field
                     }
                 } else {
-                    Text("No vehicles found in garage", color = TrackProColors.AccentRed, fontSize = 12.sp)
+                    Text("No vehicles found in garage", color = TrackProTheme.colors.accentCyan, fontSize = 12.sp)
                 }
             }
 
@@ -127,8 +127,8 @@ fun TrackVehicleSelectorScreen(
                 enabled = canStart,
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor  = if (canStart) TrackProColors.AccentRed else Color(0xFF2A1014),
-                    contentColor = if (canStart) Color.White else TrackProColors.TextMuted
+                    containerColor  = if (canStart) TrackProTheme.colors.accentCyan else Color(0xFF2A1014),
+                    contentColor = if (canStart) Color.White else TrackProTheme.colors.textMuted
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -153,12 +153,12 @@ fun SelectionCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProColors.BgCard, RoundedCornerShape(12.dp))
-            .border(1.dp, if (isSet) TrackProColors.AccentRed.copy(alpha = 0.5f) else Color(0xFF1E2530), RoundedCornerShape(12.dp))
+            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
+            .border(1.dp, if (isSet) TrackProTheme.colors.accentCyan.copy(alpha = 0.5f) else Color(0xFF1E2530), RoundedCornerShape(12.dp))
             .padding(16.dp)
     ) {
-        Text(label, color = if (isSet) TrackProColors.AccentRed else TrackProColors.TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        Text(title, color = TrackProColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
+        Text(label, color = if (isSet) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text(title, color = TrackProTheme.colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
         Spacer(modifier = Modifier.height(8.dp))
         content()
     }
