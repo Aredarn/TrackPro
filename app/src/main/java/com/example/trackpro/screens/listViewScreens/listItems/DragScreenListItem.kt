@@ -34,10 +34,9 @@ import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculatio
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.dataClasses.convertToLatLonOffsetList
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.screens.telemetricScreens.DragMetricCard
 import com.example.trackpro.screens.telemetricScreens.DragMetricDisplay
-import com.example.trackpro.theme.TrackProColors
-import com.example.trackpro.ui.theme.TrackProTheme
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
@@ -161,13 +160,13 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         // ── Top bar ───────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(TrackProColors.AccentRed)
+                .background(TrackProTheme.colors.accentCyan)
                 .padding(horizontal = 16.dp, vertical = 5.dp)
         ) {
             Text(
@@ -183,7 +182,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(TrackProColors.BgCard)
+                .background(TrackProTheme.colors.bgCard)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
@@ -197,8 +196,8 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     CompactStat(
                         label = "DURATION",
                         value = formatTime(totalTime),
-                        textMuted = TrackProColors.TextMuted,
-                        valueColor = TrackProColors.TextPrimary
+                        textMuted = TrackProTheme.colors.textMuted,
+                        valueColor = TrackProTheme.colors.textPrimary
                     )
                 }
                 CompactStat(
@@ -208,12 +207,12 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                         totalDist >= 1000 -> String.format("%.2f km", totalDist / 1000.0)
                         else -> String.format("%.0f m", totalDist)
                     },
-                    textMuted = TrackProColors.TextMuted,
-                    valueColor = TrackProColors.TextPrimary
+                    textMuted = TrackProTheme.colors.textMuted,
+                    valueColor = TrackProTheme.colors.textPrimary
                 )
             }
 
-            Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            Divider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -249,20 +248,20 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             }
         }
 
-        Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+        Divider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
         // ── Chart header ─────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(TrackProColors.BgCard)
+                .background(TrackProTheme.colors.bgCard)
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "SPEED TRACE",
-                color = TrackProColors.TextMuted,
+                color = TrackProTheme.colors.textMuted,
                 fontSize = 9.sp,
                 letterSpacing = 2.sp,
                 fontWeight = FontWeight.Bold
@@ -276,7 +275,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     Box(
                         modifier = Modifier
                             .background(
-                                if (active) TrackProColors.AccentRed else TrackProColors.SectorLine,
+                                if (active) TrackProTheme.colors.accentCyan else TrackProTheme.colors.sectorLine,
                                 androidx.compose.foundation.shape.RoundedCornerShape(3.dp)
                             )
                             .clickable { xAxisInMeters = isMeters }
@@ -284,7 +283,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     ) {
                         Text(
                             text = label,
-                            color = if (active) Color.Black else TrackProColors.TextMuted,
+                            color = if (active) Color.Black else TrackProTheme.colors.textMuted,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,
                         )
@@ -293,12 +292,12 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             }
         }
 
-        Divider(color = TrackProColors.SectorLine, thickness = 1.dp)
+        Divider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(TrackProColors.BgCard)
+                .background(TrackProTheme.colors.bgCard)
         ) {
             AndroidView(
                 factory = { ctx ->

@@ -35,8 +35,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
-import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -78,7 +78,7 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -86,7 +86,7 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(TrackProColors.AccentGreen)
+                    .background(TrackProTheme.colors.accentBlue)
                     .padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
                 Text(
@@ -102,24 +102,24 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(TrackProColors.BgCard)
+                    .background(TrackProTheme.colors.bgCard)
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = trackInfo.value.trackName,
-                    color = TrackProColors.TextPrimary,
+                    color = TrackProTheme.colors.textPrimary,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = (-0.5).sp
                 )
                 Text(
                     text = "${trackInfo.value.country} · ${trackInfo.value.type}",
-                    color = TrackProColors.TextMuted,
+                    color = TrackProTheme.colors.textMuted,
                     fontSize = 12.sp,
                     letterSpacing = 1.sp
                 )
-                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -127,32 +127,32 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
                     TrackStatCol(
                         label = "LENGTH",
                         value = "${trackInfo.value.totalLength ?: "?"} km",
-                        textPrimary = TrackProColors.TextPrimary,
-                        textMuted = TrackProColors.TextMuted
+                        textPrimary = TrackProTheme.colors.textPrimary,
+                        textMuted = TrackProTheme.colors.textMuted
                     )
                     TrackStatCol(
                         label = "TYPE",
                         value = trackInfo.value.type.uppercase(),
-                        textPrimary = TrackProColors.TextPrimary,
-                        textMuted = TrackProColors.TextMuted
+                        textPrimary = TrackProTheme.colors.textPrimary,
+                        textMuted = TrackProTheme.colors.textMuted
                     )
                     TrackStatCol(
                         label = "CORNERS",
                         value = "${trackParts.size}",
-                        textPrimary = TrackProColors.TextPrimary,
-                        textMuted = TrackProColors.TextMuted
+                        textPrimary = TrackProTheme.colors.textPrimary,
+                        textMuted = TrackProTheme.colors.textMuted
                     )
                 }
             }
 
-            HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
             // ── Map ───────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(TrackProColors.BgCard)
+                    .background(TrackProTheme.colors.bgCard)
             ) {
                 if (trackParts.isNotEmpty()) {
                     TrackStaticMapView(
@@ -165,12 +165,12 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(
-                                color = TrackProColors.AccentGreen,
+                                color = TrackProTheme.colors.accentBlue,
                                 modifier = Modifier.size(32.dp),
                                 strokeWidth = 2.dp
                             )
                             Spacer(Modifier.height(12.dp))
-                            Text("LOADING TRACK DATA", color = TrackProColors.TextMuted,
+                            Text("LOADING TRACK DATA", color = TrackProTheme.colors.textMuted,
                                 fontSize = 10.sp, letterSpacing = 2.sp)
                         }
                     }

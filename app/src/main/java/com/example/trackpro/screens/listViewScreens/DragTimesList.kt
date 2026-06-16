@@ -37,9 +37,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
 import com.example.trackpro.models.DragSessionWithVehicle
-import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.viewModels.DragSessionViewModel
 import com.example.trackpro.viewModels.DragSessionViewModelFactory
 import java.util.Date
@@ -64,7 +64,6 @@ fun DragTimesListView(
     viewModel: DragSessionViewModel,
     navController: NavController
 ) {
-    val scope = rememberCoroutineScope()
     val dragSessions by viewModel.dragSessions.collectAsState()
 
     val groupedSessions = remember(dragSessions) {
@@ -78,7 +77,7 @@ fun DragTimesListView(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -108,10 +107,10 @@ fun ExpandableSessionGroup(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProColors.BgCard, RoundedCornerShape(12.dp))
+            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
             .border(
                 1.dp,
-                if (isExpanded) TrackProColors.AccentRed.copy(alpha = 0.5f) else TrackProColors.SectorLine,
+                if (isExpanded) TrackProTheme.colors.accentCyan.copy(alpha = 0.5f) else TrackProTheme.colors.sectorLine,
                 RoundedCornerShape(12.dp)
             )
     ) {
@@ -127,14 +126,14 @@ fun ExpandableSessionGroup(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     groupTitle.uppercase(),
-                    color = if (isExpanded) TrackProColors.AccentRed else TrackProColors.TextPrimary,
+                    color = if (isExpanded) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textPrimary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.sp
                 )
                 Text(
                     "${sessions.size} RUNS COMPLETED",
-                    color = TrackProColors.TextMuted,
+                    color = TrackProTheme.colors.textMuted,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -142,7 +141,7 @@ fun ExpandableSessionGroup(
 
             Text(
                 if (isExpanded) "CLOSE —" else "VIEW ALL +",
-                color = if (isExpanded) TrackProColors.AccentRed else TrackProColors.TextMuted,
+                color = if (isExpanded) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textMuted,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black
             )
@@ -163,7 +162,7 @@ fun ExpandableSessionGroup(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(TrackProColors.BgElevated, RoundedCornerShape(6.dp))
+                            .background(TrackProTheme.colors.bgElevated, RoundedCornerShape(6.dp))
                             .clickable { navController.navigate("graph/${session.sessionId}") }
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -171,12 +170,12 @@ fun ExpandableSessionGroup(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
-                                Modifier.size(6.dp).background(TrackProColors.AccentRed, RoundedCornerShape(100))
+                                Modifier.size(6.dp).background(TrackProTheme.colors.accentCyan, RoundedCornerShape(100))
                             )
                             Spacer(Modifier.width(12.dp))
                             Text(
                                 "RUN AT $time",
-                                color = TrackProColors.TextPrimary,
+                                color = TrackProTheme.colors.textPrimary,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -184,7 +183,7 @@ fun ExpandableSessionGroup(
 
                         Text(
                             "DETAILS →",
-                            color = TrackProColors.TextMuted,
+                            color = TrackProTheme.colors.textMuted,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black
                         )

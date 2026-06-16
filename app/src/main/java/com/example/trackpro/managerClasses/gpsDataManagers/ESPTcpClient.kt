@@ -2,8 +2,8 @@ package com.example.trackpro.managerClasses.gpsDataManagers
 
 import android.util.Log
 import com.example.trackpro.dataClasses.RawGPSData
+import com.example.trackpro.managerClasses.calculationClasses.convertToUnixTimestamp
 import com.example.trackpro.models.GpsProvider
-import convertToUnixTimestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

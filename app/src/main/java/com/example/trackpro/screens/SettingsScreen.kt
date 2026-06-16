@@ -29,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.TrackProApp
-import com.example.trackpro.theme.TrackProColors
+import com.example.trackpro.extrasForUI.TrackProTheme
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
@@ -40,7 +40,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         // --- Header ---
         HeaderSection(onBack = onBack, title = "SETTINGS")
@@ -63,13 +63,13 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Column {
                         Text(
                             text = "GPS SOURCE",
-                            color = TrackProColors.TextPrimary,
+                            color = TrackProTheme.colors.textPrimary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (useExternal) "External ESP32 Module" else "Internal Phone GPS",
-                            color = if (useExternal) TrackProColors.AccentRed else TrackProColors.TextMuted,
+                            color = if (useExternal) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textMuted,
                             fontSize = 12.sp
                         )
                     }
@@ -78,14 +78,14 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Button(
                         onClick = { app.useExternalGps.value = !useExternal },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (useExternal) TrackProColors.AccentRed else Color(0xFF1E2530)
+                            containerColor = if (useExternal) TrackProTheme.colors.accentCyan else Color(0xFF1E2530)
                         ),
                         shape = RoundedCornerShape(4.dp),
                         modifier = Modifier.height(36.dp)
                     ) {
                         Text(
                             text = if (useExternal) "USE PHONE" else "USE ESP32",
-                            color = if (useExternal) Color.Black else TrackProColors.TextPrimary,
+                            color = if (useExternal) Color.Black else TrackProTheme.colors.textPrimary,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold
                         )
@@ -115,7 +115,7 @@ fun SettingsScreen(onBack: () -> Unit) {
 private fun SettingsSectionHeader(title: String) {
     Text(
         text = title,
-        color = TrackProColors.TextMuted,
+        color = TrackProTheme.colors.textMuted,
         fontSize = 10.sp,
         letterSpacing = 2.sp,
         fontWeight = FontWeight.Bold,
@@ -128,7 +128,7 @@ private fun SettingsCard(content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProColors.BgCard, RoundedCornerShape(8.dp))
+            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(8.dp))
             .border(1.dp, Color(0xFF1E2530), RoundedCornerShape(8.dp))
             .padding(16.dp)
     ) {
@@ -139,8 +139,8 @@ private fun SettingsCard(content: @Composable () -> Unit) {
 @Composable
 private fun SettingsInfoRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = TrackProColors.TextMuted, fontSize = 14.sp)
-        Text(value, color = TrackProColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = TrackProTheme.colors.textMuted, fontSize = 14.sp)
+        Text(value, color = TrackProTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -151,9 +151,9 @@ private fun HeaderSection(onBack: () -> Unit, title: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextButton(onClick = onBack) {
-            Text("← BACK", color = TrackProColors.AccentRed, fontWeight = FontWeight.Bold)
+            Text("← BACK", color = TrackProTheme.colors.accentCyan, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.weight(1f))
-        Text(title, color = TrackProColors.TextPrimary, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+        Text(title, color = TrackProTheme.colors.textPrimary, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
     }
 }

@@ -1,6 +1,6 @@
 package com.example.trackpro
 
-import TrackProTheme
+import com.example.trackpro.extrasForUI.TrackProTheme
 import android.Manifest
 import android.app.Application
 import android.os.Bundle
@@ -79,7 +79,6 @@ import com.example.trackpro.screens.listViewScreens.lapDetail.LapDetailScreen
 import com.example.trackpro.screens.listViewScreens.listItems.CarViewScreen
 import com.example.trackpro.screens.listViewScreens.listItems.GraphScreen
 import com.example.trackpro.screens.listViewScreens.listItems.TimeAttackListItemScreen
-import com.example.trackpro.theme.TrackProColors
 import com.example.trackpro.viewModels.DragSessionViewModel
 import com.example.trackpro.viewModels.DragSessionViewModelFactory
 import com.example.trackpro.viewModels.SessionViewModel
@@ -293,14 +292,14 @@ fun MainScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = TrackProColors.BgCard,
-                drawerContentColor = TrackProColors.TextPrimary
+                drawerContainerColor = TrackProTheme.colors.bgCard,
+                drawerContentColor = TrackProTheme.colors.textPrimary
             ) {
                 // Drawer header
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProColors.AccentRed)
+                        .background(TrackProTheme.colors.accentCyan)
                         .padding(horizontal = 24.dp, vertical = 20.dp)
                 ) {
                     Column {
@@ -326,13 +325,13 @@ fun MainScreen(
                     DrawerItem(
                         icon = Icons.Default.RocketLaunch,
                         label = "Drag Sessions",
-                        tint = TrackProColors.AccentRed,
+                        tint = TrackProTheme.colors.accentCyan,
                         onClick = { onNavigateToDragTimesList(); scope.launch { drawerState.close() } }
                     )
                     DrawerItem(
                         icon = Icons.Default.FlagCircle,
                         label = "Track Sessions",
-                        tint = TrackProColors.AccentGreen,
+                        tint = TrackProTheme.colors.accentBlue,
                         onClick = { onNavigateToTimeAttackListView(); scope.launch { drawerState.close() } }
                     )
                 }
@@ -340,20 +339,20 @@ fun MainScreen(
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     thickness = 1.dp,
-                    color = TrackProColors.SectorLine
+                    color = TrackProTheme.colors.sectorLine
                 )
 
                 DrawerSection(title = "MANAGEMENT") {
                     DrawerItem(
                         icon = Icons.Default.Timelapse,
                         label = "My Tracks",
-                        tint = TrackProColors.AccentAmber,
+                        tint = TrackProTheme.colors.accentAmber,
                         onClick = { onNavigateToTrackListScreen(); scope.launch { drawerState.close() } }
                     )
                     DrawerItem(
                         icon = Icons.Default.CarRepair,
                         label = "My Vehicles",
-                        tint = TrackProColors.AccentAmber,
+                        tint = TrackProTheme.colors.accentAmber,
                         onClick = { onNavigateToVehicleList(); scope.launch { drawerState.close() } }
                     )
                 }
@@ -361,20 +360,20 @@ fun MainScreen(
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     thickness = 1.dp,
-                    color = TrackProColors.SectorLine
+                    color = TrackProTheme.colors.sectorLine
                 )
 
                 DrawerSection(title = "SYSTEM") {
                     DrawerItem(
                         icon = Icons.Default.Wifi,
                         label = "ESP Connection",
-                        tint = TrackProColors.TextMuted,
+                        tint = TrackProTheme.colors.textMuted,
                         onClick = { onNavigateToESPTestScreen(); scope.launch { drawerState.close() } }
                     )
                     DrawerItem(
                         icon = Icons.Default.Settings,
                         label = "Settings",
-                        tint = TrackProColors.TextMuted,
+                        tint = TrackProTheme.colors.textMuted,
                         onClick = { onNavigateToSettings();scope.launch { drawerState.close() } }
                     )
                 }
@@ -384,7 +383,7 @@ fun MainScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(TrackProColors.BgDeep)
+                .background(TrackProTheme.colors.bgDeep)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
 
@@ -392,7 +391,7 @@ fun MainScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProColors.BgCard)
+                        .background(TrackProTheme.colors.bgCard)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Row(
@@ -402,11 +401,11 @@ fun MainScreen(
                     ) {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu",
-                                tint = TrackProColors.TextPrimary)
+                                tint = TrackProTheme.colors.textPrimary)
                         }
                         Text(
                             text = "TRACKPRO",
-                            color = TrackProColors.AccentRed,
+                            color = TrackProTheme.colors.accentCyan,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 4.sp
@@ -416,13 +415,13 @@ fun MainScreen(
                     }
                 }
 
-                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
                 // ── Hero section ──────────────────────────────
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProColors.BgCard)
+                        .background(TrackProTheme.colors.bgCard)
                         .padding(horizontal = 28.dp, vertical = 32.dp)
                 ) {
                     Column {
@@ -431,12 +430,12 @@ fun MainScreen(
                             modifier = Modifier
                                 .width(40.dp)
                                 .height(3.dp)
-                                .background(TrackProColors.AccentRed)
+                                .background(TrackProTheme.colors.accentCyan)
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
                             text = "READY TO\nBEAT RECORDS?",
-                            color = TrackProColors.TextPrimary,
+                            color = TrackProTheme.colors.textPrimary,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = (-0.5).sp,
@@ -445,14 +444,14 @@ fun MainScreen(
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = "GPS telemetry · Lap timing · Performance analysis",
-                            color = TrackProColors.TextMuted,
+                            color = TrackProTheme.colors.textMuted,
                             fontSize = 12.sp,
                             letterSpacing = 0.5.sp
                         )
                     }
                 }
 
-                HorizontalDivider(color = TrackProColors.SectorLine, thickness = 1.dp)
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
                 // ── Action grid ───────────────────────────────
                 Column(
@@ -468,7 +467,7 @@ fun MainScreen(
                         icon = Icons.Default.RocketLaunch,
                         title = "DRAG TIMING",
                         subtitle = "0–100 · ¼ mile · speed trace",
-                        accentColor = TrackProColors.AccentRed,
+                        accentColor = TrackProTheme.colors.accentCyan,
                         onClick = onNavigateToDragRace,
                         fullWidth = true
                     )
@@ -477,7 +476,7 @@ fun MainScreen(
                         icon = Icons.Default.FlagCircle,
                         title = "LAP TIMING",
                         subtitle = "Circuit & sprint · live delta · best lap",
-                        accentColor = TrackProColors.AccentGreen,
+                        accentColor = TrackProTheme.colors.accentBlue,
                         onClick = onNavigateToTrackVehicleSelector,
                         fullWidth = true
                     )
@@ -485,7 +484,7 @@ fun MainScreen(
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 4.dp),
                         thickness = 1.dp,
-                        color = TrackProColors.SectorLine
+                        color = TrackProTheme.colors.sectorLine
                     )
 
                     // Secondary actions — 2 column grid
@@ -498,7 +497,7 @@ fun MainScreen(
                                 icon = Icons.Default.CarRepair,
                                 title = "ADD VEHICLES",
                                 subtitle = "Create your own vehicles",
-                                accentColor = TrackProColors.AccentAmber,
+                                accentColor = TrackProTheme.colors.accentAmber,
                                 onClick = onNavigateToVehicleCreatorScreen,
                                 halfWidth  = true
                             )
@@ -508,7 +507,7 @@ fun MainScreen(
                                 icon = Icons.Default.Timelapse,
                                 title = "TRACK\nBUILDER",
                                 subtitle = "Define tracks",
-                                accentColor = TrackProColors.AccentAmber,
+                                accentColor = TrackProTheme.colors.accentAmber,
                                 onClick = onNavigateToTrackBuilder,
                                 halfWidth  = true
                             )
@@ -524,7 +523,7 @@ fun MainScreen(
                                 icon = Icons.Default.Wifi,
                                 title = "ESP\nCONNECT",
                                 subtitle = "Test connection",
-                                accentColor = TrackProColors.TextMuted,
+                                accentColor = TrackProTheme.colors.textMuted,
                                 onClick = onNavigateToESPTestScreen,
                                 halfWidth  = true
                             )
@@ -534,7 +533,7 @@ fun MainScreen(
                                 icon = Icons.Default.Settings,
                                 title = "SETTINGS",
                                 subtitle = "Global settings",
-                                accentColor = TrackProColors.TextMuted,
+                                accentColor = TrackProTheme.colors.textMuted,
                                 onClick = onNavigateToSettings,
                                 halfWidth  = true,
                             )
@@ -546,7 +545,7 @@ fun MainScreen(
                     // Version tag
                     Text(
                         text = "TrackPro · GPS Telemetry System",
-                        color = TrackProColors.TextMuted.copy(alpha = 0.4f),
+                        color = TrackProTheme.colors.textMuted.copy(alpha = 0.4f),
                         fontSize = 10.sp,
                         letterSpacing = 1.sp,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -581,8 +580,8 @@ private fun ActionCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProColors.BgCard, RoundedCornerShape(10.dp))
-            .border(1.dp, TrackProColors.SectorLine, RoundedCornerShape(10.dp))
+            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(10.dp))
+            .border(1.dp, TrackProTheme.colors.sectorLine, RoundedCornerShape(10.dp))
             .then(if (!disabled) Modifier.clickable(onClick = onClick) else Modifier)
     ) {
         // Left accent bar
@@ -621,7 +620,7 @@ private fun ActionCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    color = TrackProColors.TextPrimary.copy(alpha = alpha),
+                    color = TrackProTheme.colors.textPrimary.copy(alpha = alpha),
                     fontSize = titleSize,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 0.5.sp,  // reduced from 1.sp
@@ -630,7 +629,7 @@ private fun ActionCard(
                 )
                 Text(
                     text = subtitle,
-                    color = TrackProColors.TextMuted.copy(alpha = alpha),
+                    color = TrackProTheme.colors.textMuted.copy(alpha = alpha),
                     fontSize = subtitleSize,
                     letterSpacing = 0.sp,
                     maxLines = 2,
@@ -656,7 +655,7 @@ private fun ActionCard(
 private fun DrawerSection(title: String, content: @Composable () -> Unit) {
     Text(
         text = title,
-        color = TrackProColors.TextMuted,
+        color = TrackProTheme.colors.textMuted,
         fontSize = 9.sp,
         fontWeight = FontWeight.Black,
         letterSpacing = 3.sp,
@@ -688,7 +687,7 @@ private fun DrawerItem(
         ) {
             Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(16.dp))
         }
-        Text(label, color = TrackProColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = TrackProTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }
 

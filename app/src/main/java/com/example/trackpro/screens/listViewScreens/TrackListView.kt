@@ -44,9 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.dataClasses.TrackMainData
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.viewModels.TrackViewModel
-import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -68,7 +68,7 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -76,7 +76,7 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(TrackProColors.AccentAmber)
+                    .background(TrackProTheme.colors.accentAmber)
                     .padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
                 Row(
@@ -104,12 +104,12 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
             if (tracks.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("NO TRACKS YET", color = TrackProColors.TextMuted,
+                        Text("NO TRACKS YET", color = TrackProTheme.colors.textMuted,
                             fontSize = 14.sp, letterSpacing = 3.sp,
                             fontWeight = FontWeight.Black)
                         Spacer(Modifier.height(8.dp))
                         Text("Build a track to see it here",
-                            color = TrackProColors.TextMuted.copy(alpha = 0.5f), fontSize = 12.sp)
+                            color = TrackProTheme.colors.textMuted.copy(alpha = 0.5f), fontSize = 12.sp)
                     }
                 }
             } else {
@@ -122,13 +122,13 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
                         TrackCard(
                             track = track,
                             navController = navController,
-                            bgCard = TrackProColors.BgCard,
-                            bgElevated = TrackProColors.BgElevated,
-                            accentAmber = TrackProColors.AccentAmber,
-                            accentRed = TrackProColors.AccentRed,
-                            textPrimary = TrackProColors.TextPrimary,
-                            textMuted = TrackProColors.TextMuted,
-                            sectorLine = TrackProColors.SectorLine,
+                            bgCard = TrackProTheme.colors.bgCard,
+                            bgElevated = TrackProTheme.colors.bgElevated,
+                            accentAmber = TrackProTheme.colors.accentAmber,
+                            accentRed = TrackProTheme.colors.accentCyan,
+                            textPrimary = TrackProTheme.colors.textPrimary,
+                            textMuted = TrackProTheme.colors.textMuted,
+                            sectorLine = TrackProTheme.colors.sectorLine,
                             onDelete = { trackToDelete ->
                                 scope.launch(Dispatchers.IO) {
                                     database.trackMainDao().deleteTrack(trackToDelete.trackId)

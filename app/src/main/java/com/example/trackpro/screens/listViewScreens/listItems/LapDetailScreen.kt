@@ -1,6 +1,5 @@
 package com.example.trackpro.screens.listViewScreens.lapDetail
 
-import TrackProTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -36,10 +35,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.utilities.toLapTimeMillis
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
-import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.maplibre.android.MapLibre
@@ -137,13 +136,13 @@ fun LapDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         if (isLoading) {
             LoadingView()
         } else if (primaryLap == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("LAP NOT FOUND", color = TrackProColors.TextMuted,
+                Text("LAP NOT FOUND", color = TrackProTheme.colors.textMuted,
                     fontSize = 12.sp, letterSpacing = 3.sp)
             }
         } else {
@@ -167,7 +166,7 @@ fun LapDetailScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProColors.AccentGreen)
+                        .background(TrackProTheme.colors.accentBlue)
                         .padding(horizontal = 20.dp, vertical = 6.dp)
                 ) {
                     Row(
@@ -212,7 +211,7 @@ fun LapDetailScreen(
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 10.dp)
                         .background(
-                            TrackProColors.BgCard.copy(alpha = 0.92f),
+                            TrackProTheme.colors.bgCard.copy(alpha = 0.92f),
                             RoundedCornerShape(12.dp)
                         )
                         .padding(4.dp),
@@ -224,7 +223,7 @@ fun LapDetailScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(9.dp))
                                 .background(
-                                    if (selected) TrackProColors.AccentGreen
+                                    if (selected) TrackProTheme.colors.accentBlue
                                     else Color.Transparent
                                 )
                                 .clickable { heatmapMode = mode }
@@ -233,7 +232,7 @@ fun LapDetailScreen(
                         ) {
                             Text(
                                 "${mode.icon} ${mode.label}",
-                                color = if (selected) Color.Black else TrackProColors.TextMuted,
+                                color = if (selected) Color.Black else TrackProTheme.colors.textMuted,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 1.sp
@@ -250,7 +249,7 @@ fun LapDetailScreen(
                         .align(Alignment.TopEnd)
                         .padding(top = 80.dp, end = 16.dp)
                         .background(
-                            TrackProColors.BgCard.copy(alpha = 0.92f),
+                            TrackProTheme.colors.bgCard.copy(alpha = 0.92f),
                             RoundedCornerShape(10.dp)
                         )
                         .border(1.dp, COMPARE_COLOR.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
@@ -270,13 +269,13 @@ fun LapDetailScreen(
                                 color = COMPARE_COLOR, fontSize = 8.sp,
                                 fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                             Text(cl.laptime,
-                                color = TrackProColors.TextPrimary, fontSize = 13.sp,
+                                color = TrackProTheme.colors.textPrimary, fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold)
                             if (compareMs > 0) {
                                 val sign = if (deltaMs > 0) "+" else ""
                                 Text(
                                     text = "${sign}${deltaMs.toLapTimeString()}",
-                                    color = if (deltaMs < 0) TrackProColors.DeltaGood else TrackProColors.DeltaBad,
+                                    color = if (deltaMs < 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad,
                                     fontSize = 10.sp, fontWeight = FontWeight.Bold
                                 )
                             }
@@ -284,7 +283,7 @@ fun LapDetailScreen(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Remove compare",
-                            tint = TrackProColors.TextMuted,
+                            tint = TrackProTheme.colors.textMuted,
                             modifier = Modifier
                                 .size(16.dp)
                                 .clickable {
@@ -324,7 +323,7 @@ fun LapDetailScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProColors.BgCard.copy(alpha = 0.95f))
+                        .background(TrackProTheme.colors.bgCard.copy(alpha = 0.95f))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -332,7 +331,7 @@ fun LapDetailScreen(
                     ActionButton(
                         label = if (showStatsPanel) "HIDE STATS" else "STATS",
                         icon  = "📊",
-                        color = TrackProColors.AccentGreen,
+                        color = TrackProTheme.colors.accentBlue,
                         modifier = Modifier.weight(1f)
                     ) { showStatsPanel = !showStatsPanel }
 
@@ -340,7 +339,7 @@ fun LapDetailScreen(
                     ActionButton(
                         label    = if (compareLap != null) "COMPARING" else "COMPARE",
                         icon     = "⚖",
-                        color    = if (compareLap != null) COMPARE_COLOR else TrackProColors.AccentAmber,
+                        color    = if (compareLap != null) COMPARE_COLOR else TrackProTheme.colors.accentAmber,
                         modifier = Modifier.weight(1f)
                     ) { showLapPicker = true }
                 }
@@ -614,7 +613,7 @@ private fun StatsPanel(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                TrackProColors.BgCard.copy(alpha = 0.97f),
+                TrackProTheme.colors.bgCard.copy(alpha = 0.97f),
                 RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
             )
             .padding(bottom = 4.dp)
@@ -626,7 +625,7 @@ private fun StatsPanel(
                 .padding(top = 10.dp, bottom = 6.dp)
                 .width(40.dp)
                 .height(3.dp)
-                .background(TrackProColors.TextMuted.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
+                .background(TrackProTheme.colors.textMuted.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
         )
 
         Row(
@@ -636,16 +635,16 @@ private fun StatsPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("LAP STATS", color = TrackProColors.TextMuted, fontSize = 9.sp,
+            Text("LAP STATS", color = TrackProTheme.colors.textMuted, fontSize = 9.sp,
                 fontWeight = FontWeight.Black, letterSpacing = 3.sp)
             Icon(
                 Icons.Default.Close, "dismiss",
-                tint = TrackProColors.TextMuted,
+                tint = TrackProTheme.colors.textMuted,
                 modifier = Modifier.size(16.dp).clickable { onDismiss() }
             )
         }
 
-        HorizontalDivider(color = TrackProColors.SectorLine)
+        HorizontalDivider(color = TrackProTheme.colors.sectorLine)
 
         // Header row
         Row(
@@ -654,7 +653,7 @@ private fun StatsPanel(
                 .padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("METRIC", color = TrackProColors.TextMuted, fontSize = 8.sp,
+            Text("METRIC", color = TrackProTheme.colors.textMuted, fontSize = 8.sp,
                 fontWeight = FontWeight.Black, letterSpacing = 2.sp,
                 modifier = Modifier.weight(1.4f))
             Row(
@@ -679,7 +678,7 @@ private fun StatsPanel(
             }
         }
 
-        HorizontalDivider(color = TrackProColors.SectorLine)
+        HorizontalDivider(color = TrackProTheme.colors.sectorLine)
 
         val rows = buildList {
             add(Triple("LAP TIME",    primaryLap.laptime, compareLap?.laptime ?: "—"))
@@ -701,28 +700,28 @@ private fun StatsPanel(
                     .fillMaxWidth()
                     .background(
                         if (i % 2 == 0) Color.Transparent
-                        else TrackProColors.BgElevated.copy(alpha = 0.5f)
+                        else TrackProTheme.colors.bgElevated.copy(alpha = 0.5f)
                     )
                     .padding(horizontal = 20.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(label, color = TrackProColors.TextMuted, fontSize = 9.sp,
+                Text(label, color = TrackProTheme.colors.textMuted, fontSize = 9.sp,
                     fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
                     modifier = Modifier.weight(1.4f))
-                Text(v1, color = if (label == "DELTA" && deltaMs < 0) TrackProColors.DeltaGood
-                    else TrackProColors.TextPrimary,
+                Text(v1, color = if (label == "DELTA" && deltaMs < 0) TrackProTheme.colors.deltaGood
+                    else TrackProTheme.colors.textPrimary,
                     fontSize = 13.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f))
                 if (compareLap != null && v2.isNotEmpty()) {
-                    Text(v2, color = if (label == "DELTA") TrackProColors.AccentRed
-                        else TrackProColors.TextPrimary,
+                    Text(v2, color = if (label == "DELTA") TrackProTheme.colors.accentCyan
+                        else TrackProTheme.colors.textPrimary,
                         fontSize = 13.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f))
                 }
             }
             if (i < rows.lastIndex) {
-                HorizontalDivider(color = TrackProColors.SectorLine.copy(alpha = 0.5f))
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine.copy(alpha = 0.5f))
             }
         }
 
@@ -746,7 +745,7 @@ private fun LapPickerSheet(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                TrackProColors.BgCard,
+                TrackProTheme.colors.bgCard,
                 RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
             )
             .heightIn(max = 360.dp)
@@ -758,7 +757,7 @@ private fun LapPickerSheet(
                 .padding(top = 10.dp, bottom = 8.dp)
                 .width(40.dp)
                 .height(3.dp)
-                .background(TrackProColors.TextMuted.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
+                .background(TrackProTheme.colors.textMuted.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
         )
         Row(
             modifier = Modifier
@@ -767,12 +766,12 @@ private fun LapPickerSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("SELECT LAP TO COMPARE", color = TrackProColors.TextMuted, fontSize = 9.sp,
+            Text("SELECT LAP TO COMPARE", color = TrackProTheme.colors.textMuted, fontSize = 9.sp,
                 fontWeight = FontWeight.Black, letterSpacing = 3.sp)
-            Icon(Icons.Default.Close, "close", tint = TrackProColors.TextMuted,
+            Icon(Icons.Default.Close, "close", tint = TrackProTheme.colors.textMuted,
                 modifier = Modifier.size(16.dp).clickable { onDismiss() })
         }
-        HorizontalDivider(color = TrackProColors.SectorLine)
+        HorizontalDivider(color = TrackProTheme.colors.sectorLine)
 
         LazyColumn(contentPadding = PaddingValues(vertical = 4.dp, horizontal = 12.dp)) {
             items(laps) { lap ->
@@ -789,7 +788,7 @@ private fun LapPickerSheet(
                         .background(
                             when {
                                 isSelected -> COMPARE_COLOR.copy(alpha = 0.15f)
-                                isBest     -> TrackProColors.AccentGreen.copy(alpha = 0.05f)
+                                isBest     -> TrackProTheme.colors.accentBlue.copy(alpha = 0.05f)
                                 else       -> Color.Transparent
                             }
                         )
@@ -797,7 +796,7 @@ private fun LapPickerSheet(
                             width = 1.dp,
                             color = when {
                                 isSelected -> COMPARE_COLOR.copy(alpha = 0.5f)
-                                isBest     -> TrackProColors.AccentGreen.copy(alpha = 0.2f)
+                                isBest     -> TrackProTheme.colors.accentBlue.copy(alpha = 0.2f)
                                 else       -> Color.Transparent
                             },
                             shape = RoundedCornerShape(8.dp)
@@ -813,17 +812,17 @@ private fun LapPickerSheet(
                     ) {
                         Text(
                             String.format("%02d", lap.lapnumber),
-                            color = if (isBest) TrackProColors.AccentGreen else TrackProColors.TextPrimary,
+                            color = if (isBest) TrackProTheme.colors.accentBlue else TrackProTheme.colors.textPrimary,
                             fontSize = 18.sp, fontWeight = FontWeight.Black
                         )
                         if (isBest) {
                             Box(
                                 Modifier
-                                    .background(TrackProColors.AccentGreen.copy(alpha = 0.15f),
+                                    .background(TrackProTheme.colors.accentBlue.copy(alpha = 0.15f),
                                         RoundedCornerShape(3.dp))
                                     .padding(horizontal = 5.dp, vertical = 2.dp)
                             ) {
-                                Text("BEST", color = TrackProColors.AccentGreen, fontSize = 7.sp,
+                                Text("BEST", color = TrackProTheme.colors.accentBlue, fontSize = 7.sp,
                                     fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                             }
                         }
@@ -836,10 +835,10 @@ private fun LapPickerSheet(
                         val sign = if (deltaMs > 0) "+" else ""
                         Text(
                             "${sign}${deltaMs.toLapTimeString()}",
-                            color = if (deltaMs < 0) TrackProColors.DeltaGood else TrackProColors.DeltaBad,
+                            color = if (deltaMs < 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad,
                             fontSize = 11.sp, fontWeight = FontWeight.Bold
                         )
-                        Text(lap.laptime, color = TrackProColors.TextPrimary,
+                        Text(lap.laptime, color = TrackProTheme.colors.textPrimary,
                             fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         if (isSelected) {
                             Box(Modifier.size(8.dp).background(COMPARE_COLOR, CircleShape))
@@ -859,12 +858,12 @@ private fun LoadingView() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator(
-                color = TrackProColors.AccentGreen,
+                color = TrackProTheme.colors.accentBlue,
                 modifier = Modifier.size(32.dp),
                 strokeWidth = 2.dp
             )
             Spacer(Modifier.height(12.dp))
-            Text("LOADING LAP", color = TrackProColors.TextMuted,
+            Text("LOADING LAP", color = TrackProTheme.colors.textMuted,
                 fontSize = 10.sp, letterSpacing = 3.sp)
         }
     }

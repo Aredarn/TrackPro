@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
-import com.example.trackpro.theme.TrackProColors
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.viewModels.SessionViewModel
 import com.example.trackpro.viewModels.TrackViewModel
 import com.example.trackpro.viewModels.VehicleFULLViewModel
@@ -59,11 +59,11 @@ fun TimeAttackListViewScreen(
     }
 
 
-    Box(modifier = Modifier.fillMaxSize().background(TrackProColors.BgDeep)) {
+    Box(modifier = Modifier.fillMaxSize().background(TrackProTheme.colors.bgDeep)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header Bar
             Box(
-                modifier = Modifier.fillMaxWidth().background(TrackProColors.AccentGreen).padding(horizontal = 20.dp, vertical = 6.dp)
+                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.accentCyan).padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -110,17 +110,14 @@ fun ExpandableTrackGroup(
     navController: NavController
 ) {
     var isExpanded by remember { mutableStateOf(false) }
-    val AccentGreen = Color(0xFF00C853)
-    val SectorLine = Color(0xFF1E2530)
-    val BgCard = Color(0xFF0E1117)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BgCard, RoundedCornerShape(12.dp))
+            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
             .border(
                 1.dp,
-                if (isExpanded) AccentGreen.copy(alpha = 0.4f) else SectorLine,
+                if (isExpanded) TrackProTheme.colors.accentCyan.copy(alpha = 0.4f) else TrackProTheme.colors.sectorLine,
                 RoundedCornerShape(12.dp)
             )
     ) {
@@ -135,21 +132,21 @@ fun ExpandableTrackGroup(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     trackName.uppercase(),
-                    color = if (isExpanded) AccentGreen else Color.White,
+                    color = if (isExpanded) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textPrimary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.sp
                 )
                 Text(
                     "$trackMeta · ${sessions.size} SESSIONS",
-                    color = Color(0xFF6B7280),
+                    color = TrackProTheme.colors.textMuted,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
             Text(
                 if (isExpanded) "CLOSE —" else "VIEW ALL +",
-                color = if (isExpanded) AccentGreen else Color(0xFF6B7280),
+                color = if (isExpanded) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textMuted,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black
             )
@@ -169,8 +166,8 @@ fun ExpandableTrackGroup(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, SectorLine.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                            .background(Color(0xFF151922).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                            .border(1.dp, TrackProTheme.colors.sectorLine.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .background(TrackProTheme.colors.bgElevated.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                             .clickable { navController.navigate("timeattacklistitem/${session.id}") }
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -178,26 +175,26 @@ fun ExpandableTrackGroup(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             // Vertical "Pillar" accent
-                            Box(modifier = Modifier.width(3.dp).height(24.dp).background(AccentGreen, RoundedCornerShape(2.dp)))
+                            Box(modifier = Modifier.width(3.dp).height(24.dp).background(TrackProTheme.colors.accentCyan, RoundedCornerShape(2.dp)))
                             Spacer(Modifier.width(12.dp))
                             Column {
                                 Text(
                                     "${vehicle?.manufacturer} ${vehicle?.model}",
-                                    color = Color.White,
+                                    color = TrackProTheme.colors.textPrimary,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
                                     "SESSION DATE: $date",
-                                    color = Color(0xFF6B7280),
+                                    color = TrackProTheme.colors.textMuted,
                                     fontSize = 10.sp
                                 )
                             }
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("TELEMETRY", color = AccentGreen, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                            Text("→", color = AccentGreen, fontSize = 12.sp)
+                            Text("TELEMETRY", color = TrackProTheme.colors.accentCyan, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text("→", color = TrackProTheme.colors.accentCyan, fontSize = 12.sp)
                         }
                     }
                 }

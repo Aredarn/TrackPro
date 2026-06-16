@@ -46,9 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.dataClasses.VehicleInformationData
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.viewModels.VehicleFULLViewModel
-import com.example.trackpro.theme.TrackProColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -73,7 +73,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProColors.BgDeep)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -81,7 +81,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(TrackProColors.AccentAmber)
+                    .background(TrackProTheme.colors.accentAmber)
                     .padding(horizontal = 20.dp, vertical = 6.dp)
             ) {
                 Row(
@@ -111,7 +111,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "NO VEHICLES YET",
-                            color = TrackProColors.TextMuted,
+                            color = TrackProTheme.colors.textMuted,
                             fontSize = 14.sp,
                             letterSpacing = 3.sp,
                             fontWeight = FontWeight.Black
@@ -119,7 +119,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = "Add a vehicle from the main screen",
-                            color = TrackProColors.TextMuted.copy(alpha = 0.5f),
+                            color = TrackProTheme.colors.textMuted.copy(alpha = 0.5f),
                             fontSize = 12.sp
                         )
                     }
@@ -134,13 +134,13 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
                         VehicleCard(
                             vehicle = vehicle,
                             navController = navController,
-                            bgCard = TrackProColors.BgCard,
-                            bgElevated = TrackProColors.BgElevated,
-                            accentAmber = TrackProColors.AccentAmber,
-                            accentRed = TrackProColors.AccentRed,
-                            textPrimary = TrackProColors.TextPrimary,
-                            textMuted = TrackProColors.TextMuted,
-                            sectorLine = TrackProColors.SectorLine,
+                            bgCard = TrackProTheme.colors.bgCard,
+                            bgElevated = TrackProTheme.colors.bgElevated,
+                            accentAmber = TrackProTheme.colors.accentAmber,
+                            accentRed = TrackProTheme.colors.accentCyan,
+                            textPrimary = TrackProTheme.colors.textPrimary,
+                            textMuted = TrackProTheme.colors.textMuted,
+                            sectorLine = TrackProTheme.colors.sectorLine,
                             onDelete = { vehicleToDelete ->
                                 scope.launch(Dispatchers.IO) {
                                     database.vehicleInformationDAO()
