@@ -37,6 +37,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val app = context.applicationContext as TrackProApp
     val useExternal by app.useExternalGps.collectAsState()
     val useDarkTheme by app.useDarkTheme.collectAsState()
+    val useMetric by app.useMetricUnits.collectAsState()
 
     Column(
         modifier = Modifier
@@ -126,6 +127,46 @@ fun SettingsScreen(onBack: () -> Unit) {
                     ) {
                         Text(
                             text = if (useDarkTheme) "USE LIGHT" else "USE DARK",
+                            color = Color.Black,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+            }
+
+            // --- Section: Units ---
+            SettingsSectionHeader(title = "UNITS")
+            SettingsCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "SPEED & DISTANCE",
+                            color = TrackProTheme.colors.textPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (useMetric) "Metric (km/h, km)" else "Imperial (mph, mi)",
+                            color = TrackProTheme.colors.accentCyan,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Button(
+                        onClick = { app.setMetricUnits(!useMetric) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = TrackProTheme.colors.accentCyan
+                        ),
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text(
+                            text = if (useMetric) "USE MPH" else "USE KM/H",
                             color = Color.Black,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold

@@ -28,17 +28,44 @@ object TrackGeometry {
             return if (track.size >= 2) listOf(track[0], track[1]) else track
         }
 
+        return buildGateLine(track, startPoint, idBase = -1) ?: run {
+            Log.w(TAG, "Not enough points near start")
+            if (track.size >= 2) listOf(track[0], track[1]) else track
+        }
+    }
+
+    /**
+     * Computes a perpendicular gate line (2 points) through each point on the track that was
+     * marked as a sector split during track building, ordered by sectorIndex. Tracks with no
+     * marked sector points (e.g. the bundled seed tracks) simply return an empty list.
+     */
+    fun calculateSectorLines(track: List<TrackCoordinatesData>): List<List<TrackCoordinatesData>> {
+        val sectorPoints = track.filter { it.isSectorPoint }
+            .sortedBy { it.sectorIndex ?: Int.MAX_VALUE }
+
+        return sectorPoints.mapIndexedNotNull { index, point ->
+            buildGateLine(track, point, idBase = -100 - (index * 2L))
+        }
+    }
+
+    /**
+     * Builds a perpendicular gate line through [atPoint], oriented to the track's local
+     * direction of travel around it (same construction as the finish/sector lines), or null
+     * if there aren't enough nearby points to establish a direction.
+     */
+    private fun buildGateLine(
+        track: List<TrackCoordinatesData>,
+        atPoint: TrackCoordinatesData,
+        idBase: Long
+    ): List<TrackCoordinatesData>? {
         val nearbyPoints = track.filter {
-            it.id in (startPoint.id - 5)..(startPoint.id + 5) && it.id != startPoint.id
+            it.id in (atPoint.id - 5)..(atPoint.id + 5) && it.id != atPoint.id
         }.take(10)
 
-        if (nearbyPoints.isEmpty()) {
-            Log.w(TAG, "Not enough points near start")
-            return if (track.size >= 2) listOf(track[0], track[1]) else track
-        }
+        if (nearbyPoints.isEmpty()) return null
 
         val avgDirection = nearbyPoints.fold(Vector(0.0, 0.0)) { acc, point ->
-            acc + Vector(point.longitude - startPoint.longitude, point.latitude - startPoint.latitude)
+            acc + Vector(point.longitude - atPoint.longitude, point.latitude - atPoint.latitude)
         } * (1.0 / nearbyPoints.size)
 
         val perpendicular = Vector(-avgDirection.y, avgDirection.x).normalized()
@@ -46,17 +73,19 @@ object TrackGeometry {
         val scaledPerpendicular = perpendicular * lineLength
 
         return listOf(
-            startPoint.copy(
-                id = -1,
-                latitude = startPoint.latitude - scaledPerpendicular.y,
-                longitude = startPoint.longitude - scaledPerpendicular.x,
-                isStartPoint = false
+            atPoint.copy(
+                id = idBase,
+                latitude = atPoint.latitude - scaledPerpendicular.y,
+                longitude = atPoint.longitude - scaledPerpendicular.x,
+                isStartPoint = false,
+                isSectorPoint = false
             ),
-            startPoint.copy(
-                id = -2,
-                latitude = startPoint.latitude + scaledPerpendicular.y,
-                longitude = startPoint.longitude + scaledPerpendicular.x,
-                isStartPoint = false
+            atPoint.copy(
+                id = idBase - 1,
+                latitude = atPoint.latitude + scaledPerpendicular.y,
+                longitude = atPoint.longitude + scaledPerpendicular.x,
+                isStartPoint = false,
+                isSectorPoint = false
             )
         )
     }

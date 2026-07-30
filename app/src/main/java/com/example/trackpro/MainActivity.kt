@@ -122,6 +122,14 @@ class TrackProApp : Application() {
         useDarkTheme.value = enabled
     }
 
+    private val unitPrefs by lazy { getSharedPreferences("unit_prefs", MODE_PRIVATE) }
+    val useMetricUnits by lazy { MutableStateFlow(unitPrefs.getBoolean("metric_units", true)) }
+
+    fun setMetricUnits(enabled: Boolean) {
+        unitPrefs.edit().putBoolean("metric_units", enabled).apply()
+        useMetricUnits.value = enabled
+    }
+
     val gpsManager: GpsManager by lazy {
         GpsManager(
             espProvider = espTcpClient,

@@ -35,8 +35,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
+import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.utilities.SpeedColorUtils
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.managerClasses.utilities.toLapTimeMillis
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import kotlinx.coroutines.Dispatchers
@@ -94,12 +98,17 @@ fun LapDetailScreen(
     sessionId: Long,
     primaryLapId: Long
 ) {
+    val app = LocalContext.current.applicationContext as TrackProApp
+    val useMetric by app.useMetricUnits.collectAsState()
+
     // ── State ──────────────────────────────────────────────
     var allSessionLaps  by remember { mutableStateOf<List<LapTimeData>>(emptyList()) }
     var primaryLap      by remember { mutableStateOf<LapTimeData?>(null) }
     var primaryGps      by remember { mutableStateOf<List<LapInfoData>>(emptyList()) }
+    var primarySectors  by remember { mutableStateOf<List<SectorTimeData>>(emptyList()) }
     var compareLap      by remember { mutableStateOf<LapTimeData?>(null) }
     var compareGps      by remember { mutableStateOf<List<LapInfoData>>(emptyList()) }
+    var compareSectors  by remember { mutableStateOf<List<SectorTimeData>>(emptyList()) }
     var isLoading       by remember { mutableStateOf(true) }
     var heatmapMode     by remember { mutableStateOf(HeatmapMode.SPEED) }
     var showLapPicker   by remember { mutableStateOf(false) }
@@ -113,6 +122,9 @@ fun LapDetailScreen(
             primaryGps     = primaryLap?.let {
                 database.lapInfoDataDAO().getLapData(it.id)
             } ?: emptyList()
+            primarySectors = primaryLap?.let {
+                database.sectorTimeDataDAO().getSectorTimesForLap(it.id)
+            } ?: emptyList()
             withContext(Dispatchers.Main) { isLoading = false }
         }
     }
@@ -122,8 +134,9 @@ fun LapDetailScreen(
         compareLap?.let { cl ->
             withContext(Dispatchers.IO) {
                 compareGps = database.lapInfoDataDAO().getLapData(cl.id)
+                compareSectors = database.sectorTimeDataDAO().getSectorTimesForLap(cl.id)
             }
-        } ?: run { compareGps = emptyList() }
+        } ?: run { compareGps = emptyList(); compareSectors = emptyList() }
     }
 
     // ── Derived stats ──────────────────────────────────────
@@ -198,7 +211,7 @@ fun LapDetailScreen(
                             )
                         }
                         Text(
-                            "⚡ ${String.format("%.0f", primaryTopSpeed)} km/h",
+                            "⚡ ${UnitFormatter.formatSpeed(primaryTopSpeed, useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)}",
                             color = Color.Black,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
@@ -310,11 +323,14 @@ fun LapDetailScreen(
                     StatsPanel(
                         primaryLap      = lap,
                         primaryGps      = primaryGps,
+                        primarySectors  = primarySectors,
                         compareLap      = compareLap,
                         compareGps      = compareGps,
+                        compareSectors  = compareSectors,
                         primaryTopSpeed = primaryTopSpeed,
                         compareTopSpeed = compareTopSpeed,
                         deltaMs         = deltaMs,
+                        useMetric       = useMetric,
                         onDismiss       = { showStatsPanel = false }
                     )
                 }
@@ -474,7 +490,7 @@ private fun drawSpeedHeatmap(
 
         val spd = ((pt0.spd ?: minSpd) + (pt1.spd ?: minSpd)) / 2f
         val t   = if (maxSpd > minSpd) (spd - minSpd) / (maxSpd - minSpd) else 0f
-        val hex = speedToHex(t)
+        val hex = SpeedColorUtils.speedToHex(t)
 
         features.add("""
             {
@@ -548,31 +564,6 @@ private fun drawEndpointDot(style: Style, pt: LapInfoData, id: String, color: St
     })
 }
 
-/** t in 0..1 → blue (slow) → green → yellow → red (fast) */
-private fun speedToHex(t: Float): String {
-    val clamped = t.coerceIn(0f, 1f)
-    val r: Int; val g: Int; val b: Int
-    when {
-        clamped < 0.25f -> {
-            val s = clamped / 0.25f
-            r = 0; g = (s * 180).toInt(); b = 255
-        }
-        clamped < 0.5f -> {
-            val s = (clamped - 0.25f) / 0.25f
-            r = 0; g = (180 + s * 75).toInt(); b = (255 * (1 - s)).toInt()
-        }
-        clamped < 0.75f -> {
-            val s = (clamped - 0.5f) / 0.25f
-            r = (s * 255).toInt(); g = 255; b = 0
-        }
-        else -> {
-            val s = (clamped - 0.75f) / 0.25f
-            r = 255; g = (255 * (1 - s)).toInt(); b = 0
-        }
-    }
-    return String.format("#%02X%02X%02X", r.coerceIn(0,255), g.coerceIn(0,255), b.coerceIn(0,255))
-}
-
 private fun fitCameraToGps(map: org.maplibre.android.maps.MapLibreMap, gps: List<LapInfoData>) {
     val valid = gps.filter { it.lat != null && it.lon != null }
     if (valid.isEmpty()) return
@@ -595,11 +586,14 @@ private fun androidColorFrom(color: Color): Int =
 private fun StatsPanel(
     primaryLap: LapTimeData,
     primaryGps: List<LapInfoData>,
+    primarySectors: List<SectorTimeData>,
     compareLap: LapTimeData?,
     compareGps: List<LapInfoData>,
+    compareSectors: List<SectorTimeData>,
     primaryTopSpeed: Float,
     compareTopSpeed: Float,
     deltaMs: Long,
+    useMetric: Boolean,
     onDismiss: () -> Unit
 ) {
     val primaryAvgSpd = primaryGps.mapNotNull { it.spd }.let {
@@ -680,14 +674,23 @@ private fun StatsPanel(
 
         HorizontalDivider(color = TrackProTheme.colors.sectorLine)
 
+        val speedUnit = UnitFormatter.speedUnitLabel(useMetric)
         val rows = buildList {
             add(Triple("LAP TIME",    primaryLap.laptime, compareLap?.laptime ?: "—"))
-            add(Triple("TOP SPEED",   "${String.format("%.0f", primaryTopSpeed)} km/h",
-                if (compareLap != null) "${String.format("%.0f", compareTopSpeed)} km/h" else "—"))
-            add(Triple("AVG SPEED",   "${String.format("%.1f", primaryAvgSpd)} km/h",
-                if (compareLap != null) "${String.format("%.1f", compareAvgSpd)} km/h" else "—"))
+            add(Triple("TOP SPEED",   "${UnitFormatter.formatSpeed(primaryTopSpeed, useMetric)} $speedUnit",
+                if (compareLap != null) "${UnitFormatter.formatSpeed(compareTopSpeed, useMetric)} $speedUnit" else "—"))
+            add(Triple("AVG SPEED",   "${UnitFormatter.formatSpeedPrecise(primaryAvgSpd.toDouble(), useMetric)} $speedUnit",
+                if (compareLap != null) "${UnitFormatter.formatSpeedPrecise(compareAvgSpd.toDouble(), useMetric)} $speedUnit" else "—"))
             add(Triple("GPS POINTS",  "${primaryGps.size}",
                 if (compareLap != null) "${compareGps.size}" else "—"))
+            primarySectors.sortedBy { it.sectorIndex }.forEach { sector ->
+                val compareSplit = compareSectors.find { it.sectorIndex == sector.sectorIndex }
+                add(Triple(
+                    "SECTOR ${sector.sectorIndex + 1}",
+                    String.format("%.2fs", sector.splitTimeMs / 1000.0),
+                    if (compareLap != null) compareSplit?.let { String.format("%.2fs", it.splitTimeMs / 1000.0) } ?: "—" else "—"
+                ))
+            }
             if (compareLap != null) {
                 val sign = if (deltaMs > 0) "+" else ""
                 add(Triple("DELTA", "${sign}${deltaMs.toLapTimeString()}", ""))

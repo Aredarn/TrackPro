@@ -10,6 +10,7 @@ import com.example.trackpro.dao.DerivedDataDao
 import com.example.trackpro.dao.LapInfoDataDAO
 import com.example.trackpro.dao.LapTimeDataDAO
 import com.example.trackpro.dao.RawGPSDataDao
+import com.example.trackpro.dao.SectorTimeDataDAO
 import com.example.trackpro.dao.SessionDataDao
 import com.example.trackpro.dao.SmoothedGPSDataDAO
 import com.example.trackpro.dao.TrackCoordinatesDataDAO
@@ -19,6 +20,7 @@ import com.example.trackpro.dataClasses.DerivedData
 import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.RawGPSData
+import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.SmoothedGPSData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
@@ -42,8 +44,9 @@ import kotlinx.coroutines.launch
     TrackCoordinatesData::class,
     VehicleInformationData::class,
     LapTimeData::class,
-    LapInfoData::class
-], version = 2, exportSchema = false)
+    LapInfoData::class,
+    SectorTimeData::class
+], version = 3, exportSchema = false)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun rawGPSDataDao(): RawGPSDataDao
@@ -54,6 +57,7 @@ abstract class ESPDatabase : RoomDatabase() {
     abstract fun vehicleInformationDAO(): VehicleInformationDAO
     abstract fun lapTimeDataDAO(): LapTimeDataDAO
     abstract fun lapInfoDataDAO(): LapInfoDataDAO
+    abstract fun sectorTimeDataDAO(): SectorTimeDataDAO
 
     companion object {
         @Volatile
