@@ -42,6 +42,8 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,6 +114,22 @@ class TrackProApp : Application() {
 
     val useExternalGps = MutableStateFlow(true)
 
+    private val themePrefs by lazy { getSharedPreferences("theme_prefs", MODE_PRIVATE) }
+    val useDarkTheme by lazy { MutableStateFlow(themePrefs.getBoolean("dark_theme", true)) }
+
+    fun setDarkTheme(enabled: Boolean) {
+        themePrefs.edit().putBoolean("dark_theme", enabled).apply()
+        useDarkTheme.value = enabled
+    }
+
+    private val unitPrefs by lazy { getSharedPreferences("unit_prefs", MODE_PRIVATE) }
+    val useMetricUnits by lazy { MutableStateFlow(unitPrefs.getBoolean("metric_units", true)) }
+
+    fun setMetricUnits(enabled: Boolean) {
+        unitPrefs.edit().putBoolean("metric_units", enabled).apply()
+        useMetricUnits.value = enabled
+    }
+
     val gpsManager: GpsManager by lazy {
         GpsManager(
             espProvider = espTcpClient,
@@ -168,7 +186,8 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
-            TrackProTheme {
+            val useDarkTheme by (application as TrackProApp).useDarkTheme.collectAsState()
+            TrackProTheme(darkTheme = useDarkTheme) {
                 val navController = rememberNavController()
                 NavHost(navController = navController, startDestination = "main") {
                     composable("main") {

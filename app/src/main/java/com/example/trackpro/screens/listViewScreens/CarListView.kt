@@ -1,9 +1,6 @@
 package com.example.trackpro.screens.listViewScreens
 
 import android.content.Context
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,16 +48,6 @@ import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.viewModels.VehicleFULLViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-class CarListView : ComponentActivity()
-{
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent{
-
-        }
-    }
-}
 
 @Composable
 fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel) {
@@ -173,9 +160,9 @@ fun VehicleCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            containerColor = Color(0xFF0E1117),
-            titleContentColor = Color(0xFFF0F2F5),
-            textContentColor = Color(0xFF6B7280),
+            containerColor = TrackProTheme.colors.bgCard,
+            titleContentColor = TrackProTheme.colors.textPrimary,
+            textContentColor = TrackProTheme.colors.textMuted,
             confirmButton = {
                 TextButton(onClick = {
                     onDelete(vehicle)

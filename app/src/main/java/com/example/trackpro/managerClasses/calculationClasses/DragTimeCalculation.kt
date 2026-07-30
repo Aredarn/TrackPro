@@ -29,13 +29,19 @@ class DragTimeCalculation(
     val session: Long? = null,
     private val database: ESPDatabase
 ) {
+    companion object {
+        private const val QUARTER_MILE_METERS = 402.336f
+        private const val HALF_MILE_METERS = 804.672f
+    }
+
     private val zeroThreshold = 2.0f // Speed threshold to consider as "zero" (km/h)
 
     // Real-time tracking state
     private var runStartTime: Long = 0L
     private var hasStartedRun: Boolean = false
-    private val gpsPoints = mutableListOf<LatLonOffset>()
+    private var lastPoint: LatLonOffset? = null
     private var totalDistanceMeters: Float = 0f
+    private var runStartDistanceMeters: Float = 0f
     private var maxSpeedRecorded: Float = 0f
 
     // Metric tracking
@@ -59,12 +65,12 @@ class DragTimeCalculation(
         // --- 1. GLOBAL STATS ---
         if (currentSpeed > maxSpeedRecorded) maxSpeedRecorded = currentSpeed
 
-        gpsPoints.add(LatLonOffset(gpsData.latitude, gpsData.longitude))
-        if (gpsPoints.size >= 2) {
-            val last = gpsPoints[gpsPoints.size - 2]
-            val dist = haversineDistance(last.lat, last.lon, gpsData.latitude, gpsData.longitude)
+        val currentPoint = LatLonOffset(gpsData.latitude, gpsData.longitude)
+        lastPoint?.let { last ->
+            val dist = haversineDistance(last.lat, last.lon, currentPoint.lat, currentPoint.lon)
             totalDistanceMeters += dist.toFloat()
         }
+        lastPoint = currentPoint
 
         // --- 2. STANDING START LOGIC ---
         // If we are below threshold, we are "Ready" to perform a 0-X run
@@ -76,6 +82,7 @@ class DragTimeCalculation(
         if (!hasStartedRun && isReadyForRun && currentSpeed > zeroThreshold) {
             hasStartedRun = true
             runStartTime = currentTimeMillis
+            runStartDistanceMeters = totalDistanceMeters
         }
 
         // Calculate Standing Metrics (Only if a valid run started)
@@ -87,10 +94,15 @@ class DragTimeCalculation(
             if (time0to160Result == null && currentSpeed >= 160f) time0to160Result = elapsed
             if (time0to200Result == null && currentSpeed >= 200f) time0to200Result = elapsed
 
-            // Quarter Mile (Standing only)
-            if (quarterMileTimeResult == null && totalDistanceMeters >= 402.336f) {
+            // Quarter Mile (Standing only, measured from the run's start, not the whole recording)
+            if (quarterMileTimeResult == null && (totalDistanceMeters - runStartDistanceMeters) >= QUARTER_MILE_METERS) {
                 quarterMileTimeResult = elapsed
                 quarterMileSpeedResult = currentSpeed
+            }
+
+            // Half Mile (Standing only, measured from the run's start)
+            if (halfMileTimeResult == null && (totalDistanceMeters - runStartDistanceMeters) >= HALF_MILE_METERS) {
+                halfMileTimeResult = elapsed
             }
         }
 
@@ -145,8 +157,10 @@ class DragTimeCalculation(
     fun resetRealtimeTracking() {
         runStartTime = 0L
         hasStartedRun = false
-        gpsPoints.clear()
+        isReadyForRun = false
+        lastPoint = null
         totalDistanceMeters = 0f
+        runStartDistanceMeters = 0f
         maxSpeedRecorded = 0f
 
         time0to60Result = null

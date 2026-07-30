@@ -5,7 +5,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 
@@ -20,17 +19,25 @@ fun CustomTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, color = Color.White) },
+        label = { Text(label, color = TrackProTheme.colors.textMuted) },
         keyboardOptions = if (isNumber) KeyboardOptions(keyboardType = KeyboardType.Number) else KeyboardOptions.Default,
         leadingIcon = if (leadingIcon != null) {
             {
                 Icon(
                     imageVector = leadingIcon,
                     contentDescription = null,
-                    tint = Color.LightGray
+                    tint = TrackProTheme.colors.textMuted
                 )
             }
         } else null,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = TrackProTheme.colors.textPrimary,
+            unfocusedTextColor = TrackProTheme.colors.textPrimary,
+            focusedBorderColor = TrackProTheme.colors.accentCyan,
+            unfocusedBorderColor = TrackProTheme.colors.sectorLine,
+            focusedLabelColor = TrackProTheme.colors.accentCyan,
+            cursorColor = TrackProTheme.colors.accentCyan
+        ),
         modifier = Modifier.fillMaxWidth()
     )
 }

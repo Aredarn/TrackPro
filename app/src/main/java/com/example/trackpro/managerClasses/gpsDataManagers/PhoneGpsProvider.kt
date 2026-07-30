@@ -1,8 +1,12 @@
 package com.example.trackpro.managerClasses.gpsDataManagers
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Looper
+import android.util.Log
+import androidx.core.content.ContextCompat
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.models.GpsProvider
 import com.google.android.gms.location.LocationCallback
@@ -14,7 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class PhoneGpsProvider(
-    context: Context,
+    private val context: Context,
 ) : GpsProvider {
     private val client = LocationServices.getFusedLocationProviderClient(context)
 
@@ -41,6 +45,18 @@ class PhoneGpsProvider(
 
     @SuppressLint("MissingPermission")
     override fun start() {
+        val hasFineLocation = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val hasCoarseLocation = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!hasFineLocation && !hasCoarseLocation) {
+            Log.w("PhoneGpsProvider", "Location permission not granted, cannot start phone GPS")
+            _isConnected.value = false
+            return
+        }
+
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 100).build()
         client.requestLocationUpdates(request, callback, Looper.getMainLooper())
         _isConnected.value = true

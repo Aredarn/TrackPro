@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -43,6 +42,7 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.managerClasses.timeAttackManagers.SectorSplit
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.viewModels.TimeAttackViewModel
 import kotlinx.coroutines.Dispatchers
@@ -95,6 +95,7 @@ fun TimeAttackScreenView(
     val startLine    by vm.startLine.collectAsState()
     val driver       by vm.driverPosition.collectAsState()
     val timingMode   by vm.timingMode.collectAsState()
+    val lapSplits    by vm.currentLapSplits.collectAsState()
 
     val linesToShow by remember(timingMode, startLine, finishLine) {
         derivedStateOf {
@@ -162,7 +163,8 @@ fun TimeAttackScreenView(
             gpsPoints   = gpsPoints,
             driver      = driverPos,
             isConnected = isConnected,
-            linesToShow = linesToShow
+            linesToShow = linesToShow,
+            lapSplits   = lapSplits
         )
         else -> TimeAttackPortraitLayout(
             timingMode  = timingMode,
@@ -175,19 +177,11 @@ fun TimeAttackScreenView(
             gpsPoints   = gpsPoints,
             driver      = driverPos,
             isConnected = isConnected,
-            linesToShow = linesToShow
+            linesToShow = linesToShow,
+            lapSplits   = lapSplits
         )
     }
 
-    DisposableEffect(Unit) {
-        Log.d("TimeAttackScreen", "DisposableEffect - Connecting to ESP")
-        app.espTcpClient.connect()
-
-        onDispose {
-            Log.d("TimeAttackScreen", "DisposableEffect - Disconnecting from ESP")
-            app.espTcpClient.disconnect()
-        }
-    }
 }
 // ── Portrait ───────────────────────────────────────────────
 
@@ -203,7 +197,8 @@ fun TimeAttackPortraitLayout(
     gpsPoints: List<TrackCoordinatesData>,
     driver: LatLonOffset,
     isConnected: Boolean,
-    linesToShow : List<TrackCoordinatesData>
+    linesToShow : List<TrackCoordinatesData>,
+    lapSplits: List<SectorSplit> = emptyList()
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
@@ -318,6 +313,11 @@ fun TimeAttackPortraitLayout(
                 StintTimerCell(stintStart = stintStart)
             }
 
+            if (lapSplits.isNotEmpty()) {
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                SectorSplitsRow(splits = lapSplits)
+            }
+
             HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
             // ── Map ───────────────────────────────────────
@@ -369,7 +369,8 @@ fun TimeAttackLandscapeLayout(
     gpsPoints: List<TrackCoordinatesData>,
     driver: LatLonOffset,
     isConnected: Boolean,
-    linesToShow: List<TrackCoordinatesData>
+    linesToShow: List<TrackCoordinatesData>,
+    lapSplits: List<SectorSplit> = emptyList()
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
@@ -448,6 +449,11 @@ fun TimeAttackLandscapeLayout(
                 Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                     LapTimeCell(label = "BEST", value = bestTime, valueColor = TrackProTheme.colors.deltaGood)
                     LapTimeCell(label = "LAST", value = lastTime, valueColor = TrackProTheme.colors.textPrimary)
+                }
+
+                if (lapSplits.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    SectorSplitsRow(splits = lapSplits)
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -554,6 +560,49 @@ private fun StintTimerCell(stintStart: Long) {
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
+    }
+}
+
+@Composable
+private fun SectorSplitsRow(splits: List<SectorSplit>) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        splits.forEach { split ->
+            val deltaColor = when {
+                split.deltaMs == null -> TrackProTheme.colors.textPrimary
+                split.deltaMs <= 0    -> TrackProTheme.colors.deltaGood
+                else                  -> TrackProTheme.colors.deltaBad
+            }
+            Column {
+                Text(
+                    "S${split.sectorIndex + 1}",
+                    color = TrackProTheme.colors.textMuted,
+                    fontSize = 9.sp,
+                    letterSpacing = 1.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    String.format("%.2fs", split.splitMs / 1000.0),
+                    color = deltaColor,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (split.deltaMs != null) {
+                    val deltaSeconds = split.deltaMs / 1000.0
+                    val sign = if (deltaSeconds > 0) "+" else ""
+                    Text(
+                        "$sign${String.format("%.2f", deltaSeconds)}",
+                        color = deltaColor,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -1,8 +1,5 @@
 package com.example.trackpro.screens.listViewScreens
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,14 +47,7 @@ import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.viewModels.TrackViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-class TrackListView : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-        }
-    }
-}
+import kotlinx.coroutines.withContext
 
 @Composable
 fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
@@ -122,6 +113,7 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
                         TrackCard(
                             track = track,
                             navController = navController,
+                            database = database,
                             bgCard = TrackProTheme.colors.bgCard,
                             bgElevated = TrackProTheme.colors.bgElevated,
                             accentAmber = TrackProTheme.colors.accentAmber,
@@ -146,6 +138,7 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
 fun TrackCard(
     track: TrackMainData,
     navController: NavController,
+    database: ESPDatabase,
     bgCard: Color,
     bgElevated: Color,
     accentAmber: Color,
@@ -156,13 +149,20 @@ fun TrackCard(
     onDelete: (TrackMainData) -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var bestLapTime by remember(track.trackId) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(track.trackId) {
+        bestLapTime = withContext(Dispatchers.IO) {
+            database.lapTimeDataDAO().getBestLapForTrack(track.trackId)?.laptime
+        }
+    }
 
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            containerColor = Color(0xFF0E1117),
-            titleContentColor = Color(0xFFF0F2F5),
-            textContentColor = Color(0xFF6B7280),
+            containerColor = TrackProTheme.colors.bgCard,
+            titleContentColor = TrackProTheme.colors.textPrimary,
+            textContentColor = TrackProTheme.colors.textMuted,
             confirmButton = {
                 TextButton(onClick = { onDelete(track); showDeleteDialog = false }) {
                     Text("DELETE", color = accentRed, fontWeight = FontWeight.Black)
@@ -288,8 +288,7 @@ fun TrackCard(
                     Text("LAP RECORD", color = textMuted, fontSize = 9.sp,
                         letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        // TODO: wire up actual lap record from DB
-                        text = "—",
+                        text = bestLapTime ?: "—",
                         color = textPrimary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Black

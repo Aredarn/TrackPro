@@ -1,6 +1,7 @@
 package com.example.trackpro.dataClasses
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 
@@ -10,7 +11,8 @@ import androidx.room.PrimaryKey
     parentColumns = ["id"],
     childColumns = ["sessionid"],
     onDelete = androidx.room.ForeignKey.CASCADE
-)])
+)],
+        indices = [Index("sessionid")])
 
 data class DerivedData(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,

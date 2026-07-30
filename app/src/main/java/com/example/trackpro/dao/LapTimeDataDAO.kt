@@ -32,6 +32,18 @@ interface LapTimeDataDAO {
     @Query("SELECT * FROM lap_time_data WHERE sessionid = :sessionId ORDER BY laptime ASC LIMIT 1")
     suspend fun getBestLapForSession(sessionId: Long): LapTimeData?
 
+    // Get best completed lap across all sessions recorded on a track
+    @Query("""
+    SELECT lap_time_data.* FROM lap_time_data
+    INNER JOIN session_data ON lap_time_data.sessionid = session_data.id
+    WHERE session_data.trackId = :trackId
+    AND lap_time_data.laptime != 'IN PROGRESS'
+    AND lap_time_data.laptime != 'INVALID'
+    ORDER BY lap_time_data.laptime ASC
+    LIMIT 1
+    """)
+    suspend fun getBestLapForTrack(trackId: Long): LapTimeData?
+
     // Get total number of laps in a session
     @Query("SELECT COUNT(*) FROM lap_time_data WHERE sessionid = :sessionId")
     suspend fun getLapCountForSession(sessionId: Long): Int

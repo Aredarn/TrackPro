@@ -33,25 +33,33 @@ fun DropdownMenuFieldMulti(label: String, options: List<VehiclePair>, selectedOp
             value = selectedText,
             onValueChange = {},
             readOnly = true,
-            label = { Text(label) },
+            label = { Text(label, color = TrackProTheme.colors.textMuted) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF007BFF),
-                unfocusedBorderColor = Color.Gray
+                focusedTextColor = TrackProTheme.colors.textPrimary,
+                unfocusedTextColor = TrackProTheme.colors.textPrimary,
+                focusedBorderColor = TrackProTheme.colors.accentCyan,
+                unfocusedBorderColor = TrackProTheme.colors.sectorLine
             ),
             modifier = Modifier
                 .fillMaxWidth()
         )
 
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(TrackProTheme.colors.bgElevated)
+        ) {
             options.forEach { option ->
                 Log.d("trackpro", "ID:" + option.vehicleId)
-                DropdownMenuItem(text = { Text(option.manufacturerAndModel) }, onClick = {
-                    selectedText = option.manufacturerAndModel
-                    expanded = false
-                    onOptionSelected(option.vehicleId)
-                })
+                DropdownMenuItem(
+                    text = { Text(option.manufacturerAndModel, color = TrackProTheme.colors.textPrimary) },
+                    onClick = {
+                        selectedText = option.manufacturerAndModel
+                        expanded = false
+                        onOptionSelected(option.vehicleId)
+                    }
+                )
             }
         }
     }
@@ -73,25 +81,39 @@ fun TrackDropdownMenu(
             value = selectedText,
             onValueChange = {},
             readOnly = true,
-            label = { Text(label) },
+            label = { Text(label, color = TrackProTheme.colors.textMuted) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF007BFF),
-                unfocusedBorderColor = Color.Gray
+                focusedTextColor = TrackProTheme.colors.textPrimary,
+                unfocusedTextColor = TrackProTheme.colors.textPrimary,
+                focusedBorderColor = TrackProTheme.colors.accentCyan,
+                unfocusedBorderColor = TrackProTheme.colors.sectorLine
             ),
             modifier = Modifier.fillMaxWidth()
         )
 
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            tracks.forEach { track ->
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(TrackProTheme.colors.bgElevated)
+        ) {
+            if (tracks.isEmpty()) {
                 DropdownMenuItem(
-                    text = { Text(track.trackName) },
-                    onClick = {
-                        selectedText = track.trackName
-                        expanded = false
-                        onTrackSelected(track.trackId)
-                    }
+                    text = { Text("No tracks found", color = TrackProTheme.colors.textMuted) },
+                    onClick = { expanded = false },
+                    enabled = false
                 )
+            } else {
+                tracks.forEach { track ->
+                    DropdownMenuItem(
+                        text = { Text(track.trackName, color = TrackProTheme.colors.textPrimary) },
+                        onClick = {
+                            selectedText = track.trackName
+                            expanded = false
+                            onTrackSelected(track.trackId)
+                        }
+                    )
+                }
             }
         }
     }
@@ -105,7 +127,7 @@ fun DropdownMenuField(
     label: String,
     options: List<String>,
     selectedOption: String,
-    textColor: Color = Color.White,
+    textColor: Color = TrackProTheme.colors.textPrimary,
     onOptionSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -115,10 +137,16 @@ fun DropdownMenuField(
             value = selectedOption,
             onValueChange = {},
             readOnly = true,
-            label = { Text(label, color = textColor) },
+            label = { Text(label, color = TrackProTheme.colors.textMuted) },
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                focusedBorderColor = TrackProTheme.colors.accentCyan,
+                unfocusedBorderColor = TrackProTheme.colors.sectorLine
+            ),
             modifier = Modifier
                 .fillMaxWidth()
         )
@@ -126,11 +154,11 @@ fun DropdownMenuField(
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            modifier = Modifier.background(Color(0xFF2C2C2C))
+            modifier = Modifier.background(TrackProTheme.colors.bgElevated)
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option, color = Color.White) },
+                    text = { Text(option, color = TrackProTheme.colors.textPrimary) },
                     onClick = {
                         onOptionSelected(option)
                         expanded = false

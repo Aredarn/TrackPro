@@ -1,6 +1,7 @@
 package com.example.trackpro.dataClasses
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
@@ -10,7 +11,8 @@ import androidx.room.PrimaryKey
         parentColumns = ["vehicleId"],
         childColumns = ["vehicleId"],
         onDelete = androidx.room.ForeignKey.CASCADE
-    )]
+    )],
+    indices = [Index("vehicleId"), Index("trackId")]
 
 )
 data class SessionData(

@@ -81,6 +81,14 @@ fun TrackBuilderScreen(
 
     // Track Points
     val gpsPointsList = remember { mutableStateListOf<TrackCoordinatesData>() }
+    var sectorCount by remember { mutableIntStateOf(0) }
+
+    fun markSector() {
+        if (gpsPointsList.isEmpty()) return
+        val lastIndex = gpsPointsList.size - 1
+        gpsPointsList[lastIndex] = gpsPointsList[lastIndex].copy(isSectorPoint = true, sectorIndex = sectorCount)
+        sectorCount += 1
+    }
 
     // UI State
     var showInfoDialog by remember { mutableStateOf(false) }
@@ -121,6 +129,7 @@ fun TrackBuilderScreen(
                                 } else {
                                     coroutineScope.launch {
                                         gpsPointsList.clear() // Clear old preview
+                                        sectorCount = 0
                                         trackID = startTrackBuilder(database, trackName, countryName, trackMode)
                                         isLiveRecording = true
                                     }
@@ -152,6 +161,13 @@ fun TrackBuilderScreen(
                         canSave = gpsPointsList.size > 1 && trackName.isNotEmpty()
                     )
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                MarkSectorButton(
+                    count = sectorCount,
+                    enabled = gpsPointsList.isNotEmpty() && (builderType == 1 || isLiveRecording),
+                    onClick = { markSector() }
+                )
             }
 
             // Map/Preview Area
@@ -188,8 +204,9 @@ fun MapLibreBuilderView(
     onMapTap: (LatLng) -> Unit
 ) {
     var mapLibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
+    val sectorMarkCount = points.count { it.isSectorPoint }
 
-    LaunchedEffect(points.size) {
+    LaunchedEffect(points.size, sectorMarkCount) {
         mapLibreMap?.let { map ->
             map.clear()
 
@@ -221,6 +238,16 @@ fun MapLibreBuilderView(
                         .title(if (trackMode == "Circuit") "LAP COMPLETE" else "FINISH LINE")
                     )
                 }
+
+                // Sector markers
+                points.filter { it.isSectorPoint }
+                    .sortedBy { it.sectorIndex ?: Int.MAX_VALUE }
+                    .forEach { sectorPoint ->
+                        map.addMarker(MarkerOptions()
+                            .position(LatLng(sectorPoint.latitude, sectorPoint.longitude))
+                            .title("S${(sectorPoint.sectorIndex ?: 0) + 1}")
+                        )
+                    }
             }
         }
     }
@@ -265,6 +292,28 @@ private fun TrackInfoCard(name: String, country: String, mode: String, onClick: 
         ) {
             Text("EDIT", color = TrackProTheme.colors.textPrimary)
         }
+    }
+}
+
+@Composable
+private fun MarkSectorButton(count: Int, enabled: Boolean, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = TrackProTheme.colors.accentBlue,
+            disabledContainerColor = Color(0xFF1E2530)
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            "MARK SECTOR ${count + 1}",
+            color = if (enabled) Color.Black else TrackProTheme.colors.textMuted,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp,
+            letterSpacing = 1.sp
+        )
     }
 }
 

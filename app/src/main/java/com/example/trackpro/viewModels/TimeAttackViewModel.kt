@@ -9,10 +9,12 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.RawGPSData
+import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.timeAttackManagers.CircuitTimingManager
+import com.example.trackpro.managerClasses.timeAttackManagers.SectorSplit
 import com.example.trackpro.managerClasses.timeAttackManagers.SprintTimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
@@ -51,6 +53,7 @@ class TimeAttackViewModel(
     private val _fullTrack = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
     private val _startLine = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
     private val _finishLine = MutableStateFlow<List<TrackCoordinatesData>>(emptyList())
+    private val _sectorLines = MutableStateFlow<List<List<TrackCoordinatesData>>>(emptyList())
 
     // Session state
     private var _sessionId: Long = -1
@@ -64,6 +67,13 @@ class TimeAttackViewModel(
     val fullTrack: StateFlow<List<TrackCoordinatesData>> = _fullTrack.asStateFlow()
     val startLine: StateFlow<List<TrackCoordinatesData>> = _startLine.asStateFlow()
     val finishLine: StateFlow<List<TrackCoordinatesData>> = _finishLine.asStateFlow()
+    val sectorLines: StateFlow<List<List<TrackCoordinatesData>>> = _sectorLines.asStateFlow()
+
+    // Sector splits for the lap currently in progress (Circuit mode only; empty for Sprint
+    // or tracks with no marked sector points).
+    val currentLapSplits: StateFlow<List<SectorSplit>>
+        get() = (timingManager as? CircuitTimingManager)?.currentLapSplits
+            ?: MutableStateFlow<List<SectorSplit>>(emptyList()).asStateFlow()
 
     // Expose timing state
     val currentTime: StateFlow<String>
@@ -106,11 +116,17 @@ class TimeAttackViewModel(
                             TimingMode.Circuit -> {
                                 _finishLine.value = calculateFinishLine(coords)
                                 _startLine.value = emptyList()
-                                val manager = CircuitTimingManager(_finishLine.value)
+                                _sectorLines.value = TrackGeometry.calculateSectorLines(coords)
+                                val manager = CircuitTimingManager(_finishLine.value, _sectorLines.value)
                                 timingManager = manager
                                 viewModelScope.launch {
                                     manager.lapCompletedChannel.consumeAsFlow().collect { lapMs ->
                                         handleCompletedLap(lapMs)
+                                    }
+                                }
+                                viewModelScope.launch {
+                                    manager.sectorCompletedChannel.consumeAsFlow().collect { split ->
+                                        handleCompletedSector(split)
                                     }
                                 }
                             }
@@ -203,6 +219,26 @@ class TimeAttackViewModel(
         }
     }
 
+    private fun handleCompletedSector(split: SectorSplit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (_lapId == -1L) {
+                Log.w("TimeAttack", "Cannot record sector split: no active lap")
+                return@launch
+            }
+            try {
+                database.sectorTimeDataDAO().insert(
+                    SectorTimeData(
+                        lapid = _lapId,
+                        sectorIndex = split.sectorIndex,
+                        splitTimeMs = split.splitMs
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e("TimeAttack", "Error recording sector split: ${e.message}", e)
+            }
+        }
+    }
+
     private fun handleCompletedSprint(sprintMs: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             if (_sessionId == -1L || _lapId == -1L) {
@@ -238,14 +274,11 @@ class TimeAttackViewModel(
             val eventType = "${track.trackName} - $todayFormatted"
 
 
-            _sessionId = run {
-                sessionManager.startSession(
-                    eventType = eventType,
-                    vehicleId = vehicleId,
-                    trackId = trackId
-                )
-                sessionManager.getCurrentSessionId()!!
-            }
+            _sessionId = sessionManager.startSession(
+                eventType = eventType,
+                vehicleId = vehicleId,
+                trackId = trackId
+            )
 
             Log.d("TimeAttack", "Session created/resumed: $_sessionId")
 

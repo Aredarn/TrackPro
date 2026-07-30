@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +37,9 @@ import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.dataClasses.convertToLatLonOffsetList
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.TrackProApp
+import com.example.trackpro.managerClasses.utilities.SpeedColorUtils
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.screens.telemetricScreens.DragMetricCard
 import com.example.trackpro.screens.telemetricScreens.DragMetricDisplay
 import com.github.mikephil.charting.charts.LineChart
@@ -45,6 +50,19 @@ import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import org.maplibre.android.style.expressions.Expression
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.sources.GeoJsonSource
 import java.util.concurrent.TimeUnit
 import kotlin.math.*
 
@@ -63,10 +81,13 @@ private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Doub
 @Composable
 fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     val context = LocalContext.current
+    val app = context.applicationContext as TrackProApp
+    val useMetric by app.useMetricUnits.collectAsState()
     val database = remember { ESPDatabase.getInstance(context) }
     var coordinates by remember { mutableStateOf(emptyList<RawGPSData>()) }
     val dragTimeClass = remember { DragTimeCalculation(sessionId, database) }
     var totalDist by remember { mutableDoubleStateOf(-1.0) }
+    var showMap by remember { mutableStateOf(false) }
     
     // X = cumulative meters or seconds, Y = speed (km/h)
     val dataPointsMeters = remember { mutableListOf<Entry>() }
@@ -202,11 +223,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 }
                 CompactStat(
                     label = "DISTANCE",
-                    value = when {
-                        totalDist <= 0 -> "—"
-                        totalDist >= 1000 -> String.format("%.2f km", totalDist / 1000.0)
-                        else -> String.format("%.0f m", totalDist)
-                    },
+                    value = if (totalDist <= 0) "—" else UnitFormatter.formatDistance(totalDist, useMetric),
                     textMuted = TrackProTheme.colors.textMuted,
                     valueColor = TrackProTheme.colors.textPrimary
                 )
@@ -218,9 +235,9 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                DragMetricCard(DragMetricDisplay("TOP SPEED",  if (maxSpeed > 0) String.format("%.0f", maxSpeed) else "—", "KM/H", maxSpeed > 0), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("AVG SPEED",  if (avgSpeed > 0) String.format("%.0f", avgSpeed) else "—", "KM/H", avgSpeed > 0), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("MAX ACCEL",  if (maxAcceleration > 0) String.format("%.1f", maxAcceleration) else "—", "KM/H/S", maxAcceleration > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("TOP SPEED",  if (maxSpeed > 0) UnitFormatter.formatSpeed(maxSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), maxSpeed > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("AVG SPEED",  if (avgSpeed > 0) UnitFormatter.formatSpeed(avgSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), avgSpeed > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("MAX ACCEL",  if (maxAcceleration > 0) String.format("%.1f", UnitFormatter.convertSpeed(maxAcceleration, useMetric)) else "—", "${UnitFormatter.speedUnitLabel(useMetric)}/S", maxAcceleration > 0), modifier = Modifier.weight(1f))
             }
 
             Row(
@@ -244,7 +261,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 DragMetricCard(DragMetricDisplay("100-200",  formatMetric(metrics.time100to200),               "SEC",   metrics.time100to200 != null),   modifier = Modifier.weight(1f))
                 DragMetricCard(DragMetricDisplay("¼ MILE",   formatMetric(metrics.quarterMileTime),            "SEC",   metrics.quarterMileTime != null), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("TRAP SPD", metrics.quarterMileSpeed?.toInt()?.toString() ?: "—", "KM/H", metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("TRAP SPD", metrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "—", UnitFormatter.speedUnitLabel(useMetric), metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
             }
         }
 
@@ -260,7 +277,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "SPEED TRACE",
+                text = if (showMap) "GPS TRACE" else "SPEED TRACE",
                 color = TrackProTheme.colors.textMuted,
                 fontSize = 9.sp,
                 letterSpacing = 2.sp,
@@ -270,15 +287,36 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                listOf(true to "METER", false to "SEC").forEach { (isMeters, label) ->
-                    val active = xAxisInMeters == isMeters
+                if (!showMap) {
+                    listOf(true to "METER", false to "SEC").forEach { (isMeters, label) ->
+                        val active = xAxisInMeters == isMeters
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    if (active) TrackProTheme.colors.accentCyan else TrackProTheme.colors.sectorLine,
+                                    RoundedCornerShape(3.dp)
+                                )
+                                .clickable { xAxisInMeters = isMeters }
+                                .padding(horizontal = 10.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (active) Color.Black else TrackProTheme.colors.textMuted,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                    }
+                }
+                listOf(false to "CHART", true to "MAP").forEach { (isMap, label) ->
+                    val active = showMap == isMap
                     Box(
                         modifier = Modifier
                             .background(
-                                if (active) TrackProTheme.colors.accentCyan else TrackProTheme.colors.sectorLine,
-                                androidx.compose.foundation.shape.RoundedCornerShape(3.dp)
+                                if (active) TrackProTheme.colors.accentAmber else TrackProTheme.colors.sectorLine,
+                                RoundedCornerShape(3.dp)
                             )
-                            .clickable { xAxisInMeters = isMeters }
+                            .clickable { showMap = isMap }
                             .padding(horizontal = 10.dp, vertical = 3.dp)
                     ) {
                         Text(
@@ -299,41 +337,157 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 .fillMaxSize()
                 .background(TrackProTheme.colors.bgCard)
         ) {
-            AndroidView(
-                factory = { ctx ->
-                    LineChart(ctx).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
+            if (showMap) {
+                if (coordinates.isNotEmpty()) {
+                    DragSessionMapView(gpsData = coordinates, modifier = Modifier.fillMaxSize())
+                } else {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            "NO GPS DATA",
+                            color = TrackProTheme.colors.textMuted,
+                            fontSize = 12.sp,
+                            letterSpacing = 2.sp
                         )
-                        setupChartStyle()
                     }
-                },
-                update = { chart ->
-                    val dataSet = LineDataSet(dataPoints, "Speed").apply {
-                        setDrawValues(false)
-                        setDrawCircles(false)
-                        lineWidth = 2f
-                        color = android.graphics.Color.parseColor("#E8001C")
-                        setDrawFilled(true)
-                        fillColor = android.graphics.Color.parseColor("#E8001C")
-                        fillAlpha = 40
-                    }
-                    chart.data = LineData(dataSet)
-                    chart.xAxis.valueFormatter = object : ValueFormatter() {
-                        override fun getFormattedValue(value: Float): String {
-                            return if (xAxisInMeters) "${value.toInt()}m" else "${value.toInt()}s"
+                }
+            } else {
+                AndroidView(
+                    factory = { ctx ->
+                        LineChart(ctx).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                            setupChartStyle()
                         }
-                    }
-                    chart.notifyDataSetChanged()
-                    chart.invalidate()
-                },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-            )
+                    },
+                    update = { chart ->
+                        val convertedPoints = dataPoints.map { Entry(it.x, UnitFormatter.convertSpeed(it.y, useMetric)) }
+                        val dataSet = LineDataSet(convertedPoints, "Speed").apply {
+                            setDrawValues(false)
+                            setDrawCircles(false)
+                            lineWidth = 2f
+                            color = android.graphics.Color.parseColor("#E8001C")
+                            setDrawFilled(true)
+                            fillColor = android.graphics.Color.parseColor("#E8001C")
+                            fillAlpha = 40
+                        }
+                        chart.data = LineData(dataSet)
+                        chart.xAxis.valueFormatter = object : ValueFormatter() {
+                            override fun getFormattedValue(value: Float): String {
+                                return if (xAxisInMeters) "${value.toInt()}m" else "${value.toInt()}s"
+                            }
+                        }
+                        chart.notifyDataSetChanged()
+                        chart.invalidate()
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                )
+            }
         }
     }
+}
+
+@Composable
+fun DragSessionMapView(
+    gpsData: List<RawGPSData>,
+    modifier: Modifier = Modifier
+) {
+    val mapRef = remember { mutableStateOf<MapLibreMap?>(null) }
+    val styleRef = remember { mutableStateOf<Style?>(null) }
+
+    LaunchedEffect(gpsData) {
+        val map = mapRef.value ?: return@LaunchedEffect
+        val style = styleRef.value ?: return@LaunchedEffect
+        drawDragSpeedHeatmap(style, gpsData)
+        if (gpsData.isNotEmpty()) fitCameraToDragGps(map, gpsData)
+    }
+
+    AndroidView(
+        factory = { ctx ->
+            MapLibre.getInstance(ctx)
+            MapView(ctx).also { mv ->
+                mv.onCreate(null)
+                mv.getMapAsync { map ->
+                    mapRef.value = map
+                    map.uiSettings.setAllGesturesEnabled(true)
+                    map.setStyle("https://tiles.openfreemap.org/styles/dark") { style ->
+                        styleRef.value = style
+                        drawDragSpeedHeatmap(style, gpsData)
+                        if (gpsData.isNotEmpty()) fitCameraToDragGps(map, gpsData)
+                    }
+                }
+            }
+        },
+        modifier = modifier
+    )
+}
+
+private fun drawDragSpeedHeatmap(style: Style, gps: List<RawGPSData>) {
+    listOf("drag-heat-layer", "drag-start-layer", "drag-end-layer").forEach { id ->
+        style.getLayer(id)?.let { style.removeLayer(it) }
+    }
+    listOf("drag-heat-src", "drag-start-src", "drag-end-src").forEach { id ->
+        style.getSource(id)?.let { style.removeSource(it) }
+    }
+
+    if (gps.size < 2) return
+
+    val speeds = gps.mapNotNull { it.speed }
+    val minSpd = speeds.minOrNull() ?: 0f
+    val maxSpd = speeds.maxOrNull() ?: 1f
+
+    val features = mutableListOf<String>()
+    for (i in 0 until gps.size - 1) {
+        val p0 = gps[i]; val p1 = gps[i + 1]
+        val spd = ((p0.speed ?: minSpd) + (p1.speed ?: minSpd)) / 2f
+        val t = if (maxSpd > minSpd) (spd - minSpd) / (maxSpd - minSpd) else 0f
+        val hex = SpeedColorUtils.speedToHex(t)
+        features.add(
+            """{"type":"Feature","geometry":{"type":"LineString","coordinates":[[${p0.longitude},${p0.latitude}],[${p1.longitude},${p1.latitude}]]},"properties":{"color":"$hex"}}"""
+        )
+    }
+
+    val geojson = """{"type":"FeatureCollection","features":[${features.joinToString(",")}]}"""
+    style.addSource(GeoJsonSource("drag-heat-src", geojson))
+    style.addLayer(LineLayer("drag-heat-layer", "drag-heat-src").apply {
+        setProperties(
+            PropertyFactory.lineColor(Expression.get("color")),
+            PropertyFactory.lineWidth(3f),
+            PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+            PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND)
+        )
+    })
+
+    val start = gps.first()
+    val end = gps.last()
+    style.addSource(GeoJsonSource("drag-start-src", """{"type":"Feature","geometry":{"type":"Point","coordinates":[${start.longitude},${start.latitude}]}}"""))
+    style.addLayer(CircleLayer("drag-start-layer", "drag-start-src").apply {
+        setProperties(
+            PropertyFactory.circleColor("#00E676"),
+            PropertyFactory.circleRadius(6f),
+            PropertyFactory.circleStrokeColor("#0E1117"),
+            PropertyFactory.circleStrokeWidth(1.5f)
+        )
+    })
+    style.addSource(GeoJsonSource("drag-end-src", """{"type":"Feature","geometry":{"type":"Point","coordinates":[${end.longitude},${end.latitude}]}}"""))
+    style.addLayer(CircleLayer("drag-end-layer", "drag-end-src").apply {
+        setProperties(
+            PropertyFactory.circleColor("#FF1744"),
+            PropertyFactory.circleRadius(6f),
+            PropertyFactory.circleStrokeColor("#0E1117"),
+            PropertyFactory.circleStrokeWidth(1.5f)
+        )
+    })
+}
+
+private fun fitCameraToDragGps(map: MapLibreMap, gps: List<RawGPSData>) {
+    if (gps.isEmpty()) return
+    val bb = LatLngBounds.Builder()
+    gps.forEach { bb.include(LatLng(it.latitude, it.longitude)) }
+    map.easeCamera(CameraUpdateFactory.newLatLngBounds(bb.build(), 80), 800)
 }
 
 private fun LineChart.setupChartStyle() {

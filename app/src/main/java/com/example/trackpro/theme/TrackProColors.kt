@@ -18,29 +18,29 @@ data class TrackProColorScheme(
 
 
 val DarkTrackProColors = TrackProColorScheme(
-    bgDeep = Color(0xFF0F1219),
-    bgCard = Color(0xFF161B26),
-    bgElevated = Color(0xFF1F2635),
-    accentCyan = Color(0xFF00B4D8),
-    accentBlue = Color(0xFF6C7AEC),
-    accentAmber = Color(0xFFF7A23B),
-    textPrimary = Color(0xFFF1F3F7),
-    textMuted = Color(0xFF8A94A6),
-    deltaGood = Color(0xFF22C55E),
-    deltaBad = Color(0xFFEF4444),
-    sectorLine = Color(0xFF2E374A)
+    bgDeep = Color(0xFF0A0C11),
+    bgCard = Color(0xFF151924),
+    bgElevated = Color(0xFF212739),
+    accentCyan = Color(0xFF22D3EE),
+    accentBlue = Color(0xFF818CF8),
+    accentAmber = Color(0xFFFBBF24),
+    textPrimary = Color(0xFFF3F5F9),
+    textMuted = Color(0xFF9AA5B8),
+    deltaGood = Color(0xFF4ADE80),
+    deltaBad = Color(0xFFF87171),
+    sectorLine = Color(0xFF3A4358)
 )
 
 val LightTrackProColors = TrackProColorScheme(
-    bgDeep = Color(0xFFF4F6F9),
+    bgDeep = Color(0xFFEEF1F6),
     bgCard = Color(0xFFFFFFFF),
-    bgElevated = Color(0xFFEAEFF5),
-    accentCyan = Color(0xFF0077B6),
-    accentBlue = Color(0xFF4A56E2),
+    bgElevated = Color(0xFFE2E8F1),
+    accentCyan = Color(0xFF0891B2),
+    accentBlue = Color(0xFF6366F1),
     accentAmber = Color(0xFFD97706),
-    textPrimary = Color(0xFF111827),
-    textMuted = Color(0xFF6B7280),
+    textPrimary = Color(0xFF0F172A),
+    textMuted = Color(0xFF64748B),
     deltaGood = Color(0xFF16A34A),
     deltaBad = Color(0xFFDC2626),
-    sectorLine = Color(0xFFE5E7EB)
+    sectorLine = Color(0xFFD8DEE9)
 )

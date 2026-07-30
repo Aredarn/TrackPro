@@ -76,7 +76,23 @@ fun TimeAttackListViewScreen(
             }
 
             if (trackSessions.isEmpty()) {
-                // ... Empty State ...
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "NO SESSIONS RECORDED",
+                            color = TrackProTheme.colors.textMuted,
+                            fontSize = 14.sp,
+                            letterSpacing = 3.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Run a track session to see it here",
+                            color = TrackProTheme.colors.textMuted.copy(alpha = 0.5f),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),

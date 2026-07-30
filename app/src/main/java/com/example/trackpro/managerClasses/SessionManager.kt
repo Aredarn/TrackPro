@@ -21,7 +21,7 @@ class SessionManager private constructor(
             trackId = trackId,
             )
         currentSessionId = sessionDataDao.insertSession(session) // Insert session
-        Log.e("SessionManager", "Inserted session with ID: $currentSessionId")
+        Log.d("SessionManager", "Inserted session with ID: $currentSessionId")
 
         return currentSessionId ?: throw Exception("Failed to insert session")
     }

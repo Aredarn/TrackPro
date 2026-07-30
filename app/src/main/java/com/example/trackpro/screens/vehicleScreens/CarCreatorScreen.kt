@@ -1,8 +1,8 @@
 package com.example.trackpro.screens.vehicleScreens
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -25,9 +25,6 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,6 +43,7 @@ import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.extrasForUI.CustomTextField
 import com.example.trackpro.extrasForUI.DropdownMenuField
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.JsonReader.loadJsonOptions
 import kotlinx.coroutines.launch
 
@@ -76,34 +74,41 @@ fun CarCreationScreen(
 
     val scrollState = rememberScrollState()
 
-    val showSection = remember { mutableStateOf(true) }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
-            .padding(16.dp)
+            .background(TrackProTheme.colors.bgDeep)
     ) {
-        Column(
-            modifier = Modifier
-                .verticalScroll(scrollState)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "🏎️ Vehicle Setup",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+        Column(modifier = Modifier.fillMaxSize()) {
 
-            AnimatedVisibility(visible = showSection.value) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(10.dp),
-                    modifier = Modifier.fillMaxWidth()
+            // ── Top bar ───────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(TrackProTheme.colors.accentAmber)
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "● VEHICLE SETUP",
+                    color = Color.Black,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 3.sp
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .verticalScroll(scrollState)
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
+                        .border(1.dp, TrackProTheme.colors.sectorLine, RoundedCornerShape(12.dp))
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
 
@@ -121,19 +126,19 @@ fun CarCreationScreen(
                         CustomTextField("Fuel Capacity (L)", fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
 
                         SectionTitle("Configuration")
-                        DropdownMenuField("Engine Type", jsonOptions.engineTypes, selectedEngineType, Color.White) { selectedEngineType = it }
-                        DropdownMenuField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain, Color.White) { selectedDrivetrain = it }
-                        DropdownMenuField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType, Color.White) { selectedFuelType = it }
-                        DropdownMenuField("Tire Type", jsonOptions.tireTypes, selectedTireType, Color.White) { selectedTireType = it }
-                        DropdownMenuField("Transmission", jsonOptions.transmissions, selectedTransmission, Color.White) { selectedTransmission = it }
-                        DropdownMenuField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType, Color.White) { selectedSuspensionType = it }
+                        DropdownMenuField("Engine Type", jsonOptions.engineTypes, selectedEngineType) { selectedEngineType = it }
+                        DropdownMenuField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain) { selectedDrivetrain = it }
+                        DropdownMenuField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType) { selectedFuelType = it }
+                        DropdownMenuField("Tire Type", jsonOptions.tireTypes, selectedTireType) { selectedTireType = it }
+                        DropdownMenuField("Transmission", jsonOptions.transmissions, selectedTransmission) { selectedTransmission = it }
+                        DropdownMenuField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType) { selectedSuspensionType = it }
 
                         Spacer(modifier = Modifier.height(20.dp))
 
                         Button(
                             onClick = {
                                 if (manufacturer.isBlank() || model.isBlank() || year.isBlank()) {
-                                    Toast.makeText(context, "⚠️ Fill in required fields.", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Fill in required fields.", Toast.LENGTH_SHORT).show()
                                     return@Button
                                 }
 
@@ -159,13 +164,19 @@ fun CarCreationScreen(
                                     database.vehicleInformationDAO().insertVehicle(vehicle)
                                 }
 
-                                Toast.makeText(context, "🚀 Vehicle saved successfully!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Vehicle saved successfully.", Toast.LENGTH_SHORT).show()
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
-                            shape = RoundedCornerShape(14.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = TrackProTheme.colors.deltaGood),
+                            shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Save Vehicle", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                "SAVE VEHICLE",
+                                color = Color.Black,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.sp
+                            )
                         }
                     }
                 }
@@ -178,9 +189,11 @@ fun CarCreationScreen(
 @Composable
 fun SectionTitle(title: String) {
     Text(
-        text = title,
-        color = Color(0xFFB0BEC5),
-        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+        text = title.uppercase(),
+        color = TrackProTheme.colors.textMuted,
+        fontSize = 10.sp,
+        letterSpacing = 2.sp,
+        fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(vertical = 8.dp)
     )
 }

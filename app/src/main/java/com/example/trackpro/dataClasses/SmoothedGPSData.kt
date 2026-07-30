@@ -3,6 +3,7 @@ package com.example.trackpro.dataClasses
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.ForeignKey
+import androidx.room.Index
 
 @Entity(
     tableName = "smoothed_gps_data" ,
@@ -11,7 +12,8 @@ import androidx.room.ForeignKey
         parentColumns = ["id"],
         childColumns = ["sessionid"],
         onDelete = ForeignKey.CASCADE
-    )]
+    )],
+    indices = [Index("sessionid")]
 )
 
 data class SmoothedGPSData (
