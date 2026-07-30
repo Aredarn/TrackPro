@@ -56,9 +56,6 @@ class PostProcessing(val database: ESPDatabase) {
             val smoothedAlt = altWindow.filterNotNull().averageOrNull() ?: gpsData.altitude
             val smoothedSpeed = speedWindow.filterNotNull().averageOrNull() ?: gpsData.speed
 
-            // Debug log
-            Log.d("PostProcessing", "Timestamp: ${gpsData.timestamp}, Smoothed Speed: $smoothedSpeed")
-
             // Add smoothed result to the list
             smoothed.add(
                 SmoothedGPSData(

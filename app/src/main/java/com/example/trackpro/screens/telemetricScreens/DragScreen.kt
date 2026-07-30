@@ -111,9 +111,7 @@ fun DragRaceScreen(
             if (isSessionActive) {
                 scope.launch(Dispatchers.IO) {
                     sessionManager.endSession()
-                    dataBuffer.forEach { gps ->
-                        database.rawGPSDataDao().insert(gps)
-                    }
+                    database.rawGPSDataDao().insertAll(dataBuffer)
                 }
             }
         }
@@ -561,9 +559,7 @@ fun DragRaceScreen(
                                     sessionManager.endSession()
 
                                     // Save buffered GPS data
-                                    dataBuffer.forEach { gps ->
-                                        database.rawGPSDataDao().insert(gps)
-                                    }
+                                    database.rawGPSDataDao().insertAll(dataBuffer)
                                     dataBuffer.clear()
                                 }
                             }

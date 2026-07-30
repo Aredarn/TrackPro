@@ -43,7 +43,7 @@ import kotlinx.coroutines.launch
     VehicleInformationData::class,
     LapTimeData::class,
     LapInfoData::class
-], version = 1, exportSchema = false)
+], version = 2, exportSchema = false)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun rawGPSDataDao(): RawGPSDataDao
@@ -114,6 +114,11 @@ abstract class ESPDatabase : RoomDatabase() {
 
                         }
                     })
+                    // No migrations exist yet; without this, any future (or this) schema
+                    // change throws IllegalStateException on every existing install instead
+                    // of recovering. Replace with real Migration objects once the schema
+                    // needs to be preserved across upgrades.
+                    .fallbackToDestructiveMigration()
                     .build()
 
                 INSTANCE = instance

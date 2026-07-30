@@ -2,6 +2,7 @@ package com.example.trackpro.dataClasses
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
@@ -11,7 +12,8 @@ import androidx.room.PrimaryKey
         parentColumns = ["id"],
         childColumns = ["lapid"],
         onDelete = ForeignKey.CASCADE
-    )]
+    )],
+    indices = [Index("lapid")]
 )
 data class LapInfoData(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

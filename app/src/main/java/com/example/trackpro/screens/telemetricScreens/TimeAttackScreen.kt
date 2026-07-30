@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -179,15 +178,6 @@ fun TimeAttackScreenView(
         )
     }
 
-    DisposableEffect(Unit) {
-        Log.d("TimeAttackScreen", "DisposableEffect - Connecting to ESP")
-        app.espTcpClient.connect()
-
-        onDispose {
-            Log.d("TimeAttackScreen", "DisposableEffect - Disconnecting from ESP")
-            app.espTcpClient.disconnect()
-        }
-    }
 }
 // ── Portrait ───────────────────────────────────────────────
 

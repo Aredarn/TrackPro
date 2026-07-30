@@ -37,7 +37,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,6 +45,7 @@ import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.extrasForUI.CustomTextField
 import com.example.trackpro.extrasForUI.DropdownMenuField
+import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.JsonReader.loadJsonOptions
 import kotlinx.coroutines.launch
 
@@ -81,7 +81,7 @@ fun CarCreationScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
+            .background(TrackProTheme.colors.bgDeep)
             .padding(16.dp)
     ) {
         Column(
@@ -92,7 +92,7 @@ fun CarCreationScreen(
         ) {
             Text(
                 text = "🏎️ Vehicle Setup",
-                color = Color.White,
+                color = TrackProTheme.colors.textPrimary,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -100,7 +100,7 @@ fun CarCreationScreen(
 
             AnimatedVisibility(visible = showSection.value) {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                    colors = CardDefaults.cardColors(containerColor = TrackProTheme.colors.bgCard),
                     shape = RoundedCornerShape(20.dp),
                     elevation = CardDefaults.cardElevation(10.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -121,12 +121,12 @@ fun CarCreationScreen(
                         CustomTextField("Fuel Capacity (L)", fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
 
                         SectionTitle("Configuration")
-                        DropdownMenuField("Engine Type", jsonOptions.engineTypes, selectedEngineType, Color.White) { selectedEngineType = it }
-                        DropdownMenuField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain, Color.White) { selectedDrivetrain = it }
-                        DropdownMenuField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType, Color.White) { selectedFuelType = it }
-                        DropdownMenuField("Tire Type", jsonOptions.tireTypes, selectedTireType, Color.White) { selectedTireType = it }
-                        DropdownMenuField("Transmission", jsonOptions.transmissions, selectedTransmission, Color.White) { selectedTransmission = it }
-                        DropdownMenuField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType, Color.White) { selectedSuspensionType = it }
+                        DropdownMenuField("Engine Type", jsonOptions.engineTypes, selectedEngineType, TrackProTheme.colors.textPrimary) { selectedEngineType = it }
+                        DropdownMenuField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain, TrackProTheme.colors.textPrimary) { selectedDrivetrain = it }
+                        DropdownMenuField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType, TrackProTheme.colors.textPrimary) { selectedFuelType = it }
+                        DropdownMenuField("Tire Type", jsonOptions.tireTypes, selectedTireType, TrackProTheme.colors.textPrimary) { selectedTireType = it }
+                        DropdownMenuField("Transmission", jsonOptions.transmissions, selectedTransmission, TrackProTheme.colors.textPrimary) { selectedTransmission = it }
+                        DropdownMenuField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType, TrackProTheme.colors.textPrimary) { selectedSuspensionType = it }
 
                         Spacer(modifier = Modifier.height(20.dp))
 
@@ -162,7 +162,7 @@ fun CarCreationScreen(
                                 Toast.makeText(context, "🚀 Vehicle saved successfully!", Toast.LENGTH_SHORT).show()
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
+                            colors = ButtonDefaults.buttonColors(containerColor = TrackProTheme.colors.deltaGood),
                             shape = RoundedCornerShape(14.dp)
                         ) {
                             Text("Save Vehicle", fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -179,7 +179,7 @@ fun CarCreationScreen(
 fun SectionTitle(title: String) {
     Text(
         text = title,
-        color = Color(0xFFB0BEC5),
+        color = TrackProTheme.colors.textMuted,
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
         modifier = Modifier.padding(vertical = 8.dp)
     )

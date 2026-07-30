@@ -2,6 +2,7 @@ package com.example.trackpro.dataClasses
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 
@@ -12,7 +13,8 @@ import androidx.room.PrimaryKey
         parentColumns = ["trackId"],
         childColumns = ["trackId"],
         onDelete = ForeignKey.CASCADE
-    )]
+    )],
+    indices = [Index("trackId")]
 )
 data class TrackCoordinatesData(
     @PrimaryKey(autoGenerate = true)
