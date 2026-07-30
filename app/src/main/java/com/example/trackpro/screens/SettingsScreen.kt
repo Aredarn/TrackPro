@@ -36,6 +36,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
     val useExternal by app.useExternalGps.collectAsState()
+    val useDarkTheme by app.useDarkTheme.collectAsState()
 
     Column(
         modifier = Modifier
@@ -78,7 +79,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Button(
                         onClick = { app.useExternalGps.value = !useExternal },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (useExternal) TrackProTheme.colors.accentCyan else Color(0xFF1E2530)
+                            containerColor = if (useExternal) TrackProTheme.colors.accentCyan else TrackProTheme.colors.bgElevated
                         ),
                         shape = RoundedCornerShape(4.dp),
                         modifier = Modifier.height(36.dp)
@@ -93,10 +94,44 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
             }
 
-            // --- Section: Measurement ---
-            SettingsSectionHeader(title = "UNITS")
+            // --- Section: Appearance ---
+            SettingsSectionHeader(title = "APPEARANCE")
             SettingsCard {
-                //SettingsToggleRow(label = "Use Metric Units (km/h)", isActive = true) {}
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "THEME",
+                            color = TrackProTheme.colors.textPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (useDarkTheme) "Dark" else "Light",
+                            color = TrackProTheme.colors.accentCyan,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Button(
+                        onClick = { app.setDarkTheme(!useDarkTheme) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = TrackProTheme.colors.accentCyan
+                        ),
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text(
+                            text = if (useDarkTheme) "USE LIGHT" else "USE DARK",
+                            color = Color.Black,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
             }
 
             // --- Section: System ---
@@ -129,7 +164,7 @@ private fun SettingsCard(content: @Composable () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(TrackProTheme.colors.bgCard, RoundedCornerShape(8.dp))
-            .border(1.dp, Color(0xFF1E2530), RoundedCornerShape(8.dp))
+            .border(1.dp, TrackProTheme.colors.sectorLine, RoundedCornerShape(8.dp))
             .padding(16.dp)
     ) {
         content()

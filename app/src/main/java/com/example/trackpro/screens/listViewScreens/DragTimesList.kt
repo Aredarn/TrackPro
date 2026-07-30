@@ -1,8 +1,5 @@
 package com.example.trackpro.screens.listViewScreens
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,29 +33,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
 import com.example.trackpro.models.DragSessionWithVehicle
 import com.example.trackpro.viewModels.DragSessionViewModel
-import com.example.trackpro.viewModels.DragSessionViewModelFactory
 import java.util.Date
-
-class DragTimesList : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            val navController = rememberNavController()
-            val viewModel: DragSessionViewModel = viewModel(
-                factory = DragSessionViewModelFactory(this)
-            )
-
-            DragTimesListView(viewModel = viewModel, navController = navController)
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -107,18 +88,38 @@ fun DragTimesListView(
             }
 
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                groupedSessions.forEach { (groupKey, sessions) ->
-                    item(key = groupKey) {
-                        ExpandableSessionGroup(
-                            groupTitle = groupKey,
-                            sessions = sessions,
-                            navController = navController
+            if (dragSessions.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "NO SESSIONS RECORDED",
+                            color = TrackProTheme.colors.textMuted,
+                            fontSize = 14.sp,
+                            letterSpacing = 3.sp,
+                            fontWeight = FontWeight.Black
                         )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Run a drag session to see it here",
+                            color = TrackProTheme.colors.textMuted.copy(alpha = 0.5f),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    groupedSessions.forEach { (groupKey, sessions) ->
+                        item(key = groupKey) {
+                            ExpandableSessionGroup(
+                                groupTitle = groupKey,
+                                sessions = sessions,
+                                navController = navController
+                            )
+                        }
                     }
                 }
             }

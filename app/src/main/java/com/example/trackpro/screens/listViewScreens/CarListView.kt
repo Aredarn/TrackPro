@@ -160,9 +160,9 @@ fun VehicleCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            containerColor = Color(0xFF0E1117),
-            titleContentColor = Color(0xFFF0F2F5),
-            textContentColor = Color(0xFF6B7280),
+            containerColor = TrackProTheme.colors.bgCard,
+            titleContentColor = TrackProTheme.colors.textPrimary,
+            textContentColor = TrackProTheme.colors.textMuted,
             confirmButton = {
                 TextButton(onClick = {
                     onDelete(vehicle)
