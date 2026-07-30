@@ -39,6 +39,16 @@ import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.sources.GeoJsonSource
 
 
 @Composable
@@ -195,13 +205,13 @@ fun TrackStaticMapView(
     trackType: String,
     modifier: Modifier = Modifier
 ) {
-    var mapViewRef by remember { mutableStateOf<org.maplibre.android.maps.MapView?>(null) }
+    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
     val trackDrawn = remember { mutableStateOf(false) }
 
     AndroidView(
         factory = { ctx ->
-            org.maplibre.android.MapLibre.getInstance(ctx)
-            org.maplibre.android.maps.MapView(ctx).also { mv ->
+            MapLibre.getInstance(ctx)
+            MapView(ctx).also { mv ->
                 mapViewRef = mv
                 mv.onCreate(null)
                 mv.getMapAsync { map ->
@@ -211,56 +221,60 @@ fun TrackStaticMapView(
                         map.uiSettings.isLogoEnabled = false
                         map.uiSettings.isAttributionEnabled = false
 
-                        val coords = trackParts.joinToString(",") {
-                            "[${it.longitude},${it.latitude}]"
-                        }
+                        // A single (or empty) point can't form a line or a real bounding
+                        // box - draw only the start marker and center on it directly,
+                        // rather than feeding MapLibre a degenerate LineString/bounds.
+                        if (trackParts.size >= 2) {
+                            val coords = trackParts.joinToString(",") {
+                                "[${it.longitude},${it.latitude}]"
+                            }
 
-                        // Only close the loop if it's a Circuit
-                        val finalCoordinates = if (trackType == "Circuit") {
-                            val first = trackParts.first()
-                            "$coords,[${first.longitude},${first.latitude}]"
-                        } else {
-                            coords // Keep it as an open line for Sprints
-                        }
+                            // Only close the loop if it's a Circuit
+                            val finalCoordinates = if (trackType == "Circuit") {
+                                val first = trackParts.first()
+                                "$coords,[${first.longitude},${first.latitude}]"
+                            } else {
+                                coords // Keep it as an open line for Sprints
+                            }
 
-                        val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":[$finalCoordinates]},"properties":{}}"""
-                        val src = org.maplibre.android.style.sources.GeoJsonSource("track-static-src", geojson)
-                        style.addSource(src)
-                        style.addLayer(
-                            org.maplibre.android.style.layers.LineLayer("track-static-layer", "track-static-src").apply {
-                                setProperties(
-                                    org.maplibre.android.style.layers.PropertyFactory.lineColor("#00C853"),
-                                    org.maplibre.android.style.layers.PropertyFactory.lineWidth(3f),
-                                    org.maplibre.android.style.layers.PropertyFactory.lineCap(
-                                        org.maplibre.android.style.layers.Property.LINE_CAP_ROUND
+                            val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":[$finalCoordinates]},"properties":{}}"""
+                            style.addSource(GeoJsonSource("track-static-src", geojson))
+                            style.addLayer(
+                                LineLayer("track-static-layer", "track-static-src").apply {
+                                    setProperties(
+                                        PropertyFactory.lineColor("#00C853"),
+                                        PropertyFactory.lineWidth(3f),
+                                        PropertyFactory.lineCap(Property.LINE_CAP_ROUND)
                                     )
-                                )
-                            }
-                        )
+                                }
+                            )
+                        }
 
-                        // Start/finish marker
-                        val startGeojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[$finalCoordinates}]},"properties":{}}"""
-
-                        style.addSource(org.maplibre.android.style.sources.GeoJsonSource("start-src", startGeojson))
+                        // Start/finish marker - a single point at the actual start coordinate
+                        val startPoint = trackParts.first()
+                        val startGeojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${startPoint.longitude},${startPoint.latitude}]},"properties":{}}"""
+                        style.addSource(GeoJsonSource("start-src", startGeojson))
                         style.addLayer(
-                            org.maplibre.android.style.layers.CircleLayer("start-layer", "start-src").apply {
+                            CircleLayer("start-layer", "start-src").apply {
                                 setProperties(
-                                    org.maplibre.android.style.layers.PropertyFactory.circleColor("#E8001C"),
-                                    org.maplibre.android.style.layers.PropertyFactory.circleRadius(8f),
-                                    org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor("#FFFFFF"),
-                                    org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth(2f)
+                                    PropertyFactory.circleColor("#E8001C"),
+                                    PropertyFactory.circleRadius(8f),
+                                    PropertyFactory.circleStrokeColor("#FFFFFF"),
+                                    PropertyFactory.circleStrokeWidth(2f)
                                 )
                             }
                         )
 
-                        val bounds = org.maplibre.android.geometry.LatLngBounds.Builder()
-                            .includes(trackParts.map {
-                                org.maplibre.android.geometry.LatLng(it.latitude, it.longitude)
-                            })
-                            .build()
-                        map.easeCamera(
-                            org.maplibre.android.camera.CameraUpdateFactory.newLatLngBounds(bounds, 64), 800
-                        )
+                        if (trackParts.size >= 2) {
+                            val bounds = LatLngBounds.Builder()
+                                .includes(trackParts.map { LatLng(it.latitude, it.longitude) })
+                                .build()
+                            map.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, 64), 800)
+                        } else {
+                            map.moveCamera(
+                                CameraUpdateFactory.newLatLngZoom(LatLng(startPoint.latitude, startPoint.longitude), 16.0)
+                            )
+                        }
                         trackDrawn.value = true
                     }
                 }

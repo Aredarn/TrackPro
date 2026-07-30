@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.annotations.PolylineOptions
+import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
@@ -248,6 +249,15 @@ fun MapLibreBuilderView(
                             .title("S${(sectorPoint.sectorIndex ?: 0) + 1}")
                         )
                     }
+
+                // Follow the most recent point - without this the camera stays wherever
+                // it started (a default world view), so a live recording never visibly
+                // moves even though points are being collected correctly.
+                val last = points.last()
+                map.easeCamera(
+                    CameraUpdateFactory.newLatLngZoom(LatLng(last.latitude, last.longitude), 17.0),
+                    500
+                )
             }
         }
     }

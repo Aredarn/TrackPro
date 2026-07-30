@@ -77,6 +77,19 @@ private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Doub
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 }
 
+// Centered moving average over GPS speed samples, tolerant of null readings. Smooths out
+// per-sample GPS jitter for display/differentiation without touching the raw stored data
+// (0-60/quarter-mile threshold detection still uses the unsmoothed values for accuracy).
+private fun smoothSpeeds(data: List<RawGPSData>, windowSize: Int = 5): List<Float?> {
+    val half = windowSize / 2
+    return data.indices.map { i ->
+        val lo = (i - half).coerceAtLeast(0)
+        val hi = (i + half).coerceAtMost(data.lastIndex)
+        val window = (lo..hi).mapNotNull { data[it].speed }
+        if (window.isEmpty()) null else window.average().toFloat()
+    }
+}
+
 
 @Composable
 fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
@@ -85,6 +98,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     val useMetric by app.useMetricUnits.collectAsState()
     val database = remember { ESPDatabase.getInstance(context) }
     var coordinates by remember { mutableStateOf(emptyList<RawGPSData>()) }
+    var mapGpsData by remember { mutableStateOf(emptyList<RawGPSData>()) }
     val dragTimeClass = remember { DragTimeCalculation(sessionId, database) }
     var totalDist by remember { mutableDoubleStateOf(-1.0) }
     var showMap by remember { mutableStateOf(false) }
@@ -114,6 +128,11 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             val data = database.rawGPSDataDao().getGPSDataBySession(sessionId)
             if (data.isEmpty()) return@withContext
 
+            // Raw per-sample GPS speed is noisy enough that both the chart and the
+            // differentiated MAX ACCEL stat look jagged even for a genuinely smooth run.
+            // Smooth it with a small centered moving average before using it for either.
+            val smoothedSpeeds = smoothSpeeds(data)
+
             // Build cumulative distance array for X axis
             val cumulativeDist = DoubleArray(data.size)
             for (i in 1 until data.size) {
@@ -127,7 +146,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             dataPointsMeters.clear()
             dataPointsSeconds.clear()
             data.forEachIndexed { i, d ->
-                d.speed?.let {
+                smoothedSpeeds[i]?.let {
                     dataPointsMeters.add(Entry(cumulativeDist[i].toFloat(), it))
                     dataPointsSeconds.add(Entry(((d.timestamp - t0) / 1000f), it))
                 }
@@ -143,7 +162,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
 
             var maxAccel = -1.0
             for (i in 1 until data.size) {
-                val dSpeed = (data[i].speed ?: continue) - (data[i - 1].speed ?: continue)
+                val dSpeed = (smoothedSpeeds[i] ?: continue) - (smoothedSpeeds[i - 1] ?: continue)
                 val dTime = (data[i].timestamp - data[i - 1].timestamp) / 1000.0
                 if (dTime > 0) {
                     val accel = dSpeed / dTime
@@ -164,8 +183,11 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             val lastAlt  = data.lastOrNull  { it.altitude != null }?.altitude
             val net = if (firstAlt != null && lastAlt != null) lastAlt - firstAlt else 0.0
 
+            val smoothedMapData = data.mapIndexed { i, d -> d.copy(speed = smoothedSpeeds[i]) }
+
             withContext(Dispatchers.Main) {
                 coordinates = data
+                mapGpsData = smoothedMapData
                 metrics = calculatedMetrics
                 totalDist = totalDistValue
                 maxSpeed = maxSpeedValue
@@ -338,8 +360,8 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 .background(TrackProTheme.colors.bgCard)
         ) {
             if (showMap) {
-                if (coordinates.isNotEmpty()) {
-                    DragSessionMapView(gpsData = coordinates, modifier = Modifier.fillMaxSize())
+                if (mapGpsData.isNotEmpty()) {
+                    DragSessionMapView(gpsData = mapGpsData, modifier = Modifier.fillMaxSize())
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
