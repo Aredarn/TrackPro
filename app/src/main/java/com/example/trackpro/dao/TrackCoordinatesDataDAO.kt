@@ -24,5 +24,5 @@ interface TrackCoordinatesDataDAO {
     //OR
     // IF the user filters the coordinates (if the full track is complete)
     @Query("DELETE FROM track_coordinates_data WHERE trackId = :trackId")
-    suspend fun deleteTrackCoordinates(trackId: Int)
+    suspend fun deleteTrackCoordinates(trackId: Long)
 }

@@ -238,14 +238,11 @@ class TimeAttackViewModel(
             val eventType = "${track.trackName} - $todayFormatted"
 
 
-            _sessionId = run {
-                sessionManager.startSession(
-                    eventType = eventType,
-                    vehicleId = vehicleId,
-                    trackId = trackId
-                )
-                sessionManager.getCurrentSessionId()!!
-            }
+            _sessionId = sessionManager.startSession(
+                eventType = eventType,
+                vehicleId = vehicleId,
+                trackId = trackId
+            )
 
             Log.d("TimeAttack", "Session created/resumed: $_sessionId")
 

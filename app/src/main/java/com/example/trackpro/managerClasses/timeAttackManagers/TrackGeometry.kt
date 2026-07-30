@@ -136,7 +136,13 @@ object TrackGeometry {
         }
 
         return intersection?.let {
-            CrossingResult(true, determineDirection(prevPos, currPos, lineStart, lineEnd))
+            val direction = determineDirection(prevPos, currPos, lineStart, lineEnd)
+            // Lines are built with the perpendicular rotated from the track's forward
+            // direction of travel, which makes ENTERING correspond to a crossing in that
+            // forward direction. Only forward crossings should count, otherwise a car
+            // overshooting the line and rolling back across it would register a second
+            // (bogus) crossing.
+            CrossingResult(direction == CrossingDirection.ENTERING, direction)
         }
     }
 

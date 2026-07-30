@@ -36,6 +36,7 @@ class DragTimeCalculation(
     private var hasStartedRun: Boolean = false
     private val gpsPoints = mutableListOf<LatLonOffset>()
     private var totalDistanceMeters: Float = 0f
+    private var runStartDistanceMeters: Float = 0f
     private var maxSpeedRecorded: Float = 0f
 
     // Metric tracking
@@ -76,6 +77,7 @@ class DragTimeCalculation(
         if (!hasStartedRun && isReadyForRun && currentSpeed > zeroThreshold) {
             hasStartedRun = true
             runStartTime = currentTimeMillis
+            runStartDistanceMeters = totalDistanceMeters
         }
 
         // Calculate Standing Metrics (Only if a valid run started)
@@ -87,8 +89,8 @@ class DragTimeCalculation(
             if (time0to160Result == null && currentSpeed >= 160f) time0to160Result = elapsed
             if (time0to200Result == null && currentSpeed >= 200f) time0to200Result = elapsed
 
-            // Quarter Mile (Standing only)
-            if (quarterMileTimeResult == null && totalDistanceMeters >= 402.336f) {
+            // Quarter Mile (Standing only, measured from the run's start, not the whole recording)
+            if (quarterMileTimeResult == null && (totalDistanceMeters - runStartDistanceMeters) >= 402.336f) {
                 quarterMileTimeResult = elapsed
                 quarterMileSpeedResult = currentSpeed
             }
@@ -145,8 +147,10 @@ class DragTimeCalculation(
     fun resetRealtimeTracking() {
         runStartTime = 0L
         hasStartedRun = false
+        isReadyForRun = false
         gpsPoints.clear()
         totalDistanceMeters = 0f
+        runStartDistanceMeters = 0f
         maxSpeedRecorded = 0f
 
         time0to60Result = null

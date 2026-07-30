@@ -18,5 +18,5 @@ interface RawGPSDataDao {
     suspend fun getGPSDataBySession(sessionId: Long?): List<RawGPSData>
 
     @Query("DELETE FROM raw_gps_data WHERE sessionId = :sessionId")
-    suspend fun deleteGPSDataBySession(sessionId: Int)
+    suspend fun deleteGPSDataBySession(sessionId: Long)
 }
