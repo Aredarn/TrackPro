@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,14 +34,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.EmptyState
+import com.example.trackpro.components.StatCell
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.viewModels.TrackViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -53,6 +58,8 @@ import kotlinx.coroutines.withContext
 fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
     val tracks by viewModel.tracks.collectAsState()
     val context = LocalContext.current
+    val app = context.applicationContext as TrackProApp
+    val useMetric by app.useMetricUnits.collectAsState()
     val database = remember { ESPDatabase.getInstance(context) }
     val scope = rememberCoroutineScope()
 
@@ -63,61 +70,36 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // ── Top bar ───────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(TrackProTheme.colors.accentAmber)
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            AppTopBar(
+                title = "My Tracks",
+                accent = TrackProTheme.colors.accentAmber,
+                trailing = {
                     Text(
-                        text = "● MY TRACKS",
-                        color = Color.Black,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 3.sp
-                    )
-                    Text(
-                        text = "${tracks.size} TRACKS",
-                        color = Color.Black,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
+                        text = "${tracks.size} tracks",
+                        style = TrackProType.label,
+                        color = TrackProTheme.colors.textMuted
                     )
                 }
-            }
+            )
 
             if (tracks.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("NO TRACKS YET", color = TrackProTheme.colors.textMuted,
-                            fontSize = 14.sp, letterSpacing = 3.sp,
-                            fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Build a track to see it here",
-                            color = TrackProTheme.colors.textMuted.copy(alpha = 0.5f), fontSize = 12.sp)
-                    }
-                }
+                EmptyState(message = "No tracks yet", hint = "Build a track to see it here")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    contentPadding = PaddingValues(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     items(tracks) { track ->
                         TrackCard(
                             track = track,
                             navController = navController,
                             database = database,
+                            useMetric = useMetric,
                             bgCard = TrackProTheme.colors.bgCard,
                             bgElevated = TrackProTheme.colors.bgElevated,
                             accentAmber = TrackProTheme.colors.accentAmber,
-                            accentRed = TrackProTheme.colors.accentCyan,
+                            dangerColor = TrackProTheme.colors.danger,
                             textPrimary = TrackProTheme.colors.textPrimary,
                             textMuted = TrackProTheme.colors.textMuted,
                             sectorLine = TrackProTheme.colors.sectorLine,
@@ -139,10 +121,11 @@ fun TrackCard(
     track: TrackMainData,
     navController: NavController,
     database: ESPDatabase,
+    useMetric: Boolean,
     bgCard: Color,
     bgElevated: Color,
     accentAmber: Color,
-    accentRed: Color,
+    dangerColor: Color,
     textPrimary: Color,
     textMuted: Color,
     sectorLine: Color,
@@ -165,15 +148,15 @@ fun TrackCard(
             textContentColor = TrackProTheme.colors.textMuted,
             confirmButton = {
                 TextButton(onClick = { onDelete(track); showDeleteDialog = false }) {
-                    Text("DELETE", color = accentRed, fontWeight = FontWeight.Black)
+                    Text("Delete", color = dangerColor, style = TrackProType.titleMedium)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("CANCEL", color = textMuted)
+                    Text("Cancel", color = textMuted)
                 }
             },
-            title = { Text("Delete Track?", fontWeight = FontWeight.Black) },
+            title = { Text("Delete Track?") },
             text = { Text("${track.trackName} will be permanently removed.") }
         )
     }
@@ -181,8 +164,8 @@ fun TrackCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(bgCard, RoundedCornerShape(12.dp))
-            .border(1.dp, sectorLine, RoundedCornerShape(12.dp))
+            .background(bgCard, TrackProShapes.card)
+            .border(1.dp, sectorLine, TrackProShapes.card)
             .clickable { navController.navigate("track/${track.trackId}") }
     ) {
         Column {
@@ -192,9 +175,9 @@ fun TrackCard(
                     .fillMaxWidth()
                     .background(
                         accentAmber.copy(alpha = 0.12f),
-                        RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                        RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
                     )
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -203,43 +186,38 @@ fun TrackCard(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(accentAmber.copy(alpha = 0.15f),
-                                    RoundedCornerShape(3.dp))
+                                .background(accentAmber.copy(alpha = 0.15f), TrackProShapes.badge)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = track.type.uppercase(),
-                                color = accentAmber,
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
+                                style = TrackProType.label.copy(fontSize = 9.sp),
+                                color = accentAmber
                             )
                         }
                         Text(
                             text = track.country.uppercase(),
-                            color = textMuted,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
+                            style = TrackProType.label.copy(fontSize = 9.sp),
+                            color = textMuted
                         )
                     }
 
                     // Delete button
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
-                            .background(accentRed.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                            .size(26.dp)
+                            .background(dangerColor.copy(alpha = 0.1f), TrackProShapes.badge)
                             .clickable { showDeleteDialog = true },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Delete",
-                            tint = accentRed,
+                            tint = dangerColor,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -248,15 +226,13 @@ fun TrackCard(
 
             // ── Track name ────────────────────────────────
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = track.trackName,
+                    style = TrackProType.titleMedium,
                     color = textPrimary,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-0.3).sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -268,38 +244,26 @@ fun TrackCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(bgElevated,
-                        RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .background(bgElevated, RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text("LENGTH", color = textMuted, fontSize = 9.sp,
-                        letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        text = "${track.totalLength ?: "?"} km",
-                        color = accentAmber,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("LAP RECORD", color = textMuted, fontSize = 9.sp,
-                        letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        text = bestLapTime ?: "—",
-                        color = textPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                }
+                StatCell(
+                    label = "Length",
+                    // totalLength is stored in km; formatDistance takes meters.
+                    value = track.totalLength?.let { UnitFormatter.formatDistance(it * 1000.0, useMetric) } ?: "?",
+                    valueColor = accentAmber
+                )
+                StatCell(
+                    label = "Lap Record",
+                    value = bestLapTime ?: "—",
+                    horizontalAlignment = Alignment.CenterHorizontally
+                )
                 Text(
-                    text = "VIEW →",
-                    color = accentAmber.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
+                    text = "View",
+                    style = TrackProType.label,
+                    color = accentAmber.copy(alpha = 0.8f)
                 )
             }
         }

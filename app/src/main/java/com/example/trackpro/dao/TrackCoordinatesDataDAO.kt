@@ -3,6 +3,7 @@ package com.example.trackpro.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import kotlinx.coroutines.flow.Flow
 
@@ -19,6 +20,11 @@ interface TrackCoordinatesDataDAO {
     //Same as the insertTrackPart, but made two @Insert for better readability
     @Insert
     suspend fun insertTrack(data: List<TrackCoordinatesData>)
+
+    // Bulk-updates existing points in place (matched by primary key) - used to (re)apply
+    // sector markers to an already-saved track without re-recording it.
+    @Update
+    suspend fun updateTrackCoordinates(data: List<TrackCoordinatesData>)
 
     // IF the user whats to recreate the track
     //OR

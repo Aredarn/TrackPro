@@ -38,7 +38,10 @@ class PhoneGpsProvider(
                 altitude = loc.altitude,
                 speed = loc.speed * 3.6f, // CRITICAL: Convert m/s to km/h
                 fixQuality = if (loc.accuracy < 10) 3 else 1,
-                timestamp = loc.time
+                // Stamped on receipt rather than using loc.time: elapsed-time math (0-60,
+                // quarter mile, etc.) needs consistent relative precision between samples,
+                // and this is the same clock the live view already uses for that math.
+                timestamp = System.currentTimeMillis()
             )
         }
     }

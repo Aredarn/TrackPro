@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -34,13 +34,21 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.SectionLabel
+import com.example.trackpro.components.StatCell
+import com.example.trackpro.components.StatCellDivider
+import com.example.trackpro.components.StatCellSize
+import com.example.trackpro.theme.DataVizColors
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.JsonReader
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -53,6 +61,7 @@ fun ESPConnectionTestScreen() {
     val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
     val gpsData     by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
     val useExternal by app.useExternalGps.collectAsState()
+    val useMetric   by app.useMetricUnits.collectAsState()
 
     // 2. Configuration for display
     val config = remember { JsonReader.loadConfig(context) }
@@ -71,39 +80,18 @@ fun ESPConnectionTestScreen() {
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // ── Top Bar (Reacts to Source) ────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(if (isConnected) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentCyan)
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            AppTopBar(
+                title = if (useExternal) "ESP32 Mode" else "Phone GPS Mode",
+                accent = if (isConnected) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentCyan,
+                trailing = {
                     Text(
-                        text = if (useExternal) "● ESP32 MODE" else "● PHONE GPS MODE",
-                        color = Color.Black,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp
+                        text = "Switch",
+                        style = TrackProType.label,
+                        color = TrackProTheme.colors.accentCyan,
+                        modifier = Modifier.clickable { app.useExternalGps.value = !useExternal }
                     )
-
-                    // Simple Toggle Switch in the Top Bar
-                    androidx.compose.material3.Button(
-                        onClick = { app.useExternalGps.value = !useExternal },
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = Color.Black.copy(alpha = 0.2f)
-                        ),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                        modifier = Modifier.height(24.dp)
-                    ) {
-                        Text("SWITCH", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                    }
                 }
-            }
+            )
 
             Column(
                 modifier = Modifier
@@ -120,16 +108,14 @@ fun ESPConnectionTestScreen() {
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         StyledSpeedometer(
-                            speed = speed,
+                            speed = UnitFormatter.convertSpeed(speed, useMetric),
                             textPrimary = TrackProTheme.colors.textPrimary
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "km/h",
-                            color = TrackProTheme.colors.textMuted,
-                            fontSize = 12.sp,
-                            letterSpacing = 3.sp,
-                            fontWeight = FontWeight.Bold
+                            text = UnitFormatter.speedUnitLabel(useMetric).lowercase(),
+                            style = TrackProType.label,
+                            color = TrackProTheme.colors.textMuted
                         )
                     }
                 }
@@ -141,52 +127,54 @@ fun ESPConnectionTestScreen() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(TrackProTheme.colors.bgElevated)
-                        .padding(horizontal = 24.dp, vertical = 14.dp),
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    SignalCell(
-                        label = "SOURCE",
-                        value = if (useExternal) "ESP32" else "INTERNAL",
-                        valueColor = TrackProTheme.colors.textPrimary,
-                        textMuted = TrackProTheme.colors.textMuted
+                    StatCell(
+                        label = "Source",
+                        value = if (useExternal) "ESP32" else "Internal",
+                        size = StatCellSize.Small,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     )
-                    VerticalDividerLine(TrackProTheme.colors.sectorLine)
-                    SignalCell(
-                        label = "STATUS",
-                        value = if (isConnected) "LIVE" else "OFFLINE",
+                    StatCellDivider()
+                    StatCell(
+                        label = "Status",
+                        value = if (isConnected) "Live" else "Offline",
                         valueColor = if (isConnected) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentCyan,
-                        textMuted = TrackProTheme.colors.textMuted
+                        size = StatCellSize.Small,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     )
-                    VerticalDividerLine(TrackProTheme.colors.sectorLine)
-                    SignalCell(
-                        label = "FIX",
-                        value = if (fix) "OK" else "WAIT",
+                    StatCellDivider()
+                    StatCell(
+                        label = "Fix",
+                        value = if (fix) "OK" else "Wait",
                         valueColor = if (fix) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentAmber,
-                        textMuted = TrackProTheme.colors.textMuted
+                        size = StatCellSize.Small,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     )
                 }
 
                 HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
                 // ── Telemetry List ────────────────────────
-                SectionHeader("DATA STREAM", com.example.trackpro.extrasForUI.TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
+                SectionLabel("Data Stream", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(TrackProTheme.colors.bgCard)
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     if (useExternal) {
-                        TelemetryRow("REMOTE IP", "$ip:$port", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
+                        TelemetryRow("Remote IP", "$ip:$port", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
                     }
-                    TelemetryRow("LATITUDE", gpsData?.latitude?.let { String.format("%.6f°", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
-                    TelemetryRow("LONGITUDE", gpsData?.longitude?.let { String.format("%.6f°", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
-                    TelemetryRow("ALTITUDE", gpsData?.altitude?.let { String.format("%.1f m", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
+                    TelemetryRow("Latitude", gpsData?.latitude?.let { String.format("%.6f°", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
+                    TelemetryRow("Longitude", gpsData?.longitude?.let { String.format("%.6f°", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
+                    TelemetryRow("Altitude", gpsData?.altitude?.let { String.format("%.1f m", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
 
                     TelemetryRow(
-                        "REFRESH",
+                        "Refresh",
                         if (useExternal) "20-25 Hz" else "1-5 Hz",
                         if (useExternal) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentAmber,
                         TrackProTheme.colors.textMuted
@@ -196,13 +184,13 @@ fun ESPConnectionTestScreen() {
                 HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
                 // ── Raw Packet / Debug ────────────────────
-                SectionHeader("RAW PACKET", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
+                SectionLabel("Raw Packet", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(TrackProTheme.colors.bgCard)
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md)
                 ) {
                     Text(
                         text = gpsData?.toString() ?: "Awaiting data stream...",
@@ -212,7 +200,7 @@ fun ESPConnectionTestScreen() {
                         lineHeight = 16.sp
                     )
                 }
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(Spacing.xl))
             }
         }
     }
@@ -243,7 +231,7 @@ fun StyledSpeedometer(
 
             // Background arc track
             drawArc(
-                color = Color(0xFF1E2530),
+                color = Color(DataVizColors.gaugeTrack.toColorInt()),
                 startAngle = startAngle,
                 sweepAngle = sweepTotal,
                 useCenter = false,
@@ -257,9 +245,9 @@ fun StyledSpeedometer(
             if (speedFraction > 0f) {
                 // Color shifts from green → amber → red as speed increases
                 val arcColor = when {
-                    speedFraction < 0.5f -> Color(0xFF00C853)
-                    speedFraction < 0.8f -> Color(0xFFFFC107)
-                    else                 -> Color(0xFFE8001C)
+                    speedFraction < 0.5f -> Color(DataVizColors.gaugeLow.toColorInt())
+                    speedFraction < 0.8f -> Color(DataVizColors.gaugeMid.toColorInt())
+                    else                 -> Color(DataVizColors.gaugeHigh.toColorInt())
                 }
                 drawArc(
                     color = arcColor,
@@ -274,12 +262,12 @@ fun StyledSpeedometer(
 
             // Tick marks every 20 km/h
             val tickPaint = android.graphics.Paint().apply {
-                color = "#6B7280".toColorInt()
+                color = DataVizColors.gaugeTick.toColorInt()
                 strokeWidth = 2f
                 isAntiAlias = true
             }
             val labelPaint = android.graphics.Paint().apply {
-                color = "#6B7280".toColorInt()
+                color = DataVizColors.gaugeTick.toColorInt()
                 textSize = 22f
                 textAlign = android.graphics.Paint.Align.CENTER
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
@@ -318,7 +306,7 @@ fun StyledSpeedometer(
 
             // Needle glow (wider, semi-transparent)
             drawLine(
-                color = Color(0xFFE8001C).copy(alpha = 0.2f),
+                color = Color(DataVizColors.gaugeHigh.toColorInt()).copy(alpha = 0.2f),
                 start = Offset(cx, cy),
                 end = Offset(
                     (cx + cos(needleAngle) * needleLength).toFloat(),
@@ -329,7 +317,7 @@ fun StyledSpeedometer(
             )
             // Needle sharp
             drawLine(
-                color = Color(0xFFE8001C),
+                color = Color(DataVizColors.gaugeHigh.toColorInt()),
                 start = Offset(cx, cy),
                 end = Offset(
                     (cx + cos(needleAngle) * needleLength).toFloat(),
@@ -340,9 +328,9 @@ fun StyledSpeedometer(
             )
 
             // Center hub
-            drawCircle(color = Color(0xFF0E1117), radius = 10.dp.toPx(), center = Offset(cx, cy))
+            drawCircle(color = Color(DataVizColors.darkOutline.toColorInt()), radius = 10.dp.toPx(), center = Offset(cx, cy))
             drawCircle(
-                color = Color(0xFFE8001C),
+                color = Color(DataVizColors.gaugeHigh.toColorInt()),
                 radius = 6.dp.toPx(),
                 center = Offset(cx, cy)
             )
@@ -353,10 +341,8 @@ fun StyledSpeedometer(
             Spacer(Modifier.height(60.dp))
             Text(
                 text = "${animatedSpeed.toInt()}",
-                color = textPrimary,
-                fontSize = 52.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-1).sp
+                style = TrackProType.displayNumeric,
+                color = textPrimary
             )
         }
     }
@@ -365,48 +351,18 @@ fun StyledSpeedometer(
 // ── Sub-components ─────────────────────────────────────────
 
 @Composable
-private fun SectionHeader(title: String, textMuted: Color, sectorLine: Color) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF0A0C11))
-            .padding(horizontal = 24.dp, vertical = 8.dp)
-    ) {
-        Text(title, color = textMuted, fontSize = 9.sp,
-            fontWeight = FontWeight.Black, letterSpacing = 3.sp)
-    }
-    HorizontalDivider(color = sectorLine, thickness = 1.dp)
-}
-
-@Composable
 private fun TelemetryRow(label: String, value: String, textPrimary: Color, textMuted: Color) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = textMuted, fontSize = 10.sp,
-            letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-        Text(value, color = textPrimary, fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+        Text(label.uppercase(), style = TrackProType.label, color = textMuted)
+        Text(
+            value,
+            style = TrackProType.body.copy(fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+            color = textPrimary
+        )
     }
-}
-
-@Composable
-private fun SignalCell(label: String, value: String, valueColor: Color, textMuted: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = textMuted, fontSize = 9.sp,
-            letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
-        Text(value, color = valueColor, fontSize = 13.sp, fontWeight = FontWeight.Black)
-    }
-}
-
-@Composable
-private fun VerticalDividerLine(color: Color) {
-    Box(modifier = Modifier
-        .width(1.dp)
-        .height(36.dp)
-        .background(color))
 }
 

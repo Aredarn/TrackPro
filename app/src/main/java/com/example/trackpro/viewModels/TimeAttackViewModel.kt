@@ -75,6 +75,13 @@ class TimeAttackViewModel(
         get() = (timingManager as? CircuitTimingManager)?.currentLapSplits
             ?: MutableStateFlow<List<SectorSplit>>(emptyList()).asStateFlow()
 
+    // Continuously-updating delta vs. the session's best lap, tracked by distance into the
+    // lap rather than only once at the finish line. Null until a best lap reference exists
+    // (i.e. before the first lap of the session has completed) or in Sprint mode.
+    val liveDelta: StateFlow<Double?>
+        get() = (timingManager as? CircuitTimingManager)?.liveDelta
+            ?: MutableStateFlow<Double?>(null).asStateFlow()
+
     // Expose timing state
     val currentTime: StateFlow<String>
         get() = timingManager?.currentTime ?: MutableStateFlow("00:00.00").asStateFlow()

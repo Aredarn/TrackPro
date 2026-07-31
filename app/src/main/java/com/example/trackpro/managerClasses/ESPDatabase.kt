@@ -1,11 +1,9 @@
 package com.example.trackpro.managerClasses
 
 import android.content.Context
-import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.trackpro.dao.DerivedDataDao
 import com.example.trackpro.dao.LapInfoDataDAO
 import com.example.trackpro.dao.LapTimeDataDAO
@@ -24,15 +22,8 @@ import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.SmoothedGPSData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
-import com.example.trackpro.dataClasses.TrackJson
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.dataClasses.VehicleInformationData
-import com.example.trackpro.R
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Database(entities =
 [
@@ -70,60 +61,17 @@ abstract class ESPDatabase : RoomDatabase() {
                     ESPDatabase::class.java,
                     "esp_database"
                 )
-                    .addCallback(object : Callback() {
-                        override fun onCreate(db: SupportSQLiteDatabase) {
-                            super.onCreate(db)
-
-                            CoroutineScope(Dispatchers.IO).launch {
-                                try {
-                                    val inputStream = context.resources.openRawResource(R.raw.tracks) // your JSON file
-                                    val jsonString = inputStream.bufferedReader().use { it.readText() }
-
-                                    val tracks: List<TrackJson> = Gson().fromJson(
-                                        jsonString,
-                                        object : TypeToken<List<TrackJson>>() {}.type
-                                    )
-
-                                    val db = getInstance(context)
-
-                                    for (track in tracks) {
-                                        val trackId = db.trackMainDao().insertTrackMainDataDAO(
-                                            TrackMainData(
-                                                trackName = track.trackName,
-                                                totalLength = track.totalLength,
-                                                country = track.country,
-                                                type = track.type
-                                            )
-                                        )
-
-                                        val coords = track.coordinates.mapIndexed { index, coord ->
-                                            TrackCoordinatesData(
-                                                trackId = trackId,
-                                                latitude = coord.lat,
-                                                longitude = coord.lon,
-                                                altitude = null,
-                                                isStartPoint = index == 0
-                                            )
-                                        }
-
-                                        db.trackCoordinatesDao().insertTrack(coords)
-
-                                        Log.d("DB_INIT", "Inserted ${coords.size} points for ${track.trackName}")
-                                    }
-
-                                } catch (e: Exception) {
-                                    Log.e("DB_INIT", "Error inserting tracks", e)
-                                }
-                            }
-
-                        }
-                    })
                     // No migrations exist yet; without this, any future (or this) schema
                     // change throws IllegalStateException on every existing install instead
                     // of recovering. Replace with real Migration objects once the schema
                     // needs to be preserved across upgrades.
                     .fallbackToDestructiveMigration()
                     .build()
+
+                // Premade tracks (res/raw/tracks.json) are synced separately on every app
+                // start via TrackSeeder, called from TrackProApp.onCreate() - not here, since
+                // this factory can be called from a background thread and seeding is its own
+                // idempotent, name-deduped operation rather than a one-time DB-creation hook.
 
                 INSTANCE = instance
                 instance

@@ -25,14 +25,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.EmptyState
+import com.example.trackpro.components.ExpandableGroup
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.viewModels.SessionViewModel
 import com.example.trackpro.viewModels.TrackViewModel
 import com.example.trackpro.viewModels.VehicleFULLViewModel
@@ -61,43 +64,21 @@ fun TimeAttackListViewScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(TrackProTheme.colors.bgDeep)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header Bar
-            Box(
-                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.accentCyan).padding(horizontal = 20.dp, vertical = 6.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("● TRACK RECORDS", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
-                    Text("${trackSessions.size} SESSIONS", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            AppTopBar(
+                title = "Track Records",
+                accent = TrackProTheme.colors.accentCyan,
+                trailing = {
+                    Text("${trackSessions.size} sessions", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
                 }
-            }
+            )
 
             if (trackSessions.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "NO SESSIONS RECORDED",
-                            color = TrackProTheme.colors.textMuted,
-                            fontSize = 14.sp,
-                            letterSpacing = 3.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Run a track session to see it here",
-                            color = TrackProTheme.colors.textMuted.copy(alpha = 0.5f),
-                            fontSize = 12.sp
-                        )
-                    }
-                }
+                EmptyState(message = "No sessions recorded", hint = "Run a track session to see it here")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     groupedByTrack.forEach { (trackName, sessions) ->
                         item(key = trackName) {
@@ -125,94 +106,53 @@ fun ExpandableTrackGroup(
     vehicles: List<VehicleInformationData>,
     navController: NavController
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
-            .border(
-                1.dp,
-                if (isExpanded) TrackProTheme.colors.accentCyan.copy(alpha = 0.4f) else TrackProTheme.colors.sectorLine,
-                RoundedCornerShape(12.dp)
-            )
-    ) {
-        // --- HEADER ---
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { isExpanded = !isExpanded }
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    ExpandableGroup(
+        accent = TrackProTheme.colors.accentCyan,
+        header = {
             Column(modifier = Modifier.weight(1f)) {
+                Text(trackName, style = TrackProType.titleMedium.copy(fontSize = 14.sp), color = TrackProTheme.colors.textPrimary)
                 Text(
-                    trackName.uppercase(),
-                    color = if (isExpanded) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
-                )
-                Text(
-                    "$trackMeta · ${sessions.size} SESSIONS",
-                    color = TrackProTheme.colors.textMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
+                    "$trackMeta · ${sessions.size} sessions",
+                    style = TrackProType.body.copy(fontSize = 11.sp),
+                    color = TrackProTheme.colors.textMuted
                 )
             }
-            Text(
-                if (isExpanded) "CLOSE —" else "VIEW ALL +",
-                color = if (isExpanded) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textMuted,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black
-            )
         }
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            sessions.forEach { session ->
+                val vehicle = vehicles.find { it.vehicleId == session.vehicleId }
+                val date = Instant.ofEpochMilli(session.startTime)
+                    .atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd MMM"))
 
-        // --- EXPANDED SESSIONS ---
-        if (isExpanded) {
-            Column(
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                sessions.forEach { session ->
-                    val vehicle = vehicles.find { it.vehicleId == session.vehicleId }
-                    val date = Instant.ofEpochMilli(session.startTime)
-                        .atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd MMM"))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, TrackProTheme.colors.sectorLine.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                            .background(TrackProTheme.colors.bgElevated.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                            .clickable { navController.navigate("timeattacklistitem/${session.id}") }
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Vertical "Pillar" accent
-                            Box(modifier = Modifier.width(3.dp).height(24.dp).background(TrackProTheme.colors.accentCyan, RoundedCornerShape(2.dp)))
-                            Spacer(Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    "${vehicle?.manufacturer} ${vehicle?.model}",
-                                    color = TrackProTheme.colors.textPrimary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    "SESSION DATE: $date",
-                                    color = TrackProTheme.colors.textMuted,
-                                    fontSize = 10.sp
-                                )
-                            }
-                        }
-
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("TELEMETRY", color = TrackProTheme.colors.accentCyan, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                            Text("→", color = TrackProTheme.colors.accentCyan, fontSize = 12.sp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(TrackProTheme.colors.bgElevated.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        .clickable { navController.navigate("timeattacklistitem/${session.id}") }
+                        .padding(Spacing.sm),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Vertical "Pillar" accent
+                        Box(modifier = Modifier.width(2.dp).height(24.dp).background(TrackProTheme.colors.accentCyan, RoundedCornerShape(2.dp)))
+                        Spacer(Modifier.width(Spacing.sm))
+                        Column {
+                            Text(
+                                "${vehicle?.manufacturer} ${vehicle?.model}",
+                                style = TrackProType.body,
+                                color = TrackProTheme.colors.textPrimary
+                            )
+                            Text(
+                                "Session date: $date",
+                                style = TrackProType.body.copy(fontSize = 10.sp),
+                                color = TrackProTheme.colors.textMuted
+                            )
                         }
                     }
+
+                    Text("Telemetry", style = TrackProType.label, color = TrackProTheme.colors.accentCyan)
                 }
             }
         }

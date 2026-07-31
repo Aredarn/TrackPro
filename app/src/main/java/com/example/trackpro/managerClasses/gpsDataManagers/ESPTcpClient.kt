@@ -2,7 +2,6 @@ package com.example.trackpro.managerClasses.gpsDataManagers
 
 import android.util.Log
 import com.example.trackpro.dataClasses.RawGPSData
-import com.example.trackpro.managerClasses.calculationClasses.convertToUnixTimestamp
 import com.example.trackpro.models.GpsProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -100,7 +99,11 @@ class ESPTcpClient(
                         altitude = raw.altitude,
                         speed = raw.speed,
                         fixQuality = raw.satellites,
-                        timestamp = convertToUnixTimestamp(raw.timestamp)
+                        // Stamped on receipt rather than the ESP32-reported timestamp string:
+                        // elapsed-time math (0-60, quarter mile, etc.) needs consistent
+                        // relative precision between samples, and the module's own timestamp
+                        // has no guaranteed sub-second resolution.
+                        timestamp = System.currentTimeMillis()
                     )
                     _gpsFlow.value = parsed  // Use .value instead of .emit()
                 } catch (e: Exception) {
