@@ -181,6 +181,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     SettingsInfoRow(label = "App Version", value = "1.0.4-PRO")
                     SettingsInfoRow(label = "Database Status", value = "Connected")
+                    SettingsInfoRow(label = "Map & Track Data", value = "© OpenStreetMap contributors")
                 }
             }
         }

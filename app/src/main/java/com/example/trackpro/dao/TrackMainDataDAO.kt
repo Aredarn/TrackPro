@@ -15,6 +15,10 @@ interface TrackMainDataDAO {
     @Query("SELECT * FROM track_main_data ORDER BY trackName ASC")
     fun getAllTrack(): Flow<List<TrackMainData>>
 
+    // One-shot (non-Flow) name lookup used to dedup premade-track seeding on startup.
+    @Query("SELECT trackName FROM track_main_data")
+    suspend fun getAllTrackNames(): List<String>
+
     @Query("Select * from track_main_data where trackId =:trackId")
     fun getTrack(trackId: Long): Flow<TrackMainData>
 

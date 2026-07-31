@@ -332,8 +332,16 @@ fun TrackStaticMapView(
     // of only ever drawing once on first load. trackParts is a SnapshotStateList mutated
     // in place, so its reference never changes - key on derived values instead, or this
     // would never restart.
+    //
+    // mapRef/styleRef are also keys, not just guards: getMapAsync/setStyle are async, and
+    // trackParts is normally already fully loaded *before* the map finishes initializing
+    // (this composable isn't even entered until trackParts is non-empty - see TrackView).
+    // Without these as keys, the effect's first run would hit them still null, bail out,
+    // and - since trackParts.size/sectorMarkCount never change again afterwards - never get
+    // a second chance to run once the map actually becomes ready, leaving the track
+    // permanently undrawn (default world view) despite the data being there.
     val sectorMarkCount = trackParts.count { it.isSectorPoint }
-    LaunchedEffect(trackParts.size, sectorMarkCount) {
+    LaunchedEffect(trackParts.size, sectorMarkCount, mapRef, styleRef) {
         val style = styleRef ?: return@LaunchedEffect
         val map = mapRef ?: return@LaunchedEffect
         if (trackParts.isEmpty()) return@LaunchedEffect

@@ -60,6 +60,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.TrackSeeder
 import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.JsonReader
 import com.example.trackpro.managerClasses.SessionManager
@@ -143,6 +144,12 @@ class TrackProApp : Application() {
         MapLibre.getInstance(this)
         // Start the active provider immediately at app launch
         gpsManager.startActiveProvider()
+
+        // Sync bundled premade tracks on every launch (not just first install) so existing
+        // users pick up newly-added ones too; name-deduped, so this is always safe to re-run.
+        applicationScope.launch(Dispatchers.IO) {
+            TrackSeeder.syncPremadeTracks(this@TrackProApp, database)
+        }
     }
 
     override fun onTerminate() {
