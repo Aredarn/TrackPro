@@ -9,7 +9,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,11 +22,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CarRepair
 import androidx.compose.material.icons.filled.FlagCircle
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Settings
@@ -49,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -92,6 +92,11 @@ import com.example.trackpro.viewModels.VehicleFULLViewModel
 import com.example.trackpro.viewModels.VehicleFULLViewModelFactory
 import com.example.trackpro.viewModels.VehicleViewModel
 import com.example.trackpro.viewModels.VehicleViewModelFactory
+import com.example.trackpro.components.AppCard
+import com.example.trackpro.components.SectionLabel
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.TrackProType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -325,27 +330,32 @@ fun MainScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProTheme.colors.accentCyan)
-                        .padding(horizontal = 24.dp, vertical = 20.dp)
+                        .background(TrackProTheme.colors.bgElevated)
+                        .padding(horizontal = 20.dp, vertical = 18.dp)
                 ) {
-                    Column {
-                        Text(
-                            text = "TRACKPRO",
-                            color = Color.Black,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 4.sp
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(TrackProTheme.colors.accentCyan, CircleShape)
                         )
-                        Text(
-                            text = "Performance Telemetry",
-                            color = Color.Black.copy(alpha = 0.7f),
-                            fontSize = 11.sp,
-                            letterSpacing = 1.sp
-                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "TRACKPRO",
+                                style = TrackProType.titleLarge,
+                                color = TrackProTheme.colors.textPrimary
+                            )
+                            Text(
+                                text = "Performance Telemetry",
+                                style = TrackProType.body.copy(fontSize = 11.sp),
+                                color = TrackProTheme.colors.textFaint
+                            )
+                        }
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
 
                 DrawerSection(title = "SESSIONS") {
                     DrawerItem(
@@ -418,7 +428,7 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(TrackProTheme.colors.bgCard)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -431,13 +441,11 @@ fun MainScreen(
                         }
                         Text(
                             text = "TRACKPRO",
-                            color = TrackProTheme.colors.accentCyan,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 4.sp
+                            style = TrackProType.label.copy(fontSize = 13.sp, letterSpacing = 2.sp),
+                            color = TrackProTheme.colors.textPrimary
                         )
                         // Spacer to balance the row
-                        Box(modifier = Modifier.size(48.dp))
+                        Box(modifier = Modifier.size(40.dp))
                     }
                 }
 
@@ -448,31 +456,26 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(TrackProTheme.colors.bgCard)
-                        .padding(horizontal = 28.dp, vertical = 32.dp)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.xl)
                 ) {
                     Column {
-                        // Red accent line
                         Box(
                             modifier = Modifier
-                                .width(40.dp)
-                                .height(3.dp)
+                                .width(28.dp)
+                                .height(2.dp)
                                 .background(TrackProTheme.colors.accentCyan)
                         )
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(10.dp))
                         Text(
-                            text = "READY TO\nBEAT RECORDS?",
-                            color = TrackProTheme.colors.textPrimary,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = (-0.5).sp,
-                            lineHeight = 36.sp
+                            text = "Ready to beat records?",
+                            style = TrackProType.titleLarge,
+                            color = TrackProTheme.colors.textPrimary
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(4.dp))
                         Text(
                             text = "GPS telemetry · Lap timing · Performance analysis",
-                            color = TrackProTheme.colors.textMuted,
-                            fontSize = 12.sp,
-                            letterSpacing = 0.5.sp
+                            style = TrackProType.body,
+                            color = TrackProTheme.colors.textMuted
                         )
                     }
                 }
@@ -484,8 +487,8 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
 
                     // Primary racing actions — full width
@@ -597,79 +600,76 @@ private fun ActionCard(
     disabled: Boolean = false
 ) {
     val alpha = if (disabled) 0.4f else 1f
-    val iconSize = if (halfWidth) 16.dp else if (fullWidth) 22.dp else 18.dp
-    val iconBoxSize = if (halfWidth) 32.dp else if (fullWidth) 44.dp else 36.dp
-    val titleSize = if (halfWidth) 11.sp else if (fullWidth) 14.sp else 12.sp
+    val iconSize = if (halfWidth) 14.dp else if (fullWidth) 18.dp else 16.dp
+    val iconBoxSize = if (halfWidth) 26.dp else if (fullWidth) 34.dp else 30.dp
+    val titleStyle = if (fullWidth) TrackProType.titleMedium else TrackProType.titleMedium.copy(fontSize = 13.sp)
     val subtitleSize = if (halfWidth) 9.sp else 10.sp
-    val vertPadding = if (halfWidth) 14.dp else if (fullWidth) 18.dp else 14.dp
+    val vertPadding = if (halfWidth) 10.dp else if (fullWidth) 12.dp else 10.dp
 
-    Box(
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(10.dp))
-            .border(1.dp, TrackProTheme.colors.sectorLine, RoundedCornerShape(10.dp))
-            .then(if (!disabled) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(if (!disabled) Modifier.clickable(onClick = onClick) else Modifier),
+        padding = 0.dp
     ) {
-        // Left accent bar
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .width(3.dp)
-                .height(48.dp)
-                .background(
-                    accentColor.copy(alpha = alpha),
-                    RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)
-                )
-        )
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = vertPadding),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
+        Box {
+            // Left accent bar — the accent's only job on this card
             Box(
                 modifier = Modifier
-                    .size(iconBoxSize)
-                    .background(accentColor.copy(alpha = 0.1f * alpha), RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
+                    .align(Alignment.CenterStart)
+                    .width(2.dp)
+                    .height(36.dp)
+                    .background(
+                        accentColor.copy(alpha = alpha),
+                        RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)
+                    )
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.md, vertical = vertPadding),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = accentColor.copy(alpha = alpha),
-                    modifier = Modifier.size(iconSize)
-                )
-            }
+                Box(
+                    modifier = Modifier
+                        .size(iconBoxSize)
+                        .background(accentColor.copy(alpha = 0.12f * alpha), TrackProShapes.control),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = accentColor.copy(alpha = alpha),
+                        modifier = Modifier.size(iconSize)
+                    )
+                }
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    color = TrackProTheme.colors.textPrimary.copy(alpha = alpha),
-                    fontSize = titleSize,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 0.5.sp,  // reduced from 1.sp
-                    lineHeight = (titleSize.value + 2).sp,
-                    softWrap = true
-                )
-                Text(
-                    text = subtitle,
-                    color = TrackProTheme.colors.textMuted.copy(alpha = alpha),
-                    fontSize = subtitleSize,
-                    letterSpacing = 0.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = titleStyle,
+                        color = TrackProTheme.colors.textPrimary.copy(alpha = alpha),
+                        softWrap = true
+                    )
+                    Text(
+                        text = subtitle,
+                        style = TrackProType.body.copy(fontSize = subtitleSize),
+                        color = TrackProTheme.colors.textMuted.copy(alpha = alpha),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
-            if (!disabled && !halfWidth) {
-                Text(
-                    text = "→",
-                    color = accentColor.copy(alpha = 0.6f),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Black
-                )
+                if (!disabled && !halfWidth) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = accentColor.copy(alpha = 0.6f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }
@@ -679,13 +679,9 @@ private fun ActionCard(
 
 @Composable
 private fun DrawerSection(title: String, content: @Composable () -> Unit) {
-    Text(
+    SectionLabel(
         text = title,
-        color = TrackProTheme.colors.textMuted,
-        fontSize = 9.sp,
-        fontWeight = FontWeight.Black,
-        letterSpacing = 3.sp,
-        modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 6.dp)
+        modifier = Modifier.padding(start = 20.dp, top = 14.dp, bottom = 4.dp)
     )
     content()
 }
@@ -701,19 +697,19 @@ private fun DrawerItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(32.dp)
-                .background(tint.copy(alpha = 0.1f), RoundedCornerShape(6.dp)),
+                .size(28.dp)
+                .background(tint.copy(alpha = 0.12f), TrackProShapes.control),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(16.dp))
+            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(15.dp))
         }
-        Text(label, color = TrackProTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(label, style = TrackProType.body, color = TrackProTheme.colors.textPrimary)
     }
 }
 

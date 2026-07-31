@@ -2,7 +2,6 @@ package com.example.trackpro.screens.listViewScreens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,12 +27,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.EmptyState
+import com.example.trackpro.components.ExpandableGroup
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
 import com.example.trackpro.models.DragSessionWithVehicle
 import com.example.trackpro.viewModels.DragSessionViewModel
@@ -62,55 +64,25 @@ fun DragTimesListView(
             .background(TrackProTheme.colors.bgDeep)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.accentCyan)
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            AppTopBar(
+                title = "Drag Records",
+                accent = TrackProTheme.colors.accentCyan,
+                trailing = {
                     Text(
-                        "● Drag RECORDS",
-                        color = Color.Black,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 3.sp
-                    )
-                    Text(
-                        "${dragSessions.size} SESSIONS",
-                        color = Color.Black,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
+                        "${dragSessions.size} sessions",
+                        style = TrackProType.label,
+                        color = TrackProTheme.colors.textMuted
                     )
                 }
-            }
-
+            )
 
             if (dragSessions.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "NO SESSIONS RECORDED",
-                            color = TrackProTheme.colors.textMuted,
-                            fontSize = 14.sp,
-                            letterSpacing = 3.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Run a drag session to see it here",
-                            color = TrackProTheme.colors.textMuted.copy(alpha = 0.5f),
-                            fontSize = 12.sp
-                        )
-                    }
-                }
+                EmptyState(message = "No sessions recorded", hint = "Run a drag session to see it here")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     groupedSessions.forEach { (groupKey, sessions) ->
                         item(key = groupKey) {
@@ -132,92 +104,49 @@ fun ExpandableSessionGroup(
     sessions: List<DragSessionWithVehicle>,
     navController: NavController
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
-            .border(
-                1.dp,
-                if (isExpanded) TrackProTheme.colors.accentCyan.copy(alpha = 0.5f) else TrackProTheme.colors.sectorLine,
-                RoundedCornerShape(12.dp)
-            )
-    ) {
-        // --- THE HEADER (Always Visible) ---
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { isExpanded = !isExpanded }
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+    ExpandableGroup(
+        accent = TrackProTheme.colors.accentCyan,
+        header = {
             Column(modifier = Modifier.weight(1f)) {
+                Text(groupTitle, style = TrackProType.titleMedium.copy(fontSize = 13.sp), color = TrackProTheme.colors.textPrimary)
                 Text(
-                    groupTitle.uppercase(),
-                    color = if (isExpanded) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
-                )
-                Text(
-                    "${sessions.size} RUNS COMPLETED",
-                    color = TrackProTheme.colors.textMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
+                    "${sessions.size} runs completed",
+                    style = TrackProType.body.copy(fontSize = 11.sp),
+                    color = TrackProTheme.colors.textMuted
                 )
             }
-
-            Text(
-                if (isExpanded) "CLOSE —" else "VIEW ALL +",
-                color = if (isExpanded) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textMuted,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black
-            )
         }
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            sessions.forEach { session ->
+                val time = DateFormatterUtil.getTimeFormat().format(Date(session.startTime))
 
-        // --- THE CONTENT (Visible when Expanded) ---
-        if (isExpanded) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-                    .padding(bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                sessions.forEach { session ->
-                    val time = DateFormatterUtil.getTimeFormat().format(Date(session.startTime))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(TrackProTheme.colors.bgElevated, RoundedCornerShape(6.dp))
-                            .clickable { navController.navigate("graph/${session.sessionId}") }
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                Modifier.size(6.dp).background(TrackProTheme.colors.accentCyan, RoundedCornerShape(100))
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                "RUN AT $time",
-                                color = TrackProTheme.colors.textPrimary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(TrackProTheme.colors.bgElevated, TrackProShapes.control)
+                        .clickable { navController.navigate("graph/${session.sessionId}") }
+                        .padding(Spacing.sm),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(6.dp).background(TrackProTheme.colors.accentCyan, RoundedCornerShape(100))
+                        )
+                        Spacer(Modifier.width(Spacing.sm))
                         Text(
-                            "DETAILS →",
-                            color = TrackProTheme.colors.textMuted,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black
+                            "Run at $time",
+                            style = TrackProType.body,
+                            color = TrackProTheme.colors.textPrimary
                         )
                     }
+
+                    Text(
+                        "Details",
+                        style = TrackProType.label,
+                        color = TrackProTheme.colors.textMuted
+                    )
                 }
             }
         }

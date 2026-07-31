@@ -26,13 +26,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.SectionLabel
+import com.example.trackpro.components.StatCell
+import com.example.trackpro.components.StatCellSize
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import kotlinx.coroutines.Dispatchers
@@ -70,29 +74,14 @@ fun CarViewScreen(vehicleId: Long) {
                         strokeWidth = 2.dp
                     )
                     Spacer(Modifier.height(12.dp))
-                    Text("LOADING VEHICLE", color = TrackProTheme.colors.textMuted,
-                        fontSize = 10.sp, letterSpacing = 3.sp)
+                    Text("Loading vehicle", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
                 }
             }
         } else {
             val vehicle = vehicleInfo!!
             Column(modifier = Modifier.fillMaxSize()) {
 
-                // ── Top bar ───────────────────────────────
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(TrackProTheme.colors.accentAmber)
-                        .padding(horizontal = 20.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "● VEHICLE PROFILE",
-                        color = Color.Black,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 3.sp
-                    )
-                }
+                AppTopBar(title = "Vehicle Profile", accent = TrackProTheme.colors.accentAmber)
 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
 
@@ -102,21 +91,17 @@ fun CarViewScreen(vehicleId: Long) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(TrackProTheme.colors.bgCard)
-                                .padding(horizontal = 24.dp, vertical = 20.dp)
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.md)
                         ) {
                             Text(
                                 text = "${vehicle.manufacturer} ${vehicle.model}",
-                                color = TrackProTheme.colors.textPrimary,
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-0.5).sp
+                                style = TrackProType.titleLarge,
+                                color = TrackProTheme.colors.textPrimary
                             )
                             Text(
                                 text = "${vehicle.year}",
-                                color = TrackProTheme.colors.textMuted,
-                                fontSize = 14.sp,
-                                letterSpacing = 1.sp,
-                                fontWeight = FontWeight.Bold
+                                style = TrackProType.body,
+                                color = TrackProTheme.colors.textMuted
                             )
                         }
                         HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
@@ -124,35 +109,17 @@ fun CarViewScreen(vehicleId: Long) {
 
                     // ── Performance stats ─────────────────
                     item {
-                        VehicleSectionHeader("PERFORMANCE", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
+                        SectionLabel("Performance", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(TrackProTheme.colors.bgCard)
-                                .padding(horizontal = 24.dp, vertical = 16.dp),
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            VehicleStatCol(
-                                label = "POWER",
-                                value = "${vehicle.horsepower}",
-                                unit = "hp",
-                                accentColor = TrackProTheme.colors.accentAmber,
-                                textMuted = TrackProTheme.colors.textMuted
-                            )
-                            VehicleStatCol(
-                                label = "TORQUE",
-                                value = vehicle.torque?.toString() ?: "—",
-                                unit = "Nm",
-                                accentColor = TrackProTheme.colors.accentAmber,
-                                textMuted = TrackProTheme.colors.textMuted
-                            )
-                            VehicleStatCol(
-                                label = "WEIGHT",
-                                value = "${vehicle.weight}",
-                                unit = "kg",
-                                accentColor = TrackProTheme.colors.accentAmber,
-                                textMuted = TrackProTheme.colors.textMuted
-                            )
+                            StatCell(label = "Power", value = "${vehicle.horsepower}", unit = "hp", valueColor = TrackProTheme.colors.accentAmber, size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
+                            StatCell(label = "Torque", value = vehicle.torque?.toString() ?: "—", unit = "Nm", valueColor = TrackProTheme.colors.accentAmber, size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
+                            StatCell(label = "Weight", value = "${vehicle.weight}", unit = "kg", valueColor = TrackProTheme.colors.accentAmber, size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
                         }
                         HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                     }
@@ -163,29 +130,31 @@ fun CarViewScreen(vehicleId: Long) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(TrackProTheme.colors.bgElevated)
-                                .padding(horizontal = 24.dp, vertical = 16.dp),
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            VehicleStatCol(
-                                label = "TOP SPEED",
+                            StatCell(
+                                label = "Top Speed",
                                 value = vehicle.topSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "—",
                                 unit = UnitFormatter.speedUnitLabel(useMetric).lowercase(),
-                                accentColor = TrackProTheme.colors.accentAmber,
-                                textMuted = TrackProTheme.colors.textMuted
+                                valueColor = TrackProTheme.colors.accentAmber,
+                                size = StatCellSize.Large,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             )
-                            VehicleStatCol(
+                            StatCell(
                                 label = "0–100",
                                 value = vehicle.acceleration?.toString() ?: "—",
                                 unit = "sec",
-                                accentColor = TrackProTheme.colors.accentAmber,
-                                textMuted = TrackProTheme.colors.textMuted
+                                valueColor = TrackProTheme.colors.accentAmber,
+                                size = StatCellSize.Large,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             )
-                            VehicleStatCol(
-                                label = "DRIVETRAIN",
+                            StatCell(
+                                label = "Drivetrain",
                                 value = vehicle.drivetrain,
-                                unit = "",
-                                accentColor = TrackProTheme.colors.accentAmber,
-                                textMuted = TrackProTheme.colors.textMuted
+                                valueColor = TrackProTheme.colors.accentAmber,
+                                size = StatCellSize.Large,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             )
                         }
                         HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
@@ -193,29 +162,29 @@ fun CarViewScreen(vehicleId: Long) {
 
                     // ── Mechanical details ────────────────
                     item {
-                        VehicleSectionHeader("MECHANICAL", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
+                        SectionLabel("Mechanical", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
                     }
                     item {
-                        VehicleInfoRow("ENGINE TYPE", vehicle.engineType,
+                        VehicleInfoRow("Engine Type", vehicle.engineType,
                             TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                     }
                     item {
-                        VehicleInfoRow("TRANSMISSION", vehicle.transmission,
+                        VehicleInfoRow("Transmission", vehicle.transmission,
                             TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                     }
                     item {
-                        VehicleInfoRow("FUEL TYPE", vehicle.fuelType,
+                        VehicleInfoRow("Fuel Type", vehicle.fuelType,
                             TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                     }
                     vehicle.fuelCapacity?.let {
                         item {
-                            VehicleInfoRow("FUEL CAPACITY", "$it L",
+                            VehicleInfoRow("Fuel Capacity", "$it L",
                                 TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                         }
                     }
                     vehicle.suspensionType?.let {
                         item {
-                            VehicleInfoRow("SUSPENSION", it,
+                            VehicleInfoRow("Suspension", it,
                                 TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                         }
                     }
@@ -223,48 +192,16 @@ fun CarViewScreen(vehicleId: Long) {
                     // ── Tyres ─────────────────────────────
                     item {
                         HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-                        VehicleSectionHeader("TYRES & SETUP", TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine)
+                        SectionLabel("Tyres & Setup", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
                     }
                     item {
-                        VehicleInfoRow("TYRE TYPE", vehicle.tireType,
+                        VehicleInfoRow("Tyre Type", vehicle.tireType,
                             TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                     }
 
-                    item { Spacer(Modifier.height(24.dp)) }
+                    item { Spacer(Modifier.height(Spacing.xl)) }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun VehicleSectionHeader(title: String, textMuted: Color, sectorLine: Color) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF0A0C11))
-            .padding(horizontal = 24.dp, vertical = 8.dp)
-    ) {
-        Text(title, color = textMuted, fontSize = 9.sp,
-            fontWeight = FontWeight.Black, letterSpacing = 3.sp)
-    }
-    HorizontalDivider(color = sectorLine, thickness = 1.dp)
-}
-
-@Composable
-private fun VehicleStatCol(
-    label: String,
-    value: String,
-    unit: String,
-    accentColor: Color,
-    textMuted: Color
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = textMuted, fontSize = 9.sp,
-            letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-        Text(value, color = accentColor, fontSize = 26.sp, fontWeight = FontWeight.Black)
-        if (unit.isNotEmpty()) {
-            Text(unit, color = textMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -286,13 +223,12 @@ private fun VehicleInfoRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 14.dp),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, color = textMuted, fontSize = 10.sp,
-                letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-            Text(value, color = textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(label.uppercase(), style = TrackProType.label, color = textMuted)
+            Text(value, style = TrackProType.body, color = textPrimary)
         }
         HorizontalDivider(color = sectorLine, thickness = 1.dp)
     }

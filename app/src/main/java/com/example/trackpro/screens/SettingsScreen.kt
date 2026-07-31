@@ -1,23 +1,17 @@
 package com.example.trackpro.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Text
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,11 +19,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.trackpro.TrackProApp
+import com.example.trackpro.components.AppCard
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.SectionLabel
+import com.example.trackpro.components.ToggleChip
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProType
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
@@ -44,193 +42,105 @@ fun SettingsScreen(onBack: () -> Unit) {
             .fillMaxSize()
             .background(TrackProTheme.colors.bgDeep)
     ) {
-        // --- Header ---
-        HeaderSection(onBack = onBack, title = "SETTINGS")
+        AppTopBar(title = "Settings", accent = TrackProTheme.colors.textMuted, onBack = onBack)
 
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(Spacing.md)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             // --- Section: Hardware & GPS ---
-            SettingsSectionHeader(title = "HARDWARE & SENSORS")
-
-            SettingsCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "GPS SOURCE",
-                            color = TrackProTheme.colors.textPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (useExternal) "External ESP32 Module" else "Internal Phone GPS",
-                            color = if (useExternal) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textMuted,
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    // The Toggle Button
-                    Button(
-                        onClick = { app.useExternalGps.value = !useExternal },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (useExternal) TrackProTheme.colors.accentCyan else TrackProTheme.colors.bgElevated
-                        ),
-                        shape = RoundedCornerShape(4.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text(
-                            text = if (useExternal) "USE PHONE" else "USE ESP32",
-                            color = if (useExternal) Color.Black else TrackProTheme.colors.textPrimary,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                }
+            SectionLabel("Hardware & Sensors")
+            AppCard {
+                SettingsToggleRow(
+                    label = "GPS Source",
+                    valueText = if (useExternal) "External ESP32 Module" else "Internal Phone GPS",
+                    valueColor = if (useExternal) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textMuted,
+                    buttonText = if (useExternal) "Use Phone" else "Use ESP32",
+                    isActive = useExternal,
+                    onClick = { app.useExternalGps.value = !useExternal }
+                )
             }
 
             // --- Section: Appearance ---
-            SettingsSectionHeader(title = "APPEARANCE")
-            SettingsCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "THEME",
-                            color = TrackProTheme.colors.textPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (useDarkTheme) "Dark" else "Light",
-                            color = TrackProTheme.colors.accentCyan,
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    Button(
-                        onClick = { app.setDarkTheme(!useDarkTheme) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = TrackProTheme.colors.accentCyan
-                        ),
-                        shape = RoundedCornerShape(4.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text(
-                            text = if (useDarkTheme) "USE LIGHT" else "USE DARK",
-                            color = Color.Black,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                }
+            SectionLabel("Appearance")
+            AppCard {
+                SettingsToggleRow(
+                    label = "Theme",
+                    valueText = if (useDarkTheme) "Dark" else "Light",
+                    valueColor = TrackProTheme.colors.accentCyan,
+                    buttonText = if (useDarkTheme) "Use Light" else "Use Dark",
+                    isActive = true,
+                    onClick = { app.setDarkTheme(!useDarkTheme) }
+                )
             }
 
             // --- Section: Units ---
-            SettingsSectionHeader(title = "UNITS")
-            SettingsCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "SPEED & DISTANCE",
-                            color = TrackProTheme.colors.textPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (useMetric) "Metric (km/h, km)" else "Imperial (mph, mi)",
-                            color = TrackProTheme.colors.accentCyan,
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    Button(
-                        onClick = { app.setMetricUnits(!useMetric) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = TrackProTheme.colors.accentCyan
-                        ),
-                        shape = RoundedCornerShape(4.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text(
-                            text = if (useMetric) "USE MPH" else "USE KM/H",
-                            color = Color.Black,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                }
+            SectionLabel("Units")
+            AppCard {
+                SettingsToggleRow(
+                    label = "Speed & Distance",
+                    valueText = if (useMetric) "Metric (km/h, km)" else "Imperial (mph, mi)",
+                    valueColor = TrackProTheme.colors.accentCyan,
+                    buttonText = if (useMetric) "Use mph" else "Use km/h",
+                    isActive = true,
+                    onClick = { app.setMetricUnits(!useMetric) }
+                )
             }
 
             // --- Section: System ---
-            SettingsSectionHeader(title = "APPLICATION")
-            SettingsCard {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            SectionLabel("Application")
+            AppCard {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     SettingsInfoRow(label = "App Version", value = "1.0.4-PRO")
                     SettingsInfoRow(label = "Database Status", value = "Connected")
                     SettingsInfoRow(label = "Map & Track Data", value = "© OpenStreetMap contributors")
                 }
             }
+
+            Spacer(Modifier.height(Spacing.md))
         }
     }
 }
 
+/**
+ * A labeled setting with a value line on the left and a single toggle action on the
+ * right. The three toggles on this screen (GPS source, theme, units) all used to
+ * hand-roll this same Row+Button block.
+ */
 @Composable
-private fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        color = TrackProTheme.colors.textMuted,
-        fontSize = 10.sp,
-        letterSpacing = 2.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
-    )
-}
-
-@Composable
-private fun SettingsCard(content: @Composable () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(8.dp))
-            .border(1.dp, TrackProTheme.colors.sectorLine, RoundedCornerShape(8.dp))
-            .padding(16.dp)
+private fun SettingsToggleRow(
+    label: String,
+    valueText: String,
+    valueColor: Color,
+    buttonText: String,
+    isActive: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        content()
+        Column {
+            Text(label.uppercase(), style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+            Spacer(Modifier.height(2.dp))
+            Text(valueText, style = TrackProType.body, color = valueColor)
+        }
+        ToggleChip(
+            text = buttonText,
+            selected = isActive,
+            onClick = onClick,
+            accent = TrackProTheme.colors.accentCyan
+        )
     }
 }
 
 @Composable
 private fun SettingsInfoRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = TrackProTheme.colors.textMuted, fontSize = 14.sp)
-        Text(value, color = TrackProTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun HeaderSection(onBack: () -> Unit, title: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        TextButton(onClick = onBack) {
-            Text("← BACK", color = TrackProTheme.colors.accentCyan, fontWeight = FontWeight.Bold)
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        Text(title, color = TrackProTheme.colors.textPrimary, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+        Text(label, style = TrackProType.body, color = TrackProTheme.colors.textMuted)
+        Text(value, style = TrackProType.body, color = TrackProTheme.colors.textPrimary)
     }
 }

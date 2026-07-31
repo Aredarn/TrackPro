@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,6 +41,12 @@ import com.example.trackpro.managerClasses.utilities.SpeedColorUtils
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.screens.telemetricScreens.DragMetricCard
 import com.example.trackpro.screens.telemetricScreens.DragMetricDisplay
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.StatCell
+import com.example.trackpro.components.StatCellSize
+import com.example.trackpro.theme.DataVizColors
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProType
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
@@ -205,28 +210,14 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             .fillMaxSize()
             .background(TrackProTheme.colors.bgDeep)
     ) {
-        // ── Top bar ───────────────────────────────────────────
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(TrackProTheme.colors.accentCyan)
-                .padding(horizontal = 16.dp, vertical = 5.dp)
-        ) {
-            Text(
-                text = "● SESSION OVERVIEW",
-                color = Color.Black,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 3.sp
-            )
-        }
+        AppTopBar(title = "Session Overview", accent = TrackProTheme.colors.accentCyan, onBack = onBack)
 
         // ── Compact stats panel ───────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(TrackProTheme.colors.bgCard)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
@@ -236,18 +227,12 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             ) {
                 if (coordinates.isNotEmpty()) {
                     val totalTime = coordinates.last().timestamp - coordinates.first().timestamp
-                    CompactStat(
-                        label = "DURATION",
-                        value = formatTime(totalTime),
-                        textMuted = TrackProTheme.colors.textMuted,
-                        valueColor = TrackProTheme.colors.textPrimary
-                    )
+                    StatCell(label = "Duration", value = formatTime(totalTime), size = StatCellSize.Small)
                 }
-                CompactStat(
-                    label = "DISTANCE",
+                StatCell(
+                    label = "Distance",
                     value = if (totalDist <= 0) "—" else UnitFormatter.formatDistance(totalDist, useMetric),
-                    textMuted = TrackProTheme.colors.textMuted,
-                    valueColor = TrackProTheme.colors.textPrimary
+                    size = StatCellSize.Small
                 )
             }
 
@@ -294,23 +279,21 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(TrackProTheme.colors.bgCard)
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = Spacing.md, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (showMap) "GPS TRACE" else "SPEED TRACE",
-                color = TrackProTheme.colors.textMuted,
-                fontSize = 9.sp,
-                letterSpacing = 2.sp,
-                fontWeight = FontWeight.Bold
+                text = if (showMap) "GPS Trace" else "Speed Trace",
+                style = TrackProType.label,
+                color = TrackProTheme.colors.textMuted
             )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (!showMap) {
-                    listOf(true to "METER", false to "SEC").forEach { (isMeters, label) ->
+                    listOf(true to "Meter", false to "Sec").forEach { (isMeters, label) ->
                         val active = xAxisInMeters == isMeters
                         Box(
                             modifier = Modifier
@@ -319,18 +302,17 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                                     RoundedCornerShape(3.dp)
                                 )
                                 .clickable { xAxisInMeters = isMeters }
-                                .padding(horizontal = 10.dp, vertical = 3.dp)
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
                                 text = label,
-                                color = if (active) Color.Black else TrackProTheme.colors.textMuted,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Black,
+                                style = TrackProType.body.copy(fontSize = 9.sp),
+                                color = if (active) Color.Black else TrackProTheme.colors.textMuted
                             )
                         }
                     }
                 }
-                listOf(false to "CHART", true to "MAP").forEach { (isMap, label) ->
+                listOf(false to "Chart", true to "Map").forEach { (isMap, label) ->
                     val active = showMap == isMap
                     Box(
                         modifier = Modifier
@@ -339,13 +321,12 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                                 RoundedCornerShape(3.dp)
                             )
                             .clickable { showMap = isMap }
-                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = label,
-                            color = if (active) Color.Black else TrackProTheme.colors.textMuted,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Black,
+                            style = TrackProType.body.copy(fontSize = 9.sp),
+                            color = if (active) Color.Black else TrackProTheme.colors.textMuted
                         )
                     }
                 }
@@ -364,12 +345,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     DragSessionMapView(gpsData = mapGpsData, modifier = Modifier.fillMaxSize())
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "NO GPS DATA",
-                            color = TrackProTheme.colors.textMuted,
-                            fontSize = 12.sp,
-                            letterSpacing = 2.sp
-                        )
+                        Text("No GPS data", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
                     }
                 }
             } else {
@@ -389,9 +365,9 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                             setDrawValues(false)
                             setDrawCircles(false)
                             lineWidth = 2f
-                            color = android.graphics.Color.parseColor("#E8001C")
+                            color = android.graphics.Color.parseColor(DataVizColors.chartLine)
                             setDrawFilled(true)
-                            fillColor = android.graphics.Color.parseColor("#E8001C")
+                            fillColor = android.graphics.Color.parseColor(DataVizColors.chartLine)
                             fillAlpha = 40
                         }
                         chart.data = LineData(dataSet)
@@ -488,18 +464,18 @@ private fun drawDragSpeedHeatmap(style: Style, gps: List<RawGPSData>) {
     style.addSource(GeoJsonSource("drag-start-src", """{"type":"Feature","geometry":{"type":"Point","coordinates":[${start.longitude},${start.latitude}]}}"""))
     style.addLayer(CircleLayer("drag-start-layer", "drag-start-src").apply {
         setProperties(
-            PropertyFactory.circleColor("#00E676"),
+            PropertyFactory.circleColor(DataVizColors.startMarker),
             PropertyFactory.circleRadius(6f),
-            PropertyFactory.circleStrokeColor("#0E1117"),
+            PropertyFactory.circleStrokeColor(DataVizColors.darkOutline),
             PropertyFactory.circleStrokeWidth(1.5f)
         )
     })
     style.addSource(GeoJsonSource("drag-end-src", """{"type":"Feature","geometry":{"type":"Point","coordinates":[${end.longitude},${end.latitude}]}}"""))
     style.addLayer(CircleLayer("drag-end-layer", "drag-end-src").apply {
         setProperties(
-            PropertyFactory.circleColor("#FF1744"),
+            PropertyFactory.circleColor(DataVizColors.endMarker),
             PropertyFactory.circleRadius(6f),
-            PropertyFactory.circleStrokeColor("#0E1117"),
+            PropertyFactory.circleStrokeColor(DataVizColors.darkOutline),
             PropertyFactory.circleStrokeWidth(1.5f)
         )
     })
@@ -516,12 +492,12 @@ private fun LineChart.setupChartStyle() {
     xAxis.apply {
         position = XAxis.XAxisPosition.BOTTOM
         setDrawGridLines(false)
-        textColor = android.graphics.Color.parseColor("#6B7280")
+        textColor = android.graphics.Color.parseColor(DataVizColors.chartAxisText)
         textSize = 8f
     }
     axisLeft.apply {
-        textColor = android.graphics.Color.parseColor("#6B7280")
-        gridColor = android.graphics.Color.parseColor("#1E2530")
+        textColor = android.graphics.Color.parseColor(DataVizColors.chartAxisText)
+        gridColor = android.graphics.Color.parseColor(DataVizColors.chartGrid)
         textSize = 8f
         axisMinimum = 0f
     }
@@ -530,15 +506,7 @@ private fun LineChart.setupChartStyle() {
     legend.isEnabled = false
     setNoDataText("Calculating data...")
     setNoDataTextColor(android.graphics.Color.WHITE)
-    setBackgroundColor(android.graphics.Color.parseColor("#0E1117"))
-}
-
-@Composable
-private fun CompactStat(label: String, value: String, textMuted: Color, valueColor: Color) {
-    Column {
-        Text(text = label, color = textMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Text(text = value, color = valueColor, fontSize = 14.sp, fontWeight = FontWeight.Black)
-    }
+    setBackgroundColor(android.graphics.Color.parseColor(DataVizColors.chartBackground))
 }
 
 @Preview(showBackground = true)

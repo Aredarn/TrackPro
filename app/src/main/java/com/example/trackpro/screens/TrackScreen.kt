@@ -1,7 +1,6 @@
 package com.example.trackpro.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -29,9 +27,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -41,6 +37,13 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.SectionLabel
+import com.example.trackpro.components.StatCell
+import com.example.trackpro.components.ToggleChip
+import com.example.trackpro.theme.DataVizColors
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
@@ -102,67 +105,47 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // ── Top bar ───────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(TrackProTheme.colors.accentBlue)
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = "● TRACK OVERVIEW",
-                    color = Color.Black,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 3.sp
-                )
-            }
+            AppTopBar(title = "Track Overview", accent = TrackProTheme.colors.accentBlue)
 
             // ── Track info card ───────────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(TrackProTheme.colors.bgCard)
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs)
             ) {
                 Text(
                     text = trackInfo.value.trackName,
-                    color = TrackProTheme.colors.textPrimary,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-0.5).sp
+                    style = TrackProType.titleLarge,
+                    color = TrackProTheme.colors.textPrimary
                 )
                 Text(
                     text = "${trackInfo.value.country} · ${trackInfo.value.type}",
-                    color = TrackProTheme.colors.textMuted,
-                    fontSize = 12.sp,
-                    letterSpacing = 1.sp
+                    style = TrackProType.body,
+                    color = TrackProTheme.colors.textMuted
                 )
                 HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    TrackStatCol(
-                        label = "LENGTH",
+                    StatCell(
+                        label = "Length",
                         // totalLength is stored in km; formatDistance takes meters, so convert
                         // first. This also makes the unit dynamic instead of a hardcoded "km".
                         value = trackInfo.value.totalLength?.let { UnitFormatter.formatDistance(it * 1000.0, useMetric) } ?: "?",
-                        textPrimary = TrackProTheme.colors.textPrimary,
-                        textMuted = TrackProTheme.colors.textMuted
+                        horizontalAlignment = Alignment.CenterHorizontally
                     )
-                    TrackStatCol(
-                        label = "TYPE",
+                    StatCell(
+                        label = "Type",
                         value = trackInfo.value.type.uppercase(),
-                        textPrimary = TrackProTheme.colors.textPrimary,
-                        textMuted = TrackProTheme.colors.textMuted
+                        horizontalAlignment = Alignment.CenterHorizontally
                     )
-                    TrackStatCol(
-                        label = "CORNERS",
+                    StatCell(
+                        label = "Corners",
                         value = "${trackParts.size}",
-                        textPrimary = TrackProTheme.colors.textPrimary,
-                        textMuted = TrackProTheme.colors.textMuted
+                        horizontalAlignment = Alignment.CenterHorizontally
                     )
                 }
             }
@@ -212,22 +195,12 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
                                 strokeWidth = 2.dp
                             )
                             Spacer(Modifier.height(12.dp))
-                            Text("LOADING TRACK DATA", color = TrackProTheme.colors.textMuted,
-                                fontSize = 10.sp, letterSpacing = 2.sp)
+                            Text("Loading track data", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun TrackStatCol(label: String, value: String, textPrimary: Color, textMuted: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = textMuted, fontSize = 9.sp,
-            letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-        Text(value, color = textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Black)
     }
 }
 
@@ -249,68 +222,42 @@ private fun SectorSlicerCard(
         modifier = Modifier
             .fillMaxWidth()
             .background(TrackProTheme.colors.bgCard)
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            SectionLabel("Sectors")
             Text(
-                text = "SECTORS",
-                color = TrackProTheme.colors.textMuted,
-                fontSize = 10.sp,
-                letterSpacing = 2.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = if (sectorCount > 0) "$sectorCount SECTORS MARKED" else "NONE MARKED",
-                color = if (sectorCount > 0) TrackProTheme.colors.accentBlue else TrackProTheme.colors.textMuted,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black
+                text = if (sectorCount > 0) "$sectorCount marked" else "None marked",
+                style = TrackProType.body.copy(fontSize = 11.sp),
+                color = if (sectorCount > 0) TrackProTheme.colors.accentBlue else TrackProTheme.colors.textMuted
             )
         }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             (2..6).forEach { n ->
-                val active = sectorCount == n
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(
-                            if (active) TrackProTheme.colors.accentBlue else TrackProTheme.colors.bgElevated,
-                            RoundedCornerShape(6.dp)
-                        )
-                        .border(
-                            1.dp,
-                            if (active) Color.Transparent else TrackProTheme.colors.sectorLine,
-                            RoundedCornerShape(6.dp)
-                        )
-                        .clickable { onSlice(n) }
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "$n",
-                        color = if (active) Color.Black else TrackProTheme.colors.textPrimary,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 14.sp
-                    )
-                }
+                ToggleChip(
+                    text = "$n",
+                    selected = sectorCount == n,
+                    onClick = { onSlice(n) },
+                    accent = TrackProTheme.colors.accentBlue,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
         if (sectorCount > 0) {
             Text(
-                text = "CLEAR SECTORS",
-                color = TrackProTheme.colors.deltaBad,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp,
+                text = "Clear sectors",
+                style = TrackProType.label,
+                color = TrackProTheme.colors.danger,
                 modifier = Modifier.clickable { onClear() }
             )
         }
@@ -374,7 +321,7 @@ fun TrackStaticMapView(
             style.addLayer(
                 LineLayer("track-static-layer", "track-static-src").apply {
                     setProperties(
-                        PropertyFactory.lineColor("#00C853"),
+                        PropertyFactory.lineColor(DataVizColors.trackLine),
                         PropertyFactory.lineWidth(3f),
                         PropertyFactory.lineCap(Property.LINE_CAP_ROUND)
                     )
@@ -389,9 +336,9 @@ fun TrackStaticMapView(
         style.addLayer(
             CircleLayer("start-layer", "start-src").apply {
                 setProperties(
-                    PropertyFactory.circleColor("#E8001C"),
+                    PropertyFactory.circleColor(DataVizColors.startMarker),
                     PropertyFactory.circleRadius(8f),
-                    PropertyFactory.circleStrokeColor("#FFFFFF"),
+                    PropertyFactory.circleStrokeColor(DataVizColors.boundaryLine),
                     PropertyFactory.circleStrokeWidth(2f)
                 )
             }
@@ -407,9 +354,9 @@ fun TrackStaticMapView(
             style.addLayer(
                 CircleLayer("sector-layer", "sector-src").apply {
                     setProperties(
-                        PropertyFactory.circleColor("#FBBF24"),
+                        PropertyFactory.circleColor(DataVizColors.sectorMarker),
                         PropertyFactory.circleRadius(6f),
-                        PropertyFactory.circleStrokeColor("#FFFFFF"),
+                        PropertyFactory.circleStrokeColor(DataVizColors.boundaryLine),
                         PropertyFactory.circleStrokeWidth(1.5f)
                     )
                 }

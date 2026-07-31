@@ -1,7 +1,6 @@
 package com.example.trackpro.screens.telemetricScreens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -40,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,6 +62,14 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import androidx.core.graphics.toColorInt
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.AppCard
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.PrimaryButton
+import com.example.trackpro.components.SectionLabel
+import com.example.trackpro.theme.DataVizColors
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.TrackProType
 
 data class DragMetricDisplay(
     val label: String,
@@ -148,45 +153,29 @@ fun DragRaceScreen(
     ) {
 
         // 1. TOP STATUS BAR
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .background(TrackProTheme.colors.accentCyan)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                Arrangement.SpaceBetween,
-                Alignment.CenterVertically
-            ) {
-                Text(
-                    "● DRAG MODE",
-                    color = Color.Black,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp
-                )
+        AppTopBar(
+            title = "Drag Mode",
+            accent = TrackProTheme.colors.accentCyan,
+            trailing = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     if (isSessionActive) {
                         Text(
-                            "⏱ $elapsedTime",
-                            color = Color.Black,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            elapsedTime,
+                            style = TrackProType.statValue.copy(fontSize = 13.sp),
+                            color = TrackProTheme.colors.accentCyan
                         )
                     }
                     Text(
-                        if (isConnected) "GPS LOCKED" else "GPS SEARCHING",
-                        color = Color.Black,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
+                        if (isConnected) "GPS Locked" else "GPS Searching",
+                        style = TrackProType.label,
+                        color = if (isConnected) TrackProTheme.colors.deltaGood else TrackProTheme.colors.textFaint
                     )
                 }
             }
-        }
+        )
 
         Column(
             Modifier
@@ -196,14 +185,11 @@ fun DragRaceScreen(
 
             // 2. VEHICLE SELECTOR
             if (!isSessionActive) {
-                Box(
-                    Modifier
+                AppCard(
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
-                        .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
-                        .border(1.dp, TrackProTheme.colors.sectorLine, RoundedCornerShape(12.dp))
+                        .padding(Spacing.md)
                         .clickable { showVehicleDropdown = true }
-                        .padding(16.dp)
                 ) {
                     Row(
                         Modifier.fillMaxWidth(),
@@ -211,29 +197,22 @@ fun DragRaceScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(
-                                "VEHICLE",
-                                color = TrackProTheme.colors.textMuted,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
+                            Text("Vehicle", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 selectedVehicle?.let { "${it.manufacturer} ${it.model}" }
                                     ?: "Select Vehicle",
+                                style = TrackProType.titleMedium,
                                 color = selectedVehicle?.let { TrackProTheme.colors.textPrimary }
                                     ?: TrackProTheme.colors.textMuted.copy(alpha = 0.5f),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             selectedVehicle?.let {
                                 Text(
                                     "${it.horsepower}hp · ${it.drivetrain} · ${it.year}",
-                                    color = TrackProTheme.colors.textMuted,
-                                    fontSize = 11.sp
+                                    style = TrackProType.body.copy(fontSize = 11.sp),
+                                    color = TrackProTheme.colors.textMuted
                                 )
                             }
                         }
@@ -255,13 +234,13 @@ fun DragRaceScreen(
                                     Column {
                                         Text(
                                             "${vehicle.manufacturer} ${vehicle.model}",
-                                            color = TrackProTheme.colors.textPrimary,
-                                            fontWeight = FontWeight.Bold
+                                            style = TrackProType.body,
+                                            color = TrackProTheme.colors.textPrimary
                                         )
                                         Text(
                                             "${vehicle.horsepower}hp · ${vehicle.year}",
-                                            color = TrackProTheme.colors.textMuted,
-                                            fontSize = 12.sp
+                                            style = TrackProType.body.copy(fontSize = 12.sp),
+                                            color = TrackProTheme.colors.textMuted
                                         )
                                     }
                                 },
@@ -278,45 +257,37 @@ fun DragRaceScreen(
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = Spacing.md, vertical = Spacing.sm)
                         .background(
                             TrackProTheme.colors.bgCard.copy(alpha = 0.5f),
-                            RoundedCornerShape(8.dp)
+                            TrackProShapes.control
                         )
-                        .padding(12.dp)
+                        .padding(Spacing.sm)
                 ) {
                     selectedVehicle?.let {
                         Text(
                             "${it.manufacturer} ${it.model} · ${it.horsepower}hp",
-                            color = TrackProTheme.colors.textPrimary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            style = TrackProType.body,
+                            color = TrackProTheme.colors.textPrimary
                         )
                     }
                 }
             }
 
             // 3. CURRENT SPEED (BIG)
-            Box(
-                Modifier
+            AppCard(
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
-                    .border(
-                        2.dp,
-                        if (isSessionActive) TrackProTheme.colors.accentCyan.copy(alpha = 0.5f)
-                        else TrackProTheme.colors.sectorLine,
-                        RoundedCornerShape(12.dp)
-                    )
-                    .padding(20.dp)
+                    .padding(horizontal = Spacing.md),
+                padding = Spacing.lg,
+                borderColor = if (isSessionActive) TrackProTheme.colors.accentCyan.copy(alpha = 0.5f)
+                    else TrackProTheme.colors.sectorLine
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        "CURRENT SPEED",
-                        color = TrackProTheme.colors.textMuted,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
+                        "Current Speed",
+                        style = TrackProType.label,
+                        color = TrackProTheme.colors.textMuted
                     )
                     Spacer(Modifier.height(8.dp))
                     Row(
@@ -325,18 +296,15 @@ fun DragRaceScreen(
                     ) {
                         Text(
                             gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0",
-                            fontSize = 72.sp,
-                            fontWeight = FontWeight.Black,
+                            style = TrackProType.displayNumeric,
                             color = if (isSessionActive) TrackProTheme.colors.accentCyan
-                            else TrackProTheme.colors.textPrimary,
-                            letterSpacing = (-2).sp
+                            else TrackProTheme.colors.textPrimary
                         )
                         Text(
                             UnitFormatter.speedUnitLabel(useMetric),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
+                            style = TrackProType.body.copy(fontSize = 15.sp),
                             color = TrackProTheme.colors.textMuted,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
 
@@ -344,9 +312,8 @@ fun DragRaceScreen(
                         Spacer(Modifier.height(8.dp))
                         Text(
                             "MAX: ${UnitFormatter.formatSpeed(currentMetrics.maxSpeed, useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)} · DIST: ${UnitFormatter.formatDistance(currentMetrics.totalDistance.toDouble(), useMetric)}",
-                            color = TrackProTheme.colors.textMuted,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            style = TrackProType.body.copy(fontSize = 12.sp),
+                            color = TrackProTheme.colors.textMuted
                         )
                     }
                 }
@@ -409,21 +376,15 @@ fun DragRaceScreen(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
-                Text(
-                    "PERFORMANCE METRICS",
-                    color = TrackProTheme.colors.textMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp
-                )
+                SectionLabel("Performance Metrics")
 
                 metrics.chunked(2).forEach { row ->
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                     ) {
                         row.forEach { metric ->
                             DragMetricCard(metric, Modifier.weight(1f))
@@ -432,26 +393,17 @@ fun DragRaceScreen(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Spacing.md))
 
             // 5. SPEED CHART (LARGE)
-            Box(
-                Modifier
+            AppCard(
+                modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
-                    .padding(horizontal = 16.dp)
-                    .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
-                    .border(1.dp, TrackProTheme.colors.sectorLine, RoundedCornerShape(12.dp))
-                    .padding(12.dp)
+                    .padding(horizontal = Spacing.md)
             ) {
                 Column {
-                    Text(
-                        "SPEED PROFILE",
-                        color = TrackProTheme.colors.textMuted,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp
-                    )
+                    SectionLabel("Speed Profile")
                     Spacer(Modifier.height(8.dp))
 
                     AndroidView(
@@ -461,11 +413,11 @@ fun DragRaceScreen(
                                 legend.isEnabled = false
                                 xAxis.position = XAxis.XAxisPosition.BOTTOM
                                 xAxis.setDrawGridLines(true)
-                                xAxis.gridColor = "#1E2530".toColorInt()
-                                xAxis.textColor = "#6B7280".toColorInt()
-                                axisLeft.textColor = "#F0F2F5".toColorInt()
+                                xAxis.gridColor = DataVizColors.chartGrid.toColorInt()
+                                xAxis.textColor = DataVizColors.chartAxisText.toColorInt()
+                                axisLeft.textColor = DataVizColors.chartAxisText.toColorInt()
                                 axisLeft.setDrawGridLines(true)
-                                axisLeft.gridColor = "#1E2530".toColorInt()
+                                axisLeft.gridColor = DataVizColors.chartGrid.toColorInt()
                                 axisLeft.axisMinimum = 0f
                                 axisRight.isEnabled = false
                                 setTouchEnabled(true)
@@ -478,13 +430,13 @@ fun DragRaceScreen(
                         update = { chart ->
                             if (speedDataPoints.isNotEmpty()) {
                                 val dataSet = LineDataSet(speedDataPoints.toList(), "Speed").apply {
-                                    color = "#E8001C".toColorInt()
+                                    color = DataVizColors.chartLine.toColorInt()
                                     lineWidth = 3f
                                     setDrawCircles(false)
                                     setDrawValues(false)
                                     mode = LineDataSet.Mode.CUBIC_BEZIER
                                     setDrawFilled(true)
-                                    fillColor = "#E8001C".toColorInt()
+                                    fillColor = DataVizColors.chartLine.toColorInt()
                                     fillAlpha = 40
                                 }
                                 chart.data = LineData(dataSet)
@@ -504,87 +456,59 @@ fun DragRaceScreen(
             Modifier
                 .fillMaxWidth()
                 .background(TrackProTheme.colors.bgDeep)
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(56.dp)
-                    .background(
-                        when {
-                            isSessionActive -> TrackProTheme.colors.bgElevated
-                            selectedVehicle == null -> TrackProTheme.colors.bgElevated.copy(alpha = 0.3f)
-                            else -> TrackProTheme.colors.accentCyan
-                        },
-                        RoundedCornerShape(12.dp)
-                    )
-                    .border(
-                        2.dp,
-                        when {
-                            isSessionActive -> TrackProTheme.colors.accentCyan
-                            selectedVehicle == null -> TrackProTheme.colors.sectorLine
-                            else -> Color.Transparent
-                        },
-                        RoundedCornerShape(12.dp)
-                    )
-                    .clickable(enabled = selectedVehicle != null) {
-                        scope.launch {
-                            if (!isSessionActive && selectedVehicle != null) {
-                                // Start session
-                                val eventType =
-                                    "Drag - ${
-                                        LocalDateTime
-                                            .now()
-                                            .format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"))
-                                    }"
-                                sessionID = withContext(Dispatchers.IO) {
-                                    sessionManager.startSession(
-                                        eventType = eventType,
-                                        vehicleId = selectedVehicle!!.vehicleId,
-                                        trackId = null
-                                    )
-                                }
-                                isSessionActive = true
-                                sessionStartTime = System.currentTimeMillis()
+            PrimaryButton(
+                text = when {
+                    selectedVehicle == null -> "Select Vehicle First"
+                    isSessionActive -> "Stop Session"
+                    else -> "Start Drag"
+                },
+                onClick = {
+                    scope.launch {
+                        if (!isSessionActive && selectedVehicle != null) {
+                            // Start session
+                            val eventType =
+                                "Drag - ${
+                                    LocalDateTime
+                                        .now()
+                                        .format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"))
+                                }"
+                            sessionID = withContext(Dispatchers.IO) {
+                                sessionManager.startSession(
+                                    eventType = eventType,
+                                    vehicleId = selectedVehicle!!.vehicleId,
+                                    trackId = null
+                                )
+                            }
+                            isSessionActive = true
+                            sessionStartTime = System.currentTimeMillis()
 
-                                // Reset calculator
-                                dragCalculator.resetRealtimeTracking()
-                                currentMetrics = DragMetrics()
-                                speedDataPoints.clear()
-                                chartIndex = 0f
+                            // Reset calculator
+                            dragCalculator.resetRealtimeTracking()
+                            currentMetrics = DragMetrics()
+                            speedDataPoints.clear()
+                            chartIndex = 0f
 
-                            } else if (isSessionActive) {
-                                // End session
-                                isSessionActive = false
-                                withContext(Dispatchers.IO) {
-                                    sessionManager.endSession()
+                        } else if (isSessionActive) {
+                            // End session
+                            isSessionActive = false
+                            withContext(Dispatchers.IO) {
+                                sessionManager.endSession()
 
-                                    // Save buffered GPS data
-                                    database.rawGPSDataDao().insertAll(dataBuffer)
-                                    dataBuffer.clear()
-                                }
+                                // Save buffered GPS data
+                                database.rawGPSDataDao().insertAll(dataBuffer)
+                                dataBuffer.clear()
                             }
                         }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    when {
-                        selectedVehicle == null -> "SELECT VEHICLE FIRST"
-                        isSessionActive -> "STOP SESSION"
-                        else -> "START DRAG"
-                    },
-                    color = when {
-                        isSessionActive -> TrackProTheme.colors.accentCyan
-                        selectedVehicle == null -> TrackProTheme.colors.textMuted
-                        else -> Color.Black
-                    },
-                    fontWeight = FontWeight.Black,
-                    fontSize = 13.sp,
-                    letterSpacing = 1.sp
-                )
-            }
+                    }
+                },
+                enabled = selectedVehicle != null,
+                accent = if (isSessionActive) TrackProTheme.colors.bgElevated else TrackProTheme.colors.accentCyan,
+                contentColor = if (isSessionActive) TrackProTheme.colors.accentCyan else null,
+                modifier = Modifier.weight(1f).height(56.dp)
+            )
         }
     }
 }
@@ -594,62 +518,49 @@ fun DragMetricCard(
     metric: DragMetricDisplay,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .background(
-                if (metric.achieved) TrackProTheme.colors.accentCyan.copy(alpha = 0.1f)
-                else TrackProTheme.colors.bgCard,
-                RoundedCornerShape(12.dp)
-            )
-            .border(
-                1.5.dp,
-                if (metric.achieved) TrackProTheme.colors.accentCyan.copy(alpha = 0.6f)
-                else TrackProTheme.colors.sectorLine,
-                RoundedCornerShape(12.dp)
-            )
-            .padding(12.dp)
+    AppCard(
+        modifier = modifier,
+        borderColor = if (metric.achieved) TrackProTheme.colors.accentCyan.copy(alpha = 0.6f) else TrackProTheme.colors.sectorLine
     ) {
-        Column {
+        Column(
+            modifier = Modifier.background(
+                if (metric.achieved) TrackProTheme.colors.accentCyan.copy(alpha = 0.08f) else Color.Transparent
+            )
+        ) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    metric.label,
-                    color = if (metric.achieved) TrackProTheme.colors.accentCyan
-                    else TrackProTheme.colors.textMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
+                    metric.label.uppercase(),
+                    style = TrackProType.label,
+                    color = if (metric.achieved) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textFaint
                 )
                 if (metric.achieved) {
                     Box(
                         Modifier
-                            .size(8.dp)
+                            .size(6.dp)
                             .background(TrackProTheme.colors.accentCyan, CircleShape)
                     )
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Row(
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     metric.value,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Black,
+                    style = TrackProType.statValue.copy(fontSize = 19.sp),
                     color = if (metric.achieved) TrackProTheme.colors.textPrimary
-                    else TrackProTheme.colors.textMuted.copy(alpha = 0.5f),
-                    letterSpacing = (-0.5).sp
+                    else TrackProTheme.colors.textMuted.copy(alpha = 0.5f)
                 )
                 Text(
                     metric.unit,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = TrackProType.body.copy(fontSize = 10.sp),
                     color = TrackProTheme.colors.textMuted,
-                    modifier = Modifier.padding(bottom = 3.dp)
+                    modifier = Modifier.padding(bottom = 2.dp)
                 )
             }
         }

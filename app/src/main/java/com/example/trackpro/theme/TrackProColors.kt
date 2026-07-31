@@ -11,36 +11,47 @@ data class TrackProColorScheme(
     val accentAmber: Color,
     val textPrimary: Color,
     val textMuted: Color,
+    val textFaint: Color,
     val deltaGood: Color,
     val deltaBad: Color,
-    val sectorLine: Color
+    val sectorLine: Color,
+    val danger: Color
 )
 
-
+/**
+ * Accents are desaturated on purpose and are meant to stay small (icons, hairline
+ * underlines, badges, dots) — never a full-bleed fill. bgDeep/bgCard/bgElevated carry the
+ * visual weight instead. deltaGood/deltaBad/danger stay closer to full saturation since
+ * they're functional signal colors (faster/slower, destructive), not decoration.
+ */
 val DarkTrackProColors = TrackProColorScheme(
-    bgDeep = Color(0xFF0A0C11),
-    bgCard = Color(0xFF151924),
-    bgElevated = Color(0xFF212739),
-    accentCyan = Color(0xFF22D3EE),
-    accentBlue = Color(0xFF818CF8),
-    accentAmber = Color(0xFFFBBF24),
-    textPrimary = Color(0xFFF3F5F9),
-    textMuted = Color(0xFF9AA5B8),
-    deltaGood = Color(0xFF4ADE80),
-    deltaBad = Color(0xFFF87171),
-    sectorLine = Color(0xFF3A4358)
+    bgDeep = Color(0xFF0B0D11),
+    bgCard = Color(0xFF12151A),
+    bgElevated = Color(0xFF1A1E26),
+    accentCyan = Color(0xFF4FB6C9),
+    accentBlue = Color(0xFF7B84D6),
+    accentAmber = Color(0xFFD6A44A),
+    textPrimary = Color(0xFFF0F2F6),
+    textMuted = Color(0xFF8B93A3),
+    textFaint = Color(0xFF545C6B),
+    deltaGood = Color(0xFF3ECC7A),
+    deltaBad = Color(0xFFEF5B54),
+    sectorLine = Color(0xFF232830),
+    danger = Color(0xFFEF5B54)
 )
 
 val LightTrackProColors = TrackProColorScheme(
-    bgDeep = Color(0xFFEEF1F6),
+    bgDeep = Color(0xFFF0F2F5),
     bgCard = Color(0xFFFFFFFF),
-    bgElevated = Color(0xFFE2E8F1),
-    accentCyan = Color(0xFF0891B2),
-    accentBlue = Color(0xFF6366F1),
-    accentAmber = Color(0xFFD97706),
-    textPrimary = Color(0xFF0F172A),
-    textMuted = Color(0xFF64748B),
-    deltaGood = Color(0xFF16A34A),
-    deltaBad = Color(0xFFDC2626),
-    sectorLine = Color(0xFFD8DEE9)
+    bgElevated = Color(0xFFEDF0F4),
+    accentCyan = Color(0xFF3E93A6),
+    accentBlue = Color(0xFF6169C7),
+    accentAmber = Color(0xFFB9812E),
+    textPrimary = Color(0xFF12151A),
+    textMuted = Color(0xFF667085),
+    textFaint = Color(0xFF98A2B3),
+    deltaGood = Color(0xFF1C9B57),
+    deltaBad = Color(0xFFD3453D),
+    sectorLine = Color(0xFFE2E5EA),
+    danger = Color(0xFFD3453D)
 )

@@ -9,13 +9,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,13 +34,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.EmptyState
+import com.example.trackpro.components.StatCell
+import com.example.trackpro.components.StatCellDivider
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.viewModels.VehicleFULLViewModel
 import kotlinx.coroutines.Dispatchers
@@ -64,58 +67,28 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // ── Top bar ───────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(TrackProTheme.colors.accentAmber)
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            AppTopBar(
+                title = "My Vehicles",
+                accent = TrackProTheme.colors.accentAmber,
+                trailing = {
                     Text(
-                        text = "● MY VEHICLES",
-                        color = Color.Black,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 3.sp
-                    )
-                    Text(
-                        text = "${vehicles.size} CARS",
-                        color = Color.Black,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
+                        text = "${vehicles.size} cars",
+                        style = TrackProType.label,
+                        color = TrackProTheme.colors.textMuted
                     )
                 }
-            }
+            )
 
             if (vehicles.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "NO VEHICLES YET",
-                            color = TrackProTheme.colors.textMuted,
-                            fontSize = 14.sp,
-                            letterSpacing = 3.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = "Add a vehicle from the main screen",
-                            color = TrackProTheme.colors.textMuted.copy(alpha = 0.5f),
-                            fontSize = 12.sp
-                        )
-                    }
-                }
+                EmptyState(
+                    message = "No vehicles yet",
+                    hint = "Add a vehicle from the main screen"
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    contentPadding = PaddingValues(Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     items(vehicles) { vehicle ->
                         VehicleCard(
@@ -124,7 +97,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
                             bgCard = TrackProTheme.colors.bgCard,
                             bgElevated = TrackProTheme.colors.bgElevated,
                             accentAmber = TrackProTheme.colors.accentAmber,
-                            accentRed = TrackProTheme.colors.accentCyan,
+                            dangerColor = TrackProTheme.colors.danger,
                             textPrimary = TrackProTheme.colors.textPrimary,
                             textMuted = TrackProTheme.colors.textMuted,
                             sectorLine = TrackProTheme.colors.sectorLine,
@@ -149,7 +122,7 @@ fun VehicleCard(
     bgCard: Color,
     bgElevated: Color,
     accentAmber: Color,
-    accentRed: Color,
+    dangerColor: Color,
     textPrimary: Color,
     textMuted: Color,
     sectorLine: Color,
@@ -168,15 +141,15 @@ fun VehicleCard(
                     onDelete(vehicle)
                     showDeleteDialog = false
                 }) {
-                    Text("DELETE", color = accentRed, fontWeight = FontWeight.Black)
+                    Text("Delete", color = dangerColor, style = TrackProType.titleMedium)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("CANCEL", color = textMuted)
+                    Text("Cancel", color = textMuted)
                 }
             },
-            title = { Text("Delete Vehicle?", fontWeight = FontWeight.Black) },
+            title = { Text("Delete Vehicle?") },
             text = { Text("${vehicle.manufacturer} ${vehicle.model} will be permanently removed.") }
         )
     }
@@ -184,8 +157,8 @@ fun VehicleCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(bgCard, RoundedCornerShape(12.dp))
-            .border(1.dp, sectorLine, RoundedCornerShape(12.dp))
+            .background(bgCard, TrackProShapes.card)
+            .border(1.dp, sectorLine, TrackProShapes.card)
             .clickable { navController.navigate("vehicle/${vehicle.vehicleId}") }
     ) {
         Column {
@@ -196,9 +169,9 @@ fun VehicleCard(
                     .fillMaxWidth()
                     .background(
                         accentAmber.copy(alpha = 0.12f),
-                        RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                        RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
                     )
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -207,45 +180,38 @@ fun VehicleCard(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(
-                                    accentAmber.copy(alpha = 0.15f),
-                                    RoundedCornerShape(3.dp)
-                                )
+                                .background(accentAmber.copy(alpha = 0.15f), TrackProShapes.badge)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = vehicle.fuelType.uppercase(),
-                                color = accentAmber,
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
+                                style = TrackProType.label.copy(fontSize = 9.sp),
+                                color = accentAmber
                             )
                         }
                         Text(
                             text = vehicle.drivetrain.uppercase(),
-                            color = textMuted,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
+                            style = TrackProType.label.copy(fontSize = 9.sp),
+                            color = textMuted
                         )
                     }
 
                     // Delete button
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
-                            .background(accentRed.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                            .size(26.dp)
+                            .background(dangerColor.copy(alpha = 0.1f), TrackProShapes.badge)
                             .clickable { showDeleteDialog = true },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Delete",
-                            tint = accentRed,
+                            tint = dangerColor,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -254,23 +220,20 @@ fun VehicleCard(
 
             // ── Vehicle name ────────────────────────────
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = "${vehicle.manufacturer} ${vehicle.model}",
+                    style = TrackProType.titleMedium,
                     color = textPrimary,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-0.3).sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "${vehicle.year} · ${vehicle.engineType}",
-                    color = textMuted,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    style = TrackProType.body.copy(fontSize = 12.sp),
+                    color = textMuted
                 )
             }
 
@@ -282,85 +245,24 @@ fun VehicleCard(
                     .fillMaxWidth()
                     .background(
                         bgElevated,
-                        RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+                        RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)
                     )
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                VehicleStatMini(
-                    label = "POWER",
-                    value = "${vehicle.horsepower}",
-                    unit = "hp",
-                    accentAmber = accentAmber,
-                    textMuted = textMuted
-                )
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(32.dp)
-                        .background(sectorLine)
-                )
-                VehicleStatMini(
-                    label = "TORQUE",
-                    value = vehicle.torque?.toString() ?: "—",
-                    unit = "Nm",
-                    accentAmber = accentAmber,
-                    textMuted = textMuted
-                )
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(32.dp)
-                        .background(sectorLine)
-                )
-                VehicleStatMini(
-                    label = "WEIGHT",
-                    value = "${vehicle.weight}",
-                    unit = "kg",
-                    accentAmber = accentAmber,
-                    textMuted = textMuted
-                )
+                StatCell(label = "Power", value = "${vehicle.horsepower}", unit = "hp", valueColor = accentAmber, horizontalAlignment = Alignment.CenterHorizontally)
+                StatCellDivider()
+                StatCell(label = "Torque", value = vehicle.torque?.toString() ?: "—", unit = "Nm", valueColor = accentAmber, horizontalAlignment = Alignment.CenterHorizontally)
+                StatCellDivider()
+                StatCell(label = "Weight", value = "${vehicle.weight}", unit = "kg", valueColor = accentAmber, horizontalAlignment = Alignment.CenterHorizontally)
                 Text(
-                    text = "VIEW →",
-                    color = accentAmber.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
+                    text = "View",
+                    style = TrackProType.label,
+                    color = accentAmber.copy(alpha = 0.8f)
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun VehicleStatMini(
-    label: String,
-    value: String,
-    unit: String,
-    accentAmber: Color,
-    textMuted: Color
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = label,
-            color = textMuted,
-            fontSize = 8.sp,
-            letterSpacing = 1.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = value,
-            color = accentAmber,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Black
-        )
-        Text(
-            text = unit,
-            color = textMuted,
-            fontSize = 8.sp,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 

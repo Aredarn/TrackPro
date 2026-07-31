@@ -3,7 +3,6 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,10 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,7 +31,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,6 +46,14 @@ import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.AppCard
+import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.PrimaryButton
+import com.example.trackpro.components.ToggleChip
+import com.example.trackpro.theme.DataVizColors
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.ESPDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -112,13 +115,13 @@ fun TrackBuilderScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(TrackProTheme.colors.bgDeep)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            HeaderSection(onBack)
+            AppTopBar(title = "Track Builder", accent = TrackProTheme.colors.accentAmber, onBack = onBack)
 
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(Spacing.md)) {
                 TrackInfoCard(trackName, countryName, trackMode) { showInfoDialog = true }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Spacing.md))
                 ModeToggle(builderType) { builderType = it }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Spacing.md))
 
                 if (builderType == 0) {
                     LiveControls(
@@ -169,7 +172,7 @@ fun TrackBuilderScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 MarkSectorButton(
                     count = sectorCount,
                     enabled = gpsPointsList.isNotEmpty() && (builderType == 1 || isLiveRecording),
@@ -178,9 +181,9 @@ fun TrackBuilderScreen(
             }
 
             // Map/Preview Area
-            Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp)
-                .background(TrackProTheme.colors.bgCard, RoundedCornerShape(12.dp))
-                .border(1.dp, Color(0xFF1E2530), RoundedCornerShape(12.dp))
+            Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(Spacing.md)
+                .background(TrackProTheme.colors.bgCard, TrackProShapes.card)
+                .border(1.dp, TrackProTheme.colors.sectorLine, TrackProShapes.card)
             ) {
 
                     MapLibreBuilderView(trackMode,points = gpsPointsList, onMapTap = { latLng ->
@@ -223,7 +226,7 @@ fun MapLibreBuilderView(
                 map.addPolyline(
                     PolylineOptions() // Corrected reference
                         .addAll(latLngs)
-                        .color("#E8001C".toColorInt())
+                        .color(DataVizColors.trackLine.toColorInt())
                         .width(3f)
                 )
             }
@@ -289,63 +292,53 @@ fun MapLibreBuilderView(
 
 @Composable
 private fun TrackInfoCard(name: String, country: String, mode: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(TrackProTheme.colors.bgCard, RoundedCornerShape(8.dp))
-            .border(1.dp, Color(0xFF1E2530), RoundedCornerShape(8.dp))
-            .padding(16.dp)
-    ) {
-        Column {
-            Text("TRACK CONFIGURATION", color = TrackProTheme.colors.textMuted, fontSize = 10.sp, letterSpacing = 2.sp)
-            Text(if (name.isEmpty()) "Unnamed Track" else "$name ($country)", color = TrackProTheme.colors.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text("MODE: ${mode.uppercase()}", color = TrackProTheme.colors.accentCyan, fontSize = 12.sp, fontWeight = FontWeight.Black)
-        }
-        Button(
-            onClick = onClick,
-            modifier = Modifier.align(Alignment.CenterEnd),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2530))
-        ) {
-            Text("EDIT", color = TrackProTheme.colors.textPrimary)
+    AppCard(modifier = Modifier.fillMaxWidth()) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Text("Track Configuration", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+                Text(
+                    if (name.isEmpty()) "Unnamed Track" else "$name ($country)",
+                    style = TrackProType.titleMedium,
+                    color = TrackProTheme.colors.textPrimary
+                )
+                Text("Mode: ${mode.uppercase()}", style = TrackProType.body.copy(fontSize = 12.sp), color = TrackProTheme.colors.accentCyan)
+            }
+            PrimaryButton(
+                text = "Edit",
+                onClick = onClick,
+                accent = TrackProTheme.colors.bgElevated,
+                contentColor = TrackProTheme.colors.textPrimary,
+                modifier = Modifier.align(Alignment.CenterEnd)
+            )
         }
     }
 }
 
 @Composable
 private fun MarkSectorButton(count: Int, enabled: Boolean, onClick: () -> Unit) {
-    Button(
+    PrimaryButton(
+        text = "Mark Sector ${count + 1}",
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().height(48.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = TrackProTheme.colors.accentBlue,
-            disabledContainerColor = Color(0xFF1E2530)
-        ),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Text(
-            "MARK SECTOR ${count + 1}",
-            color = if (enabled) Color.Black else TrackProTheme.colors.textMuted,
-            fontWeight = FontWeight.Bold,
-            fontSize = 12.sp,
-            letterSpacing = 1.sp
-        )
-    }
+        accent = TrackProTheme.colors.accentBlue,
+        modifier = Modifier.fillMaxWidth().height(48.dp)
+    )
 }
 
 @Composable
 private fun ModeToggle(selected: Int, onSelect: (Int) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.bgCard, RoundedCornerShape(8.dp)).padding(4.dp)) {
-        val modes = listOf("LIVE GPS", "MANUAL MAP")
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+    ) {
+        val modes = listOf("Live GPS", "Manual Map")
         modes.forEachIndexed { index, label ->
-            Box(
-                modifier = Modifier.weight(1f).height(40.dp)
-                    .background(if (selected == index) TrackProTheme.colors.accentCyan else Color.Transparent, RoundedCornerShape(6.dp))
-                    .padding(4.dp).clickable { onSelect(index) },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(label, color = if (selected == index) Color.Black else TrackProTheme.colors.textMuted, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            }
+            ToggleChip(
+                text = label,
+                selected = selected == index,
+                onClick = { onSelect(index) },
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
@@ -398,61 +391,33 @@ suspend fun endTrackBuilder(context: Context, trackId: Long, isLapTrack: Boolean
 
 
 @Composable
-fun HeaderSection(onBack: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        TextButton(onClick = onBack) {
-            Text("← BACK", color = TrackProTheme.colors.accentCyan, fontWeight = FontWeight.Bold)
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        Text("TRACK BUILDER", color = TrackProTheme.colors.textPrimary, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-    }
-}
-
-@Composable
 private fun LiveControls(isRecording: Boolean, onToggle: () -> Unit) {
-    Button(
+    PrimaryButton(
+        text = if (isRecording) "Stop Recording" else "Start GPS Recording",
         onClick = onToggle,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isRecording) Color(0xFF330000) else Color(0xFF1E2530)
-        ),
-        //border = border(1.dp, if (isRecording) AccentRed else Color.Transparent, RoundedCornerShape(8.dp))
-    ) {
-        val label = if (isRecording) "STOP RECORDING" else "START GPS RECORDING"
-        val icon = if (isRecording) "■" else "●"
-        Text("$icon $label", color = if (isRecording) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textPrimary, fontWeight = FontWeight.Bold)
-    }
+        accent = if (isRecording) TrackProTheme.colors.danger.copy(alpha = 0.18f) else TrackProTheme.colors.bgElevated,
+        contentColor = if (isRecording) TrackProTheme.colors.danger else TrackProTheme.colors.textPrimary,
+        modifier = Modifier.fillMaxWidth().height(56.dp)
+    )
 }
 
 @Composable
 private fun ManualControls(onUndo: () -> Unit, onSave: () -> Unit, canSave: Boolean) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Button(
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        PrimaryButton(
+            text = "Undo Last",
             onClick = onUndo,
-            modifier = Modifier.weight(1f).height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2530)),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("UNDO LAST", color = TrackProTheme.colors.textPrimary)
-        }
-        Button(
+            accent = TrackProTheme.colors.bgElevated,
+            contentColor = TrackProTheme.colors.textPrimary,
+            modifier = Modifier.weight(1f).height(56.dp)
+        )
+        PrimaryButton(
+            text = "Save Track",
             onClick = onSave,
             enabled = canSave,
-            modifier = Modifier.weight(1f).height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = TrackProTheme.colors.accentCyan,
-                disabledContainerColor = Color(0xFF2A1014)
-            ),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("SAVE TRACK", color = if (canSave) Color.Black else TrackProTheme.colors.textMuted, fontWeight = FontWeight.Bold)
-        }
+            accent = TrackProTheme.colors.accentCyan,
+            modifier = Modifier.weight(1f).height(56.dp)
+        )
     }
 }
 
