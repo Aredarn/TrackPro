@@ -41,9 +41,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.viewModels.TrackViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -53,6 +55,8 @@ import kotlinx.coroutines.withContext
 fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
     val tracks by viewModel.tracks.collectAsState()
     val context = LocalContext.current
+    val app = context.applicationContext as TrackProApp
+    val useMetric by app.useMetricUnits.collectAsState()
     val database = remember { ESPDatabase.getInstance(context) }
     val scope = rememberCoroutineScope()
 
@@ -114,6 +118,7 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
                             track = track,
                             navController = navController,
                             database = database,
+                            useMetric = useMetric,
                             bgCard = TrackProTheme.colors.bgCard,
                             bgElevated = TrackProTheme.colors.bgElevated,
                             accentAmber = TrackProTheme.colors.accentAmber,
@@ -139,6 +144,7 @@ fun TrackCard(
     track: TrackMainData,
     navController: NavController,
     database: ESPDatabase,
+    useMetric: Boolean,
     bgCard: Color,
     bgElevated: Color,
     accentAmber: Color,
@@ -278,7 +284,8 @@ fun TrackCard(
                     Text("LENGTH", color = textMuted, fontSize = 9.sp,
                         letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        text = "${track.totalLength ?: "?"} km",
+                        // totalLength is stored in km; formatDistance takes meters.
+                        text = track.totalLength?.let { UnitFormatter.formatDistance(it * 1000.0, useMetric) } ?: "?",
                         color = accentAmber,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Black

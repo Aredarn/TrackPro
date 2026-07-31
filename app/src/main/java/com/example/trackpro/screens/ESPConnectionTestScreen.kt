@@ -41,6 +41,7 @@ import androidx.core.graphics.toColorInt
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.JsonReader
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -53,6 +54,7 @@ fun ESPConnectionTestScreen() {
     val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
     val gpsData     by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
     val useExternal by app.useExternalGps.collectAsState()
+    val useMetric   by app.useMetricUnits.collectAsState()
 
     // 2. Configuration for display
     val config = remember { JsonReader.loadConfig(context) }
@@ -120,12 +122,12 @@ fun ESPConnectionTestScreen() {
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         StyledSpeedometer(
-                            speed = speed,
+                            speed = UnitFormatter.convertSpeed(speed, useMetric),
                             textPrimary = TrackProTheme.colors.textPrimary
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "km/h",
+                            text = UnitFormatter.speedUnitLabel(useMetric).lowercase(),
                             color = TrackProTheme.colors.textMuted,
                             fontSize = 12.sp,
                             letterSpacing = 3.sp,

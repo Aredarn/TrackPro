@@ -88,6 +88,7 @@ fun TimeAttackScreenView(
     val bestTime     by vm.bestTime.collectAsState()
     val lastTime     by vm.lastTime.collectAsState()
     val delta        by vm.delta.collectAsState()
+    val liveDelta    by vm.liveDelta.collectAsState()
     val eventCount   by vm.eventCount.collectAsState()
     val stintStart   by vm.stintStart.collectAsState()
     val fullTrack    by vm.fullTrack.collectAsState()
@@ -96,6 +97,11 @@ fun TimeAttackScreenView(
     val driver       by vm.driverPosition.collectAsState()
     val timingMode   by vm.timingMode.collectAsState()
     val lapSplits    by vm.currentLapSplits.collectAsState()
+
+    // Prefer the continuously-updating delta (tracked by distance into the lap); fall back
+    // to the static per-lap delta before a best-lap reference exists (e.g. lap 1).
+    val effectiveDelta = liveDelta ?: delta
+    val isLiveDelta = liveDelta != null
 
     val linesToShow by remember(timingMode, startLine, finishLine) {
         derivedStateOf {
@@ -157,7 +163,8 @@ fun TimeAttackScreenView(
             currentTime = currentTime,
             bestTime    = bestTime,
             lastTime    = lastTime,
-            delta       = delta,
+            delta       = effectiveDelta,
+            isLiveDelta = isLiveDelta,
             eventCount  = eventCount,
             stintStart  = stintStart,
             gpsPoints   = gpsPoints,
@@ -171,7 +178,8 @@ fun TimeAttackScreenView(
             currentTime = currentTime,
             bestTime    = bestTime,
             lastTime    = lastTime,
-            delta       = delta,
+            delta       = effectiveDelta,
+            isLiveDelta = isLiveDelta,
             eventCount  = eventCount,
             stintStart  = stintStart,
             gpsPoints   = gpsPoints,
@@ -192,6 +200,7 @@ fun TimeAttackPortraitLayout(
     bestTime: String,
     lastTime: String,
     delta: Double,
+    isLiveDelta: Boolean = false,
     eventCount: Int,
     stintStart: Long,
     gpsPoints: List<TrackCoordinatesData>,
@@ -264,17 +273,29 @@ fun TimeAttackPortraitLayout(
                         letterSpacing = (-1).sp,
                         lineHeight = 68.sp
                     )
-                    Box(
-                        modifier = Modifier
-                            .background(deltaColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "Δ ${String.format("%+.3f", delta)}s",
-                            color = deltaColor,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .background(deltaColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Δ ${String.format("%+.3f", delta)}s",
+                                color = deltaColor,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        if (isLiveDelta) {
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "● LIVE",
+                                color = deltaColor.copy(alpha = 0.7f),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.sp
+                            )
+                        }
                     }
                 }
                 Column(
@@ -364,6 +385,7 @@ fun TimeAttackLandscapeLayout(
     bestTime: String,
     lastTime: String,
     delta: Double,
+    isLiveDelta: Boolean = false,
     eventCount: Int,
     stintStart: Long,
     gpsPoints: List<TrackCoordinatesData>,
@@ -429,17 +451,29 @@ fun TimeAttackLandscapeLayout(
                     fontWeight = FontWeight.Black,
                     letterSpacing = (-1).sp
                 )
-                Box(
-                    modifier = Modifier
-                        .background(deltaColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = "Δ ${String.format("%+.3f", delta)}s",
-                        color = deltaColor,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .background(deltaColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "Δ ${String.format("%+.3f", delta)}s",
+                            color = deltaColor,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    if (isLiveDelta) {
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "● LIVE",
+                            color = deltaColor.copy(alpha = 0.7f),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(16.dp))

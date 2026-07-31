@@ -373,12 +373,15 @@ suspend fun endTrackBuilder(context: Context, trackId: Long, isLapTrack: Boolean
 
     // Explicitly calculate total distance (blocking inside suspend)
     val helper = DragTimeCalculation(database = database)
-    val totalLength = helper.totalDistance(latlon)
-    Log.d("Total length (meters):", totalLength.toString())
+    val totalLengthMeters = helper.totalDistance(latlon)
+    // TrackMainData.totalLength is stored in kilometers - matches the bundled seed tracks
+    // (see res/raw/tracks.json), which are authored in km.
+    val totalLengthKm = totalLengthMeters / 1000.0
+    Log.d("Total length (km):", totalLengthKm.toString())
 
     // Perform database update on IO dispatcher (ensure proper thread)
     withContext(Dispatchers.IO) {
-        val affectedRows = database.trackMainDao().updateTotalLength(trackId, totalLength)
+        val affectedRows = database.trackMainDao().updateTotalLength(trackId, totalLengthKm)
         Log.d("DB Update", "Updated totalLength on trackId=$trackId, affected rows: $affectedRows")
     }
 }

@@ -27,6 +27,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,12 +40,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.extrasForUI.CustomTextField
 import com.example.trackpro.extrasForUI.DropdownMenuField
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.JsonReader.loadJsonOptions
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import kotlinx.coroutines.launch
 
 @Composable
@@ -52,6 +55,8 @@ fun CarCreationScreen(
     database: ESPDatabase
 ) {
     val context = LocalContext.current
+    val app = context.applicationContext as TrackProApp
+    val useMetric by app.useMetricUnits.collectAsState()
     val jsonOptions = remember { loadJsonOptions(context) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -121,8 +126,11 @@ fun CarCreationScreen(
                         CustomTextField("Horsepower", horsepower, true, Icons.Default.FlashOn) { horsepower = it }
                         CustomTextField("Torque (Nm)", torque, true, Icons.Default.Settings) { torque = it }
                         CustomTextField("Weight (kg)", weight, true, Icons.Default.FitnessCenter) { weight = it }
-                        CustomTextField("Top Speed (km/h)", topSpeed, true, Icons.Default.Speed) { topSpeed = it }
-                        CustomTextField("0-100 km/h (s)", acceleration, true, Icons.Default.Timer) { acceleration = it }
+                        CustomTextField("Top Speed (${UnitFormatter.speedUnitLabel(useMetric)})", topSpeed, true, Icons.Default.Speed) { topSpeed = it }
+                        CustomTextField(
+                            if (useMetric) "0-100 KM/H (s)" else "0-60 MPH (s)",
+                            acceleration, true, Icons.Default.Timer
+                        ) { acceleration = it }
                         CustomTextField("Fuel Capacity (L)", fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
 
                         SectionTitle("Configuration")
@@ -150,7 +158,9 @@ fun CarCreationScreen(
                                     horsepower = horsepower.toIntOrNull() ?: 0,
                                     torque = torque.toIntOrNull(),
                                     weight = weight.toDoubleOrNull() ?: 0.0,
-                                    topSpeed = topSpeed.toDoubleOrNull(),
+                                    // Stored canonically in km/h regardless of the unit the
+                                    // user entered it in, matching every other speed value.
+                                    topSpeed = topSpeed.toDoubleOrNull()?.let { UnitFormatter.convertSpeedToKmh(it, useMetric) },
                                     acceleration = acceleration.toDoubleOrNull(),
                                     drivetrain = selectedDrivetrain,
                                     fuelType = selectedFuelType,

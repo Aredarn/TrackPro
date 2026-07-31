@@ -26,6 +26,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.SessionData
@@ -48,6 +50,7 @@ import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.managerClasses.utilities.toLapTimeMillis
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import kotlinx.coroutines.Dispatchers
@@ -80,6 +83,9 @@ fun TimeAttackListItemScreen(
     database: ESPDatabase,
     sessionId: Long
 ) {
+    val app = LocalContext.current.applicationContext as TrackProApp
+    val useMetric by app.useMetricUnits.collectAsState()
+
     var sessionData by remember { mutableStateOf<SessionData?>(null) }
     var vehicleData by remember { mutableStateOf<VehicleInformationData?>(null) }
     var lapTimes by remember { mutableStateOf<List<LapTimeData>>(emptyList()) }
@@ -268,7 +274,7 @@ fun TimeAttackListItemScreen(
                         )
                         StatRowItem(
                             label = "TOP SPEED (SESSION)",
-                            value = String.format("%.1f km/h", topSpeedOverall),
+                            value = "${UnitFormatter.formatSpeedPrecise(topSpeedOverall.toDouble(), useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)}",
                             textPrimary = TrackProTheme.colors.textPrimary,
                             textMuted = TrackProTheme.colors.textMuted
                         )
@@ -336,6 +342,7 @@ fun TimeAttackListItemScreen(
                                 isWorst = isWorst,
                                 deltaMs = deltaMs,
                                 topSpeed = topSpeed,
+                                useMetric = useMetric,
                                 bgCard = TrackProTheme.colors.bgCard,
                                 bgElevated = TrackProTheme.colors.bgElevated,
                                 accentGreen = TrackProTheme.colors.accentBlue,
@@ -362,6 +369,7 @@ private fun LapRow(
     isWorst: Boolean,
     deltaMs: Long,
     topSpeed: Float,
+    useMetric: Boolean,
     bgCard: Color,
     bgElevated: Color,
     accentGreen: Color,
@@ -429,13 +437,13 @@ private fun LapRow(
                 Text("TOP SPEED", color = textMuted, fontSize = 8.sp,
                     letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    text = if (topSpeed > 0) String.format("%.0f", topSpeed) else "—",
+                    text = if (topSpeed > 0) UnitFormatter.formatSpeed(topSpeed, useMetric) else "—",
                     color = textPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
                 if (topSpeed > 0) {
-                    Text("km/h", color = textMuted, fontSize = 8.sp)
+                    Text(UnitFormatter.speedUnitLabel(useMetric).lowercase(), color = textMuted, fontSize = 8.sp)
                 }
             }
 

@@ -17,6 +17,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,9 +30,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -39,6 +42,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun CarViewScreen(vehicleId: Long) {
     val context = LocalContext.current
+    val app = context.applicationContext as TrackProApp
+    val useMetric by app.useMetricUnits.collectAsState()
     val database = remember { ESPDatabase.getInstance(context) }
     var vehicleInfo by remember { mutableStateOf<VehicleInformationData?>(null) }
 
@@ -163,8 +168,8 @@ fun CarViewScreen(vehicleId: Long) {
                         ) {
                             VehicleStatCol(
                                 label = "TOP SPEED",
-                                value = vehicle.topSpeed?.toString() ?: "—",
-                                unit = "km/h",
+                                value = vehicle.topSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "—",
+                                unit = UnitFormatter.speedUnitLabel(useMetric).lowercase(),
                                 accentColor = TrackProTheme.colors.accentAmber,
                                 textMuted = TrackProTheme.colors.textMuted
                             )

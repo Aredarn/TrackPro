@@ -51,6 +51,7 @@ import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.SessionManager
 import com.example.trackpro.managerClasses.calculationClasses.DragMetrics
 import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.viewModels.VehicleFULLViewModel
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
@@ -80,6 +81,7 @@ fun DragRaceScreen(
 ) {
     val app = LocalContext.current.applicationContext as TrackProApp
     val scope = rememberCoroutineScope()
+    val useMetric by app.useMetricUnits.collectAsState()
 
     // --- GPS & CONNECTION STATE ---
     val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
@@ -322,7 +324,7 @@ fun DragRaceScreen(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            "${gpsData?.speed?.toInt() ?: 0}",
+                            gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0",
                             fontSize = 72.sp,
                             fontWeight = FontWeight.Black,
                             color = if (isSessionActive) TrackProTheme.colors.accentCyan
@@ -330,7 +332,7 @@ fun DragRaceScreen(
                             letterSpacing = (-2).sp
                         )
                         Text(
-                            "KM/H",
+                            UnitFormatter.speedUnitLabel(useMetric),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = TrackProTheme.colors.textMuted,
@@ -341,7 +343,7 @@ fun DragRaceScreen(
                     if (isSessionActive) {
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "MAX: ${currentMetrics.maxSpeed.toInt()} KM/H · DIST: ${String.format("%.1f", currentMetrics.totalDistance)}M",
+                            "MAX: ${UnitFormatter.formatSpeed(currentMetrics.maxSpeed, useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)} · DIST: ${UnitFormatter.formatDistance(currentMetrics.totalDistance.toDouble(), useMetric)}",
                             color = TrackProTheme.colors.textMuted,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -398,8 +400,8 @@ fun DragRaceScreen(
                 ),
                 DragMetricDisplay(
                     "1/4 TRAP",
-                    currentMetrics.quarterMileSpeed?.toInt()?.toString() ?: "--",
-                    "KM/H",
+                    currentMetrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "--",
+                    UnitFormatter.speedUnitLabel(useMetric),
                     currentMetrics.quarterMileSpeed != null
                 ),
             )

@@ -3,6 +3,8 @@ package com.example.trackpro.managerClasses.timeAttackManagers
 import android.util.Log
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
+import com.example.trackpro.managerClasses.utilities.haversineDistance
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 object TrackGeometry {
@@ -45,6 +47,48 @@ object TrackGeometry {
 
         return sectorPoints.mapIndexedNotNull { index, point ->
             buildGateLine(track, point, idBase = -100 - (index * 2L))
+        }
+    }
+
+    /**
+     * Returns a copy of [track] with sector markers placed automatically at [sectorCount] even
+     * distance intervals along the path (e.g. sectorCount=3 marks the two points closest to
+     * 1/3 and 2/3 of the total distance). Any existing sector markers are cleared first, so
+     * calling this again with a different count simply replaces the previous slicing. Points
+     * are matched back to the DB by id, so this is safe to persist with an @Update.
+     */
+    fun autoSliceSectors(track: List<TrackCoordinatesData>, sectorCount: Int): List<TrackCoordinatesData> {
+        if (sectorCount < 2 || track.size < sectorCount) {
+            return track.map { it.copy(isSectorPoint = false, sectorIndex = null) }
+        }
+
+        val cumulative = DoubleArray(track.size)
+        for (i in 1 until track.size) {
+            cumulative[i] = cumulative[i - 1] + haversineDistance(
+                track[i - 1].latitude, track[i - 1].longitude,
+                track[i].latitude, track[i].longitude
+            )
+        }
+        val totalDist = cumulative.last()
+        if (totalDist <= 0.0) {
+            return track.map { it.copy(isSectorPoint = false, sectorIndex = null) }
+        }
+
+        // One boundary per internal division point (sectorCount-1 boundaries -> sectorCount sectors)
+        val boundaryIndices = (1 until sectorCount).map { k ->
+            val target = totalDist * k / sectorCount
+            cumulative.indices.minByOrNull { abs(cumulative[it] - target) } ?: 0
+        }.distinct().sorted()
+
+        return track.mapIndexed { i, point ->
+            val sectorIdx = boundaryIndices.indexOf(i)
+            if (sectorIdx >= 0) {
+                point.copy(isSectorPoint = true, sectorIndex = sectorIdx)
+            } else if (point.isSectorPoint) {
+                point.copy(isSectorPoint = false, sectorIndex = null)
+            } else {
+                point
+            }
         }
     }
 

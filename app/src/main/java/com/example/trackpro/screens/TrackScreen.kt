@@ -1,6 +1,8 @@
 package com.example.trackpro.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,16 +13,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +42,8 @@ import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry
+import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
@@ -61,6 +68,9 @@ fun TrackScreen(trackId: Long) {
 
 @Composable
 fun TrackView(database: ESPDatabase, trackId: Long) {
+    val app = LocalContext.current.applicationContext as TrackProApp
+    val useMetric by app.useMetricUnits.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
     val trackParts = remember { mutableStateListOf<TrackCoordinatesData>() }
     val trackInfo = remember {
         mutableStateOf(
@@ -136,7 +146,9 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
                 ) {
                     TrackStatCol(
                         label = "LENGTH",
-                        value = "${trackInfo.value.totalLength ?: "?"} km",
+                        // totalLength is stored in km; formatDistance takes meters, so convert
+                        // first. This also makes the unit dynamic instead of a hardcoded "km".
+                        value = trackInfo.value.totalLength?.let { UnitFormatter.formatDistance(it * 1000.0, useMetric) } ?: "?",
                         textPrimary = TrackProTheme.colors.textPrimary,
                         textMuted = TrackProTheme.colors.textMuted
                     )
@@ -156,6 +168,26 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
             }
 
             HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+
+            // ── Sectors card ────────────────────────────────────
+            if (trackParts.isNotEmpty()) {
+                SectorSlicerCard(
+                    trackParts = trackParts,
+                    onSlice = { sectorCount ->
+                        val sliced = TrackGeometry.autoSliceSectors(trackParts.toList(), sectorCount)
+                        coroutineScope.launch(Dispatchers.IO) {
+                            database.trackCoordinatesDao().updateTrackCoordinates(sliced)
+                        }
+                    },
+                    onClear = {
+                        val cleared = TrackGeometry.autoSliceSectors(trackParts.toList(), 1)
+                        coroutineScope.launch(Dispatchers.IO) {
+                            database.trackCoordinatesDao().updateTrackCoordinates(cleared)
+                        }
+                    }
+                )
+                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+            }
 
             // ── Map ───────────────────────────────────────────
             Box(
@@ -199,6 +231,92 @@ private fun TrackStatCol(label: String, value: String, textPrimary: Color, textM
     }
 }
 
+/**
+ * Lets the user auto-slice an already-saved track into N even sectors after the fact,
+ * instead of only being able to mark them by hand while live-recording. Picking a count
+ * replaces any previous slicing (the points are matched back to the DB by id).
+ */
+@Composable
+private fun SectorSlicerCard(
+    trackParts: List<TrackCoordinatesData>,
+    onSlice: (Int) -> Unit,
+    onClear: () -> Unit
+) {
+    val markedBoundaries = trackParts.count { it.isSectorPoint }
+    val sectorCount = if (markedBoundaries > 0) markedBoundaries + 1 else 0
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(TrackProTheme.colors.bgCard)
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "SECTORS",
+                color = TrackProTheme.colors.textMuted,
+                fontSize = 10.sp,
+                letterSpacing = 2.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (sectorCount > 0) "$sectorCount SECTORS MARKED" else "NONE MARKED",
+                color = if (sectorCount > 0) TrackProTheme.colors.accentBlue else TrackProTheme.colors.textMuted,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            (2..6).forEach { n ->
+                val active = sectorCount == n
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            if (active) TrackProTheme.colors.accentBlue else TrackProTheme.colors.bgElevated,
+                            RoundedCornerShape(6.dp)
+                        )
+                        .border(
+                            1.dp,
+                            if (active) Color.Transparent else TrackProTheme.colors.sectorLine,
+                            RoundedCornerShape(6.dp)
+                        )
+                        .clickable { onSlice(n) }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "$n",
+                        color = if (active) Color.Black else TrackProTheme.colors.textPrimary,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+
+        if (sectorCount > 0) {
+            Text(
+                text = "CLEAR SECTORS",
+                color = TrackProTheme.colors.deltaBad,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+                modifier = Modifier.clickable { onClear() }
+            )
+        }
+    }
+}
+
 @Composable
 fun TrackStaticMapView(
     trackParts: List<TrackCoordinatesData>,
@@ -206,7 +324,105 @@ fun TrackStaticMapView(
     modifier: Modifier = Modifier
 ) {
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
-    val trackDrawn = remember { mutableStateOf(false) }
+    var mapRef by remember { mutableStateOf<org.maplibre.android.maps.MapLibreMap?>(null) }
+    var styleRef by remember { mutableStateOf<org.maplibre.android.maps.Style?>(null) }
+    var hasFitCamera by remember { mutableStateOf(false) }
+
+    // Redraw whenever the track's points change (e.g. after auto-slicing sectors) instead
+    // of only ever drawing once on first load. trackParts is a SnapshotStateList mutated
+    // in place, so its reference never changes - key on derived values instead, or this
+    // would never restart.
+    val sectorMarkCount = trackParts.count { it.isSectorPoint }
+    LaunchedEffect(trackParts.size, sectorMarkCount) {
+        val style = styleRef ?: return@LaunchedEffect
+        val map = mapRef ?: return@LaunchedEffect
+        if (trackParts.isEmpty()) return@LaunchedEffect
+
+        listOf("track-static-layer", "start-layer", "sector-layer").forEach { id ->
+            style.getLayer(id)?.let { style.removeLayer(it) }
+        }
+        listOf("track-static-src", "start-src", "sector-src").forEach { id ->
+            style.getSource(id)?.let { style.removeSource(it) }
+        }
+
+        // A single (or empty) point can't form a line or a real bounding box - draw only
+        // the start marker and center on it directly, rather than feeding MapLibre a
+        // degenerate LineString/bounds.
+        if (trackParts.size >= 2) {
+            val coords = trackParts.joinToString(",") {
+                "[${it.longitude},${it.latitude}]"
+            }
+
+            // Only close the loop if it's a Circuit
+            val finalCoordinates = if (trackType == "Circuit") {
+                val first = trackParts.first()
+                "$coords,[${first.longitude},${first.latitude}]"
+            } else {
+                coords // Keep it as an open line for Sprints
+            }
+
+            val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":[$finalCoordinates]},"properties":{}}"""
+            style.addSource(GeoJsonSource("track-static-src", geojson))
+            style.addLayer(
+                LineLayer("track-static-layer", "track-static-src").apply {
+                    setProperties(
+                        PropertyFactory.lineColor("#00C853"),
+                        PropertyFactory.lineWidth(3f),
+                        PropertyFactory.lineCap(Property.LINE_CAP_ROUND)
+                    )
+                }
+            )
+        }
+
+        // Start/finish marker - a single point at the actual start coordinate
+        val startPoint = trackParts.first()
+        val startGeojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${startPoint.longitude},${startPoint.latitude}]},"properties":{}}"""
+        style.addSource(GeoJsonSource("start-src", startGeojson))
+        style.addLayer(
+            CircleLayer("start-layer", "start-src").apply {
+                setProperties(
+                    PropertyFactory.circleColor("#E8001C"),
+                    PropertyFactory.circleRadius(8f),
+                    PropertyFactory.circleStrokeColor("#FFFFFF"),
+                    PropertyFactory.circleStrokeWidth(2f)
+                )
+            }
+        )
+
+        // Sector markers, if any have been marked/auto-sliced
+        val sectorPoints = trackParts.filter { it.isSectorPoint }
+        if (sectorPoints.isNotEmpty()) {
+            val sectorFeatures = sectorPoints.joinToString(",") {
+                """{"type":"Feature","geometry":{"type":"Point","coordinates":[${it.longitude},${it.latitude}]},"properties":{}}"""
+            }
+            style.addSource(GeoJsonSource("sector-src", """{"type":"FeatureCollection","features":[$sectorFeatures]}"""))
+            style.addLayer(
+                CircleLayer("sector-layer", "sector-src").apply {
+                    setProperties(
+                        PropertyFactory.circleColor("#FBBF24"),
+                        PropertyFactory.circleRadius(6f),
+                        PropertyFactory.circleStrokeColor("#FFFFFF"),
+                        PropertyFactory.circleStrokeWidth(1.5f)
+                    )
+                }
+            )
+        }
+
+        // Only fit the camera once - re-fitting on every sector change would be jarring.
+        if (!hasFitCamera) {
+            if (trackParts.size >= 2) {
+                val bounds = LatLngBounds.Builder()
+                    .includes(trackParts.map { LatLng(it.latitude, it.longitude) })
+                    .build()
+                map.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, 64), 800)
+            } else {
+                map.moveCamera(
+                    CameraUpdateFactory.newLatLngZoom(LatLng(startPoint.latitude, startPoint.longitude), 16.0)
+                )
+            }
+            hasFitCamera = true
+        }
+    }
 
     AndroidView(
         factory = { ctx ->
@@ -215,67 +431,13 @@ fun TrackStaticMapView(
                 mapViewRef = mv
                 mv.onCreate(null)
                 mv.getMapAsync { map ->
+                    mapRef = map
                     map.setStyle("https://tiles.openfreemap.org/styles/dark") { style ->
                         map.uiSettings.setAllGesturesEnabled(true)
                         map.uiSettings.isCompassEnabled = false
                         map.uiSettings.isLogoEnabled = false
                         map.uiSettings.isAttributionEnabled = false
-
-                        // A single (or empty) point can't form a line or a real bounding
-                        // box - draw only the start marker and center on it directly,
-                        // rather than feeding MapLibre a degenerate LineString/bounds.
-                        if (trackParts.size >= 2) {
-                            val coords = trackParts.joinToString(",") {
-                                "[${it.longitude},${it.latitude}]"
-                            }
-
-                            // Only close the loop if it's a Circuit
-                            val finalCoordinates = if (trackType == "Circuit") {
-                                val first = trackParts.first()
-                                "$coords,[${first.longitude},${first.latitude}]"
-                            } else {
-                                coords // Keep it as an open line for Sprints
-                            }
-
-                            val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":[$finalCoordinates]},"properties":{}}"""
-                            style.addSource(GeoJsonSource("track-static-src", geojson))
-                            style.addLayer(
-                                LineLayer("track-static-layer", "track-static-src").apply {
-                                    setProperties(
-                                        PropertyFactory.lineColor("#00C853"),
-                                        PropertyFactory.lineWidth(3f),
-                                        PropertyFactory.lineCap(Property.LINE_CAP_ROUND)
-                                    )
-                                }
-                            )
-                        }
-
-                        // Start/finish marker - a single point at the actual start coordinate
-                        val startPoint = trackParts.first()
-                        val startGeojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${startPoint.longitude},${startPoint.latitude}]},"properties":{}}"""
-                        style.addSource(GeoJsonSource("start-src", startGeojson))
-                        style.addLayer(
-                            CircleLayer("start-layer", "start-src").apply {
-                                setProperties(
-                                    PropertyFactory.circleColor("#E8001C"),
-                                    PropertyFactory.circleRadius(8f),
-                                    PropertyFactory.circleStrokeColor("#FFFFFF"),
-                                    PropertyFactory.circleStrokeWidth(2f)
-                                )
-                            }
-                        )
-
-                        if (trackParts.size >= 2) {
-                            val bounds = LatLngBounds.Builder()
-                                .includes(trackParts.map { LatLng(it.latitude, it.longitude) })
-                                .build()
-                            map.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, 64), 800)
-                        } else {
-                            map.moveCamera(
-                                CameraUpdateFactory.newLatLngZoom(LatLng(startPoint.latitude, startPoint.longitude), 16.0)
-                            )
-                        }
-                        trackDrawn.value = true
+                        styleRef = style
                     }
                 }
             }
