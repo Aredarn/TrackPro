@@ -136,12 +136,18 @@ fun TrackBuilderScreen(
                                     }
                                 }
                             } else {
+                                // Stop recording immediately (synchronously, before the save
+                                // coroutine even launches) so the GPS-update effect above stops
+                                // appending to gpsPointsList while we're reading/persisting it
+                                // below - otherwise Room can be iterating the list to build the
+                                // insert at the same moment new points are still being added to
+                                // it, which aborts the whole transaction and saves nothing.
+                                isLiveRecording = false
+                                val pointsToSave = gpsPointsList.toList()
                                 coroutineScope.launch {
-                                    // Save the points collected in the list to the DB
-                                    database.trackCoordinatesDao().insertTrackPart(gpsPointsList)
+                                    database.trackCoordinatesDao().insertTrackPart(pointsToSave)
                                     val isLapTrack = (trackMode == "Circuit")
-                                    endTrackBuilder(context, trackID,isLapTrack)
-                                    isLiveRecording = false
+                                    endTrackBuilder(context, trackID, isLapTrack)
                                     onBack()
                                 }
                             }
@@ -356,33 +362,37 @@ suspend fun endTrackBuilder(context: Context, trackId: Long, isLapTrack: Boolean
     val database = ESPDatabase.getInstance(context)
     val postProcess = PostProcessing(database)
 
+    // The dedup/lap-detection/distance loops below are CPU-bound and can take a
+    // noticeable amount of time for a longer recording (thousands of points) - run them
+    // off the caller's dispatcher so they don't block the UI thread.
+    withContext(Dispatchers.Default) {
+        // Explicitly wait and ensure the processed track data is retrieved
+        val track: List<TrackCoordinatesData> = postProcess.processTrackPoints(trackId, isLapTrack)
 
-    // Explicitly wait and ensure the processed track data is retrieved
-    val track: List<TrackCoordinatesData> = postProcess.processTrackPoints(trackId,isLapTrack)
+        if (track.isEmpty()) {
+            Log.w("endTrackBuilder", "No track points found for trackId=$trackId! Aborting.")
+            return@withContext
+        }
 
-    if (track.isEmpty()) {
-        Log.w("endTrackBuilder", "No track points found for trackId=$trackId! Aborting.")
-        return
-    }
+        // Map to lat/lon offsets (synchronously after suspend)
+        val latlon: List<LatLonOffset> = track.map { point ->
+            LatLonOffset(lat = point.latitude, lon = point.longitude)
+        }
+        Log.d("latlon:", latlon.toString())
 
-    // Map to lat/lon offsets (synchronously after suspend)
-    val latlon: List<LatLonOffset> = track.map { point ->
-        LatLonOffset(lat = point.latitude, lon = point.longitude)
-    }
-    Log.d("latlon:", latlon.toString())
+        // Explicitly calculate total distance (blocking inside suspend)
+        val helper = DragTimeCalculation(database = database)
+        val totalLengthMeters = helper.totalDistance(latlon)
+        // TrackMainData.totalLength is stored in kilometers - matches the bundled seed tracks
+        // (see res/raw/tracks.json), which are authored in km.
+        val totalLengthKm = totalLengthMeters / 1000.0
+        Log.d("Total length (km):", totalLengthKm.toString())
 
-    // Explicitly calculate total distance (blocking inside suspend)
-    val helper = DragTimeCalculation(database = database)
-    val totalLengthMeters = helper.totalDistance(latlon)
-    // TrackMainData.totalLength is stored in kilometers - matches the bundled seed tracks
-    // (see res/raw/tracks.json), which are authored in km.
-    val totalLengthKm = totalLengthMeters / 1000.0
-    Log.d("Total length (km):", totalLengthKm.toString())
-
-    // Perform database update on IO dispatcher (ensure proper thread)
-    withContext(Dispatchers.IO) {
-        val affectedRows = database.trackMainDao().updateTotalLength(trackId, totalLengthKm)
-        Log.d("DB Update", "Updated totalLength on trackId=$trackId, affected rows: $affectedRows")
+        // Perform database update on IO dispatcher (ensure proper thread)
+        withContext(Dispatchers.IO) {
+            val affectedRows = database.trackMainDao().updateTotalLength(trackId, totalLengthKm)
+            Log.d("DB Update", "Updated totalLength on trackId=$trackId, affected rows: $affectedRows")
+        }
     }
 }
 
