@@ -25,6 +25,7 @@ data class RawGPSData(
     val altitude: Double?,
     val timestamp: Long,
     val speed: Float?,
-    val fixQuality: Int?
+    val fixQuality: Int?,
+    val valid: Boolean? = null
 )
 

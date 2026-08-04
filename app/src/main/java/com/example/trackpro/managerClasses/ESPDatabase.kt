@@ -37,7 +37,7 @@ import com.example.trackpro.dataClasses.VehicleInformationData
     LapTimeData::class,
     LapInfoData::class,
     SectorTimeData::class
-], version = 3, exportSchema = false)
+], version = 4, exportSchema = false)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun rawGPSDataDao(): RawGPSDataDao

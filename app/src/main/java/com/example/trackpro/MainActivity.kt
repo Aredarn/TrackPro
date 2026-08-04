@@ -3,6 +3,7 @@ package com.example.trackpro
 import com.example.trackpro.extrasForUI.TrackProTheme
 import android.Manifest
 import android.app.Application
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -62,10 +63,12 @@ import androidx.navigation.navArgument
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.TrackSeeder
 import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
+import com.example.trackpro.managerClasses.gpsDataManagers.BluetoothClassicClient
 import com.example.trackpro.managerClasses.JsonReader
 import com.example.trackpro.managerClasses.SessionManager
 import com.example.trackpro.managerClasses.gpsDataManagers.GpsManager
 import com.example.trackpro.managerClasses.gpsDataManagers.PhoneGpsProvider
+import com.example.trackpro.models.GpsProviderType
 import com.example.trackpro.screens.vehicleScreens.CarCreationScreen
 import com.example.trackpro.screens.telemetricScreens.DragRaceScreen
 import com.example.trackpro.screens.ESPConnectionTestScreen
@@ -114,11 +117,76 @@ class TrackProApp : Application() {
         ESPTcpClient(serverAddress = config.first, port = config.second)
     }
 
+    // Lets Settings redirect the WiFi connection to a test simulator (e.g.
+    // esp32_simulator.py on a dev machine) instead of the real ESP32's fixed
+    // AP address, without editing config.json and rebuilding. Port always
+    // comes from config.json (the simulator listens on the same 4210 the
+    // firmware does) - only the host is swappable.
+    private val espTargetPrefs by lazy { getSharedPreferences("esp_target_prefs", MODE_PRIVATE) }
+    val useTestServer by lazy { MutableStateFlow(espTargetPrefs.getBoolean("use_test_server", false)) }
+    val testServerAddress by lazy { MutableStateFlow(espTargetPrefs.getString("test_server_address", "") ?: "") }
+
+    fun setUseTestServer(enabled: Boolean) {
+        espTargetPrefs.edit().putBoolean("use_test_server", enabled).apply()
+        useTestServer.value = enabled
+        applyEspTarget()
+    }
+
+    fun setTestServerAddress(address: String) {
+        espTargetPrefs.edit().putString("test_server_address", address).apply()
+        testServerAddress.value = address
+        if (useTestServer.value) applyEspTarget()
+    }
+
+    private fun applyEspTarget() {
+        val (realIp, port) = JsonReader.loadConfig(this)
+        val target = if (useTestServer.value && testServerAddress.value.isNotBlank()) {
+            testServerAddress.value
+        } else {
+            realIp
+        }
+        espTcpClient.updateTarget(target, port)
+    }
+
+    val bluetoothClassicClient: BluetoothClassicClient by lazy {
+        BluetoothClassicClient(this)
+    }
+
     val phoneGpsProvider: PhoneGpsProvider by lazy {
         PhoneGpsProvider(this)
     }
 
-    val useExternalGps = MutableStateFlow(true)
+    // Persisted like useDarkTheme/useMetricUnits below (unlike the old useExternalGps,
+    // which reset to WiFi every launch) — avoids surprising the user mid-track-day.
+    private val gpsSourcePrefs by lazy { getSharedPreferences("gps_source_prefs", MODE_PRIVATE) }
+    val gpsSource by lazy {
+        val stored = gpsSourcePrefs.getString("source", GpsProviderType.WIFI.name)
+        val initial = runCatching { GpsProviderType.valueOf(stored ?: GpsProviderType.WIFI.name) }
+            .getOrDefault(GpsProviderType.WIFI)
+        MutableStateFlow(initial)
+    }
+
+    fun setGpsSource(source: GpsProviderType) {
+        gpsSourcePrefs.edit().putString("source", source.name).apply()
+        gpsSource.value = source
+    }
+
+    private val ratePrefs by lazy { getSharedPreferences("gps_rate_prefs", MODE_PRIVATE) }
+    val selectedRateHz by lazy { MutableStateFlow(ratePrefs.getInt("rate_hz", 10)) }
+
+    fun setRateHz(hz: Int) {
+        ratePrefs.edit().putInt("rate_hz", hz).apply()
+        selectedRateHz.value = hz
+        gpsManager.sendCommandToActive("RATE:$hz\n")
+    }
+
+    private val btDevicePrefs by lazy { getSharedPreferences("bluetooth_prefs", MODE_PRIVATE) }
+    val selectedBtDeviceMac by lazy { MutableStateFlow(btDevicePrefs.getString("device_mac", null)) }
+
+    fun setSelectedBtDevice(mac: String) {
+        btDevicePrefs.edit().putString("device_mac", mac).apply()
+        selectedBtDeviceMac.value = mac
+    }
 
     private val themePrefs by lazy { getSharedPreferences("theme_prefs", MODE_PRIVATE) }
     val useDarkTheme by lazy { MutableStateFlow(themePrefs.getBoolean("dark_theme", true)) }
@@ -138,15 +206,21 @@ class TrackProApp : Application() {
 
     val gpsManager: GpsManager by lazy {
         GpsManager(
-            espProvider = espTcpClient,
+            wifiProvider = espTcpClient,
+            bluetoothProvider = bluetoothClassicClient,
             phoneProvider = phoneGpsProvider,
-            useExternalGps = useExternalGps
+            gpsSource = gpsSource,
+            selectedRateHz = selectedRateHz
         )
     }
 
     override fun onCreate() {
         super.onCreate()
         MapLibre.getInstance(this)
+        // Apply a persisted test-server redirect (if any) before the first
+        // connection attempt, so a restart doesn't briefly dial the real ESP32
+        // before switching over.
+        applyEspTarget()
         // Start the active provider immediately at app launch
         gpsManager.startActiveProvider()
 
@@ -173,6 +247,23 @@ class MainActivity : ComponentActivity() {
         if (!fineGranted && !coarseGranted) {
             // User denied — phone GPS won't work, ESP32 still will
             Log.w("Permissions", "Location permission denied — phone GPS unavailable")
+        }
+    }
+
+    // Requested contextually (only when the user opens the Bluetooth device
+    // picker in Settings), unlike the eager location request above — Bluetooth
+    // is opt-in/rare, location is core to the app on every launch.
+    private val bluetoothPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[Manifest.permission.BLUETOOTH_CONNECT] != true) {
+            Log.w("Permissions", "Bluetooth permission denied — Bluetooth GPS source unavailable")
+        }
+    }
+
+    private fun requestBluetoothPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            bluetoothPermissionRequest.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
         }
     }
 
@@ -220,7 +311,7 @@ class MainActivity : ComponentActivity() {
                         DragRaceScreen(database, sessionManager, vehicleFULLViewModel)
                     }
                     composable("esptest") {
-                        ESPConnectionTestScreen()
+                        ESPConnectionTestScreen(onNavigateToSettings = { navController.navigate("settings") })
                     }
                     composable(
                         "track/{trackId}",
@@ -286,7 +377,10 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(route = "settings") {
-                        SettingsScreen(onBack = { navController.popBackStack() })
+                        SettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            onRequestBluetoothPermission = { requestBluetoothPermissionIfNeeded() }
+                        )
                     }
                     // In your NavHost setup
                     composable("lap_detail/{sessionId}/{lapId}") { backStackEntry ->
