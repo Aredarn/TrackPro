@@ -66,7 +66,7 @@ fun DragTimesListView(
         Column(modifier = Modifier.fillMaxSize()) {
             AppTopBar(
                 title = "Drag Records",
-                accent = TrackProTheme.colors.accentCyan,
+                accent = TrackProTheme.colors.accent,
                 trailing = {
                     Text(
                         "${dragSessions.size} sessions",
@@ -105,7 +105,7 @@ fun ExpandableSessionGroup(
     navController: NavController
 ) {
     ExpandableGroup(
-        accent = TrackProTheme.colors.accentCyan,
+        accent = TrackProTheme.colors.accent,
         header = {
             Column(modifier = Modifier.weight(1f)) {
                 Text(groupTitle, style = TrackProType.titleMedium.copy(fontSize = 13.sp), color = TrackProTheme.colors.textPrimary)
@@ -132,7 +132,7 @@ fun ExpandableSessionGroup(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            Modifier.size(6.dp).background(TrackProTheme.colors.accentCyan, RoundedCornerShape(100))
+                            Modifier.size(6.dp).background(TrackProTheme.colors.accentMuted, RoundedCornerShape(100))
                         )
                         Spacer(Modifier.width(Spacing.sm))
                         Text(

@@ -431,7 +431,7 @@ fun MainScreen(
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
-                                .background(TrackProTheme.colors.accentCyan, CircleShape)
+                                .background(TrackProTheme.colors.accent, CircleShape)
                         )
                         Spacer(Modifier.width(10.dp))
                         Column {
@@ -455,13 +455,13 @@ fun MainScreen(
                     DrawerItem(
                         icon = Icons.Default.RocketLaunch,
                         label = "Drag Sessions",
-                        tint = TrackProTheme.colors.accentCyan,
+                        tint = TrackProTheme.colors.accentMuted,
                         onClick = { onNavigateToDragTimesList(); scope.launch { drawerState.close() } }
                     )
                     DrawerItem(
                         icon = Icons.Default.FlagCircle,
                         label = "Track Sessions",
-                        tint = TrackProTheme.colors.accentBlue,
+                        tint = TrackProTheme.colors.accentMuted,
                         onClick = { onNavigateToTimeAttackListView(); scope.launch { drawerState.close() } }
                     )
                 }
@@ -476,13 +476,13 @@ fun MainScreen(
                     DrawerItem(
                         icon = Icons.Default.Timelapse,
                         label = "My Tracks",
-                        tint = TrackProTheme.colors.accentAmber,
+                        tint = TrackProTheme.colors.accentMuted,
                         onClick = { onNavigateToTrackListScreen(); scope.launch { drawerState.close() } }
                     )
                     DrawerItem(
                         icon = Icons.Default.CarRepair,
                         label = "My Vehicles",
-                        tint = TrackProTheme.colors.accentAmber,
+                        tint = TrackProTheme.colors.accentMuted,
                         onClick = { onNavigateToVehicleList(); scope.launch { drawerState.close() } }
                     )
                 }
@@ -557,7 +557,7 @@ fun MainScreen(
                             modifier = Modifier
                                 .width(28.dp)
                                 .height(2.dp)
-                                .background(TrackProTheme.colors.accentCyan)
+                                .background(TrackProTheme.colors.accent)
                         )
                         Spacer(Modifier.height(10.dp))
                         Text(
@@ -590,7 +590,7 @@ fun MainScreen(
                         icon = Icons.Default.RocketLaunch,
                         title = "DRAG TIMING",
                         subtitle = "0–100 · ¼ mile · speed trace",
-                        accentColor = TrackProTheme.colors.accentCyan,
+                        accentColor = TrackProTheme.colors.accentMuted,
                         onClick = onNavigateToDragRace,
                         fullWidth = true
                     )
@@ -599,7 +599,7 @@ fun MainScreen(
                         icon = Icons.Default.FlagCircle,
                         title = "LAP TIMING",
                         subtitle = "Circuit & sprint · live delta · best lap",
-                        accentColor = TrackProTheme.colors.accentBlue,
+                        accentColor = TrackProTheme.colors.accentMuted,
                         onClick = onNavigateToTrackVehicleSelector,
                         fullWidth = true
                     )
@@ -620,7 +620,7 @@ fun MainScreen(
                                 icon = Icons.Default.CarRepair,
                                 title = "ADD VEHICLES",
                                 subtitle = "Create your own vehicles",
-                                accentColor = TrackProTheme.colors.accentAmber,
+                                accentColor = TrackProTheme.colors.accentMuted,
                                 onClick = onNavigateToVehicleCreatorScreen,
                                 halfWidth  = true
                             )
@@ -630,7 +630,7 @@ fun MainScreen(
                                 icon = Icons.Default.Timelapse,
                                 title = "TRACK\nBUILDER",
                                 subtitle = "Define tracks",
-                                accentColor = TrackProTheme.colors.accentAmber,
+                                accentColor = TrackProTheme.colors.accentMuted,
                                 onClick = onNavigateToTrackBuilder,
                                 halfWidth  = true
                             )

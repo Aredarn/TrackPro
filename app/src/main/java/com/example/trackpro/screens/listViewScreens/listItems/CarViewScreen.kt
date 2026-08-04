@@ -69,7 +69,7 @@ fun CarViewScreen(vehicleId: Long) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(
-                        color = TrackProTheme.colors.accentAmber,
+                        color = TrackProTheme.colors.accent,
                         modifier = Modifier.size(36.dp),
                         strokeWidth = 2.dp
                     )
@@ -81,7 +81,7 @@ fun CarViewScreen(vehicleId: Long) {
             val vehicle = vehicleInfo!!
             Column(modifier = Modifier.fillMaxSize()) {
 
-                AppTopBar(title = "Vehicle Profile", accent = TrackProTheme.colors.accentAmber)
+                AppTopBar(title = "Vehicle Profile", accent = TrackProTheme.colors.accent)
 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
 
@@ -117,9 +117,9 @@ fun CarViewScreen(vehicleId: Long) {
                                 .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            StatCell(label = "Power", value = "${vehicle.horsepower}", unit = "hp", valueColor = TrackProTheme.colors.accentAmber, size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
-                            StatCell(label = "Torque", value = vehicle.torque?.toString() ?: "—", unit = "Nm", valueColor = TrackProTheme.colors.accentAmber, size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
-                            StatCell(label = "Weight", value = "${vehicle.weight}", unit = "kg", valueColor = TrackProTheme.colors.accentAmber, size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
+                            StatCell(label = "Power", value = "${vehicle.horsepower}", unit = "hp", size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
+                            StatCell(label = "Torque", value = vehicle.torque?.toString() ?: "—", unit = "Nm", size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
+                            StatCell(label = "Weight", value = "${vehicle.weight}", unit = "kg", size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
                         }
                         HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                     }
@@ -137,7 +137,6 @@ fun CarViewScreen(vehicleId: Long) {
                                 label = "Top Speed",
                                 value = vehicle.topSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "—",
                                 unit = UnitFormatter.speedUnitLabel(useMetric).lowercase(),
-                                valueColor = TrackProTheme.colors.accentAmber,
                                 size = StatCellSize.Large,
                                 horizontalAlignment = Alignment.CenterHorizontally
                             )
@@ -145,14 +144,12 @@ fun CarViewScreen(vehicleId: Long) {
                                 label = "0–100",
                                 value = vehicle.acceleration?.toString() ?: "—",
                                 unit = "sec",
-                                valueColor = TrackProTheme.colors.accentAmber,
                                 size = StatCellSize.Large,
                                 horizontalAlignment = Alignment.CenterHorizontally
                             )
                             StatCell(
                                 label = "Drivetrain",
                                 value = vehicle.drivetrain,
-                                valueColor = TrackProTheme.colors.accentAmber,
                                 size = StatCellSize.Large,
                                 horizontalAlignment = Alignment.CenterHorizontally
                             )

@@ -100,12 +100,12 @@ fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
                     GpsProviderType.BLUETOOTH -> "ESP32 (Bluetooth) Mode"
                     GpsProviderType.PHONE_GPS -> "Phone GPS Mode"
                 },
-                accent = if (isConnected) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentCyan,
+                accent = if (isConnected) TrackProTheme.colors.accent else TrackProTheme.colors.textFaint,
                 trailing = {
                     Text(
                         text = "Change",
                         style = TrackProType.label,
-                        color = TrackProTheme.colors.accentCyan,
+                        color = TrackProTheme.colors.accent,
                         modifier = Modifier.clickable { onNavigateToSettings() }
                     )
                 }
@@ -162,7 +162,7 @@ fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
                     StatCell(
                         label = "Status",
                         value = if (isConnected) "Live" else "Offline",
-                        valueColor = if (isConnected) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentCyan,
+                        valueColor = if (isConnected) TrackProTheme.colors.deltaGood else TrackProTheme.colors.textMuted,
                         size = StatCellSize.Small,
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
@@ -170,7 +170,7 @@ fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
                     StatCell(
                         label = "Fix",
                         value = if (fix) "OK" else "Wait",
-                        valueColor = if (fix) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentAmber,
+                        valueColor = if (fix) TrackProTheme.colors.deltaGood else TrackProTheme.colors.textMuted,
                         size = StatCellSize.Small,
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
@@ -192,7 +192,7 @@ fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
                         GpsProviderType.WIFI -> TelemetryRow(
                             if (useTestServer) "Remote IP (Test)" else "Remote IP",
                             "$ip:$port",
-                            if (useTestServer) TrackProTheme.colors.accentAmber else TrackProTheme.colors.textPrimary,
+                            if (useTestServer) TrackProTheme.colors.accent else TrackProTheme.colors.textPrimary,
                             TrackProTheme.colors.textMuted
                         )
                         GpsProviderType.BLUETOOTH -> TelemetryRow("Paired Device", pairedDeviceLabel, TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
@@ -209,7 +209,7 @@ fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
                             confirmedRateHz != null -> "$confirmedRateHz Hz"
                             else -> "$selectedRateHz Hz (pending)"
                         },
-                        if (gpsSource != GpsProviderType.PHONE_GPS) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentAmber,
+                        TrackProTheme.colors.textPrimary,
                         TrackProTheme.colors.textMuted
                     )
                 }
@@ -227,7 +227,7 @@ fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
                 ) {
                     Text(
                         text = gpsData?.toString() ?: "Awaiting data stream...",
-                        color = if (gpsData != null) TrackProTheme.colors.accentBlue else TrackProTheme.colors.textMuted,
+                        color = if (gpsData != null) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted,
                         fontSize = 10.sp,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                         lineHeight = 16.sp

@@ -69,7 +69,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
 
             AppTopBar(
                 title = "My Vehicles",
-                accent = TrackProTheme.colors.accentAmber,
+                accent = TrackProTheme.colors.accent,
                 trailing = {
                     Text(
                         text = "${vehicles.size} cars",
@@ -96,7 +96,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
                             navController = navController,
                             bgCard = TrackProTheme.colors.bgCard,
                             bgElevated = TrackProTheme.colors.bgElevated,
-                            accentAmber = TrackProTheme.colors.accentAmber,
+                            accent = TrackProTheme.colors.accent,
                             dangerColor = TrackProTheme.colors.danger,
                             textPrimary = TrackProTheme.colors.textPrimary,
                             textMuted = TrackProTheme.colors.textMuted,
@@ -121,7 +121,7 @@ fun VehicleCard(
     navController: NavController,
     bgCard: Color,
     bgElevated: Color,
-    accentAmber: Color,
+    accent: Color,
     dangerColor: Color,
     textPrimary: Color,
     textMuted: Color,
@@ -168,7 +168,7 @@ fun VehicleCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        accentAmber.copy(alpha = 0.12f),
+                        TrackProTheme.colors.bgElevated,
                         RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
                     )
                     .padding(horizontal = Spacing.md, vertical = Spacing.sm)
@@ -184,13 +184,13 @@ fun VehicleCard(
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(accentAmber.copy(alpha = 0.15f), TrackProShapes.badge)
+                                .background(bgCard, TrackProShapes.badge)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = vehicle.fuelType.uppercase(),
                                 style = TrackProType.label.copy(fontSize = 9.sp),
-                                color = accentAmber
+                                color = textMuted
                             )
                         }
                         Text(
@@ -251,15 +251,15 @@ fun VehicleCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StatCell(label = "Power", value = "${vehicle.horsepower}", unit = "hp", valueColor = accentAmber, horizontalAlignment = Alignment.CenterHorizontally)
+                StatCell(label = "Power", value = "${vehicle.horsepower}", unit = "hp", horizontalAlignment = Alignment.CenterHorizontally)
                 StatCellDivider()
-                StatCell(label = "Torque", value = vehicle.torque?.toString() ?: "—", unit = "Nm", valueColor = accentAmber, horizontalAlignment = Alignment.CenterHorizontally)
+                StatCell(label = "Torque", value = vehicle.torque?.toString() ?: "—", unit = "Nm", horizontalAlignment = Alignment.CenterHorizontally)
                 StatCellDivider()
-                StatCell(label = "Weight", value = "${vehicle.weight}", unit = "kg", valueColor = accentAmber, horizontalAlignment = Alignment.CenterHorizontally)
+                StatCell(label = "Weight", value = "${vehicle.weight}", unit = "kg", horizontalAlignment = Alignment.CenterHorizontally)
                 Text(
                     text = "View",
                     style = TrackProType.label,
-                    color = accentAmber.copy(alpha = 0.8f)
+                    color = accent
                 )
             }
         }

@@ -83,7 +83,7 @@ fun CarCreationScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            AppTopBar(title = "Vehicle Setup", accent = TrackProTheme.colors.accentAmber)
+            AppTopBar(title = "Vehicle Setup", accent = TrackProTheme.colors.accent)
 
             Column(
                 modifier = Modifier
@@ -95,28 +95,28 @@ fun CarCreationScreen(
                 AppCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
 
                     SectionLabel("Basic Info (Required)", modifier = Modifier.padding(vertical = Spacing.sm))
-                    CustomTextField("Manufacturer", manufacturer, leadingIcon = Icons.Default.Business, accent = TrackProTheme.colors.accentAmber) { manufacturer = it }
-                    CustomTextField("Model", model, leadingIcon = Icons.Default.DirectionsCar, accent = TrackProTheme.colors.accentAmber) { model = it }
-                    CustomTextField("Year", year, leadingIcon = Icons.Default.Event, accent = TrackProTheme.colors.accentAmber) { year = it }
+                    CustomTextField("Manufacturer", manufacturer, leadingIcon = Icons.Default.Business) { manufacturer = it }
+                    CustomTextField("Model", model, leadingIcon = Icons.Default.DirectionsCar) { model = it }
+                    CustomTextField("Year", year, leadingIcon = Icons.Default.Event) { year = it }
 
                     SectionLabel("Performance", modifier = Modifier.padding(vertical = Spacing.sm))
-                    CustomTextField("Horsepower", horsepower, true, Icons.Default.FlashOn, accent = TrackProTheme.colors.accentAmber) { horsepower = it }
-                    CustomTextField("Torque (Nm)", torque, true, Icons.Default.Settings, accent = TrackProTheme.colors.accentAmber) { torque = it }
-                    CustomTextField("Weight (kg)", weight, true, Icons.Default.FitnessCenter, accent = TrackProTheme.colors.accentAmber) { weight = it }
-                    CustomTextField("Top Speed (${UnitFormatter.speedUnitLabel(useMetric)})", topSpeed, true, Icons.Default.Speed, accent = TrackProTheme.colors.accentAmber) { topSpeed = it }
+                    CustomTextField("Horsepower", horsepower, true, Icons.Default.FlashOn) { horsepower = it }
+                    CustomTextField("Torque (Nm)", torque, true, Icons.Default.Settings) { torque = it }
+                    CustomTextField("Weight (kg)", weight, true, Icons.Default.FitnessCenter) { weight = it }
+                    CustomTextField("Top Speed (${UnitFormatter.speedUnitLabel(useMetric)})", topSpeed, true, Icons.Default.Speed) { topSpeed = it }
                     CustomTextField(
                         if (useMetric) "0-100 KM/H (s)" else "0-60 MPH (s)",
-                        acceleration, true, Icons.Default.Timer, accent = TrackProTheme.colors.accentAmber
+                        acceleration, true, Icons.Default.Timer
                     ) { acceleration = it }
-                    CustomTextField("Fuel Capacity (L)", fuelCapacity, true, Icons.Default.LocalGasStation, accent = TrackProTheme.colors.accentAmber) { fuelCapacity = it }
+                    CustomTextField("Fuel Capacity (L)", fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
 
                     SectionLabel("Configuration", modifier = Modifier.padding(vertical = Spacing.sm))
-                    AppDropdownField("Engine Type", jsonOptions.engineTypes, selectedEngineType, { it }, { selectedEngineType = it }, accent = TrackProTheme.colors.accentAmber)
-                    AppDropdownField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain, { it }, { selectedDrivetrain = it }, accent = TrackProTheme.colors.accentAmber)
-                    AppDropdownField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType, { it }, { selectedFuelType = it }, accent = TrackProTheme.colors.accentAmber)
-                    AppDropdownField("Tire Type", jsonOptions.tireTypes, selectedTireType, { it }, { selectedTireType = it }, accent = TrackProTheme.colors.accentAmber)
-                    AppDropdownField("Transmission", jsonOptions.transmissions, selectedTransmission, { it }, { selectedTransmission = it }, accent = TrackProTheme.colors.accentAmber)
-                    AppDropdownField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType, { it }, { selectedSuspensionType = it }, accent = TrackProTheme.colors.accentAmber)
+                    AppDropdownField("Engine Type", jsonOptions.engineTypes, selectedEngineType, { it }, { selectedEngineType = it })
+                    AppDropdownField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain, { it }, { selectedDrivetrain = it })
+                    AppDropdownField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType, { it }, { selectedFuelType = it })
+                    AppDropdownField("Tire Type", jsonOptions.tireTypes, selectedTireType, { it }, { selectedTireType = it })
+                    AppDropdownField("Transmission", jsonOptions.transmissions, selectedTransmission, { it }, { selectedTransmission = it })
+                    AppDropdownField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType, { it }, { selectedSuspensionType = it })
 
                     Spacer(modifier = Modifier.height(Spacing.md))
 

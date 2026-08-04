@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -210,7 +209,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             .fillMaxSize()
             .background(TrackProTheme.colors.bgDeep)
     ) {
-        AppTopBar(title = "Session Overview", accent = TrackProTheme.colors.accentCyan, onBack = onBack)
+        AppTopBar(title = "Session Overview", accent = TrackProTheme.colors.accent, onBack = onBack)
 
         // ── Compact stats panel ───────────────────────────────
         Column(
@@ -298,7 +297,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                         Box(
                             modifier = Modifier
                                 .background(
-                                    if (active) TrackProTheme.colors.accentCyan else TrackProTheme.colors.sectorLine,
+                                    if (active) TrackProTheme.colors.accent else TrackProTheme.colors.sectorLine,
                                     RoundedCornerShape(3.dp)
                                 )
                                 .clickable { xAxisInMeters = isMeters }
@@ -307,7 +306,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                             Text(
                                 text = label,
                                 style = TrackProType.body.copy(fontSize = 9.sp),
-                                color = if (active) Color.Black else TrackProTheme.colors.textMuted
+                                color = if (active) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
                             )
                         }
                     }
@@ -317,7 +316,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     Box(
                         modifier = Modifier
                             .background(
-                                if (active) TrackProTheme.colors.accentAmber else TrackProTheme.colors.sectorLine,
+                                if (active) TrackProTheme.colors.accent else TrackProTheme.colors.sectorLine,
                                 RoundedCornerShape(3.dp)
                             )
                             .clickable { showMap = isMap }
@@ -326,7 +325,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                         Text(
                             text = label,
                             style = TrackProType.body.copy(fontSize = 9.sp),
-                            color = if (active) Color.Black else TrackProTheme.colors.textMuted
+                            color = if (active) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
                         )
                     }
                 }

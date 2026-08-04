@@ -106,7 +106,7 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
                 SettingsToggleRow(
                     label = "Theme",
                     valueText = if (useDarkTheme) "Dark" else "Light",
-                    valueColor = TrackProTheme.colors.accentCyan,
+                    valueColor = TrackProTheme.colors.textMuted,
                     buttonText = if (useDarkTheme) "Use Light" else "Use Dark",
                     isActive = true,
                     onClick = { app.setDarkTheme(!useDarkTheme) }
@@ -119,7 +119,7 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
                 SettingsToggleRow(
                     label = "Speed & Distance",
                     valueText = if (useMetric) "Metric (km/h, km)" else "Imperial (mph, mi)",
-                    valueColor = TrackProTheme.colors.accentCyan,
+                    valueColor = TrackProTheme.colors.textMuted,
                     buttonText = if (useMetric) "Use mph" else "Use km/h",
                     isActive = true,
                     onClick = { app.setMetricUnits(!useMetric) }
@@ -211,14 +211,14 @@ private fun EspTargetRow(
                 Text(
                     text = if (useTestServer) "Test Simulator" else "Real Device (192.168.4.1)",
                     style = TrackProType.body,
-                    color = if (useTestServer) TrackProTheme.colors.accentAmber else TrackProTheme.colors.accentCyan
+                    color = TrackProTheme.colors.textMuted
                 )
             }
             ToggleChip(
                 text = if (useTestServer) "Use Real Device" else "Use Test Simulator",
                 selected = useTestServer,
                 onClick = { onToggle(!useTestServer) },
-                accent = TrackProTheme.colors.accentAmber
+                accent = TrackProTheme.colors.accent
             )
         }
 
@@ -234,7 +234,7 @@ private fun EspTargetRow(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = TrackProTheme.colors.textPrimary,
                     unfocusedTextColor = TrackProTheme.colors.textPrimary,
-                    focusedBorderColor = TrackProTheme.colors.accentAmber,
+                    focusedBorderColor = TrackProTheme.colors.accent,
                     unfocusedBorderColor = TrackProTheme.colors.sectorLine
                 )
             )
@@ -251,7 +251,10 @@ private fun GpsRateRow(selectedHz: Int, confirmedHz: Int?, onSelect: (Int) -> Un
                 Text(
                     text = if (confirmedHz == selectedHz) "· confirmed" else "· device at ${confirmedHz}Hz",
                     style = TrackProType.body.copy(fontSize = 10.sp),
-                    color = if (confirmedHz == selectedHz) TrackProTheme.colors.accentCyan else TrackProTheme.colors.accentAmber
+                    // A mismatch between requested and confirmed rate is a real problem
+                    // worth flagging, so this is one of the few places color is earned.
+                    color = if (confirmedHz == selectedHz) TrackProTheme.colors.deltaGood
+                            else TrackProTheme.colors.deltaBad
                 )
             }
         }
@@ -300,7 +303,7 @@ private fun SettingsToggleRow(
             text = buttonText,
             selected = isActive,
             onClick = onClick,
-            accent = TrackProTheme.colors.accentCyan
+            accent = TrackProTheme.colors.accent
         )
     }
 }

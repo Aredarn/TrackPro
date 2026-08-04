@@ -32,12 +32,15 @@ object TrackProTheme {
 private fun TrackProColorScheme.toMaterialColorScheme(dark: Boolean): androidx.compose.material3.ColorScheme =
     if (dark) {
         darkColorScheme(
-            primary = accentCyan,
-            onPrimary = Color.Black,
-            secondary = accentBlue,
-            onSecondary = Color.Black,
-            tertiary = accentAmber,
-            onTertiary = Color.Black,
+            // primary/secondary/tertiary intentionally all map to the same accent - the
+            // palette has exactly one. Material needs three slots filled; that is not a
+            // reason to invent two more brand colors.
+            primary = accent,
+            onPrimary = onAccent,
+            secondary = accent,
+            onSecondary = onAccent,
+            tertiary = accent,
+            onTertiary = onAccent,
             background = bgDeep,
             onBackground = textPrimary,
             surface = bgCard,
@@ -46,16 +49,16 @@ private fun TrackProColorScheme.toMaterialColorScheme(dark: Boolean): androidx.c
             onSurfaceVariant = textMuted,
             outline = sectorLine,
             error = deltaBad,
-            onError = Color.White
+            onError = Color.Black
         )
     } else {
         lightColorScheme(
-            primary = accentCyan,
-            onPrimary = Color.Black,
-            secondary = accentBlue,
-            onSecondary = Color.Black,
-            tertiary = accentAmber,
-            onTertiary = Color.Black,
+            primary = accent,
+            onPrimary = onAccent,
+            secondary = accent,
+            onSecondary = onAccent,
+            tertiary = accent,
+            onTertiary = onAccent,
             background = bgDeep,
             onBackground = textPrimary,
             surface = bgCard,
