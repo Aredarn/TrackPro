@@ -115,7 +115,7 @@ fun TrackBuilderScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(TrackProTheme.colors.bgDeep)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            AppTopBar(title = "Track Builder", accent = TrackProTheme.colors.accentAmber, onBack = onBack)
+            AppTopBar(title = "Track Builder", accent = TrackProTheme.colors.accent, onBack = onBack)
 
             Column(modifier = Modifier.padding(Spacing.md)) {
                 TrackInfoCard(trackName, countryName, trackMode) { showInfoDialog = true }
@@ -301,7 +301,7 @@ private fun TrackInfoCard(name: String, country: String, mode: String, onClick: 
                     style = TrackProType.titleMedium,
                     color = TrackProTheme.colors.textPrimary
                 )
-                Text("Mode: ${mode.uppercase()}", style = TrackProType.body.copy(fontSize = 12.sp), color = TrackProTheme.colors.accentCyan)
+                Text("Mode: ${mode.uppercase()}", style = TrackProType.body.copy(fontSize = 12.sp), color = TrackProTheme.colors.accent)
             }
             PrimaryButton(
                 text = "Edit",
@@ -320,7 +320,7 @@ private fun MarkSectorButton(count: Int, enabled: Boolean, onClick: () -> Unit) 
         text = "Mark Sector ${count + 1}",
         onClick = onClick,
         enabled = enabled,
-        accent = TrackProTheme.colors.accentBlue,
+        accent = TrackProTheme.colors.accent,
         modifier = Modifier.fillMaxWidth().height(48.dp)
     )
 }
@@ -415,7 +415,7 @@ private fun ManualControls(onUndo: () -> Unit, onSave: () -> Unit, canSave: Bool
             text = "Save Track",
             onClick = onSave,
             enabled = canSave,
-            accent = TrackProTheme.colors.accentCyan,
+            accent = TrackProTheme.colors.accent,
             modifier = Modifier.weight(1f).height(56.dp)
         )
     }
@@ -461,7 +461,7 @@ fun TrackInfoAlert(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name, country, mode) }) {
-                Text("DONE", color = TrackProTheme.colors.accentCyan, fontWeight = FontWeight.Bold)
+                Text("DONE", color = TrackProTheme.colors.accent, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {

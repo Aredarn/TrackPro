@@ -36,7 +36,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -155,7 +154,7 @@ fun DragRaceScreen(
         // 1. TOP STATUS BAR
         AppTopBar(
             title = "Drag Mode",
-            accent = TrackProTheme.colors.accentCyan,
+            accent = TrackProTheme.colors.accent,
             trailing = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -165,7 +164,7 @@ fun DragRaceScreen(
                         Text(
                             elapsedTime,
                             style = TrackProType.statValue.copy(fontSize = 13.sp),
-                            color = TrackProTheme.colors.accentCyan
+                            color = TrackProTheme.colors.accent
                         )
                     }
                     Text(
@@ -280,7 +279,7 @@ fun DragRaceScreen(
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.md),
                 padding = Spacing.lg,
-                borderColor = if (isSessionActive) TrackProTheme.colors.accentCyan.copy(alpha = 0.5f)
+                borderColor = if (isSessionActive) TrackProTheme.colors.accent.copy(alpha = 0.5f)
                     else TrackProTheme.colors.sectorLine
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -297,7 +296,7 @@ fun DragRaceScreen(
                         Text(
                             gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0",
                             style = TrackProType.displayNumeric,
-                            color = if (isSessionActive) TrackProTheme.colors.accentCyan
+                            color = if (isSessionActive) TrackProTheme.colors.accent
                             else TrackProTheme.colors.textPrimary
                         )
                         Text(
@@ -505,8 +504,8 @@ fun DragRaceScreen(
                     }
                 },
                 enabled = selectedVehicle != null,
-                accent = if (isSessionActive) TrackProTheme.colors.bgElevated else TrackProTheme.colors.accentCyan,
-                contentColor = if (isSessionActive) TrackProTheme.colors.accentCyan else null,
+                accent = if (isSessionActive) TrackProTheme.colors.bgElevated else TrackProTheme.colors.accent,
+                contentColor = if (isSessionActive) TrackProTheme.colors.accent else null,
                 modifier = Modifier.weight(1f).height(56.dp)
             )
         }
@@ -518,15 +517,16 @@ fun DragMetricCard(
     metric: DragMetricDisplay,
     modifier: Modifier = Modifier
 ) {
+    // "Achieved" is signalled by a tinted border plus a small accent dot, and the value
+    // brightening from dim to full. An earlier version also washed the whole tile in
+    // accent and colored the label - four cues on eleven tiles at once, which is what
+    // made this grid read as noisy.
     AppCard(
         modifier = modifier,
-        borderColor = if (metric.achieved) TrackProTheme.colors.accentCyan.copy(alpha = 0.6f) else TrackProTheme.colors.sectorLine
+        borderColor = if (metric.achieved) TrackProTheme.colors.accent.copy(alpha = 0.45f)
+                      else TrackProTheme.colors.sectorLine
     ) {
-        Column(
-            modifier = Modifier.background(
-                if (metric.achieved) TrackProTheme.colors.accentCyan.copy(alpha = 0.08f) else Color.Transparent
-            )
-        ) {
+        Column {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -535,13 +535,13 @@ fun DragMetricCard(
                 Text(
                     metric.label.uppercase(),
                     style = TrackProType.label,
-                    color = if (metric.achieved) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textFaint
+                    color = if (metric.achieved) TrackProTheme.colors.textMuted else TrackProTheme.colors.textFaint
                 )
                 if (metric.achieved) {
                     Box(
                         Modifier
-                            .size(6.dp)
-                            .background(TrackProTheme.colors.accentCyan, CircleShape)
+                            .size(5.dp)
+                            .background(TrackProTheme.colors.accent, CircleShape)
                     )
                 }
             }

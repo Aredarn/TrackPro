@@ -1,5 +1,6 @@
 package com.example.trackpro.screens
 
+import android.annotation.SuppressLint
 import android.graphics.Typeface
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -49,24 +50,37 @@ import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.JsonReader
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
+import com.example.trackpro.models.GpsProviderType
 import kotlin.math.cos
 import kotlin.math.sin
 
+@SuppressLint("MissingPermission")
 @Composable
-fun ESPConnectionTestScreen() {
+fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
 
     // 1. Unified State Collection
-    val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
-    val gpsData     by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
-    val useExternal by app.useExternalGps.collectAsState()
-    val useMetric   by app.useMetricUnits.collectAsState()
+    val isConnected     by app.gpsManager.connectionStatus.collectAsState(initial = false)
+    val gpsData         by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
+    val gpsSource       by app.gpsSource.collectAsState()
+    val selectedRateHz  by app.selectedRateHz.collectAsState()
+    val confirmedRateHz by app.gpsManager.confirmedRateHz.collectAsState(initial = null)
+    val selectedBtDeviceMac by app.selectedBtDeviceMac.collectAsState()
+    val useTestServer   by app.useTestServer.collectAsState()
+    val testServerAddress by app.testServerAddress.collectAsState()
+    val useMetric       by app.useMetricUnits.collectAsState()
 
     // 2. Configuration for display
     val config = remember { JsonReader.loadConfig(context) }
-    val ip = config.first
+    val ip = if (useTestServer && testServerAddress.isNotBlank()) testServerAddress else config.first
     val port = config.second
+    val pairedDeviceLabel = remember(selectedBtDeviceMac) {
+        app.bluetoothClassicClient.getBondedDevices()
+            .find { it.address == selectedBtDeviceMac }
+            ?.let { it.name ?: it.address }
+            ?: "None selected"
+    }
 
     // 3. Derived UI values
     val speed = gpsData?.speed ?: 0f
@@ -81,14 +95,18 @@ fun ESPConnectionTestScreen() {
         Column(modifier = Modifier.fillMaxSize()) {
 
             AppTopBar(
-                title = if (useExternal) "ESP32 Mode" else "Phone GPS Mode",
-                accent = if (isConnected) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentCyan,
+                title = when (gpsSource) {
+                    GpsProviderType.WIFI -> "ESP32 (WiFi) Mode"
+                    GpsProviderType.BLUETOOTH -> "ESP32 (Bluetooth) Mode"
+                    GpsProviderType.PHONE_GPS -> "Phone GPS Mode"
+                },
+                accent = if (isConnected) TrackProTheme.colors.accent else TrackProTheme.colors.textFaint,
                 trailing = {
                     Text(
-                        text = "Switch",
+                        text = "Change",
                         style = TrackProType.label,
-                        color = TrackProTheme.colors.accentCyan,
-                        modifier = Modifier.clickable { app.useExternalGps.value = !useExternal }
+                        color = TrackProTheme.colors.accent,
+                        modifier = Modifier.clickable { onNavigateToSettings() }
                     )
                 }
             )
@@ -132,7 +150,11 @@ fun ESPConnectionTestScreen() {
                 ) {
                     StatCell(
                         label = "Source",
-                        value = if (useExternal) "ESP32" else "Internal",
+                        value = when (gpsSource) {
+                            GpsProviderType.WIFI -> "ESP32 (WiFi)"
+                            GpsProviderType.BLUETOOTH -> "ESP32 (BT)"
+                            GpsProviderType.PHONE_GPS -> "Internal"
+                        },
                         size = StatCellSize.Small,
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
@@ -140,7 +162,7 @@ fun ESPConnectionTestScreen() {
                     StatCell(
                         label = "Status",
                         value = if (isConnected) "Live" else "Offline",
-                        valueColor = if (isConnected) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentCyan,
+                        valueColor = if (isConnected) TrackProTheme.colors.deltaGood else TrackProTheme.colors.textMuted,
                         size = StatCellSize.Small,
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
@@ -148,7 +170,7 @@ fun ESPConnectionTestScreen() {
                     StatCell(
                         label = "Fix",
                         value = if (fix) "OK" else "Wait",
-                        valueColor = if (fix) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentAmber,
+                        valueColor = if (fix) TrackProTheme.colors.deltaGood else TrackProTheme.colors.textMuted,
                         size = StatCellSize.Small,
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
@@ -166,8 +188,15 @@ fun ESPConnectionTestScreen() {
                         .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                     verticalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
-                    if (useExternal) {
-                        TelemetryRow("Remote IP", "$ip:$port", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
+                    when (gpsSource) {
+                        GpsProviderType.WIFI -> TelemetryRow(
+                            if (useTestServer) "Remote IP (Test)" else "Remote IP",
+                            "$ip:$port",
+                            if (useTestServer) TrackProTheme.colors.accent else TrackProTheme.colors.textPrimary,
+                            TrackProTheme.colors.textMuted
+                        )
+                        GpsProviderType.BLUETOOTH -> TelemetryRow("Paired Device", pairedDeviceLabel, TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
+                        GpsProviderType.PHONE_GPS -> {}
                     }
                     TelemetryRow("Latitude", gpsData?.latitude?.let { String.format("%.6f°", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
                     TelemetryRow("Longitude", gpsData?.longitude?.let { String.format("%.6f°", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
@@ -175,8 +204,12 @@ fun ESPConnectionTestScreen() {
 
                     TelemetryRow(
                         "Refresh",
-                        if (useExternal) "20-25 Hz" else "1-5 Hz",
-                        if (useExternal) TrackProTheme.colors.accentBlue else TrackProTheme.colors.accentAmber,
+                        when {
+                            gpsSource == GpsProviderType.PHONE_GPS -> "1-5 Hz"
+                            confirmedRateHz != null -> "$confirmedRateHz Hz"
+                            else -> "$selectedRateHz Hz (pending)"
+                        },
+                        TrackProTheme.colors.textPrimary,
                         TrackProTheme.colors.textMuted
                     )
                 }
@@ -194,7 +227,7 @@ fun ESPConnectionTestScreen() {
                 ) {
                     Text(
                         text = gpsData?.toString() ?: "Awaiting data stream...",
-                        color = if (gpsData != null) TrackProTheme.colors.accentBlue else TrackProTheme.colors.textMuted,
+                        color = if (gpsData != null) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted,
                         fontSize = 10.sp,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                         lineHeight = 16.sp

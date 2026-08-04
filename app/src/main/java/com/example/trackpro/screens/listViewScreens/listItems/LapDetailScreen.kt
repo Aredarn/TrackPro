@@ -29,6 +29,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.toColorInt
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
@@ -181,7 +182,7 @@ fun LapDetailScreen(
             ) {
                 AppTopBar(
                     title = "Lap ${lap.lapnumber} · ${lap.laptime}",
-                    accent = TrackProTheme.colors.accentBlue,
+                    accent = TrackProTheme.colors.accent,
                     onBack = { navController.popBackStack() },
                     trailing = {
                         Text(
@@ -209,7 +210,7 @@ fun LapDetailScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
-                                    if (selected) TrackProTheme.colors.accentBlue
+                                    if (selected) TrackProTheme.colors.accent
                                     else Color.Transparent
                                 )
                                 .clickable { heatmapMode = mode }
@@ -219,7 +220,7 @@ fun LapDetailScreen(
                             Text(
                                 mode.label,
                                 style = TrackProType.label,
-                                color = if (selected) Color.Black else TrackProTheme.colors.textMuted
+                                color = if (selected) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
                             )
                         }
                     }
@@ -313,14 +314,14 @@ fun LapDetailScreen(
                     // Stats toggle
                     ActionButton(
                         label = if (showStatsPanel) "Hide Stats" else "Stats",
-                        color = TrackProTheme.colors.accentBlue,
+                        color = TrackProTheme.colors.accent,
                         modifier = Modifier.weight(1f)
                     ) { showStatsPanel = !showStatsPanel }
 
                     // Compare toggle
                     ActionButton(
                         label    = if (compareLap != null) "Comparing" else "Compare",
-                        color    = if (compareLap != null) COMPARE_COLOR else TrackProTheme.colors.accentAmber,
+                        color    = if (compareLap != null) COMPARE_COLOR else TrackProTheme.colors.accent,
                         modifier = Modifier.weight(1f)
                     ) { showLapPicker = true }
                 }
@@ -349,11 +350,13 @@ fun LapDetailScreen(
 
 // ── Heatmap Map View ───────────────────────────────────────
 
-// Dedicated (non-theme) colors: these draw MapLibre GPS traces from plain Kotlin
-// functions, which run outside any @Composable context and so can't read
-// TrackProTheme.colors. Chosen to read clearly against a dark map tile.
-private val PRIMARY_COLOR  = Color(0xFF7B84D6)
-private val COMPARE_COLOR  = Color(0xFF4FB6C9)
+// These draw MapLibre GPS traces from plain Kotlin functions, which run outside any
+// @Composable context and so can't read TrackProTheme.colors. Sourced from
+// DataVizColors so the two series stay in step with the rest of the palette - this is
+// the one sanctioned place in the app with two distinguishable hues, because telling
+// two overlaid lap traces apart is a real data problem.
+private val PRIMARY_COLOR  = Color(DataVizColors.seriesPrimary.toColorInt())
+private val COMPARE_COLOR  = Color(DataVizColors.seriesCompare.toColorInt())
 
 @Composable
 fun LapHeatmapMapView(
@@ -526,7 +529,7 @@ private fun drawEndpointDot(style: Style, pt: LapInfoData, id: String, color: St
         setProperties(
             PropertyFactory.circleColor(color),
             PropertyFactory.circleRadius(5f),
-            PropertyFactory.circleStrokeColor("#0E1117"),
+            PropertyFactory.circleStrokeColor(DataVizColors.darkOutline),
             PropertyFactory.circleStrokeWidth(1.5f)
         )
     })
@@ -750,7 +753,7 @@ private fun LapPickerSheet(
                         .background(
                             when {
                                 isSelected -> COMPARE_COLOR.copy(alpha = 0.15f)
-                                isBest     -> TrackProTheme.colors.accentBlue.copy(alpha = 0.05f)
+                                isBest     -> TrackProTheme.colors.accent.copy(alpha = 0.05f)
                                 else       -> Color.Transparent
                             }
                         )
@@ -758,7 +761,7 @@ private fun LapPickerSheet(
                             width = 1.dp,
                             color = when {
                                 isSelected -> COMPARE_COLOR.copy(alpha = 0.5f)
-                                isBest     -> TrackProTheme.colors.accentBlue.copy(alpha = 0.2f)
+                                isBest     -> TrackProTheme.colors.accent.copy(alpha = 0.2f)
                                 else       -> Color.Transparent
                             },
                             shape = RoundedCornerShape(8.dp)
@@ -775,15 +778,15 @@ private fun LapPickerSheet(
                         Text(
                             String.format("%02d", lap.lapnumber),
                             style = TrackProType.statValue.copy(fontSize = 16.sp),
-                            color = if (isBest) TrackProTheme.colors.accentBlue else TrackProTheme.colors.textPrimary
+                            color = if (isBest) TrackProTheme.colors.accent else TrackProTheme.colors.textPrimary
                         )
                         if (isBest) {
                             Box(
                                 Modifier
-                                    .background(TrackProTheme.colors.accentBlue.copy(alpha = 0.15f), TrackProShapes.badge)
+                                    .background(TrackProTheme.colors.accent.copy(alpha = 0.15f), TrackProShapes.badge)
                                     .padding(horizontal = 5.dp, vertical = 2.dp)
                             ) {
-                                Text("Best", style = TrackProType.label.copy(fontSize = 7.sp), color = TrackProTheme.colors.accentBlue)
+                                Text("Best", style = TrackProType.label.copy(fontSize = 7.sp), color = TrackProTheme.colors.accent)
                             }
                         }
                     }
@@ -817,7 +820,7 @@ private fun LoadingView() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator(
-                color = TrackProTheme.colors.accentBlue,
+                color = TrackProTheme.colors.accent,
                 modifier = Modifier.size(32.dp),
                 strokeWidth = 2.dp
             )

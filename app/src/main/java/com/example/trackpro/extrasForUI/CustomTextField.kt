@@ -16,7 +16,7 @@ fun CustomTextField(
     value: String,
     isNumber: Boolean = false,
     leadingIcon: ImageVector? = null,
-    accent: Color = TrackProTheme.colors.accentCyan,
+    accent: Color = TrackProTheme.colors.accent,
     onValueChange: (String) -> Unit
 ) {
     OutlinedTextField(

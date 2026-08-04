@@ -66,7 +66,7 @@ fun TimeAttackListViewScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             AppTopBar(
                 title = "Track Records",
-                accent = TrackProTheme.colors.accentCyan,
+                accent = TrackProTheme.colors.accent,
                 trailing = {
                     Text("${trackSessions.size} sessions", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
                 }
@@ -107,7 +107,7 @@ fun ExpandableTrackGroup(
     navController: NavController
 ) {
     ExpandableGroup(
-        accent = TrackProTheme.colors.accentCyan,
+        accent = TrackProTheme.colors.accent,
         header = {
             Column(modifier = Modifier.weight(1f)) {
                 Text(trackName, style = TrackProType.titleMedium.copy(fontSize = 14.sp), color = TrackProTheme.colors.textPrimary)
@@ -136,7 +136,7 @@ fun ExpandableTrackGroup(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         // Vertical "Pillar" accent
-                        Box(modifier = Modifier.width(2.dp).height(24.dp).background(TrackProTheme.colors.accentCyan, RoundedCornerShape(2.dp)))
+                        Box(modifier = Modifier.width(2.dp).height(24.dp).background(TrackProTheme.colors.accentMuted, RoundedCornerShape(2.dp)))
                         Spacer(Modifier.width(Spacing.sm))
                         Column {
                             Text(
@@ -152,7 +152,7 @@ fun ExpandableTrackGroup(
                         }
                     }
 
-                    Text("Telemetry", style = TrackProType.label, color = TrackProTheme.colors.accentCyan)
+                    Text("Telemetry", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
                 }
             }
         }

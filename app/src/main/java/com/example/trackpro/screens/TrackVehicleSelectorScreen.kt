@@ -65,7 +65,7 @@ fun TrackVehicleSelectorScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             AppTopBar(
                 title = "Session Setup",
-                accent = TrackProTheme.colors.accentCyan,
+                accent = TrackProTheme.colors.accent,
                 onBack = { navController.popBackStack() }
             )
 
@@ -111,7 +111,7 @@ fun TrackVehicleSelectorScreen(
                             selectedVehicleName = vehicles.find { it.vehicleId == id }?.manufacturerAndModel ?: "" // Adjust 'name' to your vehicle field
                         }
                     } else {
-                        Text("No vehicles found in garage", style = TrackProType.body.copy(fontSize = 12.sp), color = TrackProTheme.colors.accentCyan)
+                        Text("No vehicles found in garage", style = TrackProType.body.copy(fontSize = 12.sp), color = TrackProTheme.colors.accent)
                     }
                 }
 
@@ -124,7 +124,7 @@ fun TrackVehicleSelectorScreen(
                     text = "Start Time Attack",
                     onClick = { navController.navigate("timeattack/$selectedVehicleId/$selectedTrackId") },
                     enabled = canStart,
-                    accent = TrackProTheme.colors.accentCyan,
+                    accent = TrackProTheme.colors.accent,
                     modifier = Modifier.fillMaxWidth().height(56.dp)
                 )
             }
@@ -141,12 +141,12 @@ fun SelectionCard(
 ) {
     AppCard(
         modifier = Modifier.fillMaxWidth(),
-        borderColor = if (isSet) TrackProTheme.colors.accentCyan.copy(alpha = 0.5f) else TrackProTheme.colors.sectorLine
+        borderColor = if (isSet) TrackProTheme.colors.accent.copy(alpha = 0.5f) else TrackProTheme.colors.sectorLine
     ) {
         Text(
             label.uppercase(),
             style = TrackProType.label,
-            color = if (isSet) TrackProTheme.colors.accentCyan else TrackProTheme.colors.textMuted
+            color = if (isSet) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted
         )
         Text(title, style = TrackProType.titleMedium, color = TrackProTheme.colors.textPrimary, modifier = Modifier.padding(vertical = 4.dp))
         Spacer(modifier = Modifier.height(Spacing.sm))

@@ -216,7 +216,7 @@ fun TimeAttackPortraitLayout(
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
-    val modeColor  = if (timingMode is TimingMode.Circuit) TrackProTheme.colors.accentCyan else TrackProTheme.colors.accentAmber
+    val modeColor  = TrackProTheme.colors.accent
     val modeLabel  = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
 
     Box(
@@ -359,7 +359,7 @@ fun TimeAttackLandscapeLayout(
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
-    val modeColor  = if (timingMode is TimingMode.Circuit) TrackProTheme.colors.accentCyan else TrackProTheme.colors.accentAmber
+    val modeColor  = TrackProTheme.colors.accent
     val modeLabel  = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
 
     Row(

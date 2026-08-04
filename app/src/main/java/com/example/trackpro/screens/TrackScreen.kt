@@ -105,7 +105,7 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            AppTopBar(title = "Track Overview", accent = TrackProTheme.colors.accentBlue)
+            AppTopBar(title = "Track Overview", accent = TrackProTheme.colors.accent)
 
             // ── Track info card ───────────────────────────────
             Column(
@@ -190,7 +190,7 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(
-                                color = TrackProTheme.colors.accentBlue,
+                                color = TrackProTheme.colors.accent,
                                 modifier = Modifier.size(32.dp),
                                 strokeWidth = 2.dp
                             )
@@ -234,7 +234,7 @@ private fun SectorSlicerCard(
             Text(
                 text = if (sectorCount > 0) "$sectorCount marked" else "None marked",
                 style = TrackProType.body.copy(fontSize = 11.sp),
-                color = if (sectorCount > 0) TrackProTheme.colors.accentBlue else TrackProTheme.colors.textMuted
+                color = if (sectorCount > 0) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted
             )
         }
 
@@ -247,7 +247,7 @@ private fun SectorSlicerCard(
                     text = "$n",
                     selected = sectorCount == n,
                     onClick = { onSlice(n) },
-                    accent = TrackProTheme.colors.accentBlue,
+                    accent = TrackProTheme.colors.accent,
                     modifier = Modifier.weight(1f)
                 )
             }

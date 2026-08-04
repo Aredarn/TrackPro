@@ -36,7 +36,7 @@ fun <T> AppDropdownField(
     itemLabel: (T) -> String,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
-    accent: Color = TrackProTheme.colors.accentCyan,
+    accent: Color = TrackProTheme.colors.accent,
     emptyMessage: String = "No options available"
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -103,7 +103,7 @@ fun DropdownMenuFieldMulti(label: String, options: List<VehiclePair>, selectedOp
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = TrackProTheme.colors.textPrimary,
                 unfocusedTextColor = TrackProTheme.colors.textPrimary,
-                focusedBorderColor = TrackProTheme.colors.accentCyan,
+                focusedBorderColor = TrackProTheme.colors.accent,
                 unfocusedBorderColor = TrackProTheme.colors.sectorLine
             ),
             modifier = Modifier
@@ -151,7 +151,7 @@ fun TrackDropdownMenu(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = TrackProTheme.colors.textPrimary,
                 unfocusedTextColor = TrackProTheme.colors.textPrimary,
-                focusedBorderColor = TrackProTheme.colors.accentCyan,
+                focusedBorderColor = TrackProTheme.colors.accent,
                 unfocusedBorderColor = TrackProTheme.colors.sectorLine
             ),
             modifier = Modifier.fillMaxWidth()

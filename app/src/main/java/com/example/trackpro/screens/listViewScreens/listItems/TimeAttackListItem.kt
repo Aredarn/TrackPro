@@ -125,7 +125,7 @@ fun TimeAttackListItemScreen(
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = TrackProTheme.colors.accentBlue,
+                    CircularProgressIndicator(color = TrackProTheme.colors.accent,
                         modifier = Modifier.size(36.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.height(12.dp))
                     Text("Loading session", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
@@ -175,7 +175,7 @@ fun TimeAttackListItemScreen(
             val trendColor = when {
                 trend.contains("IMPROVING") -> TrackProTheme.colors.deltaGood
                 trend.contains("FADING")    -> TrackProTheme.colors.deltaBad
-                else                        -> TrackProTheme.colors.accentAmber
+                else                        -> TrackProTheme.colors.textMuted
             }
 
             LazyColumn(
@@ -186,7 +186,7 @@ fun TimeAttackListItemScreen(
                 item {
                     AppTopBar(
                         title = "Session Detail",
-                        accent = TrackProTheme.colors.accentBlue,
+                        accent = TrackProTheme.colors.accent,
                         trailing = {
                             Text("${lapTimes.size} laps", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
                         }
@@ -342,7 +342,6 @@ fun TimeAttackListItemScreen(
                                 bgElevated = TrackProTheme.colors.bgElevated,
                                 goodColor = TrackProTheme.colors.deltaGood,
                                 badColor = TrackProTheme.colors.deltaBad,
-                                accentAmber = TrackProTheme.colors.accentAmber,
                                 textPrimary = TrackProTheme.colors.textPrimary,
                                 textMuted = TrackProTheme.colors.textMuted,
                                 sectorLine = TrackProTheme.colors.sectorLine
@@ -369,7 +368,6 @@ private fun LapRow(
     bgElevated: Color,
     goodColor: Color,
     badColor: Color,
-    accentAmber: Color,
     textPrimary: Color,
     textMuted: Color,
     sectorLine: Color

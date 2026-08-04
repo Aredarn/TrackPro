@@ -72,7 +72,7 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
 
             AppTopBar(
                 title = "My Tracks",
-                accent = TrackProTheme.colors.accentAmber,
+                accent = TrackProTheme.colors.accent,
                 trailing = {
                     Text(
                         text = "${tracks.size} tracks",
@@ -98,7 +98,7 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
                             useMetric = useMetric,
                             bgCard = TrackProTheme.colors.bgCard,
                             bgElevated = TrackProTheme.colors.bgElevated,
-                            accentAmber = TrackProTheme.colors.accentAmber,
+                            accent = TrackProTheme.colors.accent,
                             dangerColor = TrackProTheme.colors.danger,
                             textPrimary = TrackProTheme.colors.textPrimary,
                             textMuted = TrackProTheme.colors.textMuted,
@@ -124,7 +124,7 @@ fun TrackCard(
     useMetric: Boolean,
     bgCard: Color,
     bgElevated: Color,
-    accentAmber: Color,
+    accent: Color,
     dangerColor: Color,
     textPrimary: Color,
     textMuted: Color,
@@ -174,7 +174,7 @@ fun TrackCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        accentAmber.copy(alpha = 0.12f),
+                        TrackProTheme.colors.bgElevated,
                         RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
                     )
                     .padding(horizontal = Spacing.md, vertical = Spacing.sm)
@@ -190,13 +190,13 @@ fun TrackCard(
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(accentAmber.copy(alpha = 0.15f), TrackProShapes.badge)
+                                .background(bgCard, TrackProShapes.badge)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = track.type.uppercase(),
                                 style = TrackProType.label.copy(fontSize = 9.sp),
-                                color = accentAmber
+                                color = textMuted
                             )
                         }
                         Text(
@@ -252,8 +252,7 @@ fun TrackCard(
                 StatCell(
                     label = "Length",
                     // totalLength is stored in km; formatDistance takes meters.
-                    value = track.totalLength?.let { UnitFormatter.formatDistance(it * 1000.0, useMetric) } ?: "?",
-                    valueColor = accentAmber
+                    value = track.totalLength?.let { UnitFormatter.formatDistance(it * 1000.0, useMetric) } ?: "?"
                 )
                 StatCell(
                     label = "Lap Record",
@@ -263,7 +262,7 @@ fun TrackCard(
                 Text(
                     text = "View",
                     style = TrackProType.label,
-                    color = accentAmber.copy(alpha = 0.8f)
+                    color = accent
                 )
             }
         }
