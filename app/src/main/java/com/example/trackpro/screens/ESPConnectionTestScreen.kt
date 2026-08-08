@@ -84,7 +84,10 @@ fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
 
     // 3. Derived UI values
     val speed = gpsData?.speed ?: 0f
-    val fix = (gpsData?.fixQuality ?: 0) > 0
+    // "valid" is the GPS module's own fix status (gps.location.isValid() in the
+    // firmware) - fixQuality is actually a satellite *count*, not a fix indicator,
+    // and could read 0 (or just not correlate) even with a real fix locked in.
+    val fix = gpsData?.valid == true
 
 
     Box(
