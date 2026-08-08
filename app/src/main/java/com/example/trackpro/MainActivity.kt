@@ -186,6 +186,13 @@ class TrackProApp : Application() {
     fun setSelectedBtDevice(mac: String) {
         btDevicePrefs.edit().putString("device_mac", mac).apply()
         selectedBtDeviceMac.value = mac
+        // Bluetooth is usually already the active source by the time a device is
+        // picked (the picker only shows once it is) - that first connect attempt
+        // already failed with no MAC set, and nothing else would ever retry it.
+        if (gpsSource.value == GpsProviderType.BLUETOOTH) {
+            bluetoothClassicClient.stop()
+            bluetoothClassicClient.start()
+        }
     }
 
     private val themePrefs by lazy { getSharedPreferences("theme_prefs", MODE_PRIVATE) }
