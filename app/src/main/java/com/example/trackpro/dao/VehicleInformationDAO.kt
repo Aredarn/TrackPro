@@ -20,6 +20,10 @@ interface VehicleInformationDAO {
     @Query("SELECT * FROM vehicle_information_data WHERE vehicleId =:vehicleId")
     fun getVehicle(vehicleId: Long?): Flow<VehicleInformationData>
 
+    // One-shot (non-Flow) signature lookup used to dedup default-vehicle seeding on startup.
+    @Query("SELECT manufacturer || ' ' || model || ' ' || year FROM vehicle_information_data")
+    suspend fun getAllVehicleSignatures(): List<String>
+
     @Insert
     suspend fun insertVehicle(vehicleInformationData: VehicleInformationData):Long
 

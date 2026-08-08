@@ -62,6 +62,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.TrackSeeder
+import com.example.trackpro.managerClasses.VehicleSeeder
 import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.gpsDataManagers.BluetoothClassicClient
 import com.example.trackpro.managerClasses.JsonReader
@@ -235,6 +236,7 @@ class TrackProApp : Application() {
         // users pick up newly-added ones too; name-deduped, so this is always safe to re-run.
         applicationScope.launch(Dispatchers.IO) {
             TrackSeeder.syncPremadeTracks(this@TrackProApp, database)
+            VehicleSeeder.syncDefaultVehicles(database)
         }
     }
 
