@@ -92,11 +92,13 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
                         )
                     }
 
-                    GpsRateRow(
-                        selectedHz = selectedRateHz,
-                        confirmedHz = confirmedRateHz,
-                        onSelect = { hz -> app.setRateHz(hz) }
-                    )
+                    if (gpsSource != GpsProviderType.PHONE_GPS) {
+                        GpsRateRow(
+                            selectedHz = selectedRateHz,
+                            confirmedHz = confirmedRateHz,
+                            onSelect = { hz -> app.setRateHz(hz) }
+                        )
+                    }
                 }
             }
 
