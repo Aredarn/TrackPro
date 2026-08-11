@@ -2,7 +2,6 @@ package com.example.trackpro.screens.listViewScreens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,8 +12,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -41,9 +42,14 @@ import androidx.navigation.NavController
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.extrasForUI.TrackProTheme
-import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.isScrolledUnderChrome
+import com.example.trackpro.components.ScreenScaffold
+import com.example.trackpro.components.Haptic
+import com.example.trackpro.components.pressable
+import com.example.trackpro.components.rememberHaptics
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.StatCell
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.TrackProType
@@ -63,53 +69,54 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
     val database = remember { ESPDatabase.getInstance(context) }
     val scope = rememberCoroutineScope()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(TrackProTheme.colors.bgDeep)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+    val listState = rememberLazyListState()
+    val scrolled by listState.isScrolledUnderChrome()
 
-            AppTopBar(
-                title = "My Tracks",
-                accent = TrackProTheme.colors.accent,
-                trailing = {
-                    Text(
-                        text = "${tracks.size} tracks",
-                        style = TrackProType.label,
-                        color = TrackProTheme.colors.textMuted
-                    )
-                }
-            )
-
-            if (tracks.isEmpty()) {
-                EmptyState(message = "No tracks yet", hint = "Build a track to see it here")
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(Spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-                ) {
-                    items(tracks) { track ->
-                        TrackCard(
-                            track = track,
-                            navController = navController,
-                            database = database,
-                            useMetric = useMetric,
-                            bgCard = TrackProTheme.colors.bgCard,
-                            bgElevated = TrackProTheme.colors.bgElevated,
-                            accent = TrackProTheme.colors.accent,
-                            dangerColor = TrackProTheme.colors.danger,
-                            textPrimary = TrackProTheme.colors.textPrimary,
-                            textMuted = TrackProTheme.colors.textMuted,
-                            sectorLine = TrackProTheme.colors.sectorLine,
-                            onDelete = { trackToDelete ->
-                                scope.launch(Dispatchers.IO) {
-                                    database.trackMainDao().deleteTrack(trackToDelete.trackId)
-                                }
+    ScreenScaffold(
+            title = "My Tracks",
+            accent = TrackProTheme.colors.accent,
+            trailing = {
+                Text(
+                    text = "${tracks.size} tracks",
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.textMuted
+                )
+            },
+        contentScrolled = scrolled
+    ) { contentPadding ->
+        if (tracks.isEmpty()) {
+            EmptyState(message = "No tracks yet", hint = "Build a track to see it here")
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                contentPadding = PaddingValues(
+                    top = contentPadding.calculateTopPadding() + Spacing.md,
+                    bottom = Spacing.md,
+                    start = Spacing.md,
+                    end = Spacing.md
+                ),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                items(tracks) { track ->
+                    TrackCard(
+                        track = track,
+                        navController = navController,
+                        database = database,
+                        useMetric = useMetric,
+                        bgCard = TrackProTheme.colors.bgCard,
+                        bgElevated = TrackProTheme.colors.bgElevated,
+                        accent = TrackProTheme.colors.accent,
+                        dangerColor = TrackProTheme.colors.danger,
+                        textPrimary = TrackProTheme.colors.textPrimary,
+                        textMuted = TrackProTheme.colors.textMuted,
+                        sectorLine = TrackProTheme.colors.sectorLine,
+                        onDelete = { trackToDelete ->
+                            scope.launch(Dispatchers.IO) {
+                                database.trackMainDao().deleteTrack(trackToDelete.trackId)
                             }
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }
@@ -132,6 +139,7 @@ fun TrackCard(
     onDelete: (TrackMainData) -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val haptics = rememberHaptics()
     var bestLapTime by remember(track.trackId) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(track.trackId) {
@@ -147,7 +155,10 @@ fun TrackCard(
             titleContentColor = TrackProTheme.colors.textPrimary,
             textContentColor = TrackProTheme.colors.textMuted,
             confirmButton = {
-                TextButton(onClick = { onDelete(track); showDeleteDialog = false }) {
+                TextButton(onClick = {
+                    haptics.perform(Haptic.Reject)
+                    onDelete(track); showDeleteDialog = false
+                }) {
                     Text("Delete", color = dangerColor, style = TrackProType.titleMedium)
                 }
             },
@@ -164,9 +175,9 @@ fun TrackCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .pressable(onClick = { navController.navigate("track/${track.trackId}") })
             .background(bgCard, TrackProShapes.card)
             .border(1.dp, sectorLine, TrackProShapes.card)
-            .clickable { navController.navigate("track/${track.trackId}") }
     ) {
         Column {
             // ── Header ────────────────────────────────────
@@ -195,13 +206,13 @@ fun TrackCard(
                         ) {
                             Text(
                                 text = track.type.uppercase(),
-                                style = TrackProType.label.copy(fontSize = 9.sp),
+                                style = TrackProType.label.atSize(9.sp),
                                 color = textMuted
                             )
                         }
                         Text(
                             text = track.country.uppercase(),
-                            style = TrackProType.label.copy(fontSize = 9.sp),
+                            style = TrackProType.label.atSize(9.sp),
                             color = textMuted
                         )
                     }
@@ -209,9 +220,10 @@ fun TrackCard(
                     // Delete button
                     Box(
                         modifier = Modifier
+                            .minimumInteractiveComponentSize()
+                            .pressable(onClick = { showDeleteDialog = true }, scale = 0.90f)
                             .size(26.dp)
-                            .background(dangerColor.copy(alpha = 0.1f), TrackProShapes.badge)
-                            .clickable { showDeleteDialog = true },
+                            .background(dangerColor.copy(alpha = 0.1f), TrackProShapes.badge),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(

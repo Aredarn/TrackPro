@@ -41,10 +41,13 @@ import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.timeAttackManagers.SectorSplit
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
+import com.example.trackpro.components.Haptic
+import com.example.trackpro.components.rememberHaptics
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.StatCell
 import com.example.trackpro.components.StatCellDivider
 import com.example.trackpro.components.StatCellSize
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.DataVizColors
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProShapes
@@ -159,6 +162,14 @@ fun TimeAttackScreenView(
         } ?: Log.w("TimeAttackScreen", "GPS data is null")
     }
 
+    // The single most useful haptic in the app: a lap closing is confirmed by feel, so
+    // the driver doesn't have to look away from the track to know it registered.
+    // Keyed on the counter itself, so it fires exactly once per lap.
+    val haptics = rememberHaptics()
+    LaunchedEffect(eventCount) {
+        if (eventCount > 0) haptics.perform(Haptic.Confirm)
+    }
+
     val gpsPoints = fullTrack //+ linesToShow
     val driverPos = driver ?: LatLonOffset(0.0, 0.0)
 
@@ -264,7 +275,7 @@ fun TimeAttackPortraitLayout(
                         ) {
                             Text(
                                 text = "Δ ${String.format("%+.3f", delta)}s",
-                                style = TrackProType.statValue.copy(fontSize = 15.sp),
+                                style = TrackProType.statValue.atSize(15.sp),
                                 color = deltaColor
                             )
                         }
@@ -405,7 +416,7 @@ fun TimeAttackLandscapeLayout(
                     ) {
                         Text(
                             text = "Δ ${String.format("%+.3f", delta)}s",
-                            style = TrackProType.statValue.copy(fontSize = 13.sp),
+                            style = TrackProType.statValue.atSize(13.sp),
                             color = deltaColor
                         )
                     }
@@ -516,12 +527,12 @@ private fun SectorSplitsRow(splits: List<SectorSplit>) {
             Column {
                 Text(
                     "S${split.sectorIndex + 1}",
-                    style = TrackProType.label.copy(fontSize = 9.sp, letterSpacing = 0.5.sp),
+                    style = TrackProType.label.atSize(9.sp).copy(letterSpacing = 0.5.sp),
                     color = TrackProTheme.colors.textFaint
                 )
                 Text(
                     String.format("%.2fs", split.splitMs / 1000.0),
-                    style = TrackProType.statValue.copy(fontSize = 13.sp),
+                    style = TrackProType.statValue.atSize(13.sp),
                     color = deltaColor
                 )
                 if (split.deltaMs != null) {
@@ -529,7 +540,7 @@ private fun SectorSplitsRow(splits: List<SectorSplit>) {
                     val sign = if (deltaSeconds > 0) "+" else ""
                     Text(
                         "$sign${String.format("%.2f", deltaSeconds)}",
-                        style = TrackProType.body.copy(fontSize = 9.sp),
+                        style = TrackProType.body.atSize(9.sp),
                         color = deltaColor
                     )
                 }

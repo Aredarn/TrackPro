@@ -1,7 +1,6 @@
 package com.example.trackpro.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,10 +36,13 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.Haptic
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.StatCell
 import com.example.trackpro.components.ToggleChip
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.DataVizColors
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
@@ -233,7 +235,7 @@ private fun SectorSlicerCard(
             SectionLabel("Sectors")
             Text(
                 text = if (sectorCount > 0) "$sectorCount marked" else "None marked",
-                style = TrackProType.body.copy(fontSize = 11.sp),
+                style = TrackProType.body.atSize(11.sp),
                 color = if (sectorCount > 0) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted
             )
         }
@@ -258,7 +260,9 @@ private fun SectorSlicerCard(
                 text = "Clear sectors",
                 style = TrackProType.label,
                 color = TrackProTheme.colors.danger,
-                modifier = Modifier.clickable { onClear() }
+                modifier = Modifier
+                    .pressable(onClick = onClear, scale = 0.94f, haptic = Haptic.Reject)
+                    .padding(vertical = 4.dp)
             )
         }
     }

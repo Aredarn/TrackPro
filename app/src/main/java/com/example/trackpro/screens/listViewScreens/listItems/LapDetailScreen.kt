@@ -3,14 +3,8 @@ package com.example.trackpro.screens.listViewScreens.lapDetail
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,8 +32,12 @@ import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.Haptic
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.DraggableSheet
 import com.example.trackpro.components.SectionLabel
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.DataVizColors
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProShapes
@@ -208,12 +207,16 @@ fun LapDetailScreen(
                         val selected = mode == heatmapMode
                         Box(
                             modifier = Modifier
+                                .pressable(
+                                    onClick = { heatmapMode = mode },
+                                    scale = 0.96f,
+                                    haptic = Haptic.Selection
+                                )
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
                                     if (selected) TrackProTheme.colors.accent
                                     else Color.Transparent
                                 )
-                                .clickable { heatmapMode = mode }
                                 .padding(horizontal = Spacing.md, vertical = 6.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -250,13 +253,13 @@ fun LapDetailScreen(
                                 .background(COMPARE_COLOR, CircleShape)
                         )
                         Column {
-                            Text("Compare · Lap ${cl.lapnumber}", style = TrackProType.label.copy(fontSize = 8.sp), color = COMPARE_COLOR)
-                            Text(cl.laptime, style = TrackProType.titleMedium.copy(fontSize = 13.sp), color = TrackProTheme.colors.textPrimary)
+                            Text("Compare · Lap ${cl.lapnumber}", style = TrackProType.label.atSize(8.sp), color = COMPARE_COLOR)
+                            Text(cl.laptime, style = TrackProType.titleMedium.atSize(13.sp), color = TrackProTheme.colors.textPrimary)
                             if (compareMs > 0) {
                                 val sign = if (deltaMs > 0) "+" else ""
                                 Text(
                                     text = "${sign}${deltaMs.toLapTimeString()}",
-                                    style = TrackProType.body.copy(fontSize = 10.sp),
+                                    style = TrackProType.body.atSize(10.sp),
                                     color = if (deltaMs < 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
                                 )
                             }
@@ -266,11 +269,15 @@ fun LapDetailScreen(
                             contentDescription = "Remove compare",
                             tint = TrackProTheme.colors.textMuted,
                             modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .pressable(
+                                    onClick = {
+                                        compareLap = null
+                                        compareGps = emptyList()
+                                    },
+                                    scale = 0.90f
+                                )
                                 .size(16.dp)
-                                .clickable {
-                                    compareLap = null
-                                    compareGps = emptyList()
-                                }
                         )
                     }
                 }
@@ -282,11 +289,10 @@ fun LapDetailScreen(
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
             ) {
-                // Stats panel (expandable)
-                AnimatedVisibility(
+                // Stats panel - draggable, so its grab handle means something.
+                DraggableSheet(
                     visible = showStatsPanel,
-                    enter = slideInVertically { it } + fadeIn(),
-                    exit  = slideOutVertically { it } + fadeOut()
+                    onDismiss = { showStatsPanel = false }
                 ) {
                     StatsPanel(
                         primaryLap      = lap,
@@ -328,10 +334,10 @@ fun LapDetailScreen(
             }
 
             // ── Lap picker bottom sheet ────────────────────
-            AnimatedVisibility(
+            DraggableSheet(
                 visible = showLapPicker,
-                enter   = slideInVertically { it } + fadeIn(),
-                exit    = slideOutVertically { it } + fadeOut()
+                onDismiss = { showLapPicker = false },
+                modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 LapPickerSheet(
                     laps         = allSessionLaps.filter { it.id != primaryLapId },
@@ -574,25 +580,12 @@ private fun StatsPanel(
         if (it.isEmpty()) 0f else it.average().toFloat()
     }
 
+    // Surface, corner radius and grab handle all come from DraggableSheet now.
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                TrackProTheme.colors.bgCard.copy(alpha = 0.97f),
-                RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-            )
             .padding(bottom = 4.dp)
     ) {
-        // Handle
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(top = 10.dp, bottom = 6.dp)
-                .width(40.dp)
-                .height(3.dp)
-                .background(TrackProTheme.colors.textMuted.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
-        )
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -604,7 +597,10 @@ private fun StatsPanel(
             Icon(
                 Icons.Default.Close, "dismiss",
                 tint = TrackProTheme.colors.textMuted,
-                modifier = Modifier.size(16.dp).clickable { onDismiss() }
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .pressable(onClick = onDismiss, scale = 0.90f)
+                    .size(16.dp)
             )
         }
 
@@ -617,7 +613,7 @@ private fun StatsPanel(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Metric", style = TrackProType.label.copy(fontSize = 8.sp), color = TrackProTheme.colors.textMuted,
+            Text("Metric", style = TrackProType.label.atSize(8.sp), color = TrackProTheme.colors.textMuted,
                 modifier = Modifier.weight(1.4f))
             Row(
                 modifier = Modifier.weight(1f),
@@ -625,7 +621,7 @@ private fun StatsPanel(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Box(Modifier.size(6.dp).background(PRIMARY_COLOR, CircleShape))
-                Text("Lap ${primaryLap.lapnumber}", style = TrackProType.label.copy(fontSize = 8.sp), color = PRIMARY_COLOR)
+                Text("Lap ${primaryLap.lapnumber}", style = TrackProType.label.atSize(8.sp), color = PRIMARY_COLOR)
             }
             if (compareLap != null) {
                 Row(
@@ -634,7 +630,7 @@ private fun StatsPanel(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Box(Modifier.size(6.dp).background(COMPARE_COLOR, CircleShape))
-                    Text("Lap ${compareLap.lapnumber}", style = TrackProType.label.copy(fontSize = 8.sp), color = COMPARE_COLOR)
+                    Text("Lap ${compareLap.lapnumber}", style = TrackProType.label.atSize(8.sp), color = COMPARE_COLOR)
                 }
             }
         }
@@ -676,13 +672,13 @@ private fun StatsPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(label.uppercase(), style = TrackProType.label.copy(fontSize = 9.sp), color = TrackProTheme.colors.textMuted,
+                Text(label.uppercase(), style = TrackProType.label.atSize(9.sp), color = TrackProTheme.colors.textMuted,
                     modifier = Modifier.weight(1.4f))
-                Text(v1, style = TrackProType.body.copy(fontSize = 13.sp), color = if (label == "Delta" && deltaMs < 0) TrackProTheme.colors.deltaGood
+                Text(v1, style = TrackProType.body.atSize(13.sp), color = if (label == "Delta" && deltaMs < 0) TrackProTheme.colors.deltaGood
                     else TrackProTheme.colors.textPrimary,
                     modifier = Modifier.weight(1f))
                 if (compareLap != null && v2.isNotEmpty()) {
-                    Text(v2, style = TrackProType.body.copy(fontSize = 13.sp), color = TrackProTheme.colors.textPrimary,
+                    Text(v2, style = TrackProType.body.atSize(13.sp), color = TrackProTheme.colors.textPrimary,
                         modifier = Modifier.weight(1f))
                 }
             }
@@ -710,21 +706,8 @@ private fun LapPickerSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                TrackProTheme.colors.bgCard,
-                RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-            )
             .heightIn(max = 360.dp)
     ) {
-        // Handle + header
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(top = 10.dp, bottom = 8.dp)
-                .width(40.dp)
-                .height(3.dp)
-                .background(TrackProTheme.colors.textMuted.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
-        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -734,7 +717,10 @@ private fun LapPickerSheet(
         ) {
             SectionLabel("Select Lap to Compare")
             Icon(Icons.Default.Close, "close", tint = TrackProTheme.colors.textMuted,
-                modifier = Modifier.size(16.dp).clickable { onDismiss() })
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .pressable(onClick = onDismiss, scale = 0.90f)
+                    .size(16.dp))
         }
         HorizontalDivider(color = TrackProTheme.colors.sectorLine)
 
@@ -749,6 +735,7 @@ private fun LapPickerSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 3.dp)
+                        .pressable(onClick = { onSelect(lap) }, haptic = Haptic.Selection)
                         .clip(RoundedCornerShape(8.dp))
                         .background(
                             when {
@@ -766,7 +753,6 @@ private fun LapPickerSheet(
                             },
                             shape = RoundedCornerShape(8.dp)
                         )
-                        .clickable { onSelect(lap) }
                         .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -777,7 +763,7 @@ private fun LapPickerSheet(
                     ) {
                         Text(
                             String.format("%02d", lap.lapnumber),
-                            style = TrackProType.statValue.copy(fontSize = 16.sp),
+                            style = TrackProType.statValue.atSize(16.sp),
                             color = if (isBest) TrackProTheme.colors.accent else TrackProTheme.colors.textPrimary
                         )
                         if (isBest) {
@@ -786,7 +772,7 @@ private fun LapPickerSheet(
                                     .background(TrackProTheme.colors.accent.copy(alpha = 0.15f), TrackProShapes.badge)
                                     .padding(horizontal = 5.dp, vertical = 2.dp)
                             ) {
-                                Text("Best", style = TrackProType.label.copy(fontSize = 7.sp), color = TrackProTheme.colors.accent)
+                                Text("Best", style = TrackProType.label.atSize(7.sp), color = TrackProTheme.colors.accent)
                             }
                         }
                     }
@@ -798,10 +784,10 @@ private fun LapPickerSheet(
                         val sign = if (deltaMs > 0) "+" else ""
                         Text(
                             "${sign}${deltaMs.toLapTimeString()}",
-                            style = TrackProType.body.copy(fontSize = 11.sp),
+                            style = TrackProType.body.atSize(11.sp),
                             color = if (deltaMs < 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
                         )
-                        Text(lap.laptime, style = TrackProType.titleMedium.copy(fontSize = 15.sp), color = TrackProTheme.colors.textPrimary)
+                        Text(lap.laptime, style = TrackProType.titleMedium.atSize(15.sp), color = TrackProTheme.colors.textPrimary)
                         if (isSelected) {
                             Box(Modifier.size(8.dp).background(COMPARE_COLOR, CircleShape))
                         }
@@ -841,14 +827,14 @@ private fun ActionButton(
 ) {
     Box(
         modifier = modifier
+            .pressable(onClick = onClick, scale = 0.96f)
             .clip(RoundedCornerShape(8.dp))
             .background(color.copy(alpha = 0.12f))
             .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-            .clickable { onClick() }
             .padding(vertical = Spacing.sm),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, style = TrackProType.titleMedium.copy(fontSize = 12.sp), color = color)
+        Text(label, style = TrackProType.titleMedium.atSize(12.sp), color = color)
     }
 }
 
