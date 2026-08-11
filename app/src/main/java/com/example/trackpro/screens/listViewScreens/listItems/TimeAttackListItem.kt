@@ -187,6 +187,7 @@ fun TimeAttackListItemScreen(
                 item {
                     AppTopBar(
                         title = "Session Detail",
+                        onBack = { navController.popBackStack() },
                         accent = TrackProTheme.colors.accent,
                         trailing = {
                             Text("${lapTimes.size} laps", style = TrackProType.label, color = TrackProTheme.colors.textMuted)

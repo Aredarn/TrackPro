@@ -47,7 +47,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun CarCreationScreen(
-    database: ESPDatabase
+    database: ESPDatabase,
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
@@ -78,6 +79,7 @@ fun CarCreationScreen(
 
     ScreenScaffold(
         title = "Vehicle Setup",
+        onBack = onBack,
         accent = TrackProTheme.colors.accent,
         contentScrolled = scrolled
     ) { contentPadding ->

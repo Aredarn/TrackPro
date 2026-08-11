@@ -64,15 +64,15 @@ import org.maplibre.android.style.sources.GeoJsonSource
 
 
 @Composable
-fun TrackScreen(trackId: Long) {
+fun TrackScreen(trackId: Long, onBack: () -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
     val database = app.database
-    TrackView(database, trackId)
+    TrackView(database, trackId, onBack)
 }
 
 @Composable
-fun TrackView(database: ESPDatabase, trackId: Long) {
+fun TrackView(database: ESPDatabase, trackId: Long, onBack: () -> Unit) {
     val app = LocalContext.current.applicationContext as TrackProApp
     val useMetric by app.useMetricUnits.collectAsState()
     val coroutineScope = rememberCoroutineScope()
@@ -107,7 +107,11 @@ fun TrackView(database: ESPDatabase, trackId: Long) {
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            AppTopBar(title = "Track Overview", accent = TrackProTheme.colors.accent)
+            AppTopBar(
+                title = "Track Overview",
+                accent = TrackProTheme.colors.accent,
+                onBack = onBack
+            )
 
             // ── Track info card ───────────────────────────────
             Column(

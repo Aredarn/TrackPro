@@ -66,6 +66,7 @@ fun DragTimesListView(
 
     ScreenScaffold(
             title = "Drag Records",
+            onBack = { navController.popBackStack() },
             accent = TrackProTheme.colors.accent,
             trailing = {
                 Text(

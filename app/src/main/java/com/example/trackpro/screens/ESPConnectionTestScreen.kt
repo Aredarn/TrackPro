@@ -56,7 +56,10 @@ import kotlin.math.sin
 
 @SuppressLint("MissingPermission")
 @Composable
-fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
+fun ESPConnectionTestScreen(
+    onNavigateToSettings: () -> Unit,
+    onBack: () -> Unit
+) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
 
@@ -104,6 +107,7 @@ fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
                     GpsProviderType.PHONE_GPS -> "Phone GPS Mode"
                 },
                 accent = if (isConnected) TrackProTheme.colors.accent else TrackProTheme.colors.textFaint,
+                onBack = onBack,
                 trailing = {
                     Text(
                         text = "Change",

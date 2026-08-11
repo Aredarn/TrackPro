@@ -78,6 +78,7 @@ import kotlin.math.sin
 fun TimeAttackScreenView(
     trackId: Long? = null,
     vehicleId: Long? = null,
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
@@ -187,7 +188,8 @@ fun TimeAttackScreenView(
             driver      = driverPos,
             isConnected = isConnected,
             linesToShow = linesToShow,
-            lapSplits   = lapSplits
+            lapSplits   = lapSplits,
+            onBack      = onBack
         )
         else -> TimeAttackPortraitLayout(
             timingMode  = timingMode,
@@ -202,7 +204,8 @@ fun TimeAttackScreenView(
             driver      = driverPos,
             isConnected = isConnected,
             linesToShow = linesToShow,
-            lapSplits   = lapSplits
+            lapSplits   = lapSplits,
+            onBack      = onBack
         )
     }
 
@@ -223,7 +226,8 @@ fun TimeAttackPortraitLayout(
     driver: LatLonOffset,
     isConnected: Boolean,
     linesToShow : List<TrackCoordinatesData>,
-    lapSplits: List<SectorSplit> = emptyList()
+    lapSplits: List<SectorSplit> = emptyList(),
+    onBack: () -> Unit
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
@@ -239,6 +243,7 @@ fun TimeAttackPortraitLayout(
 
             AppTopBar(
                 title = "$modeLabel Mode",
+                onBack = onBack,
                 accent = modeColor,
                 trailing = {
                     Text(
@@ -366,7 +371,8 @@ fun TimeAttackLandscapeLayout(
     driver: LatLonOffset,
     isConnected: Boolean,
     linesToShow: List<TrackCoordinatesData>,
-    lapSplits: List<SectorSplit> = emptyList()
+    lapSplits: List<SectorSplit> = emptyList(),
+    onBack: () -> Unit
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
@@ -387,6 +393,7 @@ fun TimeAttackLandscapeLayout(
         ) {
             AppTopBar(
                 title = modeLabel,
+                onBack = onBack,
                 accent = modeColor,
                 trailing = {
                     Text(

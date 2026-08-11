@@ -74,6 +74,7 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
 
     ScreenScaffold(
             title = "My Tracks",
+            onBack = { navController.popBackStack() },
             accent = TrackProTheme.colors.accent,
             trailing = {
                 Text(

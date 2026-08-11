@@ -83,7 +83,8 @@ data class DragMetricDisplay(
 fun DragRaceScreen(
     database: ESPDatabase,
     sessionManager: SessionManager,
-    vehicleViewModel: VehicleFULLViewModel
+    vehicleViewModel: VehicleFULLViewModel,
+    onBack: () -> Unit
 ) {
     val app = LocalContext.current.applicationContext as TrackProApp
     val scope = rememberCoroutineScope()
@@ -156,6 +157,7 @@ fun DragRaceScreen(
         // 1. TOP STATUS BAR
         AppTopBar(
             title = "Drag Mode",
+            onBack = onBack,
             accent = TrackProTheme.colors.accent,
             trailing = {
                 Row(

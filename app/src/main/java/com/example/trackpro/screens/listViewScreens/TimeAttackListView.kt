@@ -70,6 +70,7 @@ fun TimeAttackListViewScreen(
 
     ScreenScaffold(
             title = "Track Records",
+            onBack = { navController.popBackStack() },
             accent = TrackProTheme.colors.accent,
             trailing = {
                 Text("${trackSessions.size} sessions", style = TrackProType.label, color = TrackProTheme.colors.textMuted)

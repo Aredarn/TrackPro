@@ -47,7 +47,7 @@ import kotlinx.coroutines.withContext
 
 
 @Composable
-fun CarViewScreen(vehicleId: Long) {
+fun CarViewScreen(vehicleId: Long, onBack: () -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
     val useMetric by app.useMetricUnits.collectAsState()
@@ -70,6 +70,7 @@ fun CarViewScreen(vehicleId: Long) {
     // so the screen had no header (and no back affordance) while loading.
     ScreenScaffold(
         title = "Vehicle Profile",
+        onBack = onBack,
         accent = TrackProTheme.colors.accent,
         contentScrolled = scrolled
     ) { contentPadding ->
@@ -244,7 +245,8 @@ private fun VehicleInfoRow(
 fun PreviewCarViewScreen()
 {
     CarViewScreen(
-        vehicleId = 1
+        vehicleId = 1,
+        onBack = {}
     )
 
 }

@@ -71,6 +71,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
 
     ScreenScaffold(
             title = "My Vehicles",
+            onBack = { navController.popBackStack() },
             accent = TrackProTheme.colors.accent,
             trailing = {
                 Text(

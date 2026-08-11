@@ -319,17 +319,20 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("drag") {
-                        DragRaceScreen(database, sessionManager, vehicleFULLViewModel)
+                        DragRaceScreen(database, sessionManager, vehicleFULLViewModel, onBack = { navController.popBackStack() })
                     }
                     composable("esptest") {
-                        ESPConnectionTestScreen(onNavigateToSettings = { navController.navigate("settings") })
+                        ESPConnectionTestScreen(
+                            onNavigateToSettings = { navController.navigate("settings") },
+                            onBack = { navController.popBackStack() }
+                        )
                     }
                     composable(
                         "track/{trackId}",
                         arguments = listOf(navArgument("trackId") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val trackId = backStackEntry.arguments?.getLong("trackId") ?: 0L
-                        TrackScreen(trackId = trackId)
+                        TrackScreen(trackId = trackId, onBack = { navController.popBackStack() })
                     }
                     composable("dragsessions") {
                         DragTimesListView(viewModel = dragSessionViewModel, navController = navController)
@@ -355,7 +358,7 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("vehicleid") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val vehicleId = backStackEntry.arguments?.getLong("vehicleid") ?: 0L
-                        CarViewScreen(vehicleId = vehicleId)
+                        CarViewScreen(vehicleId = vehicleId, onBack = { navController.popBackStack() })
                     }
                     composable(
                         route = "timeattacklistitem/{sessionid}",
@@ -369,12 +372,12 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(route = "createvehicle") {
-                        CarCreationScreen(database)
+                        CarCreationScreen(database, onBack = { navController.popBackStack() })
                     }
                     composable(route = "timeattack/{vehicleId}/{trackId}") { backStackEntry ->
                         val vehicleId = backStackEntry.arguments?.getString("vehicleId")?.toLongOrNull() ?: -1L
                         val trackId = backStackEntry.arguments?.getString("trackId")?.toLongOrNull() ?: -1L
-                        TimeAttackScreenView(vehicleId = vehicleId, trackId = trackId)
+                        TimeAttackScreenView(vehicleId = vehicleId, trackId = trackId, onBack = { navController.popBackStack() })
                     }
                     composable(route = "trackandvehicle") {
                         TrackVehicleSelectorScreen(trackViewModel = trackViewModel, vehicleViewModel, navController)
