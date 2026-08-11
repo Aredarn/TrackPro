@@ -2,7 +2,6 @@ package com.example.trackpro.screens.listViewScreens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
@@ -31,9 +31,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.extrasForUI.TrackProTheme
-import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.isScrolledUnderChrome
+import com.example.trackpro.components.ScreenScaffold
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.ExpandableGroup
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.TrackProType
@@ -58,40 +61,43 @@ fun DragTimesListView(
     }
 
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(TrackProTheme.colors.bgDeep)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            AppTopBar(
-                title = "Drag Records",
-                accent = TrackProTheme.colors.accent,
-                trailing = {
-                    Text(
-                        "${dragSessions.size} sessions",
-                        style = TrackProType.label,
-                        color = TrackProTheme.colors.textMuted
-                    )
-                }
-            )
+    val listState = rememberLazyListState()
+    val scrolled by listState.isScrolledUnderChrome()
 
-            if (dragSessions.isEmpty()) {
-                EmptyState(message = "No sessions recorded", hint = "Run a drag session to see it here")
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(Spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-                ) {
-                    groupedSessions.forEach { (groupKey, sessions) ->
-                        item(key = groupKey) {
-                            ExpandableSessionGroup(
-                                groupTitle = groupKey,
-                                sessions = sessions,
-                                navController = navController
-                            )
-                        }
+    ScreenScaffold(
+            title = "Drag Records",
+            onBack = { navController.popBackStack() },
+            accent = TrackProTheme.colors.accent,
+            trailing = {
+                Text(
+                    "${dragSessions.size} sessions",
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.textMuted
+                )
+            },
+        contentScrolled = scrolled
+    ) { contentPadding ->
+        if (dragSessions.isEmpty()) {
+            EmptyState(message = "No sessions recorded", hint = "Run a drag session to see it here")
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                contentPadding = PaddingValues(
+                    top = contentPadding.calculateTopPadding() + Spacing.md,
+                    bottom = Spacing.md,
+                    start = Spacing.md,
+                    end = Spacing.md
+                ),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                groupedSessions.forEach { (groupKey, sessions) ->
+                    item(key = groupKey) {
+                        ExpandableSessionGroup(
+                            groupTitle = groupKey,
+                            sessions = sessions,
+                            navController = navController
+                        )
                     }
                 }
             }
@@ -108,10 +114,10 @@ fun ExpandableSessionGroup(
         accent = TrackProTheme.colors.accent,
         header = {
             Column(modifier = Modifier.weight(1f)) {
-                Text(groupTitle, style = TrackProType.titleMedium.copy(fontSize = 13.sp), color = TrackProTheme.colors.textPrimary)
+                Text(groupTitle, style = TrackProType.titleMedium.atSize(13.sp), color = TrackProTheme.colors.textPrimary)
                 Text(
                     "${sessions.size} runs completed",
-                    style = TrackProType.body.copy(fontSize = 11.sp),
+                    style = TrackProType.body.atSize(11.sp),
                     color = TrackProTheme.colors.textMuted
                 )
             }
@@ -124,8 +130,8 @@ fun ExpandableSessionGroup(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .pressable(onClick = { navController.navigate("graph/${session.sessionId}") })
                         .background(TrackProTheme.colors.bgElevated, TrackProShapes.control)
-                        .clickable { navController.navigate("graph/${session.sessionId}") }
                         .padding(Spacing.sm),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically

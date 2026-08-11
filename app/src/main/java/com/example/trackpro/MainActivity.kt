@@ -10,7 +10,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -96,8 +95,11 @@ import com.example.trackpro.viewModels.VehicleFULLViewModel
 import com.example.trackpro.viewModels.VehicleFULLViewModelFactory
 import com.example.trackpro.viewModels.VehicleViewModel
 import com.example.trackpro.viewModels.VehicleViewModelFactory
+import com.example.trackpro.components.pressableRow
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppCard
 import com.example.trackpro.components.SectionLabel
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.TrackProType
@@ -317,17 +319,20 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("drag") {
-                        DragRaceScreen(database, sessionManager, vehicleFULLViewModel)
+                        DragRaceScreen(database, sessionManager, vehicleFULLViewModel, onBack = { navController.popBackStack() })
                     }
                     composable("esptest") {
-                        ESPConnectionTestScreen(onNavigateToSettings = { navController.navigate("settings") })
+                        ESPConnectionTestScreen(
+                            onNavigateToSettings = { navController.navigate("settings") },
+                            onBack = { navController.popBackStack() }
+                        )
                     }
                     composable(
                         "track/{trackId}",
                         arguments = listOf(navArgument("trackId") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val trackId = backStackEntry.arguments?.getLong("trackId") ?: 0L
-                        TrackScreen(trackId = trackId)
+                        TrackScreen(trackId = trackId, onBack = { navController.popBackStack() })
                     }
                     composable("dragsessions") {
                         DragTimesListView(viewModel = dragSessionViewModel, navController = navController)
@@ -353,7 +358,7 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("vehicleid") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val vehicleId = backStackEntry.arguments?.getLong("vehicleid") ?: 0L
-                        CarViewScreen(vehicleId = vehicleId)
+                        CarViewScreen(vehicleId = vehicleId, onBack = { navController.popBackStack() })
                     }
                     composable(
                         route = "timeattacklistitem/{sessionid}",
@@ -367,12 +372,12 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(route = "createvehicle") {
-                        CarCreationScreen(database)
+                        CarCreationScreen(database, onBack = { navController.popBackStack() })
                     }
                     composable(route = "timeattack/{vehicleId}/{trackId}") { backStackEntry ->
                         val vehicleId = backStackEntry.arguments?.getString("vehicleId")?.toLongOrNull() ?: -1L
                         val trackId = backStackEntry.arguments?.getString("trackId")?.toLongOrNull() ?: -1L
-                        TimeAttackScreenView(vehicleId = vehicleId, trackId = trackId)
+                        TimeAttackScreenView(vehicleId = vehicleId, trackId = trackId, onBack = { navController.popBackStack() })
                     }
                     composable(route = "trackandvehicle") {
                         TrackVehicleSelectorScreen(trackViewModel = trackViewModel, vehicleViewModel, navController)
@@ -451,7 +456,7 @@ fun MainScreen(
                             )
                             Text(
                                 text = "Performance Telemetry",
-                                style = TrackProType.body.copy(fontSize = 11.sp),
+                                style = TrackProType.body.atSize(11.sp),
                                 color = TrackProTheme.colors.textFaint
                             )
                         }
@@ -544,7 +549,7 @@ fun MainScreen(
                         }
                         Text(
                             text = "TRACKPRO",
-                            style = TrackProType.label.copy(fontSize = 13.sp, letterSpacing = 2.sp),
+                            style = TrackProType.label.atSize(13.sp).copy(letterSpacing = 2.sp),
                             color = TrackProTheme.colors.textPrimary
                         )
                         // Spacer to balance the row
@@ -705,14 +710,14 @@ private fun ActionCard(
     val alpha = if (disabled) 0.4f else 1f
     val iconSize = if (halfWidth) 14.dp else if (fullWidth) 18.dp else 16.dp
     val iconBoxSize = if (halfWidth) 26.dp else if (fullWidth) 34.dp else 30.dp
-    val titleStyle = if (fullWidth) TrackProType.titleMedium else TrackProType.titleMedium.copy(fontSize = 13.sp)
+    val titleStyle = if (fullWidth) TrackProType.titleMedium else TrackProType.titleMedium.atSize(13.sp)
     val subtitleSize = if (halfWidth) 9.sp else 10.sp
     val vertPadding = if (halfWidth) 10.dp else if (fullWidth) 12.dp else 10.dp
 
     AppCard(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (!disabled) Modifier.clickable(onClick = onClick) else Modifier),
+            .pressable(onClick = onClick, enabled = !disabled),
         padding = 0.dp
     ) {
         Box {
@@ -758,7 +763,7 @@ private fun ActionCard(
                     )
                     Text(
                         text = subtitle,
-                        style = TrackProType.body.copy(fontSize = subtitleSize),
+                        style = TrackProType.body.atSize(subtitleSize),
                         color = TrackProTheme.colors.textMuted.copy(alpha = alpha),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -799,7 +804,7 @@ private fun DrawerItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .pressableRow(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)

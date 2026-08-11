@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,10 +46,12 @@ import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.StatCell
 import com.example.trackpro.components.StatCellSize
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.TrackProType
@@ -186,6 +187,7 @@ fun TimeAttackListItemScreen(
                 item {
                     AppTopBar(
                         title = "Session Detail",
+                        onBack = { navController.popBackStack() },
                         accent = TrackProTheme.colors.accent,
                         trailing = {
                             Text("${lapTimes.size} laps", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
@@ -215,14 +217,14 @@ fun TimeAttackListItemScreen(
                             )
                             Text(
                                 text = "${vehicle.engineType} · ${vehicle.horsepower}hp · ${vehicle.drivetrain}",
-                                style = TrackProType.body.copy(fontSize = 11.sp),
+                                style = TrackProType.body.atSize(11.sp),
                                 color = TrackProTheme.colors.textMuted.copy(alpha = 0.7f)
                             )
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = DateFormatterUtil.getDateTimeFormat().format(Date(session.startTime)),
-                            style = TrackProType.body.copy(fontSize = 11.sp),
+                            style = TrackProType.body.atSize(11.sp),
                             color = TrackProTheme.colors.textMuted
                         )
                     }
@@ -328,9 +330,9 @@ fun TimeAttackListItemScreen(
                         val lapMs = lap.laptime.toLapTimeMillis()
                         val deltaMs = lapMs - bestMs
                         val topSpeed = topSpeedPerLap[lap.lapnumber] ?: 0f
-                        Box(modifier = Modifier.clickable {
+                        Box(modifier = Modifier.pressable(onClick = {
                             navController.navigate("lap_detail/$sessionId/${lap.id}")
-                        }) {
+                        })) {
                             LapRow(
                                 lap = lap,
                                 isBest = isBest,
@@ -411,7 +413,7 @@ private fun LapRow(
             ) {
                 Text(
                     text = String.format("%02d", lap.lapnumber),
-                    style = TrackProType.statValue.copy(fontSize = 18.sp),
+                    style = TrackProType.statValue.atSize(18.sp),
                     color = accentColor
                 )
                 Box(
@@ -419,7 +421,7 @@ private fun LapRow(
                         .background(accentColor.copy(alpha = 0.15f), TrackProShapes.badge)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
-                    Text(badge.uppercase(), style = TrackProType.label.copy(fontSize = 8.sp), color = accentColor)
+                    Text(badge.uppercase(), style = TrackProType.label.atSize(8.sp), color = accentColor)
                 }
             }
 
@@ -436,19 +438,19 @@ private fun LapRow(
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = lap.laptime,
-                    style = TrackProType.statValue.copy(fontSize = 17.sp),
+                    style = TrackProType.statValue.atSize(17.sp),
                     color = accentColor
                 )
                 if (!isBest && deltaMs > 0) {
                     Text(
                         text = "+${deltaMs.toLapTimeString()}",
-                        style = TrackProType.body.copy(fontSize = 11.sp),
+                        style = TrackProType.body.atSize(11.sp),
                         color = badColor.copy(alpha = 0.8f)
                     )
                 } else if (isBest) {
                     Text(
                         text = "Reference",
-                        style = TrackProType.label.copy(fontSize = 9.sp),
+                        style = TrackProType.label.atSize(9.sp),
                         color = goodColor.copy(alpha = 0.7f)
                     )
                 }

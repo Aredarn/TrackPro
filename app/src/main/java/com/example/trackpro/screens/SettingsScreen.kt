@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -27,12 +25,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.components.AppCard
-import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.ScreenScaffold
+import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.ToggleChip
 import com.example.trackpro.extrasForUI.AppDropdownField
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.models.GpsProviderType
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
 
@@ -49,17 +49,24 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
     val useDarkTheme by app.useDarkTheme.collectAsState()
     val useMetric by app.useMetricUnits.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(TrackProTheme.colors.bgDeep)
-    ) {
-        AppTopBar(title = "Settings", accent = TrackProTheme.colors.textMuted, onBack = onBack)
+    val scrollState = rememberScrollState()
+    val scrolled by scrollState.isScrolledUnderChrome()
 
+    ScreenScaffold(
+        title = "Settings",
+        accent = TrackProTheme.colors.textMuted,
+        onBack = onBack,
+        contentScrolled = scrolled
+    ) { contentPadding ->
         Column(
             modifier = Modifier
-                .padding(Spacing.md)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState)
+                .padding(
+                    top = contentPadding.calculateTopPadding() + Spacing.md,
+                    start = Spacing.md,
+                    end = Spacing.md,
+                    bottom = Spacing.md
+                ),
             verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             // --- Section: Hardware & GPS ---
@@ -252,7 +259,7 @@ private fun GpsRateRow(selectedHz: Int, confirmedHz: Int?, onSelect: (Int) -> Un
             if (confirmedHz != null) {
                 Text(
                     text = if (confirmedHz == selectedHz) "· confirmed" else "· device at ${confirmedHz}Hz",
-                    style = TrackProType.body.copy(fontSize = 10.sp),
+                    style = TrackProType.body.atSize(10.sp),
                     // A mismatch between requested and confirmed rate is a real problem
                     // worth flagging, so this is one of the few places color is earned.
                     color = if (confirmedHz == selectedHz) TrackProTheme.colors.deltaGood

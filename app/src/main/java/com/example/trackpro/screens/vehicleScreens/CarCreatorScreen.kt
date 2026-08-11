@@ -1,11 +1,8 @@
 package com.example.trackpro.screens.vehicleScreens
 
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -39,7 +36,8 @@ import com.example.trackpro.extrasForUI.AppDropdownField
 import com.example.trackpro.extrasForUI.CustomTextField
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.AppCard
-import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.ScreenScaffold
+import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.PrimaryButton
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.theme.Spacing
@@ -49,7 +47,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun CarCreationScreen(
-    database: ESPDatabase
+    database: ESPDatabase,
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
@@ -76,88 +75,91 @@ fun CarCreationScreen(
 
     val scrollState = rememberScrollState()
 
-    Box(
+    val scrolled by scrollState.isScrolledUnderChrome()
+
+    ScreenScaffold(
+        title = "Vehicle Setup",
+        onBack = onBack,
+        accent = TrackProTheme.colors.accent,
+        contentScrolled = scrolled
+    ) { contentPadding ->
+    Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(TrackProTheme.colors.bgDeep)
+            .verticalScroll(scrollState)
+            .fillMaxWidth()
+            .padding(
+                top = contentPadding.calculateTopPadding() + Spacing.md,
+                start = Spacing.md,
+                end = Spacing.md,
+                bottom = Spacing.md
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+            AppCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
 
-            AppTopBar(title = "Vehicle Setup", accent = TrackProTheme.colors.accent)
+                SectionLabel("Basic Info (Required)", modifier = Modifier.padding(vertical = Spacing.sm))
+                CustomTextField("Manufacturer", manufacturer, leadingIcon = Icons.Default.Business) { manufacturer = it }
+                CustomTextField("Model", model, leadingIcon = Icons.Default.DirectionsCar) { model = it }
+                CustomTextField("Year", year, leadingIcon = Icons.Default.Event) { year = it }
 
-            Column(
-                modifier = Modifier
-                    .verticalScroll(scrollState)
-                    .fillMaxWidth()
-                    .padding(Spacing.md),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                AppCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
+                SectionLabel("Performance", modifier = Modifier.padding(vertical = Spacing.sm))
+                CustomTextField("Horsepower", horsepower, true, Icons.Default.FlashOn) { horsepower = it }
+                CustomTextField("Torque (Nm)", torque, true, Icons.Default.Settings) { torque = it }
+                CustomTextField("Weight (kg)", weight, true, Icons.Default.FitnessCenter) { weight = it }
+                CustomTextField("Top Speed (${UnitFormatter.speedUnitLabel(useMetric)})", topSpeed, true, Icons.Default.Speed) { topSpeed = it }
+                CustomTextField(
+                    if (useMetric) "0-100 KM/H (s)" else "0-60 MPH (s)",
+                    acceleration, true, Icons.Default.Timer
+                ) { acceleration = it }
+                CustomTextField("Fuel Capacity (L)", fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
 
-                    SectionLabel("Basic Info (Required)", modifier = Modifier.padding(vertical = Spacing.sm))
-                    CustomTextField("Manufacturer", manufacturer, leadingIcon = Icons.Default.Business) { manufacturer = it }
-                    CustomTextField("Model", model, leadingIcon = Icons.Default.DirectionsCar) { model = it }
-                    CustomTextField("Year", year, leadingIcon = Icons.Default.Event) { year = it }
+                SectionLabel("Configuration", modifier = Modifier.padding(vertical = Spacing.sm))
+                AppDropdownField("Engine Type", jsonOptions.engineTypes, selectedEngineType, { it }, { selectedEngineType = it })
+                AppDropdownField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain, { it }, { selectedDrivetrain = it })
+                AppDropdownField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType, { it }, { selectedFuelType = it })
+                AppDropdownField("Tire Type", jsonOptions.tireTypes, selectedTireType, { it }, { selectedTireType = it })
+                AppDropdownField("Transmission", jsonOptions.transmissions, selectedTransmission, { it }, { selectedTransmission = it })
+                AppDropdownField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType, { it }, { selectedSuspensionType = it })
 
-                    SectionLabel("Performance", modifier = Modifier.padding(vertical = Spacing.sm))
-                    CustomTextField("Horsepower", horsepower, true, Icons.Default.FlashOn) { horsepower = it }
-                    CustomTextField("Torque (Nm)", torque, true, Icons.Default.Settings) { torque = it }
-                    CustomTextField("Weight (kg)", weight, true, Icons.Default.FitnessCenter) { weight = it }
-                    CustomTextField("Top Speed (${UnitFormatter.speedUnitLabel(useMetric)})", topSpeed, true, Icons.Default.Speed) { topSpeed = it }
-                    CustomTextField(
-                        if (useMetric) "0-100 KM/H (s)" else "0-60 MPH (s)",
-                        acceleration, true, Icons.Default.Timer
-                    ) { acceleration = it }
-                    CustomTextField("Fuel Capacity (L)", fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
+                Spacer(modifier = Modifier.height(Spacing.md))
 
-                    SectionLabel("Configuration", modifier = Modifier.padding(vertical = Spacing.sm))
-                    AppDropdownField("Engine Type", jsonOptions.engineTypes, selectedEngineType, { it }, { selectedEngineType = it })
-                    AppDropdownField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain, { it }, { selectedDrivetrain = it })
-                    AppDropdownField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType, { it }, { selectedFuelType = it })
-                    AppDropdownField("Tire Type", jsonOptions.tireTypes, selectedTireType, { it }, { selectedTireType = it })
-                    AppDropdownField("Transmission", jsonOptions.transmissions, selectedTransmission, { it }, { selectedTransmission = it })
-                    AppDropdownField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType, { it }, { selectedSuspensionType = it })
+                PrimaryButton(
+                    text = "Save Vehicle",
+                    onClick = {
+                        if (manufacturer.isBlank() || model.isBlank() || year.isBlank()) {
+                            Toast.makeText(context, "Fill in required fields.", Toast.LENGTH_SHORT).show()
+                            return@PrimaryButton
+                        }
 
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                        val vehicle = VehicleInformationData(
+                            manufacturer = manufacturer,
+                            model = model,
+                            year = year.toIntOrNull() ?: 0,
+                            engineType = selectedEngineType,
+                            horsepower = horsepower.toIntOrNull() ?: 0,
+                            torque = torque.toIntOrNull(),
+                            weight = weight.toDoubleOrNull() ?: 0.0,
+                            // Stored canonically in km/h regardless of the unit the
+                            // user entered it in, matching every other speed value.
+                            topSpeed = topSpeed.toDoubleOrNull()?.let { UnitFormatter.convertSpeedToKmh(it, useMetric) },
+                            acceleration = acceleration.toDoubleOrNull(),
+                            drivetrain = selectedDrivetrain,
+                            fuelType = selectedFuelType,
+                            tireType = selectedTireType,
+                            fuelCapacity = fuelCapacity.toDoubleOrNull(),
+                            transmission = selectedTransmission,
+                            suspensionType = selectedSuspensionType
+                        )
 
-                    PrimaryButton(
-                        text = "Save Vehicle",
-                        onClick = {
-                            if (manufacturer.isBlank() || model.isBlank() || year.isBlank()) {
-                                Toast.makeText(context, "Fill in required fields.", Toast.LENGTH_SHORT).show()
-                                return@PrimaryButton
-                            }
+                        coroutineScope.launch {
+                            database.vehicleInformationDAO().insertVehicle(vehicle)
+                        }
 
-                            val vehicle = VehicleInformationData(
-                                manufacturer = manufacturer,
-                                model = model,
-                                year = year.toIntOrNull() ?: 0,
-                                engineType = selectedEngineType,
-                                horsepower = horsepower.toIntOrNull() ?: 0,
-                                torque = torque.toIntOrNull(),
-                                weight = weight.toDoubleOrNull() ?: 0.0,
-                                // Stored canonically in km/h regardless of the unit the
-                                // user entered it in, matching every other speed value.
-                                topSpeed = topSpeed.toDoubleOrNull()?.let { UnitFormatter.convertSpeedToKmh(it, useMetric) },
-                                acceleration = acceleration.toDoubleOrNull(),
-                                drivetrain = selectedDrivetrain,
-                                fuelType = selectedFuelType,
-                                tireType = selectedTireType,
-                                fuelCapacity = fuelCapacity.toDoubleOrNull(),
-                                transmission = selectedTransmission,
-                                suspensionType = selectedSuspensionType
-                            )
-
-                            coroutineScope.launch {
-                                database.vehicleInformationDAO().insertVehicle(vehicle)
-                            }
-
-                            Toast.makeText(context, "Vehicle saved successfully.", Toast.LENGTH_SHORT).show()
-                        },
-                        accent = TrackProTheme.colors.deltaGood,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                        Toast.makeText(context, "Vehicle saved successfully.", Toast.LENGTH_SHORT).show()
+                    },
+                    accent = TrackProTheme.colors.deltaGood,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }

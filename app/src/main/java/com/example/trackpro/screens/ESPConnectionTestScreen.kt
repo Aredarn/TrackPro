@@ -2,12 +2,9 @@ package com.example.trackpro.screens
 
 import android.annotation.SuppressLint
 import android.graphics.Typeface
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,12 +37,15 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.StatCell
 import com.example.trackpro.components.StatCellDivider
 import com.example.trackpro.components.StatCellSize
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.DataVizColors
+import com.example.trackpro.theme.Motion
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.JsonReader
@@ -56,7 +56,10 @@ import kotlin.math.sin
 
 @SuppressLint("MissingPermission")
 @Composable
-fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
+fun ESPConnectionTestScreen(
+    onNavigateToSettings: () -> Unit,
+    onBack: () -> Unit
+) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
 
@@ -104,12 +107,17 @@ fun ESPConnectionTestScreen(onNavigateToSettings: () -> Unit) {
                     GpsProviderType.PHONE_GPS -> "Phone GPS Mode"
                 },
                 accent = if (isConnected) TrackProTheme.colors.accent else TrackProTheme.colors.textFaint,
+                onBack = onBack,
                 trailing = {
                     Text(
                         text = "Change",
                         style = TrackProType.label,
                         color = TrackProTheme.colors.accent,
-                        modifier = Modifier.clickable { onNavigateToSettings() }
+                        // Bare text was the smallest tap target on the screen; give it
+                        // real padding and a press response.
+                        modifier = Modifier
+                            .pressable(onClick = onNavigateToSettings, scale = 0.94f)
+                            .padding(horizontal = Spacing.sm, vertical = 4.dp)
                     )
                 }
             )
@@ -250,7 +258,10 @@ fun StyledSpeedometer(
 ) {
     val animatedSpeed by animateFloatAsState(
         targetValue = speed,
-        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+        // Was tween(600): every GPS tick restarted a fixed ramp from wherever it had
+        // got to, so a steadily changing speed animated in visible steps. A spring
+        // re-targets continuously from the current value instead.
+        animationSpec = Motion.standard(),
         label = "speed"
     )
 
@@ -396,7 +407,7 @@ private fun TelemetryRow(label: String, value: String, textPrimary: Color, textM
         Text(label.uppercase(), style = TrackProType.label, color = textMuted)
         Text(
             value,
-            style = TrackProType.body.copy(fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+            style = TrackProType.body.atSize(13.sp).copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
             color = textPrimary
         )
     }

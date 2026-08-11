@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -31,7 +33,8 @@ import androidx.compose.ui.unit.dp
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
-import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.ScreenScaffold
+import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.StatCell
 import com.example.trackpro.components.StatCellSize
@@ -44,7 +47,7 @@ import kotlinx.coroutines.withContext
 
 
 @Composable
-fun CarViewScreen(vehicleId: Long) {
+fun CarViewScreen(vehicleId: Long, onBack: () -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
     val useMetric by app.useMetricUnits.collectAsState()
@@ -60,11 +63,17 @@ fun CarViewScreen(vehicleId: Long) {
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(TrackProTheme.colors.bgDeep)
-    ) {
+    val listState = rememberLazyListState()
+    val scrolled by listState.isScrolledUnderChrome()
+
+    // The bar now wraps both states - previously it only existed in the loaded branch,
+    // so the screen had no header (and no back affordance) while loading.
+    ScreenScaffold(
+        title = "Vehicle Profile",
+        onBack = onBack,
+        accent = TrackProTheme.colors.accent,
+        contentScrolled = scrolled
+    ) { contentPadding ->
         if (vehicleInfo == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -79,11 +88,11 @@ fun CarViewScreen(vehicleId: Long) {
             }
         } else {
             val vehicle = vehicleInfo!!
-            Column(modifier = Modifier.fillMaxSize()) {
-
-                AppTopBar(title = "Vehicle Profile", accent = TrackProTheme.colors.accent)
-
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                contentPadding = PaddingValues(top = contentPadding.calculateTopPadding())
+            ) {
 
                     // ── Hero ──────────────────────────────
                     item {
@@ -198,7 +207,6 @@ fun CarViewScreen(vehicleId: Long) {
 
                     item { Spacer(Modifier.height(Spacing.xl)) }
                 }
-            }
         }
     }
 }
@@ -237,7 +245,8 @@ private fun VehicleInfoRow(
 fun PreviewCarViewScreen()
 {
     CarViewScreen(
-        vehicleId = 1
+        vehicleId = 1,
+        onBack = {}
     )
 
 }

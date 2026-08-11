@@ -1,7 +1,6 @@
 package com.example.trackpro.screens.telemetricScreens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,10 +60,13 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import androidx.core.graphics.toColorInt
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.pressable
+import com.example.trackpro.components.Haptic
 import com.example.trackpro.components.AppCard
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.PrimaryButton
 import com.example.trackpro.components.SectionLabel
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.DataVizColors
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProShapes
@@ -81,7 +83,8 @@ data class DragMetricDisplay(
 fun DragRaceScreen(
     database: ESPDatabase,
     sessionManager: SessionManager,
-    vehicleViewModel: VehicleFULLViewModel
+    vehicleViewModel: VehicleFULLViewModel,
+    onBack: () -> Unit
 ) {
     val app = LocalContext.current.applicationContext as TrackProApp
     val scope = rememberCoroutineScope()
@@ -154,6 +157,7 @@ fun DragRaceScreen(
         // 1. TOP STATUS BAR
         AppTopBar(
             title = "Drag Mode",
+            onBack = onBack,
             accent = TrackProTheme.colors.accent,
             trailing = {
                 Row(
@@ -163,7 +167,7 @@ fun DragRaceScreen(
                     if (isSessionActive) {
                         Text(
                             elapsedTime,
-                            style = TrackProType.statValue.copy(fontSize = 13.sp),
+                            style = TrackProType.statValue.atSize(13.sp),
                             color = TrackProTheme.colors.accent
                         )
                     }
@@ -188,7 +192,7 @@ fun DragRaceScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(Spacing.md)
-                        .clickable { showVehicleDropdown = true }
+                        .pressable(onClick = { showVehicleDropdown = true })
                 ) {
                     Row(
                         Modifier.fillMaxWidth(),
@@ -210,7 +214,7 @@ fun DragRaceScreen(
                             selectedVehicle?.let {
                                 Text(
                                     "${it.horsepower}hp · ${it.drivetrain} · ${it.year}",
-                                    style = TrackProType.body.copy(fontSize = 11.sp),
+                                    style = TrackProType.body.atSize(11.sp),
                                     color = TrackProTheme.colors.textMuted
                                 )
                             }
@@ -238,7 +242,7 @@ fun DragRaceScreen(
                                         )
                                         Text(
                                             "${vehicle.horsepower}hp · ${vehicle.year}",
-                                            style = TrackProType.body.copy(fontSize = 12.sp),
+                                            style = TrackProType.body.atSize(12.sp),
                                             color = TrackProTheme.colors.textMuted
                                         )
                                     }
@@ -301,7 +305,7 @@ fun DragRaceScreen(
                         )
                         Text(
                             UnitFormatter.speedUnitLabel(useMetric),
-                            style = TrackProType.body.copy(fontSize = 15.sp),
+                            style = TrackProType.body.atSize(15.sp),
                             color = TrackProTheme.colors.textMuted,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
@@ -311,7 +315,7 @@ fun DragRaceScreen(
                         Spacer(Modifier.height(8.dp))
                         Text(
                             "MAX: ${UnitFormatter.formatSpeed(currentMetrics.maxSpeed, useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)} · DIST: ${UnitFormatter.formatDistance(currentMetrics.totalDistance.toDouble(), useMetric)}",
-                            style = TrackProType.body.copy(fontSize = 12.sp),
+                            style = TrackProType.body.atSize(12.sp),
                             color = TrackProTheme.colors.textMuted
                         )
                     }
@@ -504,6 +508,7 @@ fun DragRaceScreen(
                     }
                 },
                 enabled = selectedVehicle != null,
+                haptic = Haptic.Confirm,
                 accent = if (isSessionActive) TrackProTheme.colors.bgElevated else TrackProTheme.colors.accent,
                 contentColor = if (isSessionActive) TrackProTheme.colors.accent else null,
                 modifier = Modifier.weight(1f).height(56.dp)
@@ -552,13 +557,13 @@ fun DragMetricCard(
             ) {
                 Text(
                     metric.value,
-                    style = TrackProType.statValue.copy(fontSize = 19.sp),
+                    style = TrackProType.statValue.atSize(19.sp),
                     color = if (metric.achieved) TrackProTheme.colors.textPrimary
                     else TrackProTheme.colors.textMuted.copy(alpha = 0.5f)
                 )
                 Text(
                     metric.unit,
-                    style = TrackProType.body.copy(fontSize = 10.sp),
+                    style = TrackProType.body.atSize(10.sp),
                     color = TrackProTheme.colors.textMuted,
                     modifier = Modifier.padding(bottom = 2.dp)
                 )
