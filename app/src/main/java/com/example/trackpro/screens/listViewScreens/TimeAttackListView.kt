@@ -34,6 +34,7 @@ import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.ScreenScaffold
 import com.example.trackpro.components.pressable
+import com.example.trackpro.components.ConfirmDeleteDialog
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.ExpandableGroup
 import com.example.trackpro.theme.atSize
@@ -99,7 +100,8 @@ fun TimeAttackListViewScreen(
                             trackMeta = "${track?.country} · ${track?.type}",
                             sessions = sessions,
                             vehicles = vehicles,
-                            navController = navController
+                            navController = navController,
+                            onDelete = { viewModel.deleteSession(it) }
                         )
                     }
                 }
@@ -114,8 +116,25 @@ fun ExpandableTrackGroup(
     trackMeta: String,
     sessions: List<SessionData>,
     vehicles: List<VehicleInformationData>,
-    navController: NavController
+    navController: NavController,
+    onDelete: (SessionData) -> Unit
 ) {
+    // One slot per group rather than per row: only one dialog can be open at a time, and
+    // holding the pending session here keeps each row from carrying its own state.
+    var pendingDelete by remember { mutableStateOf<SessionData?>(null) }
+
+    pendingDelete?.let { session ->
+        val date = Instant.ofEpochMilli(session.startTime)
+            .atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd MMM"))
+        ConfirmDeleteDialog(
+            title = "Delete session?",
+            message = "The $trackName session from $date, including every lap and " +
+                "sector time, will be permanently removed.",
+            onConfirm = { onDelete(session); pendingDelete = null },
+            onDismiss = { pendingDelete = null }
+        )
+    }
+
     ExpandableGroup(
         accent = TrackProTheme.colors.accent,
         header = {
@@ -138,7 +157,10 @@ fun ExpandableTrackGroup(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .pressable(onClick = { navController.navigate("timeattacklistitem/${session.id}") })
+                        .pressable(
+                            onClick = { navController.navigate("timeattacklistitem/${session.id}") },
+                            onLongClick = { pendingDelete = session }
+                        )
                         .background(TrackProTheme.colors.bgElevated.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                         .padding(Spacing.sm),
                     horizontalArrangement = Arrangement.SpaceBetween,

@@ -34,6 +34,7 @@ import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.ScreenScaffold
 import com.example.trackpro.components.pressable
+import com.example.trackpro.components.ConfirmDeleteDialog
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.ExpandableGroup
 import com.example.trackpro.theme.atSize
@@ -96,7 +97,8 @@ fun DragTimesListView(
                         ExpandableSessionGroup(
                             groupTitle = groupKey,
                             sessions = sessions,
-                            navController = navController
+                            navController = navController,
+                            onDelete = { viewModel.deleteSession(it) }
                         )
                     }
                 }
@@ -108,8 +110,24 @@ fun DragTimesListView(
 fun ExpandableSessionGroup(
     groupTitle: String,
     sessions: List<DragSessionWithVehicle>,
-    navController: NavController
+    navController: NavController,
+    onDelete: (DragSessionWithVehicle) -> Unit
 ) {
+    // One slot per group rather than per row: only one dialog can be open at a time, and
+    // holding the pending session here keeps each row from carrying its own state.
+    var pendingDelete by remember { mutableStateOf<DragSessionWithVehicle?>(null) }
+
+    pendingDelete?.let { session ->
+        val time = DateFormatterUtil.getTimeFormat().format(Date(session.startTime))
+        ConfirmDeleteDialog(
+            title = "Delete session?",
+            message = "The run at $time and all of its recorded data will be " +
+                "permanently removed.",
+            onConfirm = { onDelete(session); pendingDelete = null },
+            onDismiss = { pendingDelete = null }
+        )
+    }
+
     ExpandableGroup(
         accent = TrackProTheme.colors.accent,
         header = {
@@ -130,7 +148,10 @@ fun ExpandableSessionGroup(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .pressable(onClick = { navController.navigate("graph/${session.sessionId}") })
+                        .pressable(
+                            onClick = { navController.navigate("graph/${session.sessionId}") },
+                            onLongClick = { pendingDelete = session }
+                        )
                         .background(TrackProTheme.colors.bgElevated, TrackProShapes.control)
                         .padding(Spacing.sm),
                     horizontalArrangement = Arrangement.SpaceBetween,
