@@ -43,6 +43,7 @@ import androidx.room.Room
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
+import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
@@ -50,6 +51,7 @@ import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.StatCell
+import com.example.trackpro.components.StatCellDivider
 import com.example.trackpro.components.StatCellSize
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
@@ -98,6 +100,7 @@ fun TimeAttackListItemScreen(
     var lapTimes by remember { mutableStateOf<List<LapTimeData>>(emptyList()) }
     // GPS data per lap — map of lapNumber -> list of GPS points for that lap
     var lapGpsData by remember { mutableStateOf<Map<Int, List<LapInfoData>>>(emptyMap()) }
+    var lapSectors by remember { mutableStateOf<Map<Long, List<SectorTimeData>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
 
 
@@ -109,10 +112,13 @@ fun TimeAttackListItemScreen(
                 lapTimes = database.lapTimeDataDAO().getLapsForSession(sessionId)
                 // Load GPS points for each lap for speed analysis
                 val gpsMap = mutableMapOf<Int, List<LapInfoData>>()
+                val sectorMap = mutableMapOf<Long, List<SectorTimeData>>()
                 lapTimes.forEach { lap ->
                     gpsMap[lap.lapnumber] = database.lapInfoDataDAO().getLapData(lap.id)
+                    sectorMap[lap.id] = database.sectorTimeDataDAO().getSectorTimesForLap(lap.id)
                 }
                 lapGpsData = gpsMap
+                lapSectors = sectorMap
             }
             withContext(Dispatchers.Main) { isLoading = false }
         }
@@ -161,6 +167,38 @@ fun TimeAttackListItemScreen(
             val topSpeedPerLap = lapTimes.associate { lap ->
                 lap.lapnumber to (lapGpsData[lap.lapnumber]?.mapNotNull { it.spd }?.maxOrNull() ?: 0f)
             }
+            // Predicted (theoretical) best: the quickest time set in each sector, combined
+            // into one lap that was never actually driven.
+            //
+            // Sector splits are only recorded when a sector *gate* is crossed - the finish
+            // line resets the timer without emitting one (see CircuitTimingManager). So the
+            // final segment, from the last gate to the line, is never persisted. Summing
+            // only the stored sectors would therefore produce a "best lap" shorter than any
+            // real one. That last sector is recovered here as
+            // (lap time - sum of that lap's recorded sectors).
+            //
+            // Laps that did not record the full set of gates are skipped rather than
+            // partially counted, otherwise a lap abandoned early would contribute a
+            // deceptively quick opening sector and nothing else.
+            val gateCount = lapSectors.values.maxOfOrNull { it.size } ?: 0
+            val completeLapSectors: List<List<Long>> =
+                if (gateCount == 0) emptyList()
+                else lapTimes.mapNotNull { lap ->
+                    val splits = lapSectors[lap.id].orEmpty().sortedBy { it.sectorIndex }
+                    if (splits.size != gateCount) return@mapNotNull null
+                    val recorded = splits.sumOf { it.splitTimeMs }
+                    val finalSector = lap.laptime.toLapTimeMillis() - recorded
+                    if (finalSector <= 0L) null
+                    else splits.map { it.splitTimeMs } + finalSector
+                }
+            val predictedBestMs: Long? =
+                if (completeLapSectors.isEmpty()) null
+                else (0..gateCount).sumOf { idx -> completeLapSectors.minOf { it[idx] } }
+            // Only positive when the theoretical lap actually beats the real best, which is
+            // the normal case but not guaranteed - a single lap session has no gain to show.
+            val timeOnTableMs: Long? =
+                predictedBestMs?.let { bestMs - it }?.takeIf { it > 0L }
+
             // Improvement trend: compare first half avg vs second half avg
             val trend = if (lapMillis.size >= 4) {
                 val half = lapMillis.size / 2
@@ -252,6 +290,55 @@ fun TimeAttackListItemScreen(
                         )
                     }
                     HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                }
+
+                // ── Predicted best (theoretical lap)
+                if (predictedBestMs != null) {
+                    item {
+                        SectionLabel(
+                            "Predicted Best",
+                            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(TrackProTheme.colors.bgCard)
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                StatCell(
+                                    label = "Theoretical Lap",
+                                    value = predictedBestMs.toLapTimeString(),
+                                    valueColor = TrackProTheme.colors.accent,
+                                    size = StatCellSize.Large
+                                )
+                                StatCellDivider()
+                                StatCell(
+                                    label = "Time On Table",
+                                    value = timeOnTableMs
+                                        ?.let { String.format("-%.2fs", it / 1000.0) } ?: "—",
+                                    valueColor = if (timeOnTableMs != null)
+                                        TrackProTheme.colors.deltaGood
+                                    else TrackProTheme.colors.textMuted,
+                                    size = StatCellSize.Large,
+                                    horizontalAlignment = Alignment.End
+                                )
+                            }
+                            Text(
+                                text = "Best sector from every lap, combined. Based on " +
+                                    "${completeLapSectors.size} of ${lapTimes.size} laps " +
+                                    "with a full set of splits.",
+                                style = TrackProType.body.atSize(11.sp),
+                                color = TrackProTheme.colors.textFaint
+                            )
+                        }
+                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                    }
                 }
 
                 // ── Session stats row
