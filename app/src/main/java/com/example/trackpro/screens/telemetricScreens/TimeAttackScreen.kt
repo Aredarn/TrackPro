@@ -90,12 +90,8 @@ fun TimeAttackScreenView(
         factory = TimeAttackViewModelFactory(context)
     )
 
-    // Track if initialization is complete
-    var isInitialized by remember { mutableStateOf(false) }
-
     // ── Collect all state ──────────────────────────────────
     val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
-    val gpsData by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
 
     val currentTime  by vm.currentTime.collectAsState()
     val bestTime     by vm.bestTime.collectAsState()
@@ -145,26 +141,12 @@ fun TimeAttackScreenView(
             }
 
             vm.loadTrack(trackId, mode)
-            vm.createSession(trackId, vehicleId)
-
-            // Wait a bit to ensure session is written to DB
-            delay(100)
-
-            isInitialized = true
+            // Both calls are no-ops if this screen has merely been rebuilt (rotation,
+            // returning from background) rather than genuinely started.
+            vm.ensureSession(trackId, vehicleId)
         } catch (e: Exception) {
             Log.e("TimeAttackScreen", "Initialization error: ${e.message}", e)
         }
-    }
-
-    // ── Wire GPS from shared client into ViewModel (ONLY AFTER INIT) ─────────
-    LaunchedEffect(gpsData, isInitialized) {
-        if (!isInitialized) {
-            return@LaunchedEffect
-        }
-
-        gpsData?.let {
-            vm.handleGpsUpdate(it)
-        } ?: Log.w("TimeAttackScreen", "GPS data is null")
     }
 
     // The single most useful haptic in the app: a lap closing is confirmed by feel, so

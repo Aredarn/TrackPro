@@ -21,6 +21,9 @@ import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry.calculateFinishLine
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,6 +61,15 @@ class TimeAttackViewModel(
     // Session state
     private var _sessionId: Long = -1
     private var _lapId: Long = -1
+
+    // The screen re-runs its init effect every time it enters composition - which
+    // includes every device rotation, since this screen has separate portrait and
+    // landscape layouts. The ViewModel outlives those recompositions, so it is the only
+    // place that can tell "the screen was rebuilt" apart from "the driver started a new
+    // session". These guards are what keep one run from becoming ten sessions.
+    private val sessionMutex = Mutex()
+    private var trackLoaded = false
+    private var gpsJob: Job? = null
     private var previousGPSData: RawGPSData? = null
     private val lapDataChannel = Channel<LapInfoData>(Channel.UNLIMITED)
     private val sessionManager = app.sessionManager
@@ -103,6 +115,8 @@ class TimeAttackViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        gpsJob?.cancel()
+        gpsJob = null
         tcpClient?.disconnect()
         timingManager?.reset()
         app.applicationScope.launch(Dispatchers.IO) {
@@ -111,6 +125,10 @@ class TimeAttackViewModel(
     }
 
     fun loadTrack(trackId: Long, mode: TimingMode) {
+        // getCoordinatesOfTrack returns a Flow that never completes, so calling this
+        // twice would leave two live collectors racing to set the same state.
+        if (trackLoaded) return
+        trackLoaded = true
         _timingMode.value = mode
         viewModelScope.launch {
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
@@ -274,23 +292,56 @@ class TimeAttackViewModel(
         (millis % 1000) / 10
     )
 
-    suspend fun createSession(trackId: Long, vehicleId: Long) {
-        withContext(Dispatchers.IO) {
-            val track = database.trackMainDao().getTrack(trackId).firstOrNull() ?: return@withContext
-            val todayFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
-            val eventType = "${track.trackName} - $todayFormatted"
+    /**
+     * Creates the session for this screen, or does nothing if one is already running.
+     *
+     * SessionManager.startSession always INSERTs, so every call here produces another row
+     * in the session list. The mutex closes the window where two rapid calls could both
+     * see _sessionId == -1 and each insert one.
+     */
+    suspend fun ensureSession(trackId: Long, vehicleId: Long) {
+        sessionMutex.withLock {
+            if (_sessionId != -1L) {
+                Log.d("TimeAttack", "Session $_sessionId already active - not creating another")
+            } else {
+                withContext(Dispatchers.IO) {
+                    val track = database.trackMainDao().getTrack(trackId).firstOrNull() ?: return@withContext
+                    val todayFormatted = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+                    val eventType = "${track.trackName} - $todayFormatted"
 
+                    _sessionId = sessionManager.startSession(
+                        eventType = eventType,
+                        vehicleId = vehicleId,
+                        trackId = trackId
+                    )
 
-            _sessionId = sessionManager.startSession(
-                eventType = eventType,
-                vehicleId = vehicleId,
-                trackId = trackId
-            )
+                    Log.d("TimeAttack", "Session created: $_sessionId")
 
-            Log.d("TimeAttack", "Session created/resumed: $_sessionId")
+                    // Start the first lap
+                    startNewLap(lapNumber = 1)
+                }
+            }
+        }
+        // Idempotent, and deliberately outside the branch above: it has to run even when
+        // the session already existed, so a rebuilt screen re-attaches to GPS.
+        startGpsCollection()
+    }
 
-            // Start the first lap
-            startNewLap(lapNumber = 1)
+    /**
+     * Consumes GPS straight from the source flow.
+     *
+     * This deliberately does not go through the UI. collectAsState conflates - it keeps
+     * only the newest value - so routing fixes through Compose state dropped any sample
+     * that arrived faster than the next recomposition. Line-crossing detection compares
+     * *consecutive* fixes, so a dropped sample is a missed lap, and a dropped run of them
+     * is a lap trace with a hole in it.
+     */
+    private fun startGpsCollection() {
+        if (gpsJob != null) return
+        gpsJob = viewModelScope.launch {
+            app.gpsManager.activeGpsFlow.collect { fix ->
+                fix?.let { handleGpsUpdate(it) }
+            }
         }
     }
 
@@ -323,6 +374,17 @@ class TimeAttackViewModel(
 
                 inProgressLaps.forEach { lap ->
                     database.lapTimeDataDAO().delete(lap)
+                }
+
+                // Stamp endTime, otherwise the session stays "active" forever and the
+                // detail screen reports a zero-length session. Done by id rather than via
+                // SessionManager.endSession(), which closes whatever is in its own shared
+                // currentSessionId field - that is also written by the drag screen, so it
+                // is not reliably this session.
+                database.sessionDataDao().getSessionById(_sessionId)?.let { row ->
+                    database.sessionDataDao().updateSession(
+                        row.copy(endTime = System.currentTimeMillis())
+                    )
                 }
 
                 Log.d("TimeAttack", "Session $_sessionId ended. Deleted ${inProgressLaps.size} incomplete laps.")
