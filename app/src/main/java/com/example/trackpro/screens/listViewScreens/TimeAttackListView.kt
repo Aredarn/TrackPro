@@ -2,7 +2,6 @@ package com.example.trackpro.screens.listViewScreens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,9 +31,12 @@ import androidx.navigation.NavController
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
-import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.isScrolledUnderChrome
+import com.example.trackpro.components.ScreenScaffold
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.ExpandableGroup
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.viewModels.SessionViewModel
@@ -62,35 +65,42 @@ fun TimeAttackListViewScreen(
     }
 
 
-    Box(modifier = Modifier.fillMaxSize().background(TrackProTheme.colors.bgDeep)) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            AppTopBar(
-                title = "Track Records",
-                accent = TrackProTheme.colors.accent,
-                trailing = {
-                    Text("${trackSessions.size} sessions", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
-                }
-            )
+    val listState = rememberLazyListState()
+    val scrolled by listState.isScrolledUnderChrome()
 
-            if (trackSessions.isEmpty()) {
-                EmptyState(message = "No sessions recorded", hint = "Run a track session to see it here")
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(Spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-                ) {
-                    groupedByTrack.forEach { (trackName, sessions) ->
-                        item(key = trackName) {
-                            val track = tracks.find { it.trackName == trackName }
-                            ExpandableTrackGroup(
-                                trackName = trackName,
-                                trackMeta = "${track?.country} · ${track?.type}",
-                                sessions = sessions,
-                                vehicles = vehicles,
-                                navController = navController
-                            )
-                        }
+    ScreenScaffold(
+            title = "Track Records",
+            onBack = { navController.popBackStack() },
+            accent = TrackProTheme.colors.accent,
+            trailing = {
+                Text("${trackSessions.size} sessions", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+            },
+        contentScrolled = scrolled
+    ) { contentPadding ->
+        if (trackSessions.isEmpty()) {
+            EmptyState(message = "No sessions recorded", hint = "Run a track session to see it here")
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                contentPadding = PaddingValues(
+                    top = contentPadding.calculateTopPadding() + Spacing.md,
+                    bottom = Spacing.md,
+                    start = Spacing.md,
+                    end = Spacing.md
+                ),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                groupedByTrack.forEach { (trackName, sessions) ->
+                    item(key = trackName) {
+                        val track = tracks.find { it.trackName == trackName }
+                        ExpandableTrackGroup(
+                            trackName = trackName,
+                            trackMeta = "${track?.country} · ${track?.type}",
+                            sessions = sessions,
+                            vehicles = vehicles,
+                            navController = navController
+                        )
                     }
                 }
             }
@@ -110,10 +120,10 @@ fun ExpandableTrackGroup(
         accent = TrackProTheme.colors.accent,
         header = {
             Column(modifier = Modifier.weight(1f)) {
-                Text(trackName, style = TrackProType.titleMedium.copy(fontSize = 14.sp), color = TrackProTheme.colors.textPrimary)
+                Text(trackName, style = TrackProType.titleMedium.atSize(14.sp), color = TrackProTheme.colors.textPrimary)
                 Text(
                     "$trackMeta · ${sessions.size} sessions",
-                    style = TrackProType.body.copy(fontSize = 11.sp),
+                    style = TrackProType.body.atSize(11.sp),
                     color = TrackProTheme.colors.textMuted
                 )
             }
@@ -128,8 +138,8 @@ fun ExpandableTrackGroup(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .pressable(onClick = { navController.navigate("timeattacklistitem/${session.id}") })
                         .background(TrackProTheme.colors.bgElevated.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                        .clickable { navController.navigate("timeattacklistitem/${session.id}") }
                         .padding(Spacing.sm),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -146,7 +156,7 @@ fun ExpandableTrackGroup(
                             )
                             Text(
                                 "Session date: $date",
-                                style = TrackProType.body.copy(fontSize = 10.sp),
+                                style = TrackProType.body.atSize(10.sp),
                                 color = TrackProTheme.colors.textMuted
                             )
                         }

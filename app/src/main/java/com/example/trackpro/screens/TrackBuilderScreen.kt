@@ -46,10 +46,12 @@ import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.Haptic
 import com.example.trackpro.components.AppCard
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.PrimaryButton
 import com.example.trackpro.components.ToggleChip
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.DataVizColors
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProShapes
@@ -301,7 +303,7 @@ private fun TrackInfoCard(name: String, country: String, mode: String, onClick: 
                     style = TrackProType.titleMedium,
                     color = TrackProTheme.colors.textPrimary
                 )
-                Text("Mode: ${mode.uppercase()}", style = TrackProType.body.copy(fontSize = 12.sp), color = TrackProTheme.colors.accent)
+                Text("Mode: ${mode.uppercase()}", style = TrackProType.body.atSize(12.sp), color = TrackProTheme.colors.accent)
             }
             PrimaryButton(
                 text = "Edit",
@@ -320,6 +322,7 @@ private fun MarkSectorButton(count: Int, enabled: Boolean, onClick: () -> Unit) 
         text = "Mark Sector ${count + 1}",
         onClick = onClick,
         enabled = enabled,
+        haptic = Haptic.Confirm,
         accent = TrackProTheme.colors.accent,
         modifier = Modifier.fillMaxWidth().height(48.dp)
     )
@@ -395,6 +398,7 @@ private fun LiveControls(isRecording: Boolean, onToggle: () -> Unit) {
     PrimaryButton(
         text = if (isRecording) "Stop Recording" else "Start GPS Recording",
         onClick = onToggle,
+        haptic = Haptic.Confirm,
         accent = if (isRecording) TrackProTheme.colors.danger.copy(alpha = 0.18f) else TrackProTheme.colors.bgElevated,
         contentColor = if (isRecording) TrackProTheme.colors.danger else TrackProTheme.colors.textPrimary,
         modifier = Modifier.fillMaxWidth().height(56.dp)
@@ -415,6 +419,7 @@ private fun ManualControls(onUndo: () -> Unit, onSave: () -> Unit, canSave: Bool
             text = "Save Track",
             onClick = onSave,
             enabled = canSave,
+            haptic = Haptic.Confirm,
             accent = TrackProTheme.colors.accent,
             modifier = Modifier.weight(1f).height(56.dp)
         )

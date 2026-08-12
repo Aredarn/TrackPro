@@ -34,6 +34,7 @@ import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.AppCard
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.PrimaryButton
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.viewModels.TrackViewModel
@@ -111,7 +112,7 @@ fun TrackVehicleSelectorScreen(
                             selectedVehicleName = vehicles.find { it.vehicleId == id }?.manufacturerAndModel ?: "" // Adjust 'name' to your vehicle field
                         }
                     } else {
-                        Text("No vehicles found in garage", style = TrackProType.body.copy(fontSize = 12.sp), color = TrackProTheme.colors.accent)
+                        Text("No vehicles found in garage", style = TrackProType.body.atSize(12.sp), color = TrackProTheme.colors.accent)
                     }
                 }
 

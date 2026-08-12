@@ -3,7 +3,6 @@ package com.example.trackpro.screens.listViewScreens.listItems
 import android.annotation.SuppressLint
 import android.view.ViewGroup
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,9 +39,12 @@ import com.example.trackpro.managerClasses.utilities.SpeedColorUtils
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.screens.telemetricScreens.DragMetricCard
 import com.example.trackpro.screens.telemetricScreens.DragMetricDisplay
+import com.example.trackpro.components.Haptic
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.StatCell
 import com.example.trackpro.components.StatCellSize
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.DataVizColors
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
@@ -296,16 +298,20 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                         val active = xAxisInMeters == isMeters
                         Box(
                             modifier = Modifier
+                                .pressable(
+                                    onClick = { xAxisInMeters = isMeters },
+                                    scale = 0.96f,
+                                    haptic = Haptic.Selection
+                                )
                                 .background(
                                     if (active) TrackProTheme.colors.accent else TrackProTheme.colors.sectorLine,
                                     RoundedCornerShape(3.dp)
                                 )
-                                .clickable { xAxisInMeters = isMeters }
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
                                 text = label,
-                                style = TrackProType.body.copy(fontSize = 9.sp),
+                                style = TrackProType.body.atSize(9.sp),
                                 color = if (active) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
                             )
                         }
@@ -315,16 +321,20 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     val active = showMap == isMap
                     Box(
                         modifier = Modifier
+                            .pressable(
+                                onClick = { showMap = isMap },
+                                scale = 0.96f,
+                                haptic = Haptic.Selection
+                            )
                             .background(
                                 if (active) TrackProTheme.colors.accent else TrackProTheme.colors.sectorLine,
                                 RoundedCornerShape(3.dp)
                             )
-                            .clickable { showMap = isMap }
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = label,
-                            style = TrackProType.body.copy(fontSize = 9.sp),
+                            style = TrackProType.body.atSize(9.sp),
                             color = if (active) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
                         )
                     }
