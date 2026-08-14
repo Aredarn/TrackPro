@@ -488,6 +488,20 @@ fun DragRaceScreen(
                             isSessionActive = true
                             sessionStartTime = System.currentTimeMillis()
 
+                            // Capture conditions in the background off the current GPS fix.
+                            // A drag session has no track to anchor to, so this needs a live
+                            // fix; if there isn't one yet the session simply has no weather.
+                            gpsData?.let { fix ->
+                                val createdSessionId = sessionID
+                                app.applicationScope.launch(Dispatchers.IO) {
+                                    sessionManager.captureWeather(
+                                        sessionId = createdSessionId,
+                                        latitude = fix.latitude,
+                                        longitude = fix.longitude
+                                    )
+                                }
+                            }
+
                             // Reset calculator
                             dragCalculator.resetRealtimeTracking()
                             currentMetrics = DragMetrics()

@@ -60,6 +60,7 @@ import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
+import com.example.trackpro.managerClasses.utilities.WeatherService
 import com.example.trackpro.managerClasses.utilities.toLapTimeMillis
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import kotlinx.coroutines.Dispatchers
@@ -392,6 +393,70 @@ fun TimeAttackListItemScreen(
                         )
                     }
                     HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                }
+
+                // ── Conditions (only for sessions where weather was captured)
+                val capturedTempC = session.weatherTempC
+                if (capturedTempC != null) {
+                    item {
+                        val wet = WeatherService.isWet(session.weatherPrecipitationMm, session.weatherCode)
+                        SectionLabel("Conditions", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(TrackProTheme.colors.bgCard)
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                        ) {
+                            StatRowItem(
+                                label = "Weather",
+                                value = WeatherService.describeCode(session.weatherCode),
+                                textPrimary = TrackProTheme.colors.textPrimary,
+                                textMuted = TrackProTheme.colors.textMuted
+                            )
+                            StatRowItem(
+                                label = "Surface",
+                                value = if (wet) "WET" else "DRY",
+                                // Wet vs dry is the single biggest caveat on any lap-time
+                                // comparison, so it gets colour rather than blending in.
+                                textPrimary = if (wet) TrackProTheme.colors.accent else TrackProTheme.colors.deltaGood,
+                                textMuted = TrackProTheme.colors.textMuted
+                            )
+                            StatRowItem(
+                                label = "Air Temp",
+                                value = UnitFormatter.formatTemperature(capturedTempC, useMetric),
+                                textPrimary = TrackProTheme.colors.textPrimary,
+                                textMuted = TrackProTheme.colors.textMuted
+                            )
+                            session.weatherHumidityPct?.let {
+                                StatRowItem(
+                                    label = "Humidity",
+                                    value = "$it%",
+                                    textPrimary = TrackProTheme.colors.textPrimary,
+                                    textMuted = TrackProTheme.colors.textMuted
+                                )
+                            }
+                            session.weatherWindKph?.let { wind ->
+                                StatRowItem(
+                                    label = "Wind",
+                                    value = "${UnitFormatter.formatSpeedPrecise(wind, useMetric)} " +
+                                            "${UnitFormatter.speedUnitLabel(useMetric)} " +
+                                            WeatherService.windCompass(session.weatherWindDirDeg),
+                                    textPrimary = TrackProTheme.colors.textPrimary,
+                                    textMuted = TrackProTheme.colors.textMuted
+                                )
+                            }
+                            session.weatherPressureHpa?.let {
+                                StatRowItem(
+                                    label = "Pressure",
+                                    value = String.format("%.0f hPa", it),
+                                    textPrimary = TrackProTheme.colors.textPrimary,
+                                    textMuted = TrackProTheme.colors.textMuted
+                                )
+                            }
+                        }
+                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                    }
                 }
 
                 // ── Lap-by-lap breakdown

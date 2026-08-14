@@ -31,12 +31,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.trackpro.managerClasses.calculationClasses.DragMetrics
 import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
 import com.example.trackpro.dataClasses.RawGPSData
+import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.dataClasses.convertToLatLonOffsetList
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.managerClasses.utilities.SpeedColorUtils
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
+import com.example.trackpro.managerClasses.utilities.WeatherService
 import com.example.trackpro.screens.telemetricScreens.DragMetricCard
 import com.example.trackpro.screens.telemetricScreens.DragMetricDisplay
 import com.example.trackpro.components.Haptic
@@ -105,6 +107,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     val database = remember { ESPDatabase.getInstance(context) }
     var coordinates by remember { mutableStateOf(emptyList<RawGPSData>()) }
     var mapGpsData by remember { mutableStateOf(emptyList<RawGPSData>()) }
+    var session by remember { mutableStateOf<SessionData?>(null) }
     val dragTimeClass = remember { DragTimeCalculation(sessionId, database) }
     var totalDist by remember { mutableDoubleStateOf(-1.0) }
     var showMap by remember { mutableStateOf(false) }
@@ -128,6 +131,15 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     var elevationNet by remember { mutableDoubleStateOf(0.0) }
     var elevationGain by remember { mutableDoubleStateOf(0.0) }
     var elevationLoss by remember { mutableDoubleStateOf(0.0) }
+
+    // Loaded separately from the GPS trace below, which bails early when a session has no
+    // recorded points - the captured conditions are still worth showing in that case.
+    LaunchedEffect(sessionId) {
+        withContext(Dispatchers.IO) {
+            val loaded = database.sessionDataDao().getSessionById(sessionId)
+            withContext(Dispatchers.Main) { session = loaded }
+        }
+    }
 
     LaunchedEffect(sessionId) {
         withContext(Dispatchers.IO) {
@@ -235,6 +247,38 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     value = if (totalDist <= 0) "—" else UnitFormatter.formatDistance(totalDist, useMetric),
                     size = StatCellSize.Small
                 )
+            }
+
+            // Conditions captured when this run was recorded. Air temp in particular moves
+            // both grip and power enough to explain a chunk of any run-to-run difference.
+            session?.weatherTempC?.let { tempC ->
+                val current = session
+                Divider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    StatCell(
+                        label = "Air Temp",
+                        value = UnitFormatter.formatTemperature(tempC, useMetric),
+                        size = StatCellSize.Small
+                    )
+                    StatCell(
+                        label = "Weather",
+                        value = WeatherService.describeCode(current?.weatherCode),
+                        size = StatCellSize.Small
+                    )
+                    StatCell(
+                        label = "Surface",
+                        value = if (WeatherService.isWet(
+                                current?.weatherPrecipitationMm,
+                                current?.weatherCode
+                            )
+                        ) "WET" else "DRY",
+                        size = StatCellSize.Small
+                    )
+                }
             }
 
             Divider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)

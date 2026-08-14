@@ -319,6 +319,26 @@ class TimeAttackViewModel(
 
                     // Start the first lap
                     startNewLap(lapNumber = 1)
+
+                    // Capture conditions in the background. The track's own coordinates are a
+                    // better location source here than the live GPS fix: they're definitionally
+                    // where the session happens and are available immediately, rather than
+                    // waiting for a fix to arrive. Queried directly rather than read off
+                    // _fullTrack, which loadTrack() may not have populated yet.
+                    val createdSessionId = _sessionId
+                    val anchor = database.trackCoordinatesDao()
+                        .getCoordinatesOfTrack(trackId)
+                        .firstOrNull()
+                        ?.firstOrNull()
+                    if (anchor != null) {
+                        app.applicationScope.launch(Dispatchers.IO) {
+                            sessionManager.captureWeather(
+                                sessionId = createdSessionId,
+                                latitude = anchor.latitude,
+                                longitude = anchor.longitude
+                            )
+                        }
+                    }
                 }
             }
         }
