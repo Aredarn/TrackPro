@@ -1,18 +1,41 @@
 package com.example.trackpro.theme
 
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 
 /**
- * Resize a style while keeping its leading *ratio* intact.
+ * The face of the timing sheet.
  *
- * Prefer this over `.copy(fontSize = ...)`: a plain copy keeps the original absolute
- * lineHeight, so shrinking a 13sp/19sp body style to 9sp would leave it at 19sp leading -
- * a 2.1x ratio. Since leading should tighten as size grows and loosen as it shrinks,
- * carrying the ratio is the only thing that stays correct across the scale.
+ * One monospaced family carries the entire app. That is not a "technical" costume: this
+ * product is a measuring instrument whose whole output is columns of times, splits, speeds
+ * and dates, and those columns only line up if every glyph occupies the same advance. A
+ * proportional face would make lap 9 and lap 10 sit on different axes.
+ *
+ * Intended face: Azeret Mono - mechanical, squarish, with figures heavy enough to read at
+ * a glance off a mounted phone. It is not bundled yet, so this currently resolves to the
+ * platform monospace. Swapping it is this one constant plus a file in `res/font/`.
+ */
+val TrackProFontFamily: FontFamily = FontFamily.Monospace
+
+/**
+ * Tabular, lining figures.
+ *
+ * `tnum` forces every digit to the same width so a column of times aligns on its decimal
+ * without hand-placed padding; `lnum` keeps figures at cap height rather than letting the
+ * face drop old-style numerals below the baseline. On a timing sheet this is not a
+ * refinement, it is the difference between a table and a list.
+ */
+private const val TabularFigures = "tnum, lnum"
+
+/**
+ * Resize a style while preserving its leading ratio.
+ *
+ * Line height is expressed as a multiple of size in this scale, so a naive
+ * `copy(fontSize = x)` would keep the old absolute leading and wreck the rhythm. Guarded
+ * against unset metrics, where the ratio is undefined.
  */
 fun TextStyle.atSize(size: TextUnit): TextStyle {
     if (fontSize.value <= 0f || lineHeight.value <= 0f) return copy(fontSize = size)
@@ -21,81 +44,72 @@ fun TextStyle.atSize(size: TextUnit): TextStyle {
 }
 
 /**
- * Text styles are purely typographic (no color) so they compose with
- * TrackProTheme.colors at the call site instead of baking a color in here.
- *
- * Three rules the scale follows:
- *
- *  1. **Tracking is size-specific.** Letters read as drifting apart the larger they get,
- *     so display sizes take negative tracking (~-0.02em) while small uppercase labels
- *     take positive tracking to stay legible. A single letterSpacing value across a
- *     scale is wrong at one end or the other.
- *  2. **Leading tracks size inversely.** Tight on the big numerics (1.05x), generous on
- *     body copy (1.5x). This scale previously set no lineHeight at all, which left every
- *     multi-line block on the platform default.
- *  3. **Hierarchy comes from weight + size + leading together,** not size alone -
- *     weight adds presence without consuming more space, which matters on a HUD.
- *
- * FontWeight.Black is intentionally absent - Bold is reserved for displayNumeric.
+ * The scale is a printout's, not a web page's: a very large figure for the measurement
+ * that matters, a workhorse row size, and a small tracked cap for column headers. There is
+ * no decorative display tier, because a timing sheet has no headlines.
  */
 object TrackProType {
 
-    /**
-     * Trim ensures the first line's ascent and last line's descent don't add stray
-     * padding, so a 40sp readout occupies predictable space in a HUD row.
-     */
-    private val tightLineHeight = LineHeightStyle(
-        alignment = LineHeightStyle.Alignment.Center,
-        trim = LineHeightStyle.Trim.Both
-    )
-
-    /** Lap times, live speed. Tabular figures so digits don't jitter as they count. */
+    /** The measurement. Lap time, run time, terminal speed - the number read at speed. */
     val displayNumeric = TextStyle(
-        fontSize = 40.sp,
-        lineHeight = 42.sp,          // 1.05 - tight, large text needs no air
+        fontFamily = TrackProFontFamily,
+        fontSize = 44.sp,
+        lineHeight = 46.sp,          // 1.05 - a single figure needs no breathing room
         fontWeight = FontWeight.Bold,
-        letterSpacing = (-0.8).sp,   // ~-0.02em
-        fontFeatureSettings = "tnum",
-        lineHeightStyle = tightLineHeight
+        letterSpacing = (-1.2).sp,   // mono is loose by nature; tighten the big sizes back
+        fontFeatureSettings = TabularFigures
     )
 
-    val titleLarge = TextStyle(
-        fontSize = 20.sp,
-        lineHeight = 24.sp,          // 1.2
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = (-0.3).sp,   // ~-0.015em
-        lineHeightStyle = tightLineHeight
-    )
-
-    val titleMedium = TextStyle(
-        fontSize = 15.sp,
-        lineHeight = 20.sp,          // 1.33
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = (-0.1).sp
-    )
-
-    /** Small uppercase micro-labels - positive tracking keeps caps from colliding. */
-    val label = TextStyle(
-        fontSize = 11.sp,
-        lineHeight = 14.sp,          // 1.27
-        fontWeight = FontWeight.Medium,
-        letterSpacing = 0.8.sp
-    )
-
-    val body = TextStyle(
-        fontSize = 13.sp,
-        lineHeight = 19.sp,          // 1.46 - the loosest in the scale, it's read in runs
-        fontWeight = FontWeight.Normal,
-        letterSpacing = 0.sp
-    )
-
-    /** Stat readouts. Tabular so columns of numbers align down a list. */
+    /** A figure inside a column: split, speed, count. */
     val statValue = TextStyle(
+        fontFamily = TrackProFontFamily,
+        fontSize = 19.sp,
+        lineHeight = 23.sp,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = (-0.2).sp,
+        fontFeatureSettings = TabularFigures
+    )
+
+    /** The sheet's own heading - a section rule's caption, not a headline. */
+    val titleLarge = TextStyle(
+        fontFamily = TrackProFontFamily,
         fontSize = 17.sp,
-        lineHeight = 20.sp,          // 1.18
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = (-0.1).sp,
-        fontFeatureSettings = "tnum",
-        lineHeightStyle = tightLineHeight
+        lineHeight = 21.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.4.sp,
+        fontFeatureSettings = TabularFigures
+    )
+
+    /** A row's own name. */
+    val titleMedium = TextStyle(
+        fontFamily = TrackProFontFamily,
+        fontSize = 14.sp,
+        lineHeight = 19.sp,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 0.2.sp,
+        fontFeatureSettings = TabularFigures
+    )
+
+    /**
+     * The column header and the stamped legend: small, spaced, always upper case at the
+     * call site. Tracking is positive because small caps close up without it.
+     */
+    val label = TextStyle(
+        fontFamily = TrackProFontFamily,
+        fontSize = 11.sp,
+        lineHeight = 15.sp,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 1.1.sp,
+        fontFeatureSettings = TabularFigures
+    )
+
+    /** Running text. Rare here - the sheet mostly prints values. */
+    val body = TextStyle(
+        fontFamily = TrackProFontFamily,
+        fontSize = 13.sp,
+        lineHeight = 19.sp,          // 1.46
+        fontWeight = FontWeight.Normal,
+        letterSpacing = 0.sp,
+        fontFeatureSettings = TabularFigures
     )
 }

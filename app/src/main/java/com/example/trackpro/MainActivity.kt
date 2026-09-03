@@ -1,6 +1,17 @@
 package com.example.trackpro
 
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.components.PrintedColumn
+import com.example.trackpro.components.SheetGap
+import com.example.trackpro.components.SheetLegend
+import com.example.trackpro.components.SheetRow
+import com.example.trackpro.components.SheetSectionRule
+import com.example.trackpro.components.SheetSurface
+import com.example.trackpro.theme.ink
+import com.example.trackpro.theme.inkFaint
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import androidx.compose.ui.platform.LocalContext
 import android.Manifest
 import android.app.Application
 import android.os.Build
@@ -44,6 +55,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -199,7 +211,11 @@ class TrackProApp : Application() {
     }
 
     private val themePrefs by lazy { getSharedPreferences("theme_prefs", MODE_PRIVATE) }
-    val useDarkTheme by lazy { MutableStateFlow(themePrefs.getBoolean("dark_theme", true)) }
+    // Defaults to the printed sheet rather than the illuminated board. The product's
+    // primary scene is a phone mounted in direct sunlight, where paper outreads a lit
+    // panel; the board is what live recording switches to. Anyone who has already set a
+    // preference keeps it - this default only applies to a fresh install.
+    val useDarkTheme by lazy { MutableStateFlow(themePrefs.getBoolean("dark_theme", false)) }
 
     fun setDarkTheme(enabled: Boolean) {
         themePrefs.edit().putBoolean("dark_theme", enabled).apply()
@@ -524,264 +540,169 @@ fun MainScreen(
             }
         }
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(TrackProTheme.colors.bgDeep)
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-
-                // ── Top bar ───────────────────────────────────
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(TrackProTheme.colors.bgCard)
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu",
-                                tint = TrackProTheme.colors.textPrimary)
-                        }
-                        Text(
-                            text = "TRACKPRO",
-                            style = TrackProType.label.atSize(13.sp).copy(letterSpacing = 2.sp),
-                            color = TrackProTheme.colors.textPrimary
-                        )
-                        // Spacer to balance the row
-                        Box(modifier = Modifier.size(40.dp))
-                    }
-                }
-
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-
-                // ── Hero section ──────────────────────────────
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(TrackProTheme.colors.bgCard)
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.xl)
-                ) {
-                    Column {
-                        Box(
-                            modifier = Modifier
-                                .width(28.dp)
-                                .height(2.dp)
-                                .background(TrackProTheme.colors.accent)
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            text = "Ready to beat records?",
-                            style = TrackProType.titleLarge,
-                            color = TrackProTheme.colors.textPrimary
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "GPS telemetry · Lap timing · Performance analysis",
-                            style = TrackProType.body,
-                            color = TrackProTheme.colors.textMuted
-                        )
-                    }
-                }
-
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-
-                // ── Action grid ───────────────────────────────
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(Spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-                ) {
-
-                    // Primary racing actions — full width
-                    ActionCard(
-                        icon = Icons.Default.RocketLaunch,
-                        title = "DRAG TIMING",
-                        subtitle = "0–100 · ¼ mile · speed trace",
-                        accentColor = TrackProTheme.colors.accentMuted,
-                        onClick = onNavigateToDragRace,
-                        fullWidth = true
-                    )
-
-                    ActionCard(
-                        icon = Icons.Default.FlagCircle,
-                        title = "LAP TIMING",
-                        subtitle = "Circuit & sprint · live delta · best lap",
-                        accentColor = TrackProTheme.colors.accentMuted,
-                        onClick = onNavigateToTrackVehicleSelector,
-                        fullWidth = true
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        thickness = 1.dp,
-                        color = TrackProTheme.colors.sectorLine
-                    )
-
-                    // Secondary actions — 2 column grid
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            ActionCard(
-                                icon = Icons.Default.CarRepair,
-                                title = "ADD VEHICLES",
-                                subtitle = "Create your own vehicles",
-                                accentColor = TrackProTheme.colors.accentMuted,
-                                onClick = onNavigateToVehicleCreatorScreen,
-                                halfWidth  = true
-                            )
-                        }
-                        Box(modifier = Modifier.weight(1f)) {
-                            ActionCard(
-                                icon = Icons.Default.Timelapse,
-                                title = "TRACK\nBUILDER",
-                                subtitle = "Define tracks",
-                                accentColor = TrackProTheme.colors.accentMuted,
-                                onClick = onNavigateToTrackBuilder,
-                                halfWidth  = true
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            ActionCard(
-                                icon = Icons.Default.Wifi,
-                                title = "ESP\nCONNECT",
-                                subtitle = "Test connection",
-                                accentColor = TrackProTheme.colors.textMuted,
-                                onClick = onNavigateToESPTestScreen,
-                                halfWidth  = true
-                            )
-                        }
-                        Box(modifier = Modifier.weight(1f)) {
-                            ActionCard(
-                                icon = Icons.Default.Settings,
-                                title = "SETTINGS",
-                                subtitle = "Global settings",
-                                accentColor = TrackProTheme.colors.textMuted,
-                                onClick = onNavigateToSettings,
-                                halfWidth  = true,
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    // Version tag
-                    Text(
-                        text = "TrackPro · GPS Telemetry System",
-                        color = TrackProTheme.colors.textMuted.copy(alpha = 0.4f),
-                        fontSize = 10.sp,
-                        letterSpacing = 1.sp,
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    )
-
-                }
-            }
-        }
+        MainSheet(
+            onOpenDrawer = { scope.launch { drawerState.open() } },
+            onNavigateToDragRace = onNavigateToDragRace,
+            onNavigateToTrackVehicleSelector = onNavigateToTrackVehicleSelector,
+            onNavigateToDragTimesList = onNavigateToDragTimesList,
+            onNavigateToTimeAttackListView = onNavigateToTimeAttackListView,
+            onNavigateToVehicleList = onNavigateToVehicleList,
+            onNavigateToTrackListScreen = onNavigateToTrackListScreen,
+            onNavigateToESPTestScreen = onNavigateToESPTestScreen,
+            onNavigateToTrackBuilder = onNavigateToTrackBuilder,
+            onNavigateToSettings = onNavigateToSettings
+        )
     }
 }
 
 // ── Action card ────────────────────────────────────────────
 
+// ── The sheet ──────────────────────────────────────
+
+/**
+ * The main menu, printed.
+ *
+ * A club timing sheet is a header block, a ruled column, and line items with their values
+ * on one right-hand axis - so that is what this is. There are no cards, no icon tiles and
+ * no hero: those are the arrangement the old menu shared with every other telemetry app,
+ * and the sheet refuses them.
+ *
+ * The counts are read from the database rather than decorated in. A driver with no sessions
+ * yet sees zeros, which is the honest first-run state and tells them exactly what the app
+ * is for.
+ */
 @Composable
-private fun ActionCard(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    accentColor: Color,
-    onClick: () -> Unit,
-    fullWidth: Boolean = false,
-    halfWidth: Boolean = false,  // new flag
-    disabled: Boolean = false
+private fun MainSheet(
+    onOpenDrawer: () -> Unit,
+    onNavigateToDragRace: () -> Unit,
+    onNavigateToTrackVehicleSelector: () -> Unit,
+    onNavigateToDragTimesList: () -> Unit,
+    onNavigateToTimeAttackListView: () -> Unit,
+    onNavigateToVehicleList: () -> Unit,
+    onNavigateToTrackListScreen: () -> Unit,
+    onNavigateToESPTestScreen: () -> Unit,
+    onNavigateToTrackBuilder: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
-    val alpha = if (disabled) 0.4f else 1f
-    val iconSize = if (halfWidth) 14.dp else if (fullWidth) 18.dp else 16.dp
-    val iconBoxSize = if (halfWidth) 26.dp else if (fullWidth) 34.dp else 30.dp
-    val titleStyle = if (fullWidth) TrackProType.titleMedium else TrackProType.titleMedium.atSize(13.sp)
-    val subtitleSize = if (halfWidth) 9.sp else 10.sp
-    val vertPadding = if (halfWidth) 10.dp else if (fullWidth) 12.dp else 10.dp
+    val context = LocalContext.current
+    val app = context.applicationContext as TrackProApp
 
-    AppCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressable(onClick = onClick, enabled = !disabled),
-        padding = 0.dp
-    ) {
-        Box {
-            // Left accent bar — the accent's only job on this card
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .width(2.dp)
-                    .height(36.dp)
-                    .background(
-                        accentColor.copy(alpha = alpha),
-                        RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)
-                    )
-            )
+    val sessions by app.database.sessionDataDao().getAllSessions().collectAsState(initial = emptyList())
+    val vehicles by app.database.vehicleInformationDAO().getAllVehicles().collectAsState(initial = emptyList())
+    val tracks by app.database.trackMainDao().getAllTrack().collectAsState(initial = emptyList())
+    val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
 
+    // Drag sessions carry no track; track sessions do. Same split the two list screens use.
+    val dragCount = sessions.count { it.trackId == null }
+    val trackCount = sessions.count { it.trackId != null }
+
+    val today = remember { LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")) }
+    val linkText = if (isConnected) "LINKED" else "NO LINK"
+    val linkColor = if (isConnected) TrackProTheme.colors.deltaGood else TrackProTheme.colors.inkFaint
+
+    SheetSurface(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+
+            // ── Masthead ─────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = Spacing.md, vertical = vertPadding),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                    .padding(start = 12.dp, end = 4.dp, top = 14.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(iconBoxSize)
-                        .background(accentColor.copy(alpha = 0.12f * alpha), TrackProShapes.control),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = accentColor.copy(alpha = alpha),
-                        modifier = Modifier.size(iconSize)
-                    )
-                }
-
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = title,
-                        style = titleStyle,
-                        color = TrackProTheme.colors.textPrimary.copy(alpha = alpha),
-                        softWrap = true
+                        text = "TRACKPRO",
+                        style = TrackProType.titleLarge.atSize(22.sp).copy(letterSpacing = 3.sp),
+                        color = TrackProTheme.colors.ink
                     )
                     Text(
-                        text = subtitle,
-                        style = TrackProType.body.atSize(subtitleSize),
-                        color = TrackProTheme.colors.textMuted.copy(alpha = alpha),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        text = "TIMING & SCORING",
+                        style = TrackProType.label.atSize(10.sp),
+                        color = TrackProTheme.colors.inkFaint
                     )
                 }
-
-                if (!disabled && !halfWidth) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = accentColor.copy(alpha = 0.6f),
-                        modifier = Modifier.size(16.dp)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = today,
+                        style = TrackProType.statValue.atSize(13.sp),
+                        color = TrackProTheme.colors.ink
                     )
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(
+                            Icons.Default.Menu,
+                            contentDescription = "Open menu",
+                            tint = TrackProTheme.colors.ink,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
+
+            // ── Rig legend ──────────────────────────────
+            SheetLegend("GPS", linkText, valueColor = linkColor)
+            SheetLegend("VEHICLES", if (vehicles.isEmpty()) "none saved" else "${vehicles.size} saved")
+            SheetLegend("TRACKS", "${tracks.size} loaded")
+            SheetGap(1)
+
+            val rows = 12
+            PrintedColumn(rowCount = rows) { printRow ->
+
+                printRow(0) { SheetSectionRule("Record", "start") }
+                printRow(1) {
+                    SheetRow("Drag run", onClick = onNavigateToDragRace, emphasis = true)
+                }
+                printRow(2) {
+                    SheetRow("Lap session", onClick = onNavigateToTrackVehicleSelector, emphasis = true)
+                }
+
+                printRow(3) { SheetSectionRule("Archive", "count") }
+                printRow(4) {
+                    SheetRow("Drag sessions", onClick = onNavigateToDragTimesList, value = "$dragCount")
+                }
+                printRow(5) {
+                    SheetRow("Track sessions", onClick = onNavigateToTimeAttackListView, value = "$trackCount")
+                }
+                printRow(6) {
+                    SheetRow("Vehicles", onClick = onNavigateToVehicleList, value = "${vehicles.size}")
+                }
+                printRow(7) {
+                    SheetRow("Tracks", onClick = onNavigateToTrackListScreen, value = "${tracks.size}")
+                }
+
+                printRow(8) { SheetSectionRule("Rig", "state") }
+                printRow(9) {
+                    SheetRow(
+                        "GPS link",
+                        onClick = onNavigateToESPTestScreen,
+                        value = linkText,
+                        valueColor = linkColor
+                    )
+                }
+                printRow(10) {
+                    SheetRow("Track builder", onClick = onNavigateToTrackBuilder)
+                }
+                printRow(11) {
+                    SheetRow("Setup", onClick = onNavigateToSettings)
+                }
+            }
+
+            SheetGap(2)
+            Text(
+                text = "TRACKPRO 1.1  ·  GPL-2.0  ·  MAP DATA © OPENSTREETMAP",
+                style = TrackProType.label.atSize(9.sp),
+                color = TrackProTheme.colors.inkFaint,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            )
+            SheetGap(2)
         }
     }
 }
+
 
 // ── Drawer helpers ─────────────────────────────────────────
 

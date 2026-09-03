@@ -2,92 +2,128 @@ package com.example.trackpro.theme
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * TrackPro's colour world: the club timing-and-scoring printout.
+ *
+ * Two grounds, one grammar. **Print** is the fanfold sheet you carry back from the event.
+ * **Board** is the live timing monitor hanging in race control - the same columns, the
+ * same face, the same rules, illuminated instead of printed. Neither is a "dark mode" of
+ * the other; they are two artifacts a timing system genuinely produces, and the app moves
+ * between them the way an event does: paper for reading afterwards, board while running.
+ *
+ * The data colours are not invented. Purple for the session's fastest, green for a
+ * personal best, amber for down on your own time is the convention every timing screen in
+ * motorsport has used for decades, which means this audience reads the colour before it
+ * reads the number, and no legend is owed.
+ *
+ * Field names are deliberately unchanged from the previous scheme so every existing screen
+ * inherits the new world without a rename sweep; the world-native names below
+ * ([paper], [ink], [rule], [stamp]) are what new code should read.
+ */
 data class TrackProColorScheme(
+    /** The sheet itself, or the unlit board. */
     val bgDeep: Color,
+    /** A printed block on the sheet - form areas, ruled tables. */
     val bgCard: Color,
+    /** The margin band: tractor-feed edge, column headers, the strip behind a legend. */
     val bgElevated: Color,
+
+    /** Session best. Purple, per timing convention. */
     val accent: Color,
-    /** Foreground for content sitting on top of an [accent] fill (selected chips, CTAs). */
+    /** Knocked-out figures sitting on an [accent] fill. */
     val onAccent: Color,
-    /** The quieter accent - structural marks that repeat, where [accent] would shout. */
+    /** Structural ink: rules that repeat, tick marks, secondary legends. */
     val accentMuted: Color,
+
     val textPrimary: Color,
     val textMuted: Color,
     val textFaint: Color,
+
+    /** Personal best. Green, per timing convention. */
     val deltaGood: Color,
+    /** Down on your own time. Amber, per timing convention - not red. */
     val deltaBad: Color,
+    /** Hairline rules and column separators. */
     val sectorLine: Color,
+    /** Destructive only. The stamp. */
     val danger: Color
 )
 
+// ── World-native aliases ───────────────────────────────────
+// New code reads these; they carry the world's own vocabulary without forcing a rename
+// across every existing screen.
+
+/** The sheet / the board. */
+val TrackProColorScheme.paper: Color get() = bgDeep
+
+/** A printed block on the sheet. */
+val TrackProColorScheme.printedBlock: Color get() = bgCard
+
+/** The tractor-feed margin band. */
+val TrackProColorScheme.margin: Color get() = bgElevated
+
+/** Dot-matrix ink. */
+val TrackProColorScheme.ink: Color get() = textPrimary
+
+/** Ink that struck the ribbon lightly. */
+val TrackProColorScheme.inkFaint: Color get() = textFaint
+
+/** Hairline rule between columns and rows. */
+val TrackProColorScheme.rule: Color get() = sectorLine
+
+/** The red stamp: destructive actions only, never decoration. */
+val TrackProColorScheme.stamp: Color get() = danger
+
 /**
- * Built on the supplied 5-color palette:
+ * Print: fanfold paper, dot-matrix ink.
  *
- *   #16262E  darkest navy   -> bgDeep
- *   #2E4756  dark slate     -> bgElevated / chart grid
- *   #3C7A89  teal           -> accentMuted, map + chart lines
- *   #9FA2B2  cool grey      -> textMuted
- *   #FEEA00  yellow         -> accent
- *
- * Five colors can't cover a whole UI's tonal needs, so bgCard, sectorLine and the text
- * tiers are interpolated *within* that ramp rather than invented - bgCard sits between
- * #16262E and #2E4756, sectorLine just above #2E4756, and textPrimary is #9FA2B2 lifted
- * toward white so it clears 11:1 on the deep background.
- *
- * Color hierarchy, in order of loudness:
- *
- *  1. [accent] (#FEEA00) - active / selected / primary action only. It hits 12.6:1 on the
- *     background, so it carries enormous weight; used sparingly it reads as a signal lamp,
- *     used everywhere it reads as a highlighter.
- *  2. [accentMuted] (#3C7A89) - the structural marks that repeat per row or per card:
- *     icon chips, left accent bars, map and chart lines. Same family, a fraction of the
- *     impact. This is a loudness hierarchy, not the per-section color rotation an earlier
- *     revision had - don't reintroduce that.
- *  3. [deltaGood]/[deltaBad] - faster/slower, and nothing else.
- *
- * The palette has no green or red, but a lap timer's delta has to be readable at a glance
- * at speed and green/red is the one convention drivers already know. They're tuned to sit
- * with the palette (the green leans teal, the red leans toward the yellow's warmth) rather
- * than taken off the shelf.
- *
- * Neutral, always: surfaces, top bars, card headers, form fields, and static spec values.
+ * This is the default ground. It is also the honest answer to the product's primary scene:
+ * a phone mounted in direct sunlight, where a light sheet outreads an illuminated panel.
  */
-val DarkTrackProColors = TrackProColorScheme(
-    bgDeep = Color(0xFF16262E),
-    bgCard = Color(0xFF1D3038),
-    bgElevated = Color(0xFF2E4756),
-    accent = Color(0xFFFEEA00),
-    onAccent = Color(0xFF16262E),
-    accentMuted = Color(0xFF3C7A89),
-    textPrimary = Color(0xFFDCDEE6),
-    textMuted = Color(0xFF9FA2B2),
-    textFaint = Color(0xFF6E7385),
-    deltaGood = Color(0xFF2FBF71),
-    deltaBad = Color(0xFFEF4E3A),
-    sectorLine = Color(0xFF3A5563),
-    danger = Color(0xFFEF4E3A)
+val PrintTrackProColors = TrackProColorScheme(
+    bgDeep = Color(0xFFF2EEE4),      // fanfold stock
+    bgCard = Color(0xFFFBF8F1),      // the whiter form area printed onto it
+    bgElevated = Color(0xFFE7E2D5),  // tractor-feed margin, column headers
+
+    accent = Color(0xFF6B2D8F),      // session best - purple ink, 7.4:1 on stock
+    onAccent = Color(0xFFF7F3EA),
+    accentMuted = Color(0xFF57524A),
+
+    textPrimary = Color(0xFF191712),  // 14.8:1
+    textMuted = Color(0xFF57524A),    // 7.1:1
+    textFaint = Color(0xFF8B8578),    // 3.6:1 - large/label use only
+
+    deltaGood = Color(0xFF14663A),   // personal best - green ink
+    deltaBad = Color(0xFF8A5A0F),    // down on your time - ochre, readable on paper
+    sectorLine = Color(0xFFBCB6A8),
+    danger = Color(0xFFA8321F)
 )
 
 /**
- * The supplied palette is inherently dark, so light mode is a derived inversion: the
- * darkest navy becomes the text color and the teal becomes the accent.
+ * Board: the live timing monitor, unlit glass with the same grammar lit up.
  *
- * Yellow is deliberately *not* the light-mode accent. [accent] is used as text as well as
- * fill (link hints, the top-bar dot), and #FEEA00 on white is ~1.2:1 - illegible. Teal
- * darkened to #2C6B7A clears 5.9:1 and keeps the palette's family.
+ * Used wherever a session is actually running, regardless of the user's preferred ground -
+ * a driver at night should not be handed a white screen.
  */
-val LightTrackProColors = TrackProColorScheme(
-    bgDeep = Color(0xFFEDEFF2),
-    bgCard = Color(0xFFFFFFFF),
-    bgElevated = Color(0xFFE3E7EB),
-    accent = Color(0xFF2C6B7A),
-    onAccent = Color(0xFFFFFFFF),
-    accentMuted = Color(0xFF3C7A89),
-    textPrimary = Color(0xFF16262E),
-    textMuted = Color(0xFF4F5F6C),
-    textFaint = Color(0xFF8A95A1),
-    deltaGood = Color(0xFF158A4E),
-    deltaBad = Color(0xFFC93A28),
-    sectorLine = Color(0xFFC8D0D8),
-    danger = Color(0xFFC93A28)
+val BoardTrackProColors = TrackProColorScheme(
+    bgDeep = Color(0xFF121110),
+    bgCard = Color(0xFF1A1917),
+    bgElevated = Color(0xFF24221F),
+
+    accent = Color(0xFFB473E8),      // session best
+    onAccent = Color(0xFF17111E),
+    accentMuted = Color(0xFFA8A296),
+
+    textPrimary = Color(0xFFF4F1E8),
+    textMuted = Color(0xFFA8A296),
+    textFaint = Color(0xFF6C675E),
+
+    deltaGood = Color(0xFF3FD07A),   // personal best
+    deltaBad = Color(0xFFE8B33A),    // down on your time
+    sectorLine = Color(0xFF35322C),
+    danger = Color(0xFFF2603C)
 )
+
+// Legacy names kept so existing call sites resolve unchanged.
+val DarkTrackProColors = BoardTrackProColors
+val LightTrackProColors = PrintTrackProColors
