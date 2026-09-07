@@ -4,6 +4,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 
 /**
@@ -25,11 +26,25 @@ val TrackProFontFamily: FontFamily = FontFamily.SansSerif
  */
 private const val TabularFigures = "tnum, lnum"
 
-/** Resize while preserving the leading ratio, so the scale's rhythm survives. */
+/**
+ * Resize a style, scaling leading **and tracking** with it.
+ *
+ * Tracking is size-relative, not absolute. [displayNumeric] carries -2.2sp because that is
+ * right at 56sp; carried unchanged to 15sp the same -2.2sp is roughly -15% per character
+ * and the glyphs physically overlap. Scaling by the size ratio keeps the optical spacing
+ * the style was drawn with at every size, which is the whole reason this helper exists
+ * rather than a bare `copy(fontSize = ...)`.
+ */
 fun TextStyle.atSize(size: TextUnit): TextStyle {
-    if (fontSize.value <= 0f || lineHeight.value <= 0f) return copy(fontSize = size)
-    val ratio = lineHeight.value / fontSize.value
-    return copy(fontSize = size, lineHeight = (size.value * ratio).sp)
+    if (!fontSize.isSpecified || fontSize.value <= 0f) return copy(fontSize = size)
+    val k = size.value / fontSize.value
+    return copy(
+        fontSize = size,
+        lineHeight = if (lineHeight.isSpecified && lineHeight.value > 0f)
+            (lineHeight.value * k).sp else lineHeight,
+        letterSpacing = if (letterSpacing.isSpecified)
+            (letterSpacing.value * k).sp else letterSpacing
+    )
 }
 
 /**
