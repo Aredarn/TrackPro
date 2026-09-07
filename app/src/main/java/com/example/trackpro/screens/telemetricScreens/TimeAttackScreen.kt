@@ -47,7 +47,14 @@ import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.components.Haptic
 import com.example.trackpro.components.rememberHaptics
 import com.example.trackpro.components.AppTopBar
-import com.example.trackpro.components.DeltaBar
+import com.example.trackpro.components.Bezel
+import com.example.trackpro.components.Instrument
+import com.example.trackpro.components.Readout
+import com.example.trackpro.components.SegmentBar
+import com.example.trackpro.theme.field
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
+import com.example.trackpro.theme.panel
 import com.example.trackpro.components.StatCell
 import com.example.trackpro.components.StatCellDivider
 import com.example.trackpro.components.StatCellSize
@@ -228,13 +235,17 @@ fun TimeAttackPortraitLayout(
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
-    val modeColor  = TrackProTheme.colors.accent
     val modeLabel  = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
+    val modeColor  = TrackProTheme.colors.accent
+    // Gaining pushes the bar forward, so a lower-is-better delta is negated before
+    // it reaches the bar. Two seconds fills it; past that the exact figure has
+    // stopped being actionable and pinning is the honest response.
+    val deltaFraction = (-delta / 2.0).coerceIn(-1.0, 1.0).toFloat()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProTheme.colors.bgDeep)
+            .background(TrackProTheme.colors.panel)
     ) {
 
         AppTopBar(
@@ -244,82 +255,82 @@ fun TimeAttackPortraitLayout(
             trailing = { HudTrailing(isConnected, mapVisible, onToggleMap) }
         )
 
-        // -- Main timer ---------------------------------
-        Box(
+        // -- Delta: the largest thing on the screen --------
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(TrackProTheme.colors.bgCard)
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md)
+                .background(TrackProTheme.colors.field)
+                .padding(horizontal = 14.dp, vertical = 14.dp)
         ) {
-            Column {
-                Text(
-                    text = "Current $eventName",
-                    style = TrackProType.label,
-                    color = TrackProTheme.colors.textMuted
-                )
-                Text(
-                    text = currentTime,
-                    // With the map gone there is room to grow the two numbers a driver
-                    // actually reads at speed.
-                    style = TrackProType.displayNumeric.atSize(if (mapVisible) 40.sp else 52.sp),
-                    color = deltaColor
-                )
-            }
-            StatCell(
-                label = eventName,
-                value = "$eventCount",
-                size = StatCellSize.Large,
-                horizontalAlignment = Alignment.End,
-                modifier = Modifier.align(Alignment.TopEnd)
+            Readout(
+                value = String.format("%+.3f", delta),
+                caption = if (isLiveDelta) "Delta to best - live" else "Delta to best",
+                valueColor = deltaColor,
+                valueSize = if (mapVisible) 60.sp else 84.sp,
+                trailing = {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "$eventCount",
+                            style = TrackProType.displayNumeric.atSize(28.sp),
+                            color = TrackProTheme.colors.marking
+                        )
+                        Text(
+                            text = eventName,
+                            style = TrackProType.label,
+                            color = TrackProTheme.colors.markingDim
+                        )
+                    }
+                }
+            )
+            Spacer(Modifier.height(10.dp))
+            SegmentBar(
+                signedFraction = deltaFraction,
+                activeColor = deltaColor,
+                segments = 25,
+                height = if (mapVisible) 18.dp else 26.dp
             )
         }
 
-        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+        Bezel()
 
-        // -- Delta --------------------------------------
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(TrackProTheme.colors.bgCard)
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md)
-        ) {
-            DeltaBar(
-                delta = delta,
-                isLive = isLiveDelta,
-                valueSize = if (mapVisible) 34.sp else 48.sp,
-                barHeight = if (mapVisible) 18.dp else 30.dp
+        // -- Clocks ---------------------------------------
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Instrument(
+                label = "Current $eventName",
+                value = currentTime,
+                valueSize = 24.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Bezel(vertical = true, modifier = Modifier.height(62.dp))
+            Instrument(
+                label = "Best",
+                value = bestTime,
+                valueColor = TrackProTheme.colors.accent,
+                valueSize = 24.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Bezel(vertical = true, modifier = Modifier.height(62.dp))
+            Instrument(
+                label = "Last",
+                value = lastTime,
+                valueSize = 24.sp,
+                modifier = Modifier.weight(1f)
             )
         }
 
-        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-
-        // -- Best / Last / Stint ------------------------
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(TrackProTheme.colors.bgElevated)
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            StatCell(label = "Best", value = bestTime, valueColor = TrackProTheme.colors.deltaGood, size = StatCellSize.Large)
-            StatCellDivider()
-            StatCell(label = "Last", value = lastTime, valueColor = TrackProTheme.colors.textPrimary, size = StatCellSize.Large)
-            StatCellDivider()
-            StintTimerCell(stintStart = stintStart)
-        }
+        Bezel()
 
         if (lapSplits.isNotEmpty()) {
-            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
             SectorSplitsRow(splits = lapSplits)
+            Bezel()
         }
 
         if (mapVisible) {
-            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(TrackProTheme.colors.bgCard)
+                    .background(TrackProTheme.colors.panel)
             ) {
                 if (gpsPoints.isNotEmpty()) {
                     MapLibreTrackView(
@@ -331,20 +342,23 @@ fun TimeAttackPortraitLayout(
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            "Awaiting GPS signal",
+                            "AWAITING GPS",
                             style = TrackProType.label,
-                            color = TrackProTheme.colors.textFaint
+                            color = TrackProTheme.colors.markingDim
                         )
                     }
                 }
             }
         } else {
-            // Nothing else earns screen space while driving, so let the HUD sit at the
-            // top rather than stretching the panels to fill.
             Spacer(Modifier.weight(1f))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                StintTimerCell(stintStart = stintStart, modifier = Modifier.weight(1f))
+            }
+            Bezel()
         }
     }
 }
+
 
 
 // ── Landscape ──────────────────────────────────────────────
@@ -370,20 +384,22 @@ fun TimeAttackLandscapeLayout(
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
-    val modeColor  = TrackProTheme.colors.accent
     val modeLabel  = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
+    val modeColor  = TrackProTheme.colors.accent
+    // Gaining pushes the bar forward, so a lower-is-better delta is negated before
+    // it reaches the bar. Two seconds fills it; past that the exact figure has
+    // stopped being actionable and pinning is the honest response.
+    val deltaFraction = (-delta / 2.0).coerceIn(-1.0, 1.0).toFloat()
 
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .background(TrackProTheme.colors.bgDeep)
+            .background(TrackProTheme.colors.panel)
     ) {
-        // -- Left: telemetry panel ----------------------
         Column(
             modifier = Modifier
-                .weight(if (mapVisible) 0.42f else 1f)
+                .weight(if (mapVisible) 0.46f else 1f)
                 .fillMaxSize()
-                .background(TrackProTheme.colors.bgCard)
         ) {
             AppTopBar(
                 title = modeLabel,
@@ -392,69 +408,83 @@ fun TimeAttackLandscapeLayout(
                 trailing = { HudTrailing(isConnected, mapVisible, onToggleMap) }
             )
 
-            Column(modifier = Modifier.padding(Spacing.md)) {
-                Text(
-                    text = "Current $eventName",
-                    style = TrackProType.label,
-                    color = TrackProTheme.colors.textMuted
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(TrackProTheme.colors.field)
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+                Readout(
+                    value = String.format("%+.3f", delta),
+                    caption = if (isLiveDelta) "Delta to best - live" else "Delta to best",
+                    valueColor = deltaColor,
+                    valueSize = if (mapVisible) 56.sp else 76.sp,
+                    trailing = {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "$eventCount",
+                                style = TrackProType.displayNumeric.atSize(26.sp),
+                                color = TrackProTheme.colors.marking
+                            )
+                            Text(
+                                text = eventName,
+                                style = TrackProType.label,
+                                color = TrackProTheme.colors.markingDim
+                            )
+                        }
+                    }
                 )
-                Text(
-                    text = currentTime,
-                    style = TrackProType.displayNumeric.atSize(if (mapVisible) 40.sp else 56.sp),
-                    color = deltaColor
+                Spacer(Modifier.height(8.dp))
+                SegmentBar(
+                    signedFraction = deltaFraction,
+                    activeColor = deltaColor,
+                    segments = 25,
+                    height = if (mapVisible) 16.dp else 24.dp
                 )
+            }
 
-                Spacer(Modifier.height(Spacing.md))
+            Bezel()
 
-                DeltaBar(
-                    delta = delta,
-                    isLive = isLiveDelta,
-                    valueSize = if (mapVisible) 30.sp else 44.sp,
-                    barHeight = if (mapVisible) 16.dp else 26.dp
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Instrument(
+                    label = "Current $eventName",
+                    value = currentTime,
+                    valueSize = 22.sp,
+                    modifier = Modifier.weight(1f)
                 )
+                Bezel(vertical = true, modifier = Modifier.height(58.dp))
+                Instrument(
+                    label = "Best",
+                    value = bestTime,
+                    valueColor = TrackProTheme.colors.accent,
+                    valueSize = 22.sp,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Bezel()
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Instrument(
+                    label = "Last",
+                    value = lastTime,
+                    valueSize = 22.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Bezel(vertical = true, modifier = Modifier.height(58.dp))
+                StintTimerCell(stintStart = stintStart, modifier = Modifier.weight(1f))
+            }
+            Bezel()
 
-                Spacer(Modifier.height(Spacing.md))
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine)
-                Spacer(Modifier.height(Spacing.md))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xl)) {
-                    StatCell(label = "Best", value = bestTime, valueColor = TrackProTheme.colors.deltaGood, size = StatCellSize.Large)
-                    StatCell(label = "Last", value = lastTime, valueColor = TrackProTheme.colors.textPrimary, size = StatCellSize.Large)
-                }
-
-                if (lapSplits.isNotEmpty()) {
-                    Spacer(Modifier.height(Spacing.sm))
-                    SectorSplitsRow(splits = lapSplits)
-                }
-
-                Spacer(Modifier.height(Spacing.md))
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine)
-                Spacer(Modifier.height(Spacing.md))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    StintTimerCell(stintStart = stintStart)
-                    StatCell(
-                        label = eventName,
-                        value = "$eventCount",
-                        valueColor = modeColor,
-                        size = StatCellSize.Large,
-                        horizontalAlignment = Alignment.End
-                    )
-                }
+            if (lapSplits.isNotEmpty()) {
+                SectorSplitsRow(splits = lapSplits)
             }
         }
 
-        // -- Right: map ---------------------------------
         if (mapVisible) {
             Box(
                 modifier = Modifier
-                    .weight(0.58f)
+                    .weight(0.54f)
                     .fillMaxSize()
-                    .background(TrackProTheme.colors.bgDeep)
+                    .background(TrackProTheme.colors.panel)
             ) {
                 if (gpsPoints.isNotEmpty()) {
                     MapLibreTrackView(
@@ -466,9 +496,9 @@ fun TimeAttackLandscapeLayout(
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            "Awaiting GPS",
+                            "AWAITING GPS",
                             style = TrackProType.label,
-                            color = TrackProTheme.colors.textFaint
+                            color = TrackProTheme.colors.markingDim
                         )
                     }
                 }
@@ -476,6 +506,7 @@ fun TimeAttackLandscapeLayout(
         }
     }
 }
+
 
 
 // ── Shared sub-components ──────────────────────────────────
@@ -527,7 +558,7 @@ private fun HudTrailing(
 }
 
 @Composable
-private fun StintTimerCell(stintStart: Long) {
+private fun StintTimerCell(stintStart: Long, modifier: Modifier = Modifier) {
     var stintTime by remember { mutableStateOf("00:00:00") }
     LaunchedEffect(stintStart) {
         while (true) {
@@ -539,47 +570,57 @@ private fun StintTimerCell(stintStart: Long) {
             stintTime = String.format("%02d:%02d:%02d", h, m, s)
         }
     }
-    StatCell(label = "Stint", value = stintTime, size = StatCellSize.Large)
+    Instrument(label = "Stint", value = stintTime, valueSize = 22.sp, modifier = modifier)
 }
 
 @Composable
 private fun SectorSplitsRow(splits: List<SectorSplit>) {
+    // The labanotation discipline the direction inherited: a sector's block is as wide as
+    // the time it took, so a slow sector is visibly longer before any digit is read. The
+    // numbers stay underneath for the deliberate read; the widths are the glance.
+    val total = splits.sumOf { it.splitMs }.coerceAtLeast(1L)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = Spacing.sm),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.lg)
+            .background(TrackProTheme.colors.field)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
     ) {
         splits.forEach { split ->
-            val deltaColor = when {
-                split.deltaMs == null -> TrackProTheme.colors.textPrimary
-                split.deltaMs <= 0    -> TrackProTheme.colors.deltaGood
-                else                  -> TrackProTheme.colors.deltaBad
+            val gained = (split.deltaMs ?: 0L) <= 0L
+            val color = when {
+                split.deltaMs == null -> TrackProTheme.colors.markingDim
+                gained -> TrackProTheme.colors.deltaGood
+                else -> TrackProTheme.colors.deltaBad
             }
-            Column {
+            Column(
+                modifier = Modifier.weight(
+                    (split.splitMs.toFloat() / total.toFloat()).coerceAtLeast(0.08f)
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .background(color)
+                )
+                Spacer(Modifier.height(5.dp))
                 Text(
-                    "S${split.sectorIndex + 1}",
-                    style = TrackProType.label.atSize(9.sp).copy(letterSpacing = 0.5.sp),
-                    color = TrackProTheme.colors.textFaint
+                    text = "S${split.sectorIndex + 1}",
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.markingDim
                 )
                 Text(
-                    String.format("%.2fs", split.splitMs / 1000.0),
-                    style = TrackProType.statValue.atSize(13.sp),
-                    color = deltaColor
+                    text = String.format("%.2f", split.splitMs / 1000.0),
+                    style = TrackProType.statValue.atSize(14.sp),
+                    color = color
                 )
-                if (split.deltaMs != null) {
-                    val deltaSeconds = split.deltaMs / 1000.0
-                    val sign = if (deltaSeconds > 0) "+" else ""
-                    Text(
-                        "$sign${String.format("%.2f", deltaSeconds)}",
-                        style = TrackProType.body.atSize(9.sp),
-                        color = deltaColor
-                    )
-                }
             }
         }
     }
 }
+
 // ── Reusable sub-components ────────────────────────────────
 @Composable
 fun MapLibreTrackView(

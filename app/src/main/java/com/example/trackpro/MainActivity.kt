@@ -1,16 +1,24 @@
 package com.example.trackpro
 
 import com.example.trackpro.extrasForUI.TrackProTheme
-import com.example.trackpro.components.PrintedColumn
-import com.example.trackpro.components.SheetGap
-import com.example.trackpro.components.SheetLegend
-import com.example.trackpro.components.SheetRow
-import com.example.trackpro.components.SheetSectionRule
-import com.example.trackpro.components.SheetSurface
-import com.example.trackpro.theme.ink
-import com.example.trackpro.theme.inkFaint
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import com.example.trackpro.components.Bezel
+import com.example.trackpro.components.Instrument
+import com.example.trackpro.components.Readout
+import com.example.trackpro.components.SegmentBar
+import com.example.trackpro.theme.field
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
+import com.example.trackpro.theme.panel
+import com.example.trackpro.theme.segmentOff
+import com.example.trackpro.dataClasses.LapTimeData
+import com.example.trackpro.dataClasses.SessionData
+import com.example.trackpro.dataClasses.VehicleInformationData
+import com.example.trackpro.managerClasses.utilities.toLapTimeMillis
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.platform.LocalContext
 import android.Manifest
 import android.app.Application
@@ -34,12 +42,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CarRepair
 import androidx.compose.material.icons.filled.FlagCircle
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Settings
@@ -62,7 +68,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -109,10 +114,8 @@ import com.example.trackpro.viewModels.VehicleViewModel
 import com.example.trackpro.viewModels.VehicleViewModelFactory
 import com.example.trackpro.components.pressableRow
 import com.example.trackpro.components.pressable
-import com.example.trackpro.components.AppCard
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.theme.atSize
-import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.TrackProType
 import kotlinx.coroutines.CoroutineScope
@@ -540,7 +543,7 @@ fun MainScreen(
             }
         }
     ) {
-        MainSheet(
+        DashBoard(
             onOpenDrawer = { scope.launch { drawerState.open() } },
             onNavigateToDragRace = onNavigateToDragRace,
             onNavigateToTrackVehicleSelector = onNavigateToTrackVehicleSelector,
@@ -557,22 +560,25 @@ fun MainScreen(
 
 // ── Action card ────────────────────────────────────────────
 
-// ── The sheet ──────────────────────────────────────
+// ── Status board ────────────────────────────────────
 
 /**
- * The main menu, printed.
+ * The dash at rest.
  *
- * A club timing sheet is a header block, a ruled column, and line items with their values
- * on one right-hand axis - so that is what this is. There are no cards, no icon tiles and
- * no hero: those are the arrangement the old menu shared with every other telemetry app,
- * and the sheet refuses them.
+ * This screen is read parked, never at speed, so it carries no at-speed legibility tax -
+ * that constraint belongs to the two HUDs alone. What it owes instead is that you learn
+ * something every time you open it: what the rig is doing right now, and what the last
+ * session did.
  *
- * The counts are read from the database rather than decorated in. A driver with no sessions
- * yet sees zeros, which is the honest first-run state and tells them exactly what the app
- * is for.
+ * Only two things earned a place here, and both are live from the database. There is no
+ * lifetime-totals wall and no per-track record table; they were considered and cut,
+ * because a number you never act on is decoration with a value in it.
+ *
+ * A fresh install renders the identical panel with dashes on every face. That is the
+ * whole empty state - no separate onboarding screen to design, maintain, or drift.
  */
 @Composable
-private fun MainSheet(
+private fun DashBoard(
     onOpenDrawer: () -> Unit,
     onNavigateToDragRace: () -> Unit,
     onNavigateToTrackVehicleSelector: () -> Unit,
@@ -587,121 +593,239 @@ private fun MainSheet(
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
 
-    val sessions by app.database.sessionDataDao().getAllSessions().collectAsState(initial = emptyList())
-    val vehicles by app.database.vehicleInformationDAO().getAllVehicles().collectAsState(initial = emptyList())
-    val tracks by app.database.trackMainDao().getAllTrack().collectAsState(initial = emptyList())
     val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
+    val vehicles by app.database.vehicleInformationDAO().getAllVehicles().collectAsState(initial = emptyList())
+    val sessions by app.database.sessionDataDao().getAllSessions().collectAsState(initial = emptyList())
 
-    // Drag sessions carry no track; track sessions do. Same split the two list screens use.
-    val dragCount = sessions.count { it.trackId == null }
-    val trackCount = sessions.count { it.trackId != null }
+    // The most recent session and its best lap. Resolved off the main thread; until it
+    // lands every face shows a dash, which is also the honest empty state.
+    var lastSession by remember { mutableStateOf<SessionData?>(null) }
+    var lastBestLap by remember { mutableStateOf<LapTimeData?>(null) }
+    var lastLapCount by remember { mutableStateOf(0) }
+    var lastTrackName by remember { mutableStateOf<String?>(null) }
 
-    val today = remember { LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")) }
-    val linkText = if (isConnected) "LINKED" else "NO LINK"
-    val linkColor = if (isConnected) TrackProTheme.colors.deltaGood else TrackProTheme.colors.inkFaint
-
-    SheetSurface(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-        ) {
-
-            // ── Masthead ─────────────────────────────────
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 12.dp, end = 4.dp, top = 14.dp, bottom = 10.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "TRACKPRO",
-                        style = TrackProType.titleLarge.atSize(22.sp).copy(letterSpacing = 3.sp),
-                        color = TrackProTheme.colors.ink
-                    )
-                    Text(
-                        text = "TIMING & SCORING",
-                        style = TrackProType.label.atSize(10.sp),
-                        color = TrackProTheme.colors.inkFaint
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = today,
-                        style = TrackProType.statValue.atSize(13.sp),
-                        color = TrackProTheme.colors.ink
-                    )
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(
-                            Icons.Default.Menu,
-                            contentDescription = "Open menu",
-                            tint = TrackProTheme.colors.ink,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+    LaunchedEffect(sessions) {
+        val recent = sessions.maxByOrNull { it.startTime }
+        lastSession = recent
+        if (recent == null) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            val laps = app.database.lapTimeDataDAO().getLapsForSession(recent.id)
+            val done = laps.filter { it.laptime != "IN PROGRESS" }
+            lastLapCount = done.size
+            lastBestLap = done.minByOrNull { it.laptime.toLapTimeMillis() }
+            lastTrackName = recent.trackId?.let { id ->
+                runCatching { app.database.trackMainDao().getTrack(id).first().trackName }.getOrNull()
             }
-
-            // ── Rig legend ──────────────────────────────
-            SheetLegend("GPS", linkText, valueColor = linkColor)
-            SheetLegend("VEHICLES", if (vehicles.isEmpty()) "none saved" else "${vehicles.size} saved")
-            SheetLegend("TRACKS", "${tracks.size} loaded")
-            SheetGap(1)
-
-            val rows = 12
-            PrintedColumn(rowCount = rows) { printRow ->
-
-                printRow(0) { SheetSectionRule("Record", "start") }
-                printRow(1) {
-                    SheetRow("Drag run", onClick = onNavigateToDragRace, emphasis = true)
-                }
-                printRow(2) {
-                    SheetRow("Lap session", onClick = onNavigateToTrackVehicleSelector, emphasis = true)
-                }
-
-                printRow(3) { SheetSectionRule("Archive", "count") }
-                printRow(4) {
-                    SheetRow("Drag sessions", onClick = onNavigateToDragTimesList, value = "$dragCount")
-                }
-                printRow(5) {
-                    SheetRow("Track sessions", onClick = onNavigateToTimeAttackListView, value = "$trackCount")
-                }
-                printRow(6) {
-                    SheetRow("Vehicles", onClick = onNavigateToVehicleList, value = "${vehicles.size}")
-                }
-                printRow(7) {
-                    SheetRow("Tracks", onClick = onNavigateToTrackListScreen, value = "${tracks.size}")
-                }
-
-                printRow(8) { SheetSectionRule("Rig", "state") }
-                printRow(9) {
-                    SheetRow(
-                        "GPS link",
-                        onClick = onNavigateToESPTestScreen,
-                        value = linkText,
-                        valueColor = linkColor
-                    )
-                }
-                printRow(10) {
-                    SheetRow("Track builder", onClick = onNavigateToTrackBuilder)
-                }
-                printRow(11) {
-                    SheetRow("Setup", onClick = onNavigateToSettings)
-                }
-            }
-
-            SheetGap(2)
-            Text(
-                text = "TRACKPRO 1.1  ·  GPL-2.0  ·  MAP DATA © OPENSTREETMAP",
-                style = TrackProType.label.atSize(9.sp),
-                color = TrackProTheme.colors.inkFaint,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-            )
-            SheetGap(2)
         }
     }
+
+    val vehicle: VehicleInformationData? = vehicles.firstOrNull()
+    val dash = "\u2014"
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(TrackProTheme.colors.panel)
+            .verticalScroll(rememberScrollState())
+    ) {
+
+        // ── Link bar ───────────────────────────────────
+        // The rig's state as the panel's top edge, the way a dash puts its shift lights
+        // there: a strip you catch without looking at it directly.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SegmentBar(
+                signedFraction = if (isConnected) 1f else 0f,
+                activeColor = if (isConnected) TrackProTheme.colors.deltaGood
+                else TrackProTheme.colors.segmentOff,
+                bidirectional = false,
+                segments = 16,
+                height = 10.dp,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = if (isConnected) "LINKED" else "NO LINK",
+                style = TrackProType.label,
+                color = if (isConnected) TrackProTheme.colors.deltaGood
+                else TrackProTheme.colors.markingDim
+            )
+            IconButton(onClick = onOpenDrawer, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    Icons.Default.Menu,
+                    contentDescription = "Open menu",
+                    tint = TrackProTheme.colors.marking,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Bezel()
+
+        // ── Car placard ────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pressableRow(onClick = onNavigateToVehicleList)
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (vehicle != null) "${vehicle.manufacturer} ${vehicle.model}".uppercase()
+                    else "NO VEHICLE",
+                    style = TrackProType.titleLarge.atSize(20.sp),
+                    color = TrackProTheme.colors.marking
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text = if (vehicle != null) listOfNotNull(
+                        vehicle.year.takeIf { it > 0 }?.toString(),
+                        vehicle.horsepower.takeIf { it > 0 }?.let { "$it HP" },
+                        vehicle.drivetrain.takeIf { it.isNotBlank() },
+                        vehicle.weight.takeIf { it > 0.0 }?.let { "${it.toInt()} KG" }
+                    ).joinToString("  ·  ") else "Add one to record a session",
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.markingDim
+                )
+            }
+        }
+
+        Bezel()
+
+        // ── Last session ───────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(TrackProTheme.colors.field)
+                .padding(horizontal = 12.dp, vertical = 14.dp)
+        ) {
+            Readout(
+                value = lastBestLap?.laptime ?: dash,
+                caption = "Best lap · last session",
+                valueColor = if (lastBestLap != null) TrackProTheme.colors.accent
+                else TrackProTheme.colors.markingDim,
+                valueSize = 46.sp
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = (lastTrackName ?: lastSession?.eventType ?: "No sessions recorded").uppercase(),
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.markingDim,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = if (lastSession != null) "$lastLapCount LAPS" else dash,
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.markingDim
+                )
+            }
+        }
+
+        Bezel()
+
+        // ── Mode entry ─────────────────────────────────
+        // The two things this app is for. Full width, tall, and the only elements on the
+        // panel that carry a lit ground.
+        ModeEntry("Track", "Circuit · sprint · live delta", onNavigateToTrackVehicleSelector)
+        Bezel()
+        ModeEntry("Drag", "0–100 · quarter mile · splits", onNavigateToDragRace)
+        Bezel()
+
+        // ── Secondary ──────────────────────────────────
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Instrument(
+                label = "Track records",
+                value = "${sessions.count { it.trackId != null }}",
+                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToTimeAttackListView)
+            )
+            Bezel(vertical = true, modifier = Modifier.height(58.dp))
+            Instrument(
+                label = "Drag records",
+                value = "${sessions.count { it.trackId == null }}",
+                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToDragTimesList)
+            )
+        }
+        Bezel()
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Instrument(
+                label = "Tracks",
+                value = "›",
+                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToTrackListScreen)
+            )
+            Bezel(vertical = true, modifier = Modifier.height(58.dp))
+            Instrument(
+                label = "Builder",
+                value = "›",
+                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToTrackBuilder)
+            )
+            Bezel(vertical = true, modifier = Modifier.height(58.dp))
+            Instrument(
+                label = "Rig",
+                value = "›",
+                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToESPTestScreen)
+            )
+            Bezel(vertical = true, modifier = Modifier.height(58.dp))
+            Instrument(
+                label = "Setup",
+                value = "›",
+                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToSettings)
+            )
+        }
+        Bezel()
+        Spacer(Modifier.height(20.dp))
+    }
 }
+
+/**
+ * A mode entry.
+ *
+ * Deliberately not a card and not a button: a lit strip across the panel, sized so it is
+ * reachable with a thumb without looking, because these are the two things reached for
+ * with gloves on.
+ */
+@Composable
+private fun ModeEntry(
+    name: String,
+    detail: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pressableRow(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name.uppercase(),
+                style = TrackProType.displayNumeric.atSize(30.sp),
+                color = TrackProTheme.colors.marking
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = detail.uppercase(),
+                style = TrackProType.label,
+                color = TrackProTheme.colors.markingDim
+            )
+        }
+        SegmentBar(
+            signedFraction = 1f,
+            activeColor = TrackProTheme.colors.accent,
+            bidirectional = false,
+            segments = 5,
+            height = 22.dp,
+            modifier = Modifier.width(38.dp)
+        )
+    }
+}
+
 
 
 // ── Drawer helpers ─────────────────────────────────────────

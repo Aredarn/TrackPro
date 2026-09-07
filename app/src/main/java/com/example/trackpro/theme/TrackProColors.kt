@@ -3,127 +3,127 @@ package com.example.trackpro.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * TrackPro's colour world: the club timing-and-scoring printout.
+ * TrackPro's colour world: a blackout race dash.
  *
- * Two grounds, one grammar. **Print** is the fanfold sheet you carry back from the event.
- * **Board** is the live timing monitor hanging in race control - the same columns, the
- * same face, the same rules, illuminated instead of printed. Neither is a "dark mode" of
- * the other; they are two artifacts a timing system genuinely produces, and the app moves
- * between them the way an event does: paper for reading afterwards, board while running.
+ * The reference is a purpose-built display - AiM, MoTeC, Racelogic - where the panel is
+ * unlit until it has something to say, markings are luminous rather than coloured, and
+ * nothing on the face is decorative. That discipline is the whole point: this world sits
+ * one careless step from the fake-carbon racing skin, and the thing that separates them is
+ * that every element here is a real readout.
  *
- * The data colours are not invented. Purple for the session's fastest, green for a
- * personal best, amber for down on your own time is the convention every timing screen in
- * motorsport has used for decades, which means this audience reads the colour before it
- * reads the number, and no legend is owed.
+ * **Night and Day are one face at two luminances, not two themes.** A real dash does not
+ * turn into a white document in sunlight; it drives its markings harder. So Day keeps the
+ * blackout ground, pushes it to true black for maximum contrast against glare, and lifts
+ * every marking. Anyone expecting a conventional light mode will find this surprising, and
+ * it is deliberate: a white screen on a windscreen mount at dusk is worse than useless.
  *
- * Field names are deliberately unchanged from the previous scheme so every existing screen
- * inherits the new world without a rename sweep; the world-native names below
- * ([paper], [ink], [rule], [stamp]) are what new code should read.
+ * Severity colour is the sport's own: purple for session best, green for personal best,
+ * amber for down on your own time. Red is reserved for genuine fault - never for "slower".
+ *
+ * Field names are unchanged from previous schemes so every screen inherits without a
+ * rename sweep; the world-native aliases below are what new code should read.
  */
 data class TrackProColorScheme(
-    /** The sheet itself, or the unlit board. */
+    /** The unlit panel. */
     val bgDeep: Color,
-    /** A printed block on the sheet - form areas, ruled tables. */
+    /** An instrument field raised out of the panel. */
     val bgCard: Color,
-    /** The margin band: tractor-feed edge, column headers, the strip behind a legend. */
+    /** A field that is currently the subject. */
     val bgElevated: Color,
 
     /** Session best. Purple, per timing convention. */
     val accent: Color,
-    /** Knocked-out figures sitting on an [accent] fill. */
+    /** Knocked out of an [accent] fill. */
     val onAccent: Color,
-    /** Structural ink: rules that repeat, tick marks, secondary legends. */
+    /** Inactive segment, placard caps, structural marks. */
     val accentMuted: Color,
 
     val textPrimary: Color,
     val textMuted: Color,
     val textFaint: Color,
 
-    /** Personal best. Green, per timing convention. */
+    /** Personal best / up on your time. */
     val deltaGood: Color,
-    /** Down on your own time. Amber, per timing convention - not red. */
+    /** Down on your own time. Amber, never red. */
     val deltaBad: Color,
-    /** Hairline rules and column separators. */
+    /** Bezel hairline and segment gaps. */
     val sectorLine: Color,
-    /** Destructive only. The stamp. */
+    /** Genuine fault or destructive action only. */
     val danger: Color
 )
 
 // ── World-native aliases ───────────────────────────────────
-// New code reads these; they carry the world's own vocabulary without forcing a rename
-// across every existing screen.
 
-/** The sheet / the board. */
-val TrackProColorScheme.paper: Color get() = bgDeep
+/** The unlit panel behind everything. */
+val TrackProColorScheme.panel: Color get() = bgDeep
 
-/** A printed block on the sheet. */
-val TrackProColorScheme.printedBlock: Color get() = bgCard
+/** An instrument field. */
+val TrackProColorScheme.field: Color get() = bgCard
 
-/** The tractor-feed margin band. */
-val TrackProColorScheme.margin: Color get() = bgElevated
+/** The field currently under the eye. */
+val TrackProColorScheme.fieldLive: Color get() = bgElevated
 
-/** Dot-matrix ink. */
-val TrackProColorScheme.ink: Color get() = textPrimary
+/** Luminous marking - numerals and legends. */
+val TrackProColorScheme.marking: Color get() = textPrimary
 
-/** Ink that struck the ribbon lightly. */
-val TrackProColorScheme.inkFaint: Color get() = textFaint
+/** A marking that is present but not being read. */
+val TrackProColorScheme.markingDim: Color get() = textMuted
 
-/** Hairline rule between columns and rows. */
-val TrackProColorScheme.rule: Color get() = sectorLine
+/** An unlit segment: drawn, not absent, so the bar's full range stays visible. */
+val TrackProColorScheme.segmentOff: Color get() = sectorLine
 
-/** The red stamp: destructive actions only, never decoration. */
-val TrackProColorScheme.stamp: Color get() = danger
+/** Bezel hairline between fields. */
+val TrackProColorScheme.bezel: Color get() = sectorLine
 
 /**
- * Print: fanfold paper, dot-matrix ink.
- *
- * This is the default ground. It is also the honest answer to the product's primary scene:
- * a phone mounted in direct sunlight, where a light sheet outreads an illuminated panel.
+ * Night: the default face. Dusk, garage, evening sessions, and anything indoors.
  */
-val PrintTrackProColors = TrackProColorScheme(
-    bgDeep = Color(0xFFF2EEE4),      // fanfold stock
-    bgCard = Color(0xFFFBF8F1),      // the whiter form area printed onto it
-    bgElevated = Color(0xFFE7E2D5),  // tractor-feed margin, column headers
+val NightDashColors = TrackProColorScheme(
+    bgDeep = Color(0xFF0A0C0B),
+    bgCard = Color(0xFF14171A),
+    bgElevated = Color(0xFF1E2225),
 
-    accent = Color(0xFF6B2D8F),      // session best - purple ink, 7.4:1 on stock
-    onAccent = Color(0xFFF7F3EA),
-    accentMuted = Color(0xFF57524A),
+    accent = Color(0xFFB473E8),
+    onAccent = Color(0xFF150E1C),
+    accentMuted = Color(0xFF9AA1A4),
 
-    textPrimary = Color(0xFF191712),  // 14.8:1
-    textMuted = Color(0xFF57524A),    // 7.1:1
-    textFaint = Color(0xFF8B8578),    // 3.6:1 - large/label use only
+    textPrimary = Color(0xFFF2F4F3),   // 16.9:1 on the panel
+    textMuted = Color(0xFF9AA1A4),     // 7.2:1
+    textFaint = Color(0xFF5E6669),     // 3.2:1 - large marks only
 
-    deltaGood = Color(0xFF14663A),   // personal best - green ink
-    deltaBad = Color(0xFF8A5A0F),    // down on your time - ochre, readable on paper
-    sectorLine = Color(0xFFBCB6A8),
-    danger = Color(0xFFA8321F)
+    deltaGood = Color(0xFF3FD07A),
+    deltaBad = Color(0xFFE8B33A),
+    sectorLine = Color(0xFF2A2F31),
+    danger = Color(0xFFE5453A)
 )
 
 /**
- * Board: the live timing monitor, unlit glass with the same grammar lit up.
+ * Day: the same face driven harder.
  *
- * Used wherever a session is actually running, regardless of the user's preferred ground -
- * a driver at night should not be handed a white screen.
+ * Ground goes to true black because against direct glare the limiting factor is the
+ * difference between marking and ground, and every marking lifts toward full luminance.
+ * This is a backlight step, not an inversion - see the class note.
  */
-val BoardTrackProColors = TrackProColorScheme(
-    bgDeep = Color(0xFF121110),
-    bgCard = Color(0xFF1A1917),
-    bgElevated = Color(0xFF24221F),
+val DayDashColors = TrackProColorScheme(
+    bgDeep = Color(0xFF000000),
+    bgCard = Color(0xFF0B0E10),
+    bgElevated = Color(0xFF16191C),
 
-    accent = Color(0xFFB473E8),      // session best
-    onAccent = Color(0xFF17111E),
-    accentMuted = Color(0xFFA8A296),
+    accent = Color(0xFFD9A6FF),
+    onAccent = Color(0xFF14091F),
+    accentMuted = Color(0xFFC2C8CB),
 
-    textPrimary = Color(0xFFF4F1E8),
-    textMuted = Color(0xFFA8A296),
-    textFaint = Color(0xFF6C675E),
+    textPrimary = Color(0xFFFFFFFF),   // 21:1
+    textMuted = Color(0xFFC2C8CB),     // 12.4:1
+    textFaint = Color(0xFF7C8488),     // 4.8:1
 
-    deltaGood = Color(0xFF3FD07A),   // personal best
-    deltaBad = Color(0xFFE8B33A),    // down on your time
-    sectorLine = Color(0xFF35322C),
-    danger = Color(0xFFF2603C)
+    deltaGood = Color(0xFF4FF08C),
+    deltaBad = Color(0xFFFFC64A),
+    sectorLine = Color(0xFF333A3D),
+    danger = Color(0xFFFF5A47)
 )
 
-// Legacy names kept so existing call sites resolve unchanged.
-val DarkTrackProColors = BoardTrackProColors
-val LightTrackProColors = PrintTrackProColors
+// Legacy names kept so existing call sites resolve unchanged. The app's existing
+// dark/light toggle now selects night vs day luminance rather than two themes.
+val DarkTrackProColors = NightDashColors
+val LightTrackProColors = DayDashColors

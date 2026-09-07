@@ -64,6 +64,13 @@ import com.example.trackpro.components.pressable
 import com.example.trackpro.components.Haptic
 import com.example.trackpro.components.AppCard
 import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.Bezel
+import com.example.trackpro.components.Instrument
+import com.example.trackpro.components.Readout
+import com.example.trackpro.theme.field
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
+import com.example.trackpro.theme.panel
 import com.example.trackpro.components.PrimaryButton
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.theme.atSize
@@ -277,126 +284,125 @@ fun DragRaceScreen(
                 }
             }
 
-            // 3. CURRENT SPEED (BIG)
-            AppCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.md),
-                padding = Spacing.lg,
-                borderColor = if (isSessionActive) TrackProTheme.colors.accent.copy(alpha = 0.5f)
-                    else TrackProTheme.colors.sectorLine
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        "Current Speed",
-                        style = TrackProType.label,
-                        color = TrackProTheme.colors.textMuted
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0",
-                            style = TrackProType.displayNumeric,
-                            color = if (isSessionActive) TrackProTheme.colors.accent
-                            else TrackProTheme.colors.textPrimary
-                        )
-                        Text(
-                            UnitFormatter.speedUnitLabel(useMetric),
-                            style = TrackProType.body.atSize(15.sp),
-                            color = TrackProTheme.colors.textMuted,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-
-                    if (isSessionActive) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "MAX: ${UnitFormatter.formatSpeed(currentMetrics.maxSpeed, useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)} · DIST: ${UnitFormatter.formatDistance(currentMetrics.totalDistance.toDouble(), useMetric)}",
-                            style = TrackProType.body.atSize(12.sp),
-                            color = TrackProTheme.colors.textMuted
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // 4. DRAG METRICS GRID
-            val metrics = listOf(
-                DragMetricDisplay(
-                    "0-60",
-                    currentMetrics.time0to60?.let { formatTime(it) } ?: "--.-",
-                    "SEC",
-                    currentMetrics.time0to60 != null
-                ),
-                DragMetricDisplay(
-                    "0-100",
-                    currentMetrics.time0to100?.let { formatTime(it) } ?: "--.-",
-                    "SEC",
-                    currentMetrics.time0to100 != null
-                ),
-                DragMetricDisplay(
-                    "0-160",
-                    currentMetrics.time0to160?.let { formatTime(it) } ?: "--.-",
-                    "SEC",
-                    currentMetrics.time0to160 != null
-                ),
-                DragMetricDisplay(
-                    "0-200",
-                    currentMetrics.time0to200?.let { formatTime(it) } ?: "--.-",
-                    "SEC",
-                    currentMetrics.time0to200 != null
-                ),
-                DragMetricDisplay(
-                    "50-150",
-                    currentMetrics.time50to150?.let { formatTime(it) } ?: "--.-",
-                    "SEC",
-                    currentMetrics.time50to150 != null
-                ),
-                DragMetricDisplay(
-                    "100-200",
-                    currentMetrics.time100to200?.let { formatTime(it) } ?: "--.-",
-                    "SEC",
-                    currentMetrics.time100to200 != null
-                ),
-                DragMetricDisplay(
-                    "1/4 MI",
-                    currentMetrics.quarterMileTime?.let { formatTime(it) } ?: "--.-",
-                    "SEC",
-                    currentMetrics.quarterMileTime != null
-                ),
-                DragMetricDisplay(
-                    "1/4 TRAP",
-                    currentMetrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "--",
-                    UnitFormatter.speedUnitLabel(useMetric),
-                    currentMetrics.quarterMileSpeed != null
-                ),
-            )
+            // 3. THE SPLIT JUST HIT
+            // The dominant readout is whichever split most recently landed, held at full
+            // scale until the next one lands. Before the first split there is nothing to
+            // hold, so live speed takes the slot - which is what you would be watching
+            // anyway on the launch.
+            val latestSplit: Triple<String, String, String>? = listOfNotNull(
+                currentMetrics.time0to60?.let { Triple("0-60", formatTime(it), "SEC") },
+                currentMetrics.time0to100?.let { Triple("0-100", formatTime(it), "SEC") },
+                currentMetrics.time0to160?.let { Triple("0-160", formatTime(it), "SEC") },
+                currentMetrics.time0to200?.let { Triple("0-200", formatTime(it), "SEC") },
+                currentMetrics.quarterMileTime?.let { Triple("1/4 MILE", formatTime(it), "SEC") },
+                currentMetrics.halfMileTime?.let { Triple("1/2 MILE", formatTime(it), "SEC") }
+            ).lastOrNull()
 
             Column(
-                Modifier
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = Spacing.md),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                    .background(TrackProTheme.colors.field)
+                    .padding(horizontal = 14.dp, vertical = 14.dp)
             ) {
-                SectionLabel("Performance Metrics")
+                Readout(
+                    value = latestSplit?.second
+                        ?: (gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0"),
+                    caption = latestSplit?.let { "${it.first}  \u00b7  ${it.third}" }
+                        ?: "Live speed \u00b7 ${UnitFormatter.speedUnitLabel(useMetric)}",
+                    valueColor = if (latestSplit != null) TrackProTheme.colors.accent
+                    else TrackProTheme.colors.marking,
+                    valueSize = 72.sp,
+                    trailing = {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = if (isSessionActive) "REC" else "IDLE",
+                                style = TrackProType.label,
+                                color = if (isSessionActive) TrackProTheme.colors.danger
+                                else TrackProTheme.colors.markingDim
+                            )
+                            Text(
+                                text = elapsedTime,
+                                style = TrackProType.statValue.atSize(18.sp),
+                                color = TrackProTheme.colors.marking
+                            )
+                        }
+                    }
+                )
+            }
 
-                metrics.chunked(2).forEach { row ->
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-                    ) {
-                        row.forEach { metric ->
-                            DragMetricCard(metric, Modifier.weight(1f))
+            Bezel()
+
+            // Live instruments: what is happening right now, under the held split.
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Instrument(
+                    label = "Speed \u00b7 ${UnitFormatter.speedUnitLabel(useMetric)}",
+                    value = gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0",
+                    valueSize = 24.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Bezel(vertical = true, modifier = Modifier.height(62.dp))
+                Instrument(
+                    label = "Max",
+                    value = UnitFormatter.formatSpeed(currentMetrics.maxSpeed, useMetric),
+                    valueSize = 24.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Bezel(vertical = true, modifier = Modifier.height(62.dp))
+                Instrument(
+                    label = "Distance",
+                    value = UnitFormatter.formatDistance(currentMetrics.totalDistance.toDouble(), useMetric),
+                    valueSize = 24.sp,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Bezel()
+
+            // 4. SPLIT TABLE
+            // Every split the run can produce, always present so the range is visible.
+            // Unreached splits sit dim rather than absent - the same discipline the
+            // segment bar uses for its unlit blocks.
+            val splitRows = listOf(
+                listOf(
+                    Triple("0-60", currentMetrics.time0to60?.let { formatTime(it) }, "SEC"),
+                    Triple("0-100", currentMetrics.time0to100?.let { formatTime(it) }, "SEC"),
+                    Triple("0-160", currentMetrics.time0to160?.let { formatTime(it) }, "SEC")
+                ),
+                listOf(
+                    Triple("0-200", currentMetrics.time0to200?.let { formatTime(it) }, "SEC"),
+                    Triple("50-150", currentMetrics.time50to150?.let { formatTime(it) }, "SEC"),
+                    Triple("100-200", currentMetrics.time100to200?.let { formatTime(it) }, "SEC")
+                ),
+                listOf(
+                    Triple("1/4 mile", currentMetrics.quarterMileTime?.let { formatTime(it) }, "SEC"),
+                    Triple("1/4 trap", currentMetrics.quarterMileSpeed?.let {
+                        UnitFormatter.formatSpeed(it, useMetric)
+                    }, UnitFormatter.speedUnitLabel(useMetric)),
+                    Triple("1/2 mile", currentMetrics.halfMileTime?.let { formatTime(it) }, "SEC")
+                )
+            )
+
+            splitRows.forEachIndexed { rowIndex, row ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    row.forEachIndexed { i, cell ->
+                        Instrument(
+                            label = cell.first,
+                            value = cell.second ?: "\u2013\u2013.\u2013",
+                            valueColor = if (cell.second != null) TrackProTheme.colors.marking
+                            else TrackProTheme.colors.markingDim,
+                            valueSize = 22.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (i < row.lastIndex) {
+                            Bezel(vertical = true, modifier = Modifier.height(58.dp))
                         }
                     }
                 }
+                if (rowIndex < splitRows.lastIndex) Bezel()
             }
 
-            Spacer(Modifier.height(Spacing.md))
+            Bezel()
+            Spacer(Modifier.height(12.dp))
 
             // 5. SPEED CHART (LARGE)
             AppCard(
