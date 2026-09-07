@@ -24,10 +24,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.TrackProApp
-import com.example.trackpro.components.AppCard
+import com.example.trackpro.components.DashGroup
 import com.example.trackpro.components.ScreenScaffold
 import com.example.trackpro.components.isScrolledUnderChrome
-import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.ToggleChip
 import com.example.trackpro.extrasForUI.AppDropdownField
 import com.example.trackpro.extrasForUI.TrackProTheme
@@ -61,17 +60,10 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
         Column(
             modifier = Modifier
                 .verticalScroll(scrollState)
-                .padding(
-                    top = contentPadding.calculateTopPadding() + Spacing.md,
-                    start = Spacing.md,
-                    end = Spacing.md,
-                    bottom = Spacing.md
-                ),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                .padding(top = contentPadding.calculateTopPadding()),
         ) {
             // --- Section: Hardware & GPS ---
-            SectionLabel("Hardware & Sensors")
-            AppCard {
+            DashGroup("Hardware & Sensors") {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     GpsSourceRow(
                         selected = gpsSource,
@@ -110,8 +102,7 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
             }
 
             // --- Section: Appearance ---
-            SectionLabel("Appearance")
-            AppCard {
+            DashGroup("Appearance") {
                 SettingsToggleRow(
                     label = "Theme",
                     valueText = if (useDarkTheme) "Dark" else "Light",
@@ -123,8 +114,7 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
             }
 
             // --- Section: Units ---
-            SectionLabel("Units")
-            AppCard {
+            DashGroup("Units") {
                 SettingsToggleRow(
                     label = "Speed & Distance",
                     valueText = if (useMetric) "Metric (km/h, km)" else "Imperial (mph, mi)",
@@ -136,8 +126,7 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
             }
 
             // --- Section: System ---
-            SectionLabel("Application")
-            AppCard {
+            DashGroup("Application") {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     SettingsInfoRow(label = "App Version", value = "1.0.4-PRO")
                     SettingsInfoRow(label = "Database Status", value = "Connected")

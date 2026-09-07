@@ -2,6 +2,7 @@ package com.example.trackpro
 
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.Bezel
+import com.example.trackpro.components.DashAction
 import com.example.trackpro.components.Instrument
 import com.example.trackpro.components.Readout
 import com.example.trackpro.components.SegmentBar
@@ -635,9 +636,17 @@ private fun DashBoard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
+                .padding(start = 4.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(onClick = onOpenDrawer, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    Icons.Default.Menu,
+                    contentDescription = "Open menu",
+                    tint = TrackProTheme.colors.marking,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             SegmentBar(
                 signedFraction = if (isConnected) 1f else 0f,
                 activeColor = if (isConnected) TrackProTheme.colors.deltaGood
@@ -654,14 +663,30 @@ private fun DashBoard(
                 color = if (isConnected) TrackProTheme.colors.deltaGood
                 else TrackProTheme.colors.markingDim
             )
-            IconButton(onClick = onOpenDrawer, modifier = Modifier.size(40.dp)) {
-                Icon(
-                    Icons.Default.Menu,
-                    contentDescription = "Open menu",
-                    tint = TrackProTheme.colors.marking,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+        }
+
+        Bezel()
+
+        // ── Mode entry ─────────────────────────────────
+        // The two things this app exists to do, first on the panel and the only elements
+        // carrying a lit ground and an accent hairline. Everything below is a readout.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(TrackProTheme.colors.panel)
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            DashAction(
+                label = "Track",
+                detail = "Circuit · sprint · live delta",
+                onClick = onNavigateToTrackVehicleSelector
+            )
+            DashAction(
+                label = "Drag",
+                detail = "0–100 · quarter mile · splits",
+                onClick = onNavigateToDragRace
+            )
         }
 
         Bezel()
@@ -729,14 +754,6 @@ private fun DashBoard(
 
         Bezel()
 
-        // ── Mode entry ─────────────────────────────────
-        // The two things this app is for. Full width, tall, and the only elements on the
-        // panel that carry a lit ground.
-        ModeEntry("Track", "Circuit · sprint · live delta", onNavigateToTrackVehicleSelector)
-        Bezel()
-        ModeEntry("Drag", "0–100 · quarter mile · splits", onNavigateToDragRace)
-        Bezel()
-
         // ── Secondary ──────────────────────────────────
         Row(modifier = Modifier.fillMaxWidth()) {
             Instrument(
@@ -782,49 +799,7 @@ private fun DashBoard(
     }
 }
 
-/**
- * A mode entry.
- *
- * Deliberately not a card and not a button: a lit strip across the panel, sized so it is
- * reachable with a thumb without looking, because these are the two things reached for
- * with gloves on.
- */
-@Composable
-private fun ModeEntry(
-    name: String,
-    detail: String,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressableRow(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 18.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = name.uppercase(),
-                style = TrackProType.displayNumeric.atSize(30.sp),
-                color = TrackProTheme.colors.marking
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = detail.uppercase(),
-                style = TrackProType.label,
-                color = TrackProTheme.colors.markingDim
-            )
-        }
-        SegmentBar(
-            signedFraction = 1f,
-            activeColor = TrackProTheme.colors.accent,
-            bidirectional = false,
-            segments = 5,
-            height = 22.dp,
-            modifier = Modifier.width(38.dp)
-        )
-    }
-}
+
 
 
 
