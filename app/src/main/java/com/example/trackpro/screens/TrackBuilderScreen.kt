@@ -49,8 +49,11 @@ import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.Haptic
-import com.example.trackpro.components.AppCard
 import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.DashAction
+import com.example.trackpro.components.DashGroup
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
 import com.example.trackpro.components.PrimaryButton
 import com.example.trackpro.components.ToggleChip
 import com.example.trackpro.theme.atSize
@@ -428,39 +431,44 @@ fun MapLibreBuilderView(
 
 @Composable
 private fun TrackInfoCard(name: String, country: String, mode: String, onClick: () -> Unit) {
-    AppCard(modifier = Modifier.fillMaxWidth()) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Column {
-                Text("Track Configuration", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+    DashGroup("Track configuration") {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    if (name.isEmpty()) "Unnamed Track" else "$name ($country)",
-                    style = TrackProType.titleMedium,
-                    color = TrackProTheme.colors.textPrimary
+                    if (name.isEmpty()) "Unnamed track" else name,
+                    style = TrackProType.titleLarge.atSize(18.sp),
+                    color = TrackProTheme.colors.marking
                 )
-                Text("Mode: ${mode.uppercase()}", style = TrackProType.body.atSize(12.sp), color = TrackProTheme.colors.accent)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    listOf(country, mode.uppercase()).filter { it.isNotBlank() }.joinToString("  \u00b7  "),
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.markingDim
+                )
             }
-            PrimaryButton(
-                text = "Edit",
+            Spacer(Modifier.width(12.dp))
+            DashAction(
+                label = "Edit",
                 onClick = onClick,
-                accent = TrackProTheme.colors.bgElevated,
-                contentColor = TrackProTheme.colors.textPrimary,
-                modifier = Modifier.align(Alignment.CenterEnd)
+                compact = true,
+                modifier = Modifier.width(96.dp)
             )
         }
     }
 }
 
+
 @Composable
 private fun MarkSectorButton(count: Int, enabled: Boolean, onClick: () -> Unit) {
-    PrimaryButton(
-        text = "Mark Sector ${count + 1}",
+    DashAction(
+        label = "Mark sector ${count + 1}",
         onClick = onClick,
         enabled = enabled,
-        haptic = Haptic.Confirm,
-        accent = TrackProTheme.colors.accent,
-        modifier = Modifier.fillMaxWidth().height(48.dp)
+        compact = true,
+        haptic = Haptic.Confirm
     )
 }
+
 
 /**
  * Surfaces routing state in the manual builder: either a leg is being fetched, or the last
@@ -566,36 +574,43 @@ suspend fun endTrackBuilder(context: Context, trackId: Long, isLapTrack: Boolean
 
 @Composable
 private fun LiveControls(isRecording: Boolean, onToggle: () -> Unit) {
-    PrimaryButton(
-        text = if (isRecording) "Stop Recording" else "Start GPS Recording",
+    // Recording is the one state on this screen that must be unmistakable while you are
+    // walking a circuit, so it takes the danger accent rather than a label change alone.
+    DashAction(
+        label = if (isRecording) "Stop recording" else "Start GPS recording",
+        detail = if (isRecording) "Recording \u00b7 walk the circuit" else null,
         onClick = onToggle,
+        compact = true,
         haptic = Haptic.Confirm,
-        accent = if (isRecording) TrackProTheme.colors.danger.copy(alpha = 0.18f) else TrackProTheme.colors.bgElevated,
-        contentColor = if (isRecording) TrackProTheme.colors.danger else TrackProTheme.colors.textPrimary,
-        modifier = Modifier.fillMaxWidth().height(56.dp)
+        accent = if (isRecording) TrackProTheme.colors.danger else TrackProTheme.colors.accent
     )
 }
 
+
 @Composable
 private fun ManualControls(onUndo: () -> Unit, onSave: () -> Unit, canSave: Boolean) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        PrimaryButton(
-            text = "Undo Last",
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+    ) {
+        DashAction(
+            label = "Undo last",
             onClick = onUndo,
-            accent = TrackProTheme.colors.bgElevated,
-            contentColor = TrackProTheme.colors.textPrimary,
-            modifier = Modifier.weight(1f).height(56.dp)
+            compact = true,
+            accent = TrackProTheme.colors.markingDim,
+            modifier = Modifier.weight(1f)
         )
-        PrimaryButton(
-            text = "Save Track",
+        DashAction(
+            label = "Save track",
             onClick = onSave,
             enabled = canSave,
+            compact = true,
             haptic = Haptic.Confirm,
-            accent = TrackProTheme.colors.accent,
-            modifier = Modifier.weight(1f).height(56.dp)
+            modifier = Modifier.weight(1f)
         )
     }
 }
+
 
 @Composable
 fun TrackInfoAlert(

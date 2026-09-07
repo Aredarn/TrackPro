@@ -39,10 +39,15 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
-import com.example.trackpro.components.SectionLabel
-import com.example.trackpro.components.StatCell
-import com.example.trackpro.components.StatCellDivider
-import com.example.trackpro.components.StatCellSize
+import com.example.trackpro.components.Bezel
+import com.example.trackpro.components.DashGroup
+import com.example.trackpro.components.Instrument
+import com.example.trackpro.components.Readout
+import com.example.trackpro.components.SegmentBar
+import com.example.trackpro.theme.field
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
+import com.example.trackpro.theme.panel
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.DataVizColors
 import com.example.trackpro.theme.Motion
@@ -51,6 +56,7 @@ import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.JsonReader
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.models.GpsProviderType
+import com.example.trackpro.theme.segmentOff
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -127,92 +133,88 @@ fun ESPConnectionTestScreen(
                     .weight(1f) // Takes remaining space
                     .verticalScroll(rememberScrollState())
             ) {
-                // ── Speedometer ───────────────────────────
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(TrackProTheme.colors.bgCard)
-                        .padding(top = 24.dp, bottom = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        StyledSpeedometer(
-                            speed = UnitFormatter.convertSpeed(speed, useMetric),
-                            textPrimary = TrackProTheme.colors.textPrimary
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = UnitFormatter.speedUnitLabel(useMetric).lowercase(),
-                            style = TrackProType.label,
-                            color = TrackProTheme.colors.textMuted
-                        )
-                    }
-                }
-
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-
-                // ── Signal quality row ────────────────────
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(TrackProTheme.colors.bgElevated)
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    StatCell(
-                        label = "Source",
-                        value = when (gpsSource) {
-                            GpsProviderType.WIFI -> "ESP32 (WiFi)"
-                            GpsProviderType.BLUETOOTH -> "ESP32 (BT)"
-                            GpsProviderType.PHONE_GPS -> "Internal"
-                        },
-                        size = StatCellSize.Small,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    )
-                    StatCellDivider()
-                    StatCell(
-                        label = "Status",
-                        value = if (isConnected) "Live" else "Offline",
-                        valueColor = if (isConnected) TrackProTheme.colors.deltaGood else TrackProTheme.colors.textMuted,
-                        size = StatCellSize.Small,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    )
-                    StatCellDivider()
-                    StatCell(
-                        label = "Fix",
-                        value = if (fix) "OK" else "Wait",
-                        valueColor = if (fix) TrackProTheme.colors.deltaGood else TrackProTheme.colors.textMuted,
-                        size = StatCellSize.Small,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    )
-                }
-
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-
-                // ── Telemetry List ────────────────────────
-                SectionLabel("Data Stream", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
-
+                // -- Speed ---------------------------------
+                // A numeral rather than a dial. A drawn gauge here would be a picture of
+                // an instrument; the panel's own language is a readout plus a bar, and
+                // the bar carries the range the numeral cannot.
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProTheme.colors.bgCard)
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                        .background(TrackProTheme.colors.field)
+                        .padding(horizontal = 14.dp, vertical = 14.dp)
                 ) {
+                    Readout(
+                        value = UnitFormatter.formatSpeed(speed, useMetric),
+                        caption = "Ground speed \u00b7 ${UnitFormatter.speedUnitLabel(useMetric)}",
+                        valueColor = if (isConnected) TrackProTheme.colors.marking
+                        else TrackProTheme.colors.markingDim,
+                        valueSize = 64.sp
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    SegmentBar(
+                        signedFraction = (UnitFormatter.convertSpeed(speed, useMetric) / 200.0)
+                            .coerceIn(0.0, 1.0).toFloat(),
+                        activeColor = if (isConnected) TrackProTheme.colors.deltaGood
+                        else TrackProTheme.colors.segmentOff,
+                        bidirectional = false,
+                        segments = 20,
+                        height = 14.dp
+                    )
+                }
+
+                Bezel()
+
+                // -- Link state ----------------------------
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Instrument(
+                        label = "Source",
+                        value = when (gpsSource) {
+                            GpsProviderType.WIFI -> "ESP32 WIFI"
+                            GpsProviderType.BLUETOOTH -> "ESP32 BT"
+                            GpsProviderType.PHONE_GPS -> "INTERNAL"
+                        },
+                        valueSize = 15.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Bezel(vertical = true, modifier = Modifier.height(58.dp))
+                    Instrument(
+                        label = "Link",
+                        value = if (isConnected) "LIVE" else "OFFLINE",
+                        valueColor = if (isConnected) TrackProTheme.colors.deltaGood
+                        else TrackProTheme.colors.deltaBad,
+                        valueSize = 15.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Bezel(vertical = true, modifier = Modifier.height(58.dp))
+                    Instrument(
+                        label = "Fix",
+                        value = if (fix) "LOCKED" else "SEARCHING",
+                        valueColor = if (fix) TrackProTheme.colors.deltaGood
+                        else TrackProTheme.colors.deltaBad,
+                        valueSize = 15.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Bezel()
+
+                DashGroup("Data stream") {
                     when (gpsSource) {
                         GpsProviderType.WIFI -> TelemetryRow(
-                            if (useTestServer) "Remote IP (Test)" else "Remote IP",
+                            if (useTestServer) "Remote IP (test)" else "Remote IP",
                             "$ip:$port",
-                            if (useTestServer) TrackProTheme.colors.accent else TrackProTheme.colors.textPrimary,
-                            TrackProTheme.colors.textMuted
+                            if (useTestServer) TrackProTheme.colors.accent else TrackProTheme.colors.marking,
+                            TrackProTheme.colors.markingDim
                         )
-                        GpsProviderType.BLUETOOTH -> TelemetryRow("Paired Device", pairedDeviceLabel, TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
+                        GpsProviderType.BLUETOOTH -> TelemetryRow(
+                            "Paired device", pairedDeviceLabel,
+                            TrackProTheme.colors.marking, TrackProTheme.colors.markingDim
+                        )
                         GpsProviderType.PHONE_GPS -> {}
                     }
-                    TelemetryRow("Latitude", gpsData?.latitude?.let { String.format("%.6f°", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
-                    TelemetryRow("Longitude", gpsData?.longitude?.let { String.format("%.6f°", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
-                    TelemetryRow("Altitude", gpsData?.altitude?.let { String.format("%.1f m", it) } ?: "—", TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted)
-
+                    TelemetryRow("Latitude", gpsData?.latitude?.let { String.format("%.6f\u00b0", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
+                    TelemetryRow("Longitude", gpsData?.longitude?.let { String.format("%.6f\u00b0", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
+                    TelemetryRow("Altitude", gpsData?.altitude?.let { String.format("%.1f m", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
                     TelemetryRow(
                         "Refresh",
                         when {
@@ -220,180 +222,27 @@ fun ESPConnectionTestScreen(
                             confirmedRateHz != null -> "$confirmedRateHz Hz"
                             else -> "$selectedRateHz Hz (pending)"
                         },
-                        TrackProTheme.colors.textPrimary,
-                        TrackProTheme.colors.textMuted
+                        TrackProTheme.colors.marking,
+                        TrackProTheme.colors.markingDim
                     )
                 }
 
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-
-                // ── Raw Packet / Debug ────────────────────
-                SectionLabel("Raw Packet", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(TrackProTheme.colors.bgCard)
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.md)
-                ) {
+                DashGroup("Raw packet") {
                     Text(
-                        text = gpsData?.toString() ?: "Awaiting data stream...",
-                        color = if (gpsData != null) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted,
-                        fontSize = 10.sp,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        lineHeight = 16.sp
+                        text = gpsData?.toString() ?: "Awaiting data stream\u2026",
+                        color = if (gpsData != null) TrackProTheme.colors.deltaGood
+                        else TrackProTheme.colors.markingDim,
+                        style = TrackProType.body.atSize(10.sp),
+                        lineHeight = 15.sp
                     )
                 }
+
                 Spacer(Modifier.height(Spacing.xl))
             }
         }
     }
 }
-// ── Styled speedometer ─────────────────────────────────────
 
-@Composable
-fun StyledSpeedometer(
-    speed: Float,
-    textPrimary: Color
-) {
-    val animatedSpeed by animateFloatAsState(
-        targetValue = speed,
-        // Was tween(600): every GPS tick restarted a fixed ramp from wherever it had
-        // got to, so a steadily changing speed animated in visible steps. A spring
-        // re-targets continuously from the current value instead.
-        animationSpec = Motion.standard(),
-        label = "speed"
-    )
-
-    Box(
-        modifier = Modifier.size(260.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val cx = size.width / 2f
-            val cy = size.height / 2f
-            val radius = size.minDimension / 2f - 16.dp.toPx()
-            val startAngle = 135f
-            val sweepTotal = 270f
-
-            // Background arc track
-            drawArc(
-                color = Color(DataVizColors.gaugeTrack.toColorInt()),
-                startAngle = startAngle,
-                sweepAngle = sweepTotal,
-                useCenter = false,
-                topLeft = Offset(cx - radius, cy - radius),
-                size = Size(radius * 2, radius * 2),
-                style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
-            )
-
-            // Speed fill arc
-            val speedFraction = (animatedSpeed / 260f).coerceIn(0f, 1f)
-            if (speedFraction > 0f) {
-                // Color shifts from green → amber → red as speed increases
-                val arcColor = when {
-                    speedFraction < 0.5f -> Color(DataVizColors.gaugeLow.toColorInt())
-                    speedFraction < 0.8f -> Color(DataVizColors.gaugeMid.toColorInt())
-                    else                 -> Color(DataVizColors.gaugeHigh.toColorInt())
-                }
-                drawArc(
-                    color = arcColor,
-                    startAngle = startAngle,
-                    sweepAngle = sweepTotal * speedFraction,
-                    useCenter = false,
-                    topLeft = Offset(cx - radius, cy - radius),
-                    size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
-                )
-            }
-
-            // Tick marks every 20 km/h
-            val tickPaint = android.graphics.Paint().apply {
-                color = DataVizColors.gaugeTick.toColorInt()
-                strokeWidth = 2f
-                isAntiAlias = true
-            }
-            val labelPaint = android.graphics.Paint().apply {
-                color = DataVizColors.gaugeTick.toColorInt()
-                textSize = 22f
-                textAlign = android.graphics.Paint.Align.CENTER
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                isAntiAlias = true
-            }
-
-            for (i in 0..13) {
-                val fraction = i / 13f
-                val angle = Math.toRadians((startAngle + sweepTotal * fraction).toDouble())
-                val outerR = radius - 18.dp.toPx()
-                val innerR = radius - 28.dp.toPx()
-                val labelR = radius - 44.dp.toPx()
-
-                drawContext.canvas.nativeCanvas.drawLine(
-                    (cx + cos(angle) * innerR).toFloat(),
-                    (cy + sin(angle) * innerR).toFloat(),
-                    (cx + cos(angle) * outerR).toFloat(),
-                    (cy + sin(angle) * outerR).toFloat(),
-                    tickPaint
-                )
-
-                if (i % 2 == 0) {
-                    drawContext.canvas.nativeCanvas.drawText(
-                        "${i * 20}",
-                        (cx + cos(angle) * labelR).toFloat(),
-                        (cy + sin(angle) * labelR).toFloat() + 8f,
-                        labelPaint
-                    )
-                }
-            }
-
-            // Needle
-            val needleFraction = (animatedSpeed / 260f).coerceIn(0f, 1f)
-            val needleAngle = Math.toRadians((startAngle + sweepTotal * needleFraction).toDouble())
-            val needleLength = radius - 32.dp.toPx()
-
-            // Needle glow (wider, semi-transparent)
-            drawLine(
-                color = Color(DataVizColors.gaugeHigh.toColorInt()).copy(alpha = 0.2f),
-                start = Offset(cx, cy),
-                end = Offset(
-                    (cx + cos(needleAngle) * needleLength).toFloat(),
-                    (cy + sin(needleAngle) * needleLength).toFloat()
-                ),
-                strokeWidth = 10.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            // Needle sharp
-            drawLine(
-                color = Color(DataVizColors.gaugeHigh.toColorInt()),
-                start = Offset(cx, cy),
-                end = Offset(
-                    (cx + cos(needleAngle) * needleLength).toFloat(),
-                    (cy + sin(needleAngle) * needleLength).toFloat()
-                ),
-                strokeWidth = 3.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-
-            // Center hub
-            drawCircle(color = Color(DataVizColors.darkOutline.toColorInt()), radius = 10.dp.toPx(), center = Offset(cx, cy))
-            drawCircle(
-                color = Color(DataVizColors.gaugeHigh.toColorInt()),
-                radius = 6.dp.toPx(),
-                center = Offset(cx, cy)
-            )
-        }
-
-        // Digital speed readout in center
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(Modifier.height(60.dp))
-            Text(
-                text = "${animatedSpeed.toInt()}",
-                style = TrackProType.displayNumeric,
-                color = textPrimary
-            )
-        }
-    }
-}
 
 // ── Sub-components ─────────────────────────────────────────
 
