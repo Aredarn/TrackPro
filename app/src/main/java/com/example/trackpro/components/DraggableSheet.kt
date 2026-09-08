@@ -184,7 +184,7 @@ fun DraggableSheet(
                 .fillMaxWidth()
                 .background(
                     TrackProTheme.colors.bgCard,
-                    RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                    RoundedCornerShape(0.dp)
                 )
         ) {
             // The handle is the drag affordance, so it's also the drag *target* - a

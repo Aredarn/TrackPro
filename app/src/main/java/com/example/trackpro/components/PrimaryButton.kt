@@ -15,7 +15,11 @@ import androidx.compose.ui.unit.sp
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
+import androidx.compose.foundation.border
 import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.bezel
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.TrackProType
 
 /**
@@ -44,17 +48,18 @@ fun PrimaryButton(
                 haptic = haptic,
                 role = Role.Button
             )
-            .background(
-                if (enabled) accent else TrackProTheme.colors.bgElevated,
-                TrackProShapes.control
-            )
-            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            .background(if (enabled) accent else TrackProTheme.colors.bgElevated)
+            // A lit block with a milled edge, not a pill. Disabled keeps the block and
+            // drops to the bezel, so an unavailable action still shows where it is.
+            .border(1.dp, if (enabled) accent else TrackProTheme.colors.bezel)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = text,
-            style = TrackProType.titleMedium.atSize(13.sp),
-            color = contentColor ?: if (enabled) TrackProTheme.colors.onAccent else TrackProTheme.colors.textFaint
+            text = text.uppercase(),
+            style = TrackProType.titleLarge.atSize(14.sp),
+            color = contentColor
+                ?: if (enabled) TrackProTheme.colors.onAccent else TrackProTheme.colors.markingDim
         )
     }
 }

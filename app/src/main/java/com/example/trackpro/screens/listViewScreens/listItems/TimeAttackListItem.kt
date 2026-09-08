@@ -245,13 +245,15 @@ fun TimeAttackListItemScreen(
                     ) {
                         Text(
                             text = session.eventType,
-                            style = TrackProType.titleLarge,
+                            // The session leads its own readouts.
+                            style = TrackProType.titleLarge.atSize(26.sp),
                             color = TrackProTheme.colors.textPrimary
                         )
+                        Spacer(Modifier.height(6.dp))
                         if (vehicle != null) {
                             Text(
-                                text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
-                                style = TrackProType.body,
+                                text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})".uppercase(),
+                                style = TrackProType.label,
                                 color = TrackProTheme.colors.textMuted
                             )
                             Text(

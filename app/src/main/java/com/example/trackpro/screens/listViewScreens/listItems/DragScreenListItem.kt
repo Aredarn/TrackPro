@@ -349,7 +349,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                                 )
                                 .background(
                                     if (active) TrackProTheme.colors.accent else TrackProTheme.colors.sectorLine,
-                                    RoundedCornerShape(3.dp)
+                                    RoundedCornerShape(0.dp)
                                 )
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
@@ -372,7 +372,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                             )
                             .background(
                                 if (active) TrackProTheme.colors.accent else TrackProTheme.colors.sectorLine,
-                                RoundedCornerShape(3.dp)
+                                RoundedCornerShape(0.dp)
                             )
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {

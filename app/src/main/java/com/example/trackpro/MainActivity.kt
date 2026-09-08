@@ -45,6 +45,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CarRepair
 import androidx.compose.material.icons.filled.FlagCircle
 import androidx.compose.material.icons.filled.Menu
@@ -518,6 +519,12 @@ fun MainScreen(
                         label = "My Vehicles",
                         tint = TrackProTheme.colors.accentMuted,
                         onClick = { onNavigateToVehicleList(); scope.launch { drawerState.close() } }
+                    )
+                    DrawerItem(
+                        icon = Icons.Default.AddCircle,
+                        label = "Add Vehicle",
+                        tint = TrackProTheme.colors.accentMuted,
+                        onClick = { onNavigateToVehicleCreatorScreen(); scope.launch { drawerState.close() } }
                     )
                 }
 
