@@ -104,7 +104,10 @@ fun ScrollEdgeFade(visible: Boolean, height: androidx.compose.ui.unit.Dp = 14.dp
  * Opaque enough that small uppercase labels stay legible over an arbitrary map or a
  * dense table underneath, translucent enough to read as a layer rather than a lid.
  */
-private const val TranslucentChromeAlpha = 0.86f
+// Opaque. Translucent chrome belonged to the previous visual direction; a milled
+// panel does not show what is behind it, and a half-transparent bar over live telemetry
+// is a legibility cost with nothing bought for it.
+private const val TranslucentChromeAlpha = 1f
 
 /** True once the list has moved at all - drives the scroll-edge fade. */
 @Composable

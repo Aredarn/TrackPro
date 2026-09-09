@@ -20,3 +20,6 @@ local.properties
 /.kotlin/errors/errors-1746010788178.log
 /.kotlin/errors/errors-1747138928359.log
 /.idea/runConfigurations.xml
+
+# Impeccable machine-local settings
+.impeccable/config.local.json

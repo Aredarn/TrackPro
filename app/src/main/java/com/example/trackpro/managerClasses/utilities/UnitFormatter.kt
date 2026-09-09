@@ -23,6 +23,14 @@ object UnitFormatter {
     fun convertSpeedToKmh(value: Double, metric: Boolean): Double =
         if (metric) value else value / KM_TO_MILES
 
+    fun temperatureUnitLabel(metric: Boolean) = if (metric) "°C" else "°F"
+
+    /** Formats a Celsius temperature in the display unit, e.g. "23.7 °C" / "74.7 °F". */
+    fun formatTemperature(celsius: Double, metric: Boolean): String {
+        val value = if (metric) celsius else celsius * 9.0 / 5.0 + 32.0
+        return String.format("%.1f %s", value, temperatureUnitLabel(metric))
+    }
+
     /** Formats a km/h speed as "123" / "76" (no unit suffix) rounded to the nearest whole number. */
     fun formatSpeed(kmh: Double, metric: Boolean): String =
         convertSpeed(kmh, metric).roundToInt().toString()

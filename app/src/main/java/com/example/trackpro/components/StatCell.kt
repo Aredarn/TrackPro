@@ -18,6 +18,9 @@ import androidx.compose.ui.unit.sp
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.TrackProType
+import com.example.trackpro.theme.bezel
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
 
 enum class StatCellSize { Small, Regular, Large }
 
@@ -32,20 +35,23 @@ fun StatCell(
     value: String,
     modifier: Modifier = Modifier,
     unit: String? = null,
-    valueColor: Color = TrackProTheme.colors.textPrimary,
+    valueColor: Color = TrackProTheme.colors.marking,
     size: StatCellSize = StatCellSize.Regular,
     horizontalAlignment: Alignment.Horizontal = Alignment.Start
 ) {
+    // Placard caps sized to stay legible rather than to disappear: at 8sp the old Small
+    // tier was decoration. The value keeps a clear step above it at every tier so a cell
+    // always has a hierarchy of two, never one grey block.
     val (labelSize, valueSize) = when (size) {
-        StatCellSize.Small -> 8.sp to 14.sp
-        StatCellSize.Regular -> 9.sp to 17.sp
-        StatCellSize.Large -> 10.sp to 22.sp
+        StatCellSize.Small -> 9.sp to 15.sp
+        StatCellSize.Regular -> 10.sp to 18.sp
+        StatCellSize.Large -> 10.sp to 24.sp
     }
     Column(horizontalAlignment = horizontalAlignment, modifier = modifier) {
         Text(
             text = label.uppercase(),
             style = TrackProType.label.atSize(labelSize),
-            color = TrackProTheme.colors.textFaint
+            color = TrackProTheme.colors.markingDim
         )
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
@@ -57,7 +63,7 @@ fun StatCell(
                 Text(
                     text = unit,
                     style = TrackProType.body.atSize(10.sp),
-                    color = TrackProTheme.colors.textMuted,
+                    color = TrackProTheme.colors.markingDim,
                     modifier = Modifier.padding(start = 2.dp, bottom = 1.dp)
                 )
             }
@@ -72,6 +78,6 @@ fun StatCellDivider(modifier: Modifier = Modifier, height: Dp = 28.dp) {
         modifier = modifier
             .width(1.dp)
             .height(height)
-            .background(TrackProTheme.colors.sectorLine)
+            .background(TrackProTheme.colors.bezel)
     )
 }

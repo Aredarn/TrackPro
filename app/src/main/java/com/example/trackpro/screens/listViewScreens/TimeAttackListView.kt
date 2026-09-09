@@ -161,7 +161,7 @@ fun ExpandableTrackGroup(
                             onClick = { navController.navigate("timeattacklistitem/${session.id}") },
                             onLongClick = { pendingDelete = session }
                         )
-                        .background(TrackProTheme.colors.bgElevated.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        .background(TrackProTheme.colors.bgElevated.copy(alpha = 0.4f), RoundedCornerShape(0.dp))
                         .padding(Spacing.sm),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
