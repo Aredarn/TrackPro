@@ -42,6 +42,8 @@ import androidx.navigation.NavController
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.isScrolledUnderChrome
+import com.example.trackpro.components.Bezel
+import com.example.trackpro.components.DashAction
 import com.example.trackpro.components.ScreenScaffold
 import com.example.trackpro.components.Haptic
 import com.example.trackpro.components.pressable
@@ -82,17 +84,36 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
             },
         contentScrolled = scrolled
     ) { contentPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = contentPadding.calculateTopPadding())
+        ) {
+            // Creating a vehicle belongs to the garage, not the home panel. It used to
+            // live on the main screen and was lost when that became the status board,
+            // which left this screen telling people to go somewhere that no longer
+            // offered it - and the create screen unreachable entirely.
+            Box(modifier = Modifier.padding(12.dp)) {
+                DashAction(
+                    label = "Add vehicle",
+                    detail = "New entry in the garage",
+                    onClick = { navController.navigate("createvehicle") },
+                    compact = true
+                )
+            }
+            Bezel()
+
         if (vehicles.isEmpty()) {
             EmptyState(
                 message = "No vehicles yet",
-                hint = "Add a vehicle from the main screen"
+                hint = "Every session is recorded against a car, so add one first"
             )
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
                 contentPadding = PaddingValues(
-                    top = contentPadding.calculateTopPadding() + Spacing.md,
+                    top = Spacing.md,
                     bottom = Spacing.md,
                     start = Spacing.md,
                     end = Spacing.md
@@ -119,6 +140,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
                     )
                 }
             }
+        }
         }
     }
 }
@@ -179,7 +201,7 @@ fun VehicleCard(
                     .fillMaxWidth()
                     .background(
                         TrackProTheme.colors.bgElevated,
-                        RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                        RoundedCornerShape(0.dp)
                     )
                     .padding(horizontal = Spacing.md, vertical = Spacing.sm)
             ) {
@@ -256,7 +278,7 @@ fun VehicleCard(
                     .fillMaxWidth()
                     .background(
                         bgElevated,
-                        RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)
+                        RoundedCornerShape(0.dp)
                     )
                     .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                 horizontalArrangement = Arrangement.SpaceBetween,

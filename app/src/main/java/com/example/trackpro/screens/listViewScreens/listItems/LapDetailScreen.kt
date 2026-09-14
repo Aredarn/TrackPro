@@ -198,7 +198,7 @@ fun LapDetailScreen(
                         .padding(horizontal = Spacing.md, vertical = Spacing.sm)
                         .background(
                             TrackProTheme.colors.bgCard.copy(alpha = 0.92f),
-                            RoundedCornerShape(10.dp)
+                            RoundedCornerShape(0.dp)
                         )
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
@@ -212,7 +212,7 @@ fun LapDetailScreen(
                                     scale = 0.96f,
                                     haptic = Haptic.Selection
                                 )
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(0.dp))
                                 .background(
                                     if (selected) TrackProTheme.colors.accent
                                     else Color.Transparent
@@ -238,9 +238,9 @@ fun LapDetailScreen(
                         .padding(top = 80.dp, end = 16.dp)
                         .background(
                             TrackProTheme.colors.bgCard.copy(alpha = 0.92f),
-                            RoundedCornerShape(10.dp)
+                            RoundedCornerShape(0.dp)
                         )
-                        .border(1.dp, COMPARE_COLOR.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                        .border(1.dp, COMPARE_COLOR.copy(alpha = 0.5f), RoundedCornerShape(0.dp))
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Row(
@@ -736,7 +736,7 @@ private fun LapPickerSheet(
                         .fillMaxWidth()
                         .padding(vertical = 3.dp)
                         .pressable(onClick = { onSelect(lap) }, haptic = Haptic.Selection)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(0.dp))
                         .background(
                             when {
                                 isSelected -> COMPARE_COLOR.copy(alpha = 0.15f)
@@ -751,7 +751,7 @@ private fun LapPickerSheet(
                                 isBest     -> TrackProTheme.colors.accent.copy(alpha = 0.2f)
                                 else       -> Color.Transparent
                             },
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(0.dp)
                         )
                         .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
@@ -828,9 +828,9 @@ private fun ActionButton(
     Box(
         modifier = modifier
             .pressable(onClick = onClick, scale = 0.96f)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(0.dp))
             .background(color.copy(alpha = 0.12f))
-            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(0.dp))
             .padding(vertical = Spacing.sm),
         contentAlignment = Alignment.Center
     ) {

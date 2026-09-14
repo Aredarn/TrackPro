@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,9 +33,13 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.extrasForUI.DropdownMenuFieldMulti
 import com.example.trackpro.extrasForUI.TrackDropdownMenu
 import com.example.trackpro.extrasForUI.TrackProTheme
-import com.example.trackpro.components.AppCard
 import com.example.trackpro.components.AppTopBar
-import com.example.trackpro.components.PrimaryButton
+import com.example.trackpro.components.DashAction
+import com.example.trackpro.components.DashGroup
+import com.example.trackpro.components.SegmentBar
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
+import com.example.trackpro.theme.panel
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
@@ -62,95 +68,108 @@ fun TrackVehicleSelectorScreen(
         vehicleViewModel.fetchVehicles()
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(TrackProTheme.colors.bgDeep)) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            AppTopBar(
-                title = "Session Setup",
-                accent = TrackProTheme.colors.accent,
-                onBack = { navController.popBackStack() }
+    // Two conditions arm the session. The strip below reads them the way a dash reads
+    // any other pre-condition: how many of the required inputs are satisfied, drawn
+    // rather than described, so the gap is visible before you reach for the control.
+    val trackSet = selectedTrackId != -1L
+    val vehicleSet = selectedVehicleId != -1L
+    val readyCount = listOf(trackSet, vehicleSet).count { it }
+    val canStart = trackSet && vehicleSet
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(TrackProTheme.colors.panel)
+    ) {
+        AppTopBar(
+            title = "Session setup",
+            accent = TrackProTheme.colors.accent,
+            onBack = { navController.popBackStack() }
+        )
+
+        DashGroup("Circuit") {
+            Text(
+                text = selectedTrackName.ifEmpty { "Not selected" },
+                style = TrackProType.statValue.atSize(22.sp),
+                color = if (trackSet) TrackProTheme.colors.marking
+                else TrackProTheme.colors.markingDim
             )
-
-            Column(
-                modifier = Modifier.fillMaxSize().padding(Spacing.lg),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(Spacing.md))
-
-                // ── Track Selection Card ─────────────────────────
-                SelectionCard(
-                    label = "Circuit",
-                    title = selectedTrackName.ifEmpty { "Select Track" },
-                    isSet = selectedTrackId != -1L
-                ) {
-                    TrackDropdownMenu(
-                        label = "Choose Location",
-                        tracks = tracks,
-                        selectedTrackName = selectedTrackName,
-                        onTrackSelected = { id ->
-                            val track = tracks.find { it.trackId == id }
-                            selectedTrackName = track?.trackName ?: ""
-                            selectedTrackId = id
-                        }
-                    )
+            Spacer(Modifier.height(Spacing.sm))
+            TrackDropdownMenu(
+                label = "Choose location",
+                tracks = tracks,
+                selectedTrackName = selectedTrackName,
+                onTrackSelected = { id ->
+                    val track = tracks.find { it.trackId == id }
+                    selectedTrackName = track?.trackName ?: ""
+                    selectedTrackId = id
                 }
+            )
+        }
 
-                Spacer(modifier = Modifier.height(Spacing.md))
-
-                // ── Vehicle Selection Card ───────────────────────
-                SelectionCard(
-                    label = "Vehicle",
-                    title = selectedVehicleName.ifEmpty { "Select Vehicle" },
-                    isSet = selectedVehicleId != -1L
-                ) {
-                    if (vehicles.isNotEmpty()) {
-                        DropdownMenuFieldMulti(
-                            "Choose Machine",
-                            vehicles,
-                            selectedVehicleName
-                        ) { id ->
-                            selectedVehicleId = id
-                            selectedVehicleName = vehicles.find { it.vehicleId == id }?.manufacturerAndModel ?: "" // Adjust 'name' to your vehicle field
-                        }
-                    } else {
-                        Text("No vehicles found in garage", style = TrackProType.body.atSize(12.sp), color = TrackProTheme.colors.accent)
-                    }
+        DashGroup("Vehicle") {
+            Text(
+                text = selectedVehicleName.ifEmpty { "Not selected" },
+                style = TrackProType.statValue.atSize(22.sp),
+                color = if (vehicleSet) TrackProTheme.colors.marking
+                else TrackProTheme.colors.markingDim
+            )
+            Spacer(Modifier.height(Spacing.sm))
+            if (vehicles.isNotEmpty()) {
+                DropdownMenuFieldMulti(
+                    "Choose machine",
+                    vehicles,
+                    selectedVehicleName
+                ) { id ->
+                    selectedVehicleId = id
+                    selectedVehicleName =
+                        vehicles.find { it.vehicleId == id }?.manufacturerAndModel ?: ""
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // ── Start Action ─────────────────────────────────
-                val canStart = selectedVehicleId != -1L && selectedTrackId != -1L
-
-                PrimaryButton(
-                    text = "Start Time Attack",
-                    onClick = { navController.navigate("timeattack/$selectedVehicleId/$selectedTrackId") },
-                    enabled = canStart,
-                    accent = TrackProTheme.colors.accent,
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
+            } else {
+                Text(
+                    "No vehicles in the garage yet",
+                    style = TrackProType.body.atSize(12.sp),
+                    color = TrackProTheme.colors.deltaBad
                 )
             }
         }
-    }
-}
 
-@Composable
-fun SelectionCard(
-    label: String,
-    title: String,
-    isSet: Boolean,
-    content: @Composable () -> Unit
-) {
-    AppCard(
-        modifier = Modifier.fillMaxWidth(),
-        borderColor = if (isSet) TrackProTheme.colors.accent.copy(alpha = 0.5f) else TrackProTheme.colors.sectorLine
-    ) {
-        Text(
-            label.uppercase(),
-            style = TrackProType.label,
-            color = if (isSet) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted
-        )
-        Text(title, style = TrackProType.titleMedium, color = TrackProTheme.colors.textPrimary, modifier = Modifier.padding(vertical = 4.dp))
-        Spacer(modifier = Modifier.height(Spacing.sm))
-        content()
+        Spacer(Modifier.weight(1f))
+
+        // -- Arming strip ---------------------------------
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(TrackProTheme.colors.panel)
+                .padding(horizontal = 12.dp, vertical = 12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SegmentBar(
+                    signedFraction = readyCount / 2f,
+                    activeColor = if (canStart) TrackProTheme.colors.deltaGood
+                    else TrackProTheme.colors.deltaBad,
+                    bidirectional = false,
+                    segments = 2,
+                    height = 10.dp,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = "$readyCount / 2 SET",
+                    style = TrackProType.label,
+                    color = if (canStart) TrackProTheme.colors.deltaGood
+                    else TrackProTheme.colors.markingDim
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            DashAction(
+                label = "Start session",
+                detail = if (canStart) "Arm timing and go green"
+                else if (!trackSet) "Select a circuit first" else "Select a vehicle first",
+                enabled = canStart,
+                labelSize = 28.sp,
+                onClick = { navController.navigate("timeattack/$selectedVehicleId/$selectedTrackId") }
+            )
+        }
     }
 }

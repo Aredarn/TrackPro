@@ -22,5 +22,18 @@ data class SessionData(
     val endTime: Long?,
     val eventType: String,
     val vehicleId: Long?,
-    val trackId: Long? = null
+    val trackId: Long? = null,
+
+    // Conditions captured automatically at session start from the session's GPS position.
+    // All nullable: sessions recorded offline, without a GPS fix, or before this feature
+    // existed simply have no weather. Stored in canonical metric (C, km/h, hPa, mm) to match
+    // how every other measurement in the app is stored; converted at display time.
+    val weatherTempC: Double? = null,
+    val weatherHumidityPct: Int? = null,
+    val weatherPrecipitationMm: Double? = null,
+    /** WMO weather interpretation code - see WeatherService.describeCode(). */
+    val weatherCode: Int? = null,
+    val weatherWindKph: Double? = null,
+    val weatherWindDirDeg: Int? = null,
+    val weatherPressureHpa: Double? = null
 )

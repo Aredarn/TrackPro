@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
@@ -38,6 +39,7 @@ import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.StatCell
 import com.example.trackpro.components.StatCellSize
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.ESPDatabase
@@ -103,13 +105,18 @@ fun CarViewScreen(vehicleId: Long, onBack: () -> Unit) {
                                 .padding(horizontal = Spacing.lg, vertical = Spacing.md)
                         ) {
                             Text(
-                                text = "${vehicle.manufacturer} ${vehicle.model}",
-                                style = TrackProType.titleLarge,
+                                text = "${vehicle.manufacturer} ${vehicle.model}".uppercase(),
+                                // The car leads its own spec sheet.
+                                style = TrackProType.titleLarge.atSize(26.sp),
                                 color = TrackProTheme.colors.textPrimary
                             )
+                            Spacer(Modifier.height(6.dp))
                             Text(
-                                text = "${vehicle.year}",
-                                style = TrackProType.body,
+                                text = listOfNotNull(
+                                    vehicle.year.takeIf { it > 0 }?.toString(),
+                                    vehicle.drivetrain.takeIf { it.isNotBlank() }
+                                ).joinToString("  ·  ").uppercase(),
+                                style = TrackProType.label,
                                 color = TrackProTheme.colors.textMuted
                             )
                         }

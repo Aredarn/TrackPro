@@ -23,6 +23,34 @@ interface SessionDataDao {
     @Query("DELETE FROM session_data WHERE id = :sessionId")
     suspend fun deleteSessionById(sessionId: Long)
 
+    /**
+     * Backfills only the weather columns. Deliberately a targeted UPDATE rather than a
+     * read-modify-write via [updateSession]: weather arrives asynchronously a second or two
+     * after the session starts, which can overlap with endSession() writing endTime on the
+     * same row - a whole-row write from either side would clobber the other's change.
+     */
+    @Query("""
+        UPDATE session_data SET
+            weatherTempC = :tempC,
+            weatherHumidityPct = :humidityPct,
+            weatherPrecipitationMm = :precipitationMm,
+            weatherCode = :weatherCode,
+            weatherWindKph = :windKph,
+            weatherWindDirDeg = :windDirDeg,
+            weatherPressureHpa = :pressureHpa
+        WHERE id = :sessionId
+    """)
+    suspend fun updateSessionWeather(
+        sessionId: Long,
+        tempC: Double?,
+        humidityPct: Int?,
+        precipitationMm: Double?,
+        weatherCode: Int?,
+        windKph: Double?,
+        windDirDeg: Int?,
+        pressureHpa: Double?
+    )
+
     // Get session by ID
     @Query("SELECT * FROM session_data WHERE id = :id")
     suspend fun getSessionById(id: Long): SessionData?

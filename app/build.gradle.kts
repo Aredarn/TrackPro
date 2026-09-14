@@ -5,6 +5,16 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+// Writes the resolved Room schema to app/schemas/<version>.json on every build.
+//
+// Without this there is no record of what any past schema version actually looked like,
+// which is what made the historical migrations here guesswork to reconstruct. With it,
+// each version is checked in alongside the code and future migrations can be written (and
+// tested) against a known-good schema instead of archaeology.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 android {
     namespace = "com.example.trackpro"
     compileSdk = 35
