@@ -25,7 +25,7 @@ class SprintTimingManager(
         // 1. START LOGIC: Only look for start if we haven't moved yet
         if (!hasStarted) {
             val startResult = TrackGeometry.checkLineCrossing(prev, current, startLine)
-            if (startResult != null && startResult.isValid) {
+            if (startResult != null && startResult.isForward) {
                 sprintStartTime = now
                 hasStarted = true
                 hasFinished = false
@@ -36,7 +36,7 @@ class SprintTimingManager(
         // 2. FINISH LOGIC: Only look for finish if we are currently running
         else if (hasStarted && !hasFinished) {
             val finishResult = TrackGeometry.checkLineCrossing(prev, current, finishLine)
-            if (finishResult != null && finishResult.isValid) {
+            if (finishResult != null && finishResult.isForward) {
                 val sprintMs = now - sprintStartTime
                 updateTimes(sprintMs)
                 _eventCount.value += 1

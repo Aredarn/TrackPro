@@ -24,6 +24,22 @@ class CircuitTimingManager(
     private var currentSectorIndex = 0
     private val bestSectorMs = mutableMapOf<Int, Long>()
 
+    // Which way this session is running, locked in by the first finish-line crossing.
+    //
+    // A track can be driven in either direction, and "reverse" days are common. Gate lines
+    // are built relative to the direction the track was *recorded* in, so a reversed session
+    // crosses every gate the "wrong" way - previously that meant no lap was ever counted.
+    // Locking onto the first crossing supports both directions while still rejecting an
+    // overshoot-and-rollback, which is always the opposite of the established direction.
+    private var lapDirection: TrackGeometry.CrossingDirection? = null
+
+    // A crossing only gets to *establish* the session's direction if the car is actually
+    // driving. Otherwise a slow creep backwards across the line on the grid or in the pit
+    // lane would lock the wrong direction and every real lap after it would be rejected.
+    // Only the first, direction-locking crossing is gated on speed; once locked, a slow
+    // final crossing (cool-down lap) still counts.
+    private val minDirectionLockSpeedKmh = 15f
+
     // Live delta vs. the session's best lap, updated continuously by distance travelled
     // in the current lap rather than only once per lap/sector boundary. currentLapTrace
     // records (distanceMeters, elapsedMs) as the lap is driven; if the lap turns out to be
@@ -57,10 +73,19 @@ class CircuitTimingManager(
             val finishCrossing = TrackGeometry.checkLineCrossing(prevData, current, finishLine)
             var finishHandled = false
 
-            if (finishCrossing != null && finishCrossing.isValid && now - lastCrossTime > 5000) {
+            // The very first crossing is accepted in either direction and locks the
+            // session's direction; every crossing after that must match it.
+            val movingFastEnoughToLock = (current.speed ?: 0f) >= minDirectionLockSpeedKmh
+            val finishMatchesDirection = finishCrossing != null && when (lapDirection) {
+                null -> movingFastEnoughToLock
+                else -> finishCrossing.direction == lapDirection
+            }
+
+            if (finishCrossing != null && finishMatchesDirection && now - lastCrossTime > 5000) {
                 finishHandled = true
                 if (!hasStarted) {
                     hasStarted = true
+                    lapDirection = finishCrossing.direction
                     lastCrossTime = now
                     lapStartTime = now
                     lastSplitTime = now
@@ -91,9 +116,11 @@ class CircuitTimingManager(
             // Only look for the next expected sector gate while a lap is in progress, and
             // only if the finish line didn't just fire on this same update.
             if (!finishHandled && hasStarted && currentSectorIndex < sectorLines.size) {
-                val gate = sectorLines[currentSectorIndex]
+                val gate = gateForDrivingOrder(currentSectorIndex)
                 val sectorCrossing = TrackGeometry.checkLineCrossing(prevData, current, gate)
-                if (sectorCrossing != null && sectorCrossing.isValid && now - lastCrossTime > 5000) {
+                val sectorMatchesDirection = sectorCrossing != null &&
+                        sectorCrossing.direction == lapDirection
+                if (sectorCrossing != null && sectorMatchesDirection && now - lastCrossTime > 5000) {
                     val splitMs = now - lastSplitTime
                     val best = bestSectorMs[currentSectorIndex]
                     val deltaMs = best?.let { splitMs - it }
@@ -120,6 +147,20 @@ class CircuitTimingManager(
         }
         _currentTime.value = formatTime(now - lapStartTime)
     }
+
+    /**
+     * The sector gate the car should hit next, given how many it has already passed this
+     * lap. Sectors are stored in recorded-track order; when the session is running the
+     * track in reverse the car meets them last-to-first, so the list is walked backwards.
+     * Sector numbers reported to the UI stay in *driving* order either way - "S1" is always
+     * the first sector you drive through.
+     */
+    private fun gateForDrivingOrder(drivingIndex: Int): List<TrackCoordinatesData> =
+        if (lapDirection == TrackGeometry.CrossingDirection.EXITING) {
+            sectorLines[sectorLines.size - 1 - drivingIndex]
+        } else {
+            sectorLines[drivingIndex]
+        }
 
     /** Linearly interpolates the best lap's elapsed time at the given distance into the lap. */
     private fun interpolatedElapsedAtDistance(distance: Double): Long? {
@@ -160,6 +201,7 @@ class CircuitTimingManager(
         lastCrossTime = 0L
         lastSplitTime = lapStartTime
         hasStarted = false
+        lapDirection = null
         currentSectorIndex = 0
         bestSectorMs.clear()
         currentLapDistanceMeters = 0.0

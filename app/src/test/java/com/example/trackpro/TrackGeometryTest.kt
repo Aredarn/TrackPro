@@ -68,7 +68,7 @@ class TrackGeometryTest {
 
     // ─────────────────────────────────────────────
     // Direction-aware validity (regression test for the bug where
-    // isValid was hardcoded true regardless of crossing direction)
+    // isForward was hardcoded true regardless of crossing direction)
     // ─────────────────────────────────────────────
 
     @Test
@@ -87,7 +87,7 @@ class TrackGeometryTest {
         val result = TrackGeometry.checkLineCrossing(prev, curr, line)
 
         assertNotNull(result)
-        assertTrue(result!!.isValid)
+        assertTrue(result!!.isForward)
         assertEquals(TrackGeometry.CrossingDirection.ENTERING, result.direction)
     }
 
@@ -104,7 +104,7 @@ class TrackGeometryTest {
         val result = TrackGeometry.checkLineCrossing(prev, curr, line)
 
         assertNotNull(result)
-        assertFalse(result!!.isValid)
+        assertFalse(result!!.isForward)
         assertEquals(TrackGeometry.CrossingDirection.EXITING, result.direction)
     }
 
@@ -128,7 +128,7 @@ class TrackGeometryTest {
             finishLine
         )
         assertNotNull(forward)
-        assertTrue(forward!!.isValid)
+        assertTrue(forward!!.isForward)
 
         // Overshooting and rolling back (west) across the same line must not
         // register as another valid crossing.
@@ -138,7 +138,7 @@ class TrackGeometryTest {
             finishLine
         )
         assertNotNull(rollback)
-        assertFalse(rollback!!.isValid)
+        assertFalse(rollback!!.isForward)
     }
 
     // ─────────────────────────────────────────────

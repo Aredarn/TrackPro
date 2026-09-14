@@ -22,7 +22,16 @@ object TrackGeometry {
     }
 
     enum class CrossingDirection { ENTERING, EXITING }
-    data class CrossingResult(val isValid: Boolean, val direction: CrossingDirection)
+    /**
+     * A detected crossing of a gate line.
+     *
+     * [isForward] is true when the crossing matches the direction the track was *recorded*
+     * in. It is NOT "is this a valid lap": a track driven in reverse produces a perfectly
+     * valid lap whose every crossing is non-forward. Circuit timing therefore ignores this
+     * and locks onto whichever direction the first crossing of the session establishes;
+     * only Sprint timing, whose start and finish are distinct lines, still requires forward.
+     */
+    data class CrossingResult(val isForward: Boolean, val direction: CrossingDirection)
 
     fun calculateFinishLine(track: List<TrackCoordinatesData>): List<TrackCoordinatesData> {
         val startPoint = track.find { it.isStartPoint } ?: run {
@@ -212,11 +221,11 @@ object TrackGeometry {
 
         return intersection?.let {
             val direction = determineDirection(prevPos, currPos, lineStart, lineEnd)
-            // Lines are built with the perpendicular rotated from the track's forward
-            // direction of travel, which makes ENTERING correspond to a crossing in that
-            // forward direction. Only forward crossings should count, otherwise a car
-            // overshooting the line and rolling back across it would register a second
-            // (bogus) crossing.
+            // Lines are built with the perpendicular rotated from the track's recorded
+            // direction of travel, so ENTERING means the car crossed the way the track was
+            // recorded. Callers use direction to reject the car overshooting a line and
+            // rolling back across it - which is the *opposite* direction to however it
+            // first crossed - without assuming the track is only ever driven one way.
             CrossingResult(direction == CrossingDirection.ENTERING, direction)
         }
     }
