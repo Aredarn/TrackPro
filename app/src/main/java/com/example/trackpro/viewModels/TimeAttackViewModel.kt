@@ -14,6 +14,7 @@ import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.timeAttackManagers.CircuitTimingManager
+import com.example.trackpro.managerClasses.timeAttackManagers.CompletedLap
 import com.example.trackpro.managerClasses.timeAttackManagers.SectorSplit
 import com.example.trackpro.managerClasses.timeAttackManagers.SprintTimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingManager
@@ -93,6 +94,13 @@ class TimeAttackViewModel(
     val liveDelta: StateFlow<Double?>
         get() = (timingManager as? CircuitTimingManager)?.liveDelta
             ?: MutableStateFlow<Double?>(null).asStateFlow()
+
+    // Every lap (or sprint run) closed this session, oldest first, with its sector splits.
+    // Held by the timing manager rather than read back from the database so the HUD lists
+    // them at full precision and without waiting on the lap-completion write.
+    val completedLaps: StateFlow<List<CompletedLap>>
+        get() = timingManager?.completedLaps
+            ?: MutableStateFlow<List<CompletedLap>>(emptyList()).asStateFlow()
 
     // Expose timing state
     val currentTime: StateFlow<String>

@@ -40,6 +40,8 @@ class SprintTimingManager(
                 val sprintMs = now - sprintStartTime
                 updateTimes(sprintMs)
                 _eventCount.value += 1
+                _completedLaps.value = _completedLaps.value +
+                        CompletedLap(number = _eventCount.value, timeMs = sprintMs)
                 sprintCompletedChannel.trySend(sprintMs)
 
                 hasStarted = false // Reset for next run
@@ -70,6 +72,7 @@ class SprintTimingManager(
         hasFinished = false
         _stintStart.value = SystemClock.elapsedRealtime()
         _eventCount.value = 0
+        _completedLaps.value = emptyList()
         _currentTime.value = formatTime(0)
     }
 

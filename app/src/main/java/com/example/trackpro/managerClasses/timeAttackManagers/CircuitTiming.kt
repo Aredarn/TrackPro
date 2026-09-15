@@ -100,6 +100,11 @@ class CircuitTimingManager(
                     if (isNewBest) {
                         bestLapTrace = currentLapTrace.toList()
                     }
+                    val finishedLap = CompletedLap(
+                        number = _eventCount.value + 1,
+                        timeMs = lapMs,
+                        splits = closeFinalSector(_currentLapSplits.value, now)
+                    )
                     lastCrossTime = now
                     lapStartTime = now
                     lastSplitTime = now
@@ -109,6 +114,7 @@ class CircuitTimingManager(
                     _currentLapSplits.value = emptyList()
                     _liveDelta.value = null
                     _eventCount.value += 1
+                    _completedLaps.value = _completedLaps.value + finishedLap
                     lapCompletedChannel.trySend(lapMs)
                 }
             }
@@ -162,6 +168,28 @@ class CircuitTimingManager(
             sectorLines[drivingIndex]
         }
 
+    /**
+     * The finish line is the last sector's gate, so a lap's splits are only complete once it
+     * has been added here. Only done when every marked gate was hit this lap - otherwise the
+     * remainder would silently absorb a missed sector and look like a real split.
+     *
+     * Tracked against the session's best like any other sector so it colours the same way,
+     * but never sent down [sectorCompletedChannel]: that would race the lap-completion
+     * handler for the current lap id and could land it on the *next* lap in the database.
+     * It lives on the [CompletedLap] record for the HUD only.
+     */
+    private fun closeFinalSector(recorded: List<SectorSplit>, now: Long): List<SectorSplit> {
+        if (sectorLines.isEmpty() || recorded.size != sectorLines.size) return recorded
+
+        val finalIndex = sectorLines.size
+        val finalMs = now - lastSplitTime
+        val best = bestSectorMs[finalIndex]
+        val deltaMs = best?.let { finalMs - it }
+        if (best == null || finalMs < best) bestSectorMs[finalIndex] = finalMs
+
+        return recorded + SectorSplit(finalIndex, finalMs, deltaMs)
+    }
+
     /** Linearly interpolates the best lap's elapsed time at the given distance into the lap. */
     private fun interpolatedElapsedAtDistance(distance: Double): Long? {
         if (bestLapTrace.isEmpty()) return null
@@ -209,6 +237,7 @@ class CircuitTimingManager(
         bestLapTrace = emptyList()
         _currentLapSplits.value = emptyList()
         _liveDelta.value = null
+        _completedLaps.value = emptyList()
         _stintStart.value = lapStartTime
         _eventCount.value = 0
     }

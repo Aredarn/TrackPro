@@ -30,8 +30,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.SubcomposeMeasureScope
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -42,8 +49,10 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.managerClasses.timeAttackManagers.CompletedLap
 import com.example.trackpro.managerClasses.timeAttackManagers.SectorSplit
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
+import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import com.example.trackpro.components.Haptic
 import com.example.trackpro.components.rememberHaptics
 import com.example.trackpro.components.AppTopBar
@@ -113,6 +122,7 @@ fun TimeAttackScreenView(
     val driver       by vm.driverPosition.collectAsState()
     val timingMode   by vm.timingMode.collectAsState()
     val lapSplits    by vm.currentLapSplits.collectAsState()
+    val completedLaps by vm.completedLaps.collectAsState()
 
     // Prefer the continuously-updating delta (tracked by distance into the lap); fall back
     // to the static per-lap delta before a best-lap reference exists (e.g. lap 1).
@@ -167,9 +177,10 @@ fun TimeAttackScreenView(
     val gpsPoints = fullTrack //+ linesToShow
     val driverPos = driver ?: LatLonOffset(0.0, 0.0)
 
-    // With the map off this becomes a pure driver HUD. Saved rather than remembered so
-    // it survives rotation - someone who turned the map off does not want it back every
-    // time the phone shifts orientation in a windscreen mount.
+    // With the map off this becomes a pure driver HUD, and the map's place is taken by a
+    // pit board of the session's last laps. Saved rather than remembered so it survives
+    // rotation - someone who turned the map off does not want it back every time the
+    // phone shifts orientation in a windscreen mount.
     var mapVisible by rememberSaveable { mutableStateOf(true) }
 
     when (LocalConfiguration.current.orientation) {
@@ -187,6 +198,7 @@ fun TimeAttackScreenView(
             isConnected = isConnected,
             linesToShow = linesToShow,
             lapSplits   = lapSplits,
+            completedLaps = completedLaps,
             mapVisible  = mapVisible,
             onToggleMap = { mapVisible = it },
             onBack      = onBack
@@ -205,6 +217,7 @@ fun TimeAttackScreenView(
             isConnected = isConnected,
             linesToShow = linesToShow,
             lapSplits   = lapSplits,
+            completedLaps = completedLaps,
             mapVisible  = mapVisible,
             onToggleMap = { mapVisible = it },
             onBack      = onBack
@@ -229,6 +242,7 @@ fun TimeAttackPortraitLayout(
     isConnected: Boolean,
     linesToShow : List<TrackCoordinatesData>,
     lapSplits: List<SectorSplit> = emptyList(),
+    completedLaps: List<CompletedLap> = emptyList(),
     mapVisible: Boolean,
     onToggleMap: (Boolean) -> Unit,
     onBack: () -> Unit
@@ -350,7 +364,14 @@ fun TimeAttackPortraitLayout(
                 }
             }
         } else {
-            Spacer(Modifier.weight(1f))
+            RecentLapsPanel(
+                laps = completedLaps,
+                eventName = eventName,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            )
+            Bezel()
             Row(modifier = Modifier.fillMaxWidth()) {
                 StintTimerCell(stintStart = stintStart, modifier = Modifier.weight(1f))
             }
@@ -378,6 +399,7 @@ fun TimeAttackLandscapeLayout(
     isConnected: Boolean,
     linesToShow: List<TrackCoordinatesData>,
     lapSplits: List<SectorSplit> = emptyList(),
+    completedLaps: List<CompletedLap> = emptyList(),
     mapVisible: Boolean,
     onToggleMap: (Boolean) -> Unit,
     onBack: () -> Unit
@@ -391,6 +413,9 @@ fun TimeAttackLandscapeLayout(
     // stopped being actionable and pinning is the honest response.
     val deltaFraction = (-delta / 2.0).coerceIn(-1.0, 1.0).toFloat()
 
+    // The right pane is the map or, with the map off, the lap board. Either way the
+    // instruments keep the same column, so toggling the map never reflows the numbers a
+    // driver has learned the position of.
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -398,7 +423,7 @@ fun TimeAttackLandscapeLayout(
     ) {
         Column(
             modifier = Modifier
-                .weight(if (mapVisible) 0.46f else 1f)
+                .weight(0.46f)
                 .fillMaxSize()
         ) {
             AppTopBar(
@@ -418,7 +443,7 @@ fun TimeAttackLandscapeLayout(
                     value = String.format("%+.3f", delta),
                     caption = if (isLiveDelta) "Delta to best - live" else "Delta to best",
                     valueColor = deltaColor,
-                    valueSize = if (mapVisible) 56.sp else 76.sp,
+                    valueSize = 56.sp,
                     trailing = {
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
@@ -439,7 +464,7 @@ fun TimeAttackLandscapeLayout(
                     signedFraction = deltaFraction,
                     activeColor = deltaColor,
                     segments = 25,
-                    height = if (mapVisible) 16.dp else 24.dp
+                    height = 16.dp
                 )
             }
 
@@ -479,28 +504,32 @@ fun TimeAttackLandscapeLayout(
             }
         }
 
-        if (mapVisible) {
-            Box(
-                modifier = Modifier
-                    .weight(0.54f)
-                    .fillMaxSize()
-                    .background(TrackProTheme.colors.panel)
-            ) {
-                if (gpsPoints.isNotEmpty()) {
-                    MapLibreTrackView(
-                        gpsPoints = gpsPoints,
-                        driverPosition = driver,
-                        modifier = Modifier.fillMaxSize(),
-                        linesToShow
+        Bezel(vertical = true)
+
+        Box(
+            modifier = Modifier
+                .weight(0.54f)
+                .fillMaxSize()
+                .background(TrackProTheme.colors.panel)
+        ) {
+            when {
+                !mapVisible -> RecentLapsPanel(
+                    laps = completedLaps,
+                    eventName = eventName,
+                    modifier = Modifier.fillMaxSize()
+                )
+                gpsPoints.isNotEmpty() -> MapLibreTrackView(
+                    gpsPoints = gpsPoints,
+                    driverPosition = driver,
+                    modifier = Modifier.fillMaxSize(),
+                    linesToShow
+                )
+                else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "AWAITING GPS",
+                        style = TrackProType.label,
+                        color = TrackProTheme.colors.markingDim
                     )
-                } else {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            "AWAITING GPS",
-                            style = TrackProType.label,
-                            color = TrackProTheme.colors.markingDim
-                        )
-                    }
                 }
             }
         }
@@ -516,7 +545,7 @@ fun TimeAttackLandscapeLayout(
  *
  * The map is both the most expensive thing on this screen - a MapLibre surface redrawing
  * on every GPS tick - and the thing a driver needs least mid-session. Switching it off
- * leaves only what gets read at speed.
+ * leaves only what gets read at speed, with the lap board in the map's place.
  */
 @Composable
 private fun HudTrailing(
@@ -619,6 +648,228 @@ private fun SectorSplitsRow(splits: List<SectorSplit>) {
             }
         }
     }
+}
+
+/**
+ * The pit board: the session's last laps, newest on top, in the map's place.
+ *
+ * Fitted rather than scrolled. A driver never scrolls, so the board shows exactly as many
+ * whole rows as the space holds and the rows that no longer fit are the ones that have
+ * stopped mattering. Whole rows only - a half-clipped lap time reads as a wrong lap time.
+ */
+@Composable
+private fun RecentLapsPanel(
+    laps: List<CompletedLap>,
+    eventName: String,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.background(TrackProTheme.colors.panel)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "LAST ${eventName}S",
+                style = TrackProType.label,
+                color = TrackProTheme.colors.markingDim
+            )
+            Text(
+                text = "GAP TO BEST",
+                style = TrackProType.label,
+                color = TrackProTheme.colors.markingDim
+            )
+        }
+        Bezel()
+
+        if (laps.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "NO ${eventName}S YET",
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.markingDim
+                )
+            }
+        } else {
+            FittedLapRows(
+                laps = laps,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            )
+        }
+    }
+}
+
+/**
+ * Lays out rows newest-first until the next one would not fit, then stops.
+ *
+ * Subcomposed so that only the rows actually shown are ever built: a long session has
+ * dozens of laps and the board holds a handful. Slots are keyed by lap number, so a row
+ * keeps its identity as new laps push it down the board.
+ */
+@Composable
+private fun FittedLapRows(laps: List<CompletedLap>, modifier: Modifier = Modifier) {
+    // The manager's own best is the *first* lap to set a time, so ties resolve the same
+    // way here and the row tagged BEST is the one the Best clock is showing.
+    val best = laps.minByOrNull { it.timeMs } ?: return
+
+    // This screen recomposes on every GPS tick. Remembering the policy against the lap
+    // list means a tick that closed no lap hands SubcomposeLayout the same policy instance
+    // and it does not re-measure - the board only does work when a lap actually lands.
+    val measurePolicy = remember(laps) {
+        val newestFirst = laps.asReversed()
+        val policy: SubcomposeMeasureScope.(Constraints) -> MeasureResult = { constraints ->
+            val width = constraints.maxWidth
+            val limit = if (constraints.hasBoundedHeight) constraints.maxHeight else Int.MAX_VALUE
+            val rowConstraints = Constraints(minWidth = width, maxWidth = width)
+
+            val placed = ArrayList<Placeable>()
+            var used = 0
+            for (lap in newestFirst) {
+                val row = subcompose(lap.number) {
+                    LapRow(
+                        lap = lap,
+                        isBest = lap.number == best.number,
+                        gapToBestMs = lap.timeMs - best.timeMs
+                    )
+                }.first().measure(rowConstraints)
+                if (used + row.height > limit) break
+                placed += row
+                used += row.height
+            }
+
+            val height = if (constraints.hasBoundedHeight) constraints.maxHeight else used
+            layout(width, height) {
+                var y = 0
+                placed.forEach { row ->
+                    row.placeRelative(0, y)
+                    y += row.height
+                }
+            }
+        }
+        policy
+    }
+
+    SubcomposeLayout(modifier = modifier, measurePolicy = measurePolicy)
+}
+
+private const val SLOT_LEAD = "lead"
+private const val SLOT_GAP = "gap"
+private const val SLOT_SPLIT = "split"
+
+/**
+ * One line of the board: number, time, the sector splits if there is room for all of them,
+ * and the gap to the session best.
+ *
+ * Splits are all-or-nothing. A row that fits S1 and S2 but drops S3 reads as a lap with
+ * two sectors, which is a lie the driver has no way to detect at a glance; a row with no
+ * splits reads as exactly what it is. So they are measured first and placed only if every
+ * one fits between the time and the gap - which is most tracks in portrait, and any track
+ * in landscape.
+ */
+@Composable
+private fun LapRow(lap: CompletedLap, isBest: Boolean, gapToBestMs: Long) {
+    Column {
+        Layout(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(TrackProTheme.colors.field)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            content = {
+                Row(
+                    modifier = Modifier.layoutId(SLOT_LEAD),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${lap.number}",
+                        style = TrackProType.statValue.atSize(14.sp),
+                        color = TrackProTheme.colors.markingDim,
+                        modifier = Modifier.width(34.dp)
+                    )
+                    Text(
+                        text = lap.timeMs.toLapTimeString(),
+                        style = TrackProType.statValue.atSize(18.sp),
+                        color = if (isBest) TrackProTheme.colors.accent else TrackProTheme.colors.marking
+                    )
+                }
+                if (isBest) {
+                    Text(
+                        text = "BEST",
+                        style = TrackProType.label.atSize(11.sp),
+                        color = TrackProTheme.colors.accent,
+                        modifier = Modifier.layoutId(SLOT_GAP)
+                    )
+                } else {
+                    Text(
+                        text = String.format("+%.2f", gapToBestMs / 1000.0),
+                        style = TrackProType.statValue.atSize(16.sp),
+                        color = TrackProTheme.colors.markingDim,
+                        modifier = Modifier.layoutId(SLOT_GAP)
+                    )
+                }
+                lap.splits.forEach { split ->
+                    SplitMark(split = split, modifier = Modifier.layoutId(SLOT_SPLIT))
+                }
+            }
+        ) { measurables, constraints ->
+            val width = constraints.maxWidth
+            val loose = Constraints()
+            val edge = 14.dp.roundToPx()
+            val between = 10.dp.roundToPx()
+
+            val gap = measurables.first { it.layoutId == SLOT_GAP }.measure(loose)
+            val lead = measurables.first { it.layoutId == SLOT_LEAD }
+                .measure(Constraints(maxWidth = (width - gap.width - edge).coerceAtLeast(0)))
+            val splits = measurables.filter { it.layoutId == SLOT_SPLIT }.map { it.measure(loose) }
+
+            val splitsWidth = splits.sumOf { it.width } + between * (splits.size - 1).coerceAtLeast(0)
+            val showSplits = splits.isNotEmpty() &&
+                    lead.width + edge + splitsWidth + edge + gap.width <= width
+
+            val height = maxOf(
+                lead.height,
+                gap.height,
+                if (showSplits) splits.maxOf { it.height } else 0
+            )
+            layout(width, height) {
+                lead.placeRelative(0, (height - lead.height) / 2)
+                gap.placeRelative(width - gap.width, (height - gap.height) / 2)
+                if (showSplits) {
+                    var x = lead.width + edge
+                    splits.forEach { split ->
+                        split.placeRelative(x, (height - split.height) / 2)
+                        x += split.width + between
+                    }
+                }
+            }
+        }
+        Bezel()
+    }
+}
+
+/** A sector split on the board, coloured the way it was on the live strip when it closed. */
+@Composable
+private fun SplitMark(split: SectorSplit, modifier: Modifier = Modifier) {
+    val color = when {
+        split.deltaMs == null -> TrackProTheme.colors.markingDim
+        split.deltaMs <= 0L -> TrackProTheme.colors.deltaGood
+        else -> TrackProTheme.colors.deltaBad
+    }
+    Text(
+        text = String.format("%.2f", split.splitMs / 1000.0),
+        style = TrackProType.statValue.atSize(12.sp),
+        color = color,
+        maxLines = 1,
+        softWrap = false,
+        modifier = modifier
+    )
 }
 
 // ── Reusable sub-components ────────────────────────────────
