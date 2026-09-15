@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,6 +100,9 @@ private fun smoothSpeeds(data: List<RawGPSData>, windowSize: Int = 5): List<Floa
 }
 
 
+/** Whether a run's GPS trace has been read yet, and whether there was one to read. */
+private enum class TraceState { Loading, Loaded, Empty }
+
 @Composable
 fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     val context = LocalContext.current
@@ -112,9 +116,16 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     var totalDist by remember { mutableDoubleStateOf(-1.0) }
     var showMap by remember { mutableStateOf(false) }
     
-    // X = cumulative meters or seconds, Y = speed (km/h)
-    val dataPointsMeters = remember { mutableListOf<Entry>() }
-    val dataPointsSeconds = remember { mutableListOf<Entry>() }
+    // X = cumulative meters or seconds, Y = speed (km/h).
+    // Snapshot-state lists, not plain MutableLists: the chart's AndroidView `update`
+    // block reads these, and only a state read re-runs it. With plain lists the chart
+    // depended on some *other* state changing after the points landed, which is a race.
+    val dataPointsMeters = remember { mutableStateListOf<Entry>() }
+    val dataPointsSeconds = remember { mutableStateListOf<Entry>() }
+
+    // Distinguishes "still loading" from "this run has no GPS trace" - the two used to
+    // render identically, as dashes and a chart that said "Calculating" forever.
+    var traceState by remember { mutableStateOf(TraceState.Loading) }
     var xAxisInMeters by remember { mutableStateOf(true) }
     
     // Fixed: Removed 'get()' as local variables don't support custom getters
@@ -144,7 +155,10 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     LaunchedEffect(sessionId) {
         withContext(Dispatchers.IO) {
             val data = database.rawGPSDataDao().getGPSDataBySession(sessionId)
-            if (data.isEmpty()) return@withContext
+            if (data.isEmpty()) {
+                withContext(Dispatchers.Main) { traceState = TraceState.Empty }
+                return@withContext
+            }
 
             // Raw per-sample GPS speed is noisy enough that both the chart and the
             // differentiated MAX ACCEL stat look jagged even for a genuinely smooth run.
@@ -204,6 +218,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             val smoothedMapData = data.mapIndexed { i, d -> d.copy(speed = smoothedSpeeds[i]) }
 
             withContext(Dispatchers.Main) {
+                traceState = TraceState.Loaded
                 coordinates = data
                 mapGpsData = smoothedMapData
                 metrics = calculatedMetrics
@@ -400,6 +415,15 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("No GPS data", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
                     }
+                }
+            } else if (traceState != TraceState.Loaded) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = if (traceState == TraceState.Loading) "LOADING TRACE"
+                        else "NO GPS TRACE RECORDED FOR THIS RUN",
+                        style = TrackProType.label,
+                        color = TrackProTheme.colors.textFaint
+                    )
                 }
             } else {
                 AndroidView(

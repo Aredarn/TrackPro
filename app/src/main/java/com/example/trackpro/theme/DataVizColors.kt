@@ -20,13 +20,13 @@ object DataVizColors {
     const val boundaryLine = "#9FA2B2"
 
     /** Two overlaid GPS traces on the lap-compare map: teal reference vs yellow compare. */
-    const val seriesPrimary = "#3C7A89"
-    const val seriesCompare = "#FEEA00"
+    const val seriesPrimary = "#B473E8"
+    const val seriesCompare = "#E8B33A"
 
-    const val chartBackground = "#1D3038"
-    const val chartGrid = "#2E4756"
-    const val chartAxisText = "#9FA2B2"
-    const val chartLine = "#FEEA00"
+    const val chartBackground = "#14171A"
+    const val chartGrid = "#2A2F31"
+    const val chartAxisText = "#9AA1A4"
+    const val chartLine = "#B473E8"
 
     // Gauge sweeps teal -> yellow -> red as speed climbs, so the palette itself encodes
     // "how hard are you going" without needing a legend.

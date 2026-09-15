@@ -122,12 +122,16 @@ fun DragRaceScreen(
     var elapsedTime by remember { mutableStateOf("00:00.00") }
 
     // --- CLEANUP ON DISPOSE ---
+    // Persisted on the application scope, never the composable's. onDispose runs at the
+    // exact moment rememberCoroutineScope is being cancelled, so a launch on it here was
+    // cancelled almost before it started and the run was silently lost.
     DisposableEffect(Unit) {
         onDispose {
             if (isSessionActive) {
-                scope.launch(Dispatchers.IO) {
+                val pointsToSave = synchronized(dataBuffer) { dataBuffer.toList() }
+                app.applicationScope.launch(Dispatchers.IO) {
                     sessionManager.endSession()
-                    database.rawGPSDataDao().insertAll(dataBuffer)
+                    database.rawGPSDataDao().insertAll(pointsToSave)
                 }
             }
         }
@@ -515,14 +519,20 @@ fun DragRaceScreen(
                             chartIndex = 0f
 
                         } else if (isSessionActive) {
-                            // End session
+                            // Stop appending first - the GPS effect above checks this flag.
                             isSessionActive = false
-                            withContext(Dispatchers.IO) {
+                            // Snapshot the buffer now that nothing else writes to it.
+                            val pointsToSave = synchronized(dataBuffer) {
+                                dataBuffer.toList().also { dataBuffer.clear() }
+                            }
+                            // Then persist on the application scope. This handler runs in
+                            // the composable's scope, and Back is the natural gesture after
+                            // Stop: leaving mid-insert cancelled the write, and because the
+                            // flag was already false, onDispose did not save either. Every
+                            // run stopped and immediately exited was lost with no error.
+                            app.applicationScope.launch(Dispatchers.IO) {
                                 sessionManager.endSession()
-
-                                // Save buffered GPS data
-                                database.rawGPSDataDao().insertAll(dataBuffer)
-                                dataBuffer.clear()
+                                database.rawGPSDataDao().insertAll(pointsToSave)
                             }
                         }
                     }
