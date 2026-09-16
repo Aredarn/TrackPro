@@ -10,7 +10,11 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TrackCoordinatesDataDAO {
 
-    @Query("SELECT * FROM track_coordinates_data where trackId = :trackId")
+    // Ordered explicitly: every consumer treats this list as the track path in the order it
+    // was recorded (map polylines, finish/sector gate construction, auto-slicing), which is
+    // insertion order, which is id order. SQLite only happens to return that order for an
+    // unordered query, so the guarantee is spelled out rather than relied on.
+    @Query("SELECT * FROM track_coordinates_data WHERE trackId = :trackId ORDER BY id ASC")
     fun getCoordinatesOfTrack(trackId: Long): Flow<List<TrackCoordinatesData>>
 
     @Insert

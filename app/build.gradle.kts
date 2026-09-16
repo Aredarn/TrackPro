@@ -57,6 +57,13 @@ android {
         }
     }
 
+    // Exposes the exported Room schemas (see the ksp block above) to instrumented tests as
+    // assets, which is where MigrationTestHelper looks for
+    // <database class>/<version>.json when building a database at an older version.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+
 }
 
 dependencies {
@@ -91,7 +98,9 @@ dependencies {
     implementation("androidx.room:room-runtime:2.5.1")
     ksp("androidx.room:room-compiler:2.5.1") // Annotation processor for Room
     implementation("androidx.room:room-ktx:2.5.1") // Kotlin extensions
-    implementation ("androidx.room:room-testing:2.5.1")
+    // Test-only: MigrationTestHelper for the instrumented migration tests. Was previously
+    // an `implementation` dependency, which shipped the test helper inside the app.
+    androidTestImplementation("androidx.room:room-testing:2.5.1")
     implementation(libs.androidx.ktx)
     implementation ("com.squareup.okhttp3:okhttp:4.11.0")
 
