@@ -46,7 +46,8 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.utilities.SpeedColorUtils
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
-import com.example.trackpro.managerClasses.utilities.toLapTimeMillis
+import com.example.trackpro.managerClasses.utilities.timed
+import com.example.trackpro.managerClasses.utilities.toLapTimeMillisOrNull
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -122,7 +123,11 @@ fun LapDetailScreen(
     // ── Load ───────────────────────────────────────────────
     LaunchedEffect(primaryLapId) {
         withContext(Dispatchers.IO) {
+            // Only laps that were actually timed: this screen exists to compare times, and
+            // an in-progress row has none (it used to parse as a 00:00.00 lap and win every
+            // comparison on the screen).
             allSessionLaps = database.lapTimeDataDAO().getLapsForSession(sessionId)
+                .timed().map { it.lap }
             primaryLap     = allSessionLaps.find { it.id == primaryLapId }
             primaryGps     = primaryLap?.let {
                 database.lapInfoDataDAO().getLapData(it.id)
@@ -147,8 +152,8 @@ fun LapDetailScreen(
     // ── Derived stats ──────────────────────────────────────
     val primaryTopSpeed = primaryGps.mapNotNull { it.spd }.maxOrNull() ?: 0f
     val compareTopSpeed = compareGps.mapNotNull { it.spd }.maxOrNull() ?: 0f
-    val primaryMs       = primaryLap?.laptime?.toLapTimeMillis() ?: 0L
-    val compareMs       = compareLap?.laptime?.toLapTimeMillis() ?: 0L
+    val primaryMs       = primaryLap?.laptime?.toLapTimeMillisOrNull() ?: 0L
+    val compareMs       = compareLap?.laptime?.toLapTimeMillisOrNull() ?: 0L
     val deltaMs         = compareMs - primaryMs
 
     Box(
@@ -701,7 +706,8 @@ private fun LapPickerSheet(
     onSelect: (LapTimeData) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val bestMs = laps.minByOrNull { it.laptime.toLapTimeMillis() }?.laptime?.toLapTimeMillis() ?: 0L
+    val timedLaps = laps.timed()
+    val bestMs = timedLaps.minOfOrNull { it.millis } ?: 0L
 
     Column(
         modifier = Modifier
@@ -725,8 +731,7 @@ private fun LapPickerSheet(
         HorizontalDivider(color = TrackProTheme.colors.sectorLine)
 
         LazyColumn(contentPadding = PaddingValues(vertical = 4.dp, horizontal = Spacing.sm)) {
-            items(laps) { lap ->
-                val lapMs    = lap.laptime.toLapTimeMillis()
+            items(timedLaps) { (lap, lapMs) ->
                 val deltaMs  = lapMs - primaryLapMs
                 val isSelected = lap.id == selectedLap?.id
                 val isBest   = lapMs == bestMs

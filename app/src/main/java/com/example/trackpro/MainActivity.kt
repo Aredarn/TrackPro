@@ -14,7 +14,7 @@ import com.example.trackpro.theme.segmentOff
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
-import com.example.trackpro.managerClasses.utilities.toLapTimeMillis
+import com.example.trackpro.managerClasses.utilities.timed
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
@@ -617,10 +617,11 @@ private fun DashBoard(
         lastSession = recent
         if (recent == null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            val laps = app.database.lapTimeDataDAO().getLapsForSession(recent.id)
-            val done = laps.filter { it.laptime != "IN PROGRESS" }
+            // timed() rather than filtering on the IN PROGRESS string: that filter missed
+            // INVALID laps, which then parsed as 00:00.00 and showed up here as the best lap.
+            val done = app.database.lapTimeDataDAO().getLapsForSession(recent.id).timed()
             lastLapCount = done.size
-            lastBestLap = done.minByOrNull { it.laptime.toLapTimeMillis() }
+            lastBestLap = done.minByOrNull { it.millis }?.lap
             lastTrackName = recent.trackId?.let { id ->
                 runCatching { app.database.trackMainDao().getTrack(id).first().trackName }.getOrNull()
             }

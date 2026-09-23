@@ -61,7 +61,7 @@ import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.managerClasses.utilities.WeatherService
-import com.example.trackpro.managerClasses.utilities.toLapTimeMillis
+import com.example.trackpro.managerClasses.utilities.timed
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -147,10 +147,16 @@ fun TimeAttackListItemScreen(
             val session = sessionData!!
             val vehicle = vehicleData
 
-            // Derived analytics
-            val lapMillis = lapTimes.map { it.laptime.toLapTimeMillis() }
-            val bestLap = lapTimes.minByOrNull { it.laptime.toLapTimeMillis() }
-            val worstLap = lapTimes.maxByOrNull { it.laptime.toLapTimeMillis() }
+            // Derived analytics.
+            //
+            // Everything below is built on timed() rather than the raw rows: a lap that is
+            // still in progress (or was left in progress by a session the OS killed) has no
+            // time, and counting it as one made it the session's "best lap" at 00:00.00 and
+            // pulled the average and consistency figures toward zero.
+            val timedLaps = lapTimes.timed()
+            val lapMillis = timedLaps.map { it.millis }
+            val bestLap = timedLaps.minByOrNull { it.millis }?.lap
+            val worstLap = timedLaps.maxByOrNull { it.millis }?.lap
             val bestMs = lapMillis.minOrNull() ?: 0L
             val avgMs = if (lapMillis.isNotEmpty()) lapMillis.average().toLong() else 0L
             val worstMs = lapMillis.maxOrNull() ?: 0L
@@ -165,7 +171,7 @@ fun TimeAttackListItemScreen(
             // Top speed per lap from GPS
             val topSpeedOverall = lapGpsData.values.flatten()
                 .mapNotNull { it.spd }.maxOrNull() ?: 0f
-            val topSpeedPerLap = lapTimes.associate { lap ->
+            val topSpeedPerLap = timedLaps.associate { (lap, _) ->
                 lap.lapnumber to (lapGpsData[lap.lapnumber]?.mapNotNull { it.spd }?.maxOrNull() ?: 0f)
             }
             // Predicted (theoretical) best: the quickest time set in each sector, combined
@@ -184,11 +190,11 @@ fun TimeAttackListItemScreen(
             val gateCount = lapSectors.values.maxOfOrNull { it.size } ?: 0
             val completeLapSectors: List<List<Long>> =
                 if (gateCount == 0) emptyList()
-                else lapTimes.mapNotNull { lap ->
+                else timedLaps.mapNotNull { (lap, lapMs) ->
                     val splits = lapSectors[lap.id].orEmpty().sortedBy { it.sectorIndex }
                     if (splits.size != gateCount) return@mapNotNull null
                     val recorded = splits.sumOf { it.splitTimeMs }
-                    val finalSector = lap.laptime.toLapTimeMillis() - recorded
+                    val finalSector = lapMs - recorded
                     if (finalSector <= 0L) null
                     else splits.map { it.splitTimeMs } + finalSector
                 }
@@ -229,7 +235,7 @@ fun TimeAttackListItemScreen(
                         onBack = { navController.popBackStack() },
                         accent = TrackProTheme.colors.accent,
                         trailing = {
-                            Text("${lapTimes.size} laps", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+                            Text("${timedLaps.size} laps", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
                         }
                     )
                 }
@@ -334,7 +340,7 @@ fun TimeAttackListItemScreen(
                             }
                             Text(
                                 text = "Best sector from every lap, combined. Based on " +
-                                    "${completeLapSectors.size} of ${lapTimes.size} laps " +
+                                    "${completeLapSectors.size} of ${timedLaps.size} laps " +
                                     "with a full set of splits.",
                                 style = TrackProType.body.atSize(11.sp),
                                 color = TrackProTheme.colors.textFaint
@@ -368,7 +374,7 @@ fun TimeAttackListItemScreen(
                         )
                         StatRowItem(
                             label = "Lap Count",
-                            value = "${lapTimes.size}",
+                            value = "${timedLaps.size}",
                             textPrimary = TrackProTheme.colors.textPrimary,
                             textMuted = TrackProTheme.colors.textMuted
                         )
@@ -466,7 +472,7 @@ fun TimeAttackListItemScreen(
                     SectionLabel("Lap Breakdown", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
                 }
 
-                if (lapTimes.isEmpty()) {
+                if (timedLaps.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -478,10 +484,9 @@ fun TimeAttackListItemScreen(
                         }
                     }
                 } else {
-                    items(lapTimes) { lap ->
+                    items(timedLaps) { (lap, lapMs) ->
                         val isBest = lap.id == bestLap?.id
-                        val isWorst = lap.id == worstLap?.id && lapTimes.size > 1
-                        val lapMs = lap.laptime.toLapTimeMillis()
+                        val isWorst = lap.id == worstLap?.id && timedLaps.size > 1
                         val deltaMs = lapMs - bestMs
                         val topSpeed = topSpeedPerLap[lap.lapnumber] ?: 0f
                         Box(modifier = Modifier.pressable(onClick = {

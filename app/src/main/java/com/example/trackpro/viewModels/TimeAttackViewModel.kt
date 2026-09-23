@@ -21,6 +21,7 @@ import com.example.trackpro.managerClasses.timeAttackManagers.TimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry.calculateFinishLine
+import com.example.trackpro.managerClasses.utilities.LapStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.sync.Mutex
@@ -377,12 +378,12 @@ class TimeAttackViewModel(
         val lapTimeData = LapTimeData(
             sessionid = _sessionId,
             lapnumber = lapNumber,
-            laptime = "IN PROGRESS"
+            laptime = LapStatus.IN_PROGRESS
         )
 
         withContext(Dispatchers.IO) {
             _lapId = database.lapTimeDataDAO().insert(lapTimeData)
-            Log.d("TimeAttack", "Started Lap $lapNumber with ID $_lapId (status: IN PROGRESS)")
+            Log.d("TimeAttack", "Started Lap $lapNumber with ID $_lapId (status: ${LapStatus.IN_PROGRESS})")
         }
     }
 
@@ -398,7 +399,7 @@ class TimeAttackViewModel(
                 val allLapsInSession = database.lapTimeDataDAO()
                     .getLapsForSession(_sessionId)
 
-                val inProgressLaps = allLapsInSession.filter { it.laptime == "IN PROGRESS" }
+                val inProgressLaps = allLapsInSession.filter { it.laptime == LapStatus.IN_PROGRESS }
 
                 inProgressLaps.forEach { lap ->
                     database.lapTimeDataDAO().delete(lap)
