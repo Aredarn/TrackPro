@@ -29,7 +29,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.example.trackpro.managerClasses.calculationClasses.DragMetrics
+import com.example.trackpro.managerClasses.calculationClasses.DragSpeedScale
 import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.dataClasses.SessionData
@@ -131,8 +131,15 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
     // Fixed: Removed 'get()' as local variables don't support custom getters
     val dataPoints = if (xAxisInMeters) dataPointsMeters else dataPointsSeconds
     
-    var metrics by remember { mutableStateOf(DragMetrics()) }
-    val calculator = remember { DragTimeCalculation(sessionId, database) }
+    // Rebuilt when the unit setting changes: unlike a live session, this screen derives
+    // every split from the stored trace, so it can honour the setting as it is now rather
+    // than as it was during the recording.
+    val calculator = remember(useMetric) {
+        DragTimeCalculation(sessionId, database, DragSpeedScale.of(useMetric))
+    }
+    // Seeded from the calculator rather than DragMetrics(), so the split tiles carry their
+    // labels before the trace has loaded.
+    var metrics by remember(useMetric) { mutableStateOf(calculator.getCurrentMetrics()) }
 
     var maxSpeed by remember { mutableDoubleStateOf(-1.0) }
     var avgSpeed by remember { mutableDoubleStateOf(-1.0) }
@@ -152,7 +159,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
         }
     }
 
-    LaunchedEffect(sessionId) {
+    LaunchedEffect(sessionId, useMetric) {
         withContext(Dispatchers.IO) {
             val data = database.rawGPSDataDao().getGPSDataBySession(sessionId)
             if (data.isEmpty()) {
@@ -320,15 +327,26 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 DragMetricCard(DragMetricDisplay("ELEV ↓",    if (hasElevation) lossLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
             }
 
+            // Labels come from the splits themselves, so a tile can never name a milestone
+            // the timer was not measuring. Three standing splits fill the first row; the
+            // longest rolling split shares the second with the two mile figures.
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                DragMetricCard(DragMetricDisplay("0-60",  formatMetric(metrics.time0to60),  "SEC", metrics.time0to60 != null),  modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("0-100", formatMetric(metrics.time0to100), "SEC", metrics.time0to100 != null), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("0-160", formatMetric(metrics.time0to160), "SEC", metrics.time0to160 != null), modifier = Modifier.weight(1f))
+                metrics.standing.take(3).forEach { split ->
+                    DragMetricCard(
+                        DragMetricDisplay(split.label, formatMetric(split.seconds), "SEC", split.seconds != null),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                DragMetricCard(DragMetricDisplay("100-200",  formatMetric(metrics.time100to200),               "SEC",   metrics.time100to200 != null),   modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("¼ MILE",   formatMetric(metrics.quarterMileTime),            "SEC",   metrics.quarterMileTime != null), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("TRAP SPD", metrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "—", UnitFormatter.speedUnitLabel(useMetric), metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
+                metrics.rolling.lastOrNull()?.let { split ->
+                    DragMetricCard(
+                        DragMetricDisplay(split.label, formatMetric(split.seconds), "SEC", split.seconds != null),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                DragMetricCard(DragMetricDisplay("\u00bc MILE",   formatMetric(metrics.quarterMileTime),            "SEC",   metrics.quarterMileTime != null), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("TRAP SPD", metrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "\u2014", UnitFormatter.speedUnitLabel(useMetric), metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
             }
         }
 
