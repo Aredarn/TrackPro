@@ -9,6 +9,7 @@ import kotlin.math.roundToInt
 object UnitFormatter {
     private const val KM_TO_MILES = 0.621371
     private const val METERS_TO_FEET = 3.28084
+    private const val FEET_PER_MILE = 5280.0
 
     fun speedUnitLabel(metric: Boolean) = if (metric) "KM/H" else "MPH"
 
@@ -42,14 +43,22 @@ object UnitFormatter {
     fun formatSpeedPrecise(kmh: Double, metric: Boolean): String =
         String.format("%.1f", convertSpeed(kmh, metric))
 
-    /** Formats a distance given in meters as e.g. "402 m" / "0.25 mi" / "1.20 km" / "1320 ft". */
+    /**
+     * Formats a distance given in meters as e.g. "402 m" / "1320 ft" / "1.20 km" / "2.71 mi".
+     *
+     * Each system steps up to its larger unit at one of that unit: a kilometre, a mile. The
+     * imperial side used to switch at a thousand *feet* - a fifth of a mile - so a quarter
+     * mile run read as "0.25 mi" where metric showed "402 m", and everything between 305 m
+     * and a mile was quoted as an awkward fraction instead of the feet a drag strip is
+     * actually measured in.
+     */
     fun formatDistance(meters: Double, metric: Boolean): String {
         return if (metric) {
             if (meters >= 1000) String.format("%.2f km", meters / 1000.0)
             else String.format("%.0f m", meters)
         } else {
             val feet = meters * METERS_TO_FEET
-            if (feet >= 1000) String.format("%.2f mi", (meters / 1000.0) * KM_TO_MILES)
+            if (feet >= FEET_PER_MILE) String.format("%.2f mi", feet / FEET_PER_MILE)
             else String.format("%.0f ft", feet)
         }
     }

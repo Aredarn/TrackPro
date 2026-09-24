@@ -79,6 +79,27 @@ class GpsManager(
         providerFor(gpsSource.value).start()
     }
 
+    /**
+     * Starts the phone GPS if it is the selected source and is not already running.
+     *
+     * PhoneGpsProvider.start() gives up quietly when the location permission is missing, and
+     * nothing used to try again: the app starts its provider before the permission dialog is
+     * answered, and the collector above only reacts when the source *changes*. So the first
+     * grant - or a re-grant after Android auto-revokes the permission for an unused app -
+     * left the app reading NO SIGNAL until the source was toggled or the app restarted.
+     *
+     * Safe to call speculatively: it does nothing unless the phone GPS is both selected and
+     * stopped, and start() re-checks the permission itself. Only the phone provider is
+     * covered, because it is the only one that can fail this way - the others are not
+     * permission-gated at start, and restarting a live TCP or Bluetooth link on a guess
+     * would be worse than leaving it alone.
+     */
+    fun retryPhoneGpsAfterPermission() {
+        if (gpsSource.value != GpsProviderType.PHONE_GPS) return
+        if (phoneProvider.connectionStatus.value) return
+        phoneProvider.start()
+    }
+
     fun stopActiveProvider() {
         allProviders.forEach { it.stop() }
     }

@@ -162,7 +162,11 @@ fun TimeAttackListItemScreen(
             val avgMs = if (lapMillis.isNotEmpty()) lapMillis.average().toLong() else 0L
             val worstMs = lapMillis.maxOrNull() ?: 0L
             val sessionDuration = session.endTime?.let { it - session.startTime } ?: 0L
-            // Consistency: std deviation of lap times as % of best lap (lower = more consistent)
+            // Consistency: standard deviation of the lap times as a percentage of their
+            // mean - the coefficient of variation. Lower is more consistent. Measured
+            // against the mean rather than the best lap, which is what an earlier version
+            // of this comment claimed: dividing by the best lap would make the figure
+            // depend on a single outlying lap rather than on the spread.
             val consistency = if (lapMillis.size > 1) {
                 val mean = lapMillis.average()
                 val stdDev = Math.sqrt(lapMillis.map { (it - mean) * (it - mean) }.average())

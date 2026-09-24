@@ -276,10 +276,25 @@ class MainActivity : ComponentActivity() {
     ) { permissions ->
         val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
         val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (!fineGranted && !coarseGranted) {
+        if (fineGranted || coarseGranted) {
+            // The app starts its GPS provider in Application.onCreate, before this dialog is
+            // answered, so a phone-GPS provider that gave up for want of permission has to
+            // be told that it now has one.
+            (application as TrackProApp).gpsManager.retryPhoneGpsAfterPermission()
+        } else {
             // User denied — phone GPS won't work, ESP32 still will
             Log.w("Permissions", "Location permission denied — phone GPS unavailable")
         }
+    }
+
+    /**
+     * Covers the permission being granted where no result callback fires: the user turning
+     * it on in system settings, or Android restoring it after an auto-revoke. A no-op unless
+     * the phone GPS is the selected source and is currently stopped.
+     */
+    override fun onResume() {
+        super.onResume()
+        (application as TrackProApp).gpsManager.retryPhoneGpsAfterPermission()
     }
 
     // Requested contextually (only when the user opens the Bluetooth device
