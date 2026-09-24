@@ -16,12 +16,31 @@ interface SessionDataDao {
     @Insert
     suspend fun insertSession(sessionData: SessionData): Long
 
-    // Update a session
+    /**
+     * Replaces a whole session row.
+     *
+     * Currently unused, and a hazard to reach for: a session is written by more than one
+     * party - the screen that closes it and the background weather lookup - so a
+     * read-modify-write here silently reverts whatever the other one did in between. That
+     * exact bug is why [markSessionEnded] and [updateSessionWeather] exist. If a future
+     * caller needs to change some other field, give it a targeted UPDATE too.
+     */
     @Update
     suspend fun updateSession(sessionData: SessionData)
 
     @Query("DELETE FROM session_data WHERE id = :sessionId")
     suspend fun deleteSessionById(sessionId: Long)
+
+    /**
+     * Closes a session by stamping its endTime.
+     *
+     * Targeted for the same reason as the weather backfill below, and against the same other
+     * write: closing the session used to read the whole row and write it back, so a weather
+     * lookup that landed in between was read as absent and written back as null. Two writers
+     * touching disjoint columns of one row must both write only their own columns.
+     */
+    @Query("UPDATE session_data SET endTime = :endTime WHERE id = :sessionId")
+    suspend fun markSessionEnded(sessionId: Long, endTime: Long)
 
     /**
      * Backfills only the weather columns. Deliberately a targeted UPDATE rather than a

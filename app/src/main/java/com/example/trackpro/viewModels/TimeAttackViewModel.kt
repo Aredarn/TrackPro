@@ -405,16 +405,11 @@ class TimeAttackViewModel(
                     database.lapTimeDataDAO().delete(lap)
                 }
 
-                // Stamp endTime, otherwise the session stays "active" forever and the
-                // detail screen reports a zero-length session. Done by id rather than via
-                // SessionManager.endSession(), which closes whatever is in its own shared
-                // currentSessionId field - that is also written by the drag screen, so it
-                // is not reliably this session.
-                database.sessionDataDao().getSessionById(_sessionId)?.let { row ->
-                    database.sessionDataDao().updateSession(
-                        row.copy(endTime = System.currentTimeMillis())
-                    )
-                }
+                // SessionManager.endSession now takes the session to close, so this no
+                // longer has to stamp endTime itself to avoid its old shared "current
+                // session" field. The read-modify-write this replaces could also drop a
+                // weather lookup that landed between its read and its write.
+                sessionManager.endSession(_sessionId)
 
                 Log.d("TimeAttack", "Session $_sessionId ended. Deleted ${inProgressLaps.size} incomplete laps.")
 

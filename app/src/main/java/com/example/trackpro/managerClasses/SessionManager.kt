@@ -6,13 +6,21 @@ import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.managerClasses.utilities.WeatherService
 
 
+/**
+ * Opens and closes recording sessions.
+ *
+ * Deliberately holds no notion of "the current session". It used to keep the id of whichever
+ * session was started last, and [endSession] closed that one - but this is a singleton shared
+ * by the drag screen and the time attack screen, so with both in the back stack the wrong
+ * session could be closed. Time attack had already grown its own copy of the logic to route
+ * around it. Every caller now names the session it means, and each screen owns its own id.
+ */
 class SessionManager private constructor(
     private val sessionDataDao: SessionDataDao,
 
 ) {
 
-    private var currentSessionId: Long? = null
-
+    /** Creates a session and returns its id. The caller owns that id from here on. */
     suspend fun startSession(eventType: String, vehicleId: Long?, trackId: Long? = null) : Long {
         val session = SessionData(
             eventType = eventType,
@@ -21,10 +29,10 @@ class SessionManager private constructor(
             vehicleId = vehicleId,
             trackId = trackId,
             )
-        currentSessionId = sessionDataDao.insertSession(session) // Insert session
-        Log.d("SessionManager", "Inserted session with ID: $currentSessionId")
+        val sessionId = sessionDataDao.insertSession(session)
+        Log.d("SessionManager", "Inserted session with ID: $sessionId")
 
-        return currentSessionId ?: throw Exception("Failed to insert session")
+        return sessionId
     }
 
     /**
@@ -57,20 +65,18 @@ class SessionManager private constructor(
         )
     }
 
-    // End the current session
-    suspend fun endSession() {
-        currentSessionId?.let { sessionId ->
-            val session = sessionDataDao.getSessionById(sessionId)
-            session?.let {
-                val updatedSession = it.copy(endTime = System.currentTimeMillis())
-                sessionDataDao.updateSession(updatedSession) // Update session
-            }
-        }
-        currentSessionId = null
+    /**
+     * Closes [sessionId] by stamping its endTime.
+     *
+     * Without this a session stays "active" forever and the detail screen reports it as
+     * zero-length. A one-column write, so it cannot undo a weather lookup that lands at the
+     * same moment - see SessionDataDao.markSessionEnded.
+     */
+    suspend fun endSession(sessionId: Long) {
+        if (sessionId < 0) return
+        sessionDataDao.markSessionEnded(sessionId, System.currentTimeMillis())
+        Log.d("SessionManager", "Ended session $sessionId")
     }
-
-    // Get the current session ID
-    fun getCurrentSessionId(): Long? = currentSessionId
 
     companion object {
         @Volatile
