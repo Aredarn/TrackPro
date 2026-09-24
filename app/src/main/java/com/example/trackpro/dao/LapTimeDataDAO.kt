@@ -62,6 +62,22 @@ interface LapTimeDataDAO {
     """)
     suspend fun getBestLapForTrack(trackId: Long): LapTimeData?
 
+    // The fastest laps on a track that are fit to be a live-delta reference, fastest first:
+    // completed, and with no GPS gap - a gap is a straight chord through the lap's trace,
+    // which would skew every delta measured against it. Several rather than one, because
+    // the caller still has to find the fastest in each direction the track is driven.
+    @Query("""
+    SELECT lap_time_data.* FROM lap_time_data
+    INNER JOIN session_data ON lap_time_data.sessionid = session_data.id
+    WHERE session_data.trackId = :trackId
+    AND lap_time_data.laptime != 'IN PROGRESS'
+    AND lap_time_data.laptime != 'INVALID'
+    AND lap_time_data.signalGap = 0
+    ORDER BY lap_time_data.laptime ASC
+    LIMIT :limit
+    """)
+    suspend fun getFastestCleanLapsForTrack(trackId: Long, limit: Int): List<LapTimeData>
+
     // Get total number of laps in a session
     @Query("SELECT COUNT(*) FROM lap_time_data WHERE sessionid = :sessionId")
     suspend fun getLapCountForSession(sessionId: Long): Int

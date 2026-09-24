@@ -75,8 +75,14 @@ class DragTimeCalculation(
     private var maxSpeedRecorded: Float = 0f
     private var runCount: Int = 0
 
+    // The previous sample, which every crossing below is interpolated from.
+    private var prevTimeMs: Long? = null
+    private var prevSpeed: Float? = null
+
     // Current run
-    private var runStartTime: Long = 0L
+    private var runStartTime: Double = 0.0
+    /** Distance into the run at the previous sample; null outside a run. */
+    private var prevRunDistance: Float? = null
     private var runStartDistanceMeters: Float = 0f
     private var hasStartedRun: Boolean = false
     private var isReadyForRun: Boolean = false
@@ -97,8 +103,19 @@ class DragTimeCalculation(
     private var quarterMileSpeedResult: Float? = null
     private var halfMileTimeResult: Double? = null
 
+    /**
+     * Feeds one sample. [currentTimeMillis] must be the fix's own timestamp, not the time it
+     * was processed: every split is the difference between two of these, so any delay in
+     * delivering one fix and not the next lands straight in the result.
+     *
+     * Every milestone is timed at the instant it was actually passed, interpolated between the
+     * two samples either side of it, rather than at the first sample found beyond it. At 10 Hz
+     * the difference is up to 100 ms at each end of a split.
+     */
     fun processRealtimeGPS(gpsData: RawGPSData, currentTimeMillis: Long): DragMetrics {
         val currentSpeed = gpsData.speed ?: 0f
+        val pT = prevTimeMs
+        val pV = prevSpeed
 
         // --- 1. SESSION-WIDE STATS ---
         if (currentSpeed > maxSpeedRecorded) maxSpeedRecorded = currentSpeed
@@ -122,14 +139,18 @@ class DragTimeCalculation(
                 hasStartedRun = false
                 runCommitted = false
                 isReadyForRun = true
+                prevRunDistance = null
             }
         } else {
             if (currentSpeed <= zeroThreshold) isReadyForRun = true
             if (isReadyForRun && currentSpeed > zeroThreshold) {
                 hasStartedRun = true
                 runCommitted = false
-                runStartTime = currentTimeMillis
+                // The launch is the moment speed passed the stopped threshold, somewhere
+                // between the last stationary sample and this one.
+                runStartTime = timeAtCrossing(pT, pV, currentTimeMillis, currentSpeed, zeroThreshold)
                 runStartDistanceMeters = totalDistanceMeters
+                prevRunDistance = 0f
             }
         }
 
@@ -138,34 +159,48 @@ class DragTimeCalculation(
         // sample the car first crossed the threshold on, since elapsed only grows; across
         // runs it is whichever run did it quickest.
         if (hasStartedRun) {
-            val elapsed = (currentTimeMillis - runStartTime) / 1000.0
+            fun secondsSinceLaunch(at: Double) = ((at - runStartTime) / 1000.0).coerceAtLeast(0.0)
 
             standingThresholdsKmh.forEachIndexed { i, thresholdKmh ->
                 if (currentSpeed >= thresholdKmh) {
-                    standingResults[i] = bestOf(standingResults[i], elapsed)
+                    val crossedAt = timeAtCrossing(pT, pV, currentTimeMillis, currentSpeed, thresholdKmh)
+                    standingResults[i] = bestOf(standingResults[i], secondsSinceLaunch(crossedAt))
                 }
             }
 
             // Distance covered since this launch, not since the recording started, so drift
             // before the run and any earlier run are both excluded.
             val runDistance = totalDistanceMeters - runStartDistanceMeters
+            val prevDistance = prevRunDistance
 
-            if (runDistance >= QUARTER_MILE_METERS && isBetter(quarterMileTimeResult, elapsed)) {
-                quarterMileTimeResult = elapsed
-                // Trap speed belongs to the run that set the time, so it is captured here
-                // rather than tracked on its own.
-                quarterMileSpeedResult = currentSpeed
+            if (runDistance >= QUARTER_MILE_METERS) {
+                val crossedAt = timeAtCrossing(
+                    pT, prevDistance, currentTimeMillis, runDistance, QUARTER_MILE_METERS
+                )
+                val elapsed = secondsSinceLaunch(crossedAt)
+                if (isBetter(quarterMileTimeResult, elapsed)) {
+                    quarterMileTimeResult = elapsed
+                    // Trap speed belongs to the run that set the time, so it is captured here
+                    // rather than tracked on its own - at the line, not at the next sample.
+                    quarterMileSpeedResult = speedAt(crossedAt, pT, pV, currentTimeMillis, currentSpeed)
+                }
             }
             if (runDistance >= HALF_MILE_METERS) {
-                halfMileTimeResult = bestOf(halfMileTimeResult, elapsed)
+                val crossedAt = timeAtCrossing(
+                    pT, prevDistance, currentTimeMillis, runDistance, HALF_MILE_METERS
+                )
+                halfMileTimeResult = bestOf(halfMileTimeResult, secondsSinceLaunch(crossedAt))
             }
+            prevRunDistance = runDistance
         }
 
         // --- 4. ROLLING METRICS ---
         // Deliberately outside the run window: a roll-on pull needs no standing start, and a
         // session can be started with the car already moving.
-        rollingIntervals.forEach { it.update(currentSpeed, currentTimeMillis) }
+        rollingIntervals.forEach { it.update(pT, pV, currentSpeed, currentTimeMillis) }
 
+        prevTimeMs = currentTimeMillis
+        prevSpeed = currentSpeed
         return getCurrentMetrics()
     }
 
@@ -194,12 +229,15 @@ class DragTimeCalculation(
      * stops, and the results are kept because they are the session's bests.
      */
     fun resetRealtimeTracking() {
+        prevTimeMs = null
+        prevSpeed = null
+        prevRunDistance = null
         lastPoint = null
         totalDistanceMeters = 0f
         maxSpeedRecorded = 0f
         runCount = 0
 
-        runStartTime = 0L
+        runStartTime = 0.0
         runStartDistanceMeters = 0f
         hasStartedRun = false
         isReadyForRun = false
@@ -258,13 +296,13 @@ class DragTimeCalculation(
         private val toSpeed: Float,
         private val resetSpeed: Float
     ) {
-        private var startedAt: Long? = null
+        private var startedAt: Double? = null
         private var armed = false
 
         var bestSeconds: Double? = null
             private set
 
-        fun update(speedKmh: Float, nowMillis: Long) {
+        fun update(prevTimeMs: Long?, prevSpeed: Float?, speedKmh: Float, nowMillis: Long) {
             if (speedKmh <= fromSpeed) armed = true
             // Dropping out of the band abandons an open window; the next approach through
             // fromSpeed starts a fresh one.
@@ -272,12 +310,15 @@ class DragTimeCalculation(
             if (!armed) return
 
             if (startedAt == null) {
-                if (speedKmh >= fromSpeed) startedAt = nowMillis
+                if (speedKmh >= fromSpeed) {
+                    startedAt = timeAtCrossing(prevTimeMs, prevSpeed, nowMillis, speedKmh, fromSpeed)
+                }
                 return
             }
 
             if (speedKmh >= toSpeed) {
-                val seconds = (nowMillis - startedAt!!) / 1000.0
+                val endedAt = timeAtCrossing(prevTimeMs, prevSpeed, nowMillis, speedKmh, toSpeed)
+                val seconds = (endedAt - startedAt!!) / 1000.0
                 if (bestSeconds == null || seconds < bestSeconds!!) bestSeconds = seconds
                 startedAt = null
                 armed = false
@@ -290,4 +331,28 @@ class DragTimeCalculation(
             bestSeconds = null
         }
     }
+}
+
+/**
+ * When a rising quantity - speed, or distance into a run - passed [target], interpolated
+ * linearly between the previous sample (t0, v0) and this one (t1, v1).
+ *
+ * Falls back to this sample's own time when there is no previous sample, or when the previous
+ * one was already past the target: then the crossing did not happen on this segment, and this
+ * sample is the earliest time known to be beyond it.
+ */
+private fun timeAtCrossing(t0: Long?, v0: Number?, t1: Long, v1: Number, target: Number): Double {
+    val from = v0?.toDouble()
+    val to = v1.toDouble()
+    val goal = target.toDouble()
+    if (t0 == null || from == null || from >= goal || to <= from) return t1.toDouble()
+    val fraction = ((goal - from) / (to - from)).coerceIn(0.0, 1.0)
+    return t0 + fraction * (t1 - t0)
+}
+
+/** Speed at instant [at] between the previous sample and this one, assuming it changed linearly. */
+private fun speedAt(at: Double, t0: Long?, v0: Float?, t1: Long, v1: Float): Float {
+    if (t0 == null || v0 == null || t1 == t0) return v1
+    val fraction = ((at - t0) / (t1 - t0)).coerceIn(0.0, 1.0)
+    return (v0 + fraction * (v1 - v0)).toFloat()
 }

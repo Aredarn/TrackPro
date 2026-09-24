@@ -39,7 +39,7 @@ import com.example.trackpro.dataClasses.VehicleInformationData
     LapTimeData::class,
     LapInfoData::class,
     SectorTimeData::class
-], version = 6, exportSchema = true)
+], version = 7, exportSchema = true)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun rawGPSDataDao(): RawGPSDataDao
@@ -187,6 +187,17 @@ abstract class ESPDatabase : RoomDatabase() {
         }
 
         /**
+         * v6 -> v7: timestamps the points of a lap's recorded trace, so an old lap can be
+         * replayed exactly as a live-delta reference. Nullable, so a plain ALTER matches the
+         * entity and earlier laps simply have none.
+         */
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `lap_info_data` ADD COLUMN `timestamp` INTEGER")
+            }
+        }
+
+        /**
          * Every migration, in order. This is the single list the production database is
          * built with; the instrumented migration tests run exactly the same array so a
          * migration can't be tested but forgotten here, or vice versa.
@@ -196,7 +207,8 @@ abstract class ESPDatabase : RoomDatabase() {
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
-            MIGRATION_5_6
+            MIGRATION_5_6,
+            MIGRATION_6_7
         )
 
         fun getInstance(context: Context): ESPDatabase {

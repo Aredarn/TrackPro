@@ -64,6 +64,13 @@ android {
         getByName("androidTest").assets.srcDir("$projectDir/schemas")
     }
 
+    // Plain JVM unit tests run against a stub android.jar whose every method throws unless
+    // told otherwise. The timing and geometry code logs through android.util.Log, so without
+    // this any test reaching a log call failed before its assertions ran.
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
 }
 
 dependencies {

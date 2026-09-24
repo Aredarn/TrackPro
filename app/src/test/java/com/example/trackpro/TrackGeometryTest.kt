@@ -142,6 +142,36 @@ class TrackGeometryTest {
     }
 
     // ─────────────────────────────────────────────
+    // Where along the path the line was crossed
+    // ─────────────────────────────────────────────
+
+    @Test
+    fun `checkLineCrossing reports how far along the path the line was crossed`() {
+        val line = listOf(
+            trackPoint(1, 46.999, 19.0005),
+            trackPoint(2, 47.001, 19.0005)
+        )
+        // 0.0003 of the 0.0010 travelled is before the line.
+        val result = TrackGeometry.checkLineCrossing(
+            gpsPoint(47.0, 19.0002),
+            gpsPoint(47.0, 19.0012),
+            line
+        )
+
+        assertEquals(0.3, result!!.fraction, 1e-6)
+    }
+
+    @Test
+    fun `crossingTimeMs interpolates between the two fixes`() {
+        val before = gpsPoint(47.0, 19.0002).copy(timestamp = 10_000L)
+        val after = gpsPoint(47.0, 19.0012).copy(timestamp = 10_100L)
+
+        assertEquals(10_030.0, TrackGeometry.crossingTimeMs(before, after, 0.3), 1e-6)
+        assertEquals(10_000.0, TrackGeometry.crossingTimeMs(before, after, 0.0), 1e-6)
+        assertEquals(10_100.0, TrackGeometry.crossingTimeMs(before, after, 1.0), 1e-6)
+    }
+
+    // ─────────────────────────────────────────────
     // calculateFinishLine
     // ─────────────────────────────────────────────
 

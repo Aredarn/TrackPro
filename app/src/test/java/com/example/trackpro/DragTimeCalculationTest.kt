@@ -114,14 +114,15 @@ class DragTimeCalculationTest {
     fun `0-60 time is recorded when speed first reaches 60`() {
         // Stand still → then 10 km/h per 100 ms step
         // Step 0: 0 km/h (t0)
-        // Steps 1–6: 10, 20, 30, 40, 50, 60  → run starts at step 1 (t0+100 ms)
-        //                                       60 reached at step 6 (t0+600 ms) → elapsed = 0.5 s
+        // Steps 1–6: 10, 20, 30, 40, 50, 60
+        // The launch is when speed passed the 2 km/h stopped threshold, interpolated between
+        // steps 0 and 1: t0+20 ms. 60 is reached exactly on step 6: t0+600 ms. → 0.58 s
         val speeds = listOf(0f, 10f, 20f, 30f, 40f, 50f, 60f)
         feedSequence(speeds, intervalMs = 100L)
 
         val m = calc.getCurrentMetrics()
         assertNotNull(m.split("0-60"))
-        assertEquals(0.5, m.split("0-60")!!, 0.01)   // 5 * 100 ms = 500 ms = 0.5 s
+        assertEquals(0.58, m.split("0-60")!!, 0.001)
     }
 
     @Test
@@ -134,13 +135,13 @@ class DragTimeCalculationTest {
     @Test
     fun `0-100 time is recorded correctly`() {
         // Stand still → 10 km/h per 200 ms step
-        // Run start at step 1 (t0+200); 100 km/h at step 10 (t0+2000) → elapsed = 1.8 s
+        // Launch at 2 km/h, interpolated: t0+40 ms. 100 km/h exactly at step 10: t0+2000. → 1.96 s
         val speeds = listOf(0f) + (1..10).map { it * 10f }
         feedSequence(speeds, intervalMs = 200L)
 
         val m = calc.getCurrentMetrics()
         assertNotNull(m.split("0-100"))
-        assertEquals(1.8, m.split("0-100")!!, 0.01)
+        assertEquals(1.96, m.split("0-100")!!, 0.001)
     }
 
     @Test
@@ -153,6 +154,34 @@ class DragTimeCalculationTest {
         calc.processRealtimeGPS(gps(150f), t0 + 200_000L)
 
         assertEquals(firstCapture, calc.getCurrentMetrics().split("0-60"))
+    }
+
+    // ─────────────────────────────────────────────
+    // 3a. Interpolation between samples
+    // ─────────────────────────────────────────────
+
+    @Test
+    fun `a split is timed where the threshold was crossed, not at the next sample`() {
+        // 0 -> 30 -> 90 km/h at one-second samples. Snapped to samples: launch at 1 s, 60 at
+        // 2 s, so 1.0 s. Interpolated: 2 km/h passed at 66.7 ms, 60 at 1500 ms.
+        listOf(0f to 0L, 30f to 1000L, 90f to 2000L)
+            .forEach { (speed, offset) -> calc.processRealtimeGPS(gps(speed), t0 + offset) }
+
+        assertEquals(1.4333, calc.getCurrentMetrics().split("0-60")!!, 0.001)
+    }
+
+    @Test
+    fun `quarter mile and trap speed are taken at the line, not the sample after it`() {
+        // Standstill, then two ~222 m jumps north: the 402 m line falls 81% of the way through
+        // the second jump, between 100 and 120 km/h.
+        calc.processRealtimeGPS(gps(0f, lat = 47.000, lon = 19.0), t0)
+        calc.processRealtimeGPS(gps(100f, lat = 47.000, lon = 19.0), t0 + 1000L)
+        calc.processRealtimeGPS(gps(100f, lat = 47.002, lon = 19.0), t0 + 2000L)
+        calc.processRealtimeGPS(gps(120f, lat = 47.004, lon = 19.0), t0 + 3000L)
+
+        val m = calc.getCurrentMetrics()
+        assertEquals(2.789, m.quarterMileTime!!, 0.001)
+        assertEquals(116.18f, m.quarterMileSpeed!!, 0.01f)
     }
 
     // ─────────────────────────────────────────────
@@ -216,8 +245,8 @@ class DragTimeCalculationTest {
             time += 100L
         }
 
-        // 0.5 s, not ten minutes and change.
-        assertEquals(0.5, calc.getCurrentMetrics().split("0-60")!!, 0.01)
+        // 0.58 s (see the single-run test for why not 0.5), not ten minutes and change.
+        assertEquals(0.58, calc.getCurrentMetrics().split("0-60")!!, 0.001)
     }
 
     @Test
@@ -278,7 +307,9 @@ class DragTimeCalculationTest {
         assertNull("200 km/h is short of 130 mph", imperial.getCurrentMetrics().split("60-130"))
 
         imperial.processRealtimeGPS(gps(210f), t0 + 4000L)
-        assertEquals(3.0, imperial.getCurrentMetrics().split("60-130")!!, 0.05)
+        // Both ends interpolated: 60 mph passed 995.5 ms in (0 -> 97 km/h over a second),
+        // 130 mph passed 3921.5 ms in (200 -> 210 km/h). Snapped to samples this was 3.0.
+        assertEquals(2.926, imperial.getCurrentMetrics().split("60-130")!!, 0.001)
     }
 
     // ─────────────────────────────────────────────
@@ -476,9 +507,10 @@ class DragTimeCalculationTest {
         }
 
         val result = calc.calculateFullSessionMetrics(sessionData)
-        // 0-60: hit at step 6 (t0+6000 ms), run start at step 1 (t0+1000 ms) → 5 s
+        // 0-60: hit exactly at step 6 (t0+6000 ms); launch at 2 km/h, interpolated between
+        // steps 0 and 1 (t0+200 ms) → 5.8 s
         assertNotNull(result.split("0-60"))
-        assertEquals(5.0, result.split("0-60")!!, 0.1)
+        assertEquals(5.8, result.split("0-60")!!, 0.001)
     }
 
     @Test

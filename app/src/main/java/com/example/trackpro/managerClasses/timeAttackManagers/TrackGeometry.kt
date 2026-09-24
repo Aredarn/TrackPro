@@ -30,8 +30,27 @@ object TrackGeometry {
      * valid lap whose every crossing is non-forward. Circuit timing therefore ignores this
      * and locks onto whichever direction the first crossing of the session establishes;
      * only Sprint timing, whose start and finish are distinct lines, still requires forward.
+     *
+     * [fraction] is how far along the car's path from the earlier fix to the later one the
+     * line was crossed, 0.0 to 1.0. It is what turns a crossing into a *time* finer than the
+     * GPS rate - see [crossingTimeMs].
      */
-    data class CrossingResult(val isForward: Boolean, val direction: CrossingDirection)
+    data class CrossingResult(
+        val isForward: Boolean,
+        val direction: CrossingDirection,
+        val fraction: Double
+    )
+
+    /**
+     * When the car crossed a line, on the fixes' own clock: interpolated between the two fixes
+     * either side of it by how far along that segment the crossing lay.
+     *
+     * Timing a crossing by the fix *after* it rounds every lap boundary up to the next sample -
+     * up to 100 ms at 10 Hz at each end of a lap, on a display that shows hundredths. Assuming
+     * constant speed across one sample interval is far closer than that.
+     */
+    fun crossingTimeMs(prev: RawGPSData, curr: RawGPSData, fraction: Double): Double =
+        prev.timestamp + fraction.coerceIn(0.0, 1.0) * (curr.timestamp - prev.timestamp)
 
     fun calculateFinishLine(track: List<TrackCoordinatesData>): List<TrackCoordinatesData> {
         val startPoint = track.find { it.isStartPoint } ?: run {
@@ -212,25 +231,24 @@ object TrackGeometry {
         val lineStart = Vector(line[0].longitude, line[0].latitude)
         val lineEnd = Vector(line[1].longitude, line[1].latitude)
 
-        val intersection = findIntersection(prevPos, currPos, lineStart, lineEnd)
+        val fraction = findIntersection(prevPos, currPos, lineStart, lineEnd)
 
-        // Debug Log: If you see this in Logcat, the geometry is working!
-        if (intersection != null) {
-            Log.d("TrackGeometry", "INTERSECTION DETECTED at $intersection")
-        }
-
-        return intersection?.let {
+        return fraction?.let {
             val direction = determineDirection(prevPos, currPos, lineStart, lineEnd)
             // Lines are built with the perpendicular rotated from the track's recorded
             // direction of travel, so ENTERING means the car crossed the way the track was
             // recorded. Callers use direction to reject the car overshooting a line and
             // rolling back across it - which is the *opposite* direction to however it
             // first crossed - without assuming the track is only ever driven one way.
-            CrossingResult(direction == CrossingDirection.ENTERING, direction)
+            CrossingResult(direction == CrossingDirection.ENTERING, direction, it)
         }
     }
 
-    private fun findIntersection(a1: Vector, a2: Vector, b1: Vector, b2: Vector): Vector? {
+    /**
+     * Where segment a1-a2 crosses segment b1-b2, as the fraction of the way from a1 to a2, or
+     * null if they do not cross.
+     */
+    private fun findIntersection(a1: Vector, a2: Vector, b1: Vector, b2: Vector): Double? {
         val r = a2 - a1 // Car vector
         val s = b2 - b1 // Finish line vector
         val rxs = r.cross(s)
@@ -244,9 +262,7 @@ object TrackGeometry {
 
         // t is the "time" along the car's path (0.0 to 1.0)
         // u is the "position" along the finish line (0.0 to 1.0)
-        return if (t in 0.0..1.0 && u in 0.0..1.0) {
-            a1 + r * t
-        } else null
+        return if (t in 0.0..1.0 && u in 0.0..1.0) t else null
     }
 
     private fun determineDirection(

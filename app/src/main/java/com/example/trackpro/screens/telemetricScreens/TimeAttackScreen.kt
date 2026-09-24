@@ -19,6 +19,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,10 +51,12 @@ import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.managerClasses.timeAttackManagers.CompletedLap
+import com.example.trackpro.managerClasses.timeAttackManagers.DeltaReference
 import com.example.trackpro.managerClasses.timeAttackManagers.SectorSplit
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import com.example.trackpro.components.Haptic
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.KeepScreenOn
 import com.example.trackpro.components.rememberHaptics
 import com.example.trackpro.components.AppTopBar
@@ -128,11 +131,19 @@ fun TimeAttackScreenView(
     val timingMode   by vm.timingMode.collectAsState()
     val lapSplits    by vm.currentLapSplits.collectAsState()
     val completedLaps by vm.completedLaps.collectAsState()
+    val activeReference by vm.activeReference.collectAsState()
+    val preferredReference by vm.preferredReference.collectAsState()
 
     // Prefer the continuously-updating delta (tracked by distance into the lap); fall back
     // to the static per-lap delta before a best-lap reference exists (e.g. lap 1).
     val effectiveDelta = liveDelta ?: delta
     val isLiveDelta = liveDelta != null
+    val isCircuit = timingMode is TimingMode.Circuit
+    val deltaCaption = if (isCircuit) {
+        captionForDelta(isLiveDelta, activeReference, preferredReference)
+    } else {
+        if (isLiveDelta) "Delta to best - live" else "Delta to best"
+    }
 
     val linesToShow by remember(timingMode, startLine, finishLine) {
         derivedStateOf {
@@ -203,6 +214,11 @@ fun TimeAttackScreenView(
             isConnected = isConnected,
             linesToShow = linesToShow,
             lapSplits   = lapSplits,
+            deltaCaption = deltaCaption,
+            // Sprint has no live delta to point anywhere, so no switch.
+            showReferenceSwitch = isCircuit,
+            preferredReference = preferredReference,
+            onReferenceChange = vm::setDeltaReference,
             completedLaps = completedLaps,
             mapVisible  = mapVisible,
             onToggleMap = { mapVisible = it },
@@ -222,6 +238,11 @@ fun TimeAttackScreenView(
             isConnected = isConnected,
             linesToShow = linesToShow,
             lapSplits   = lapSplits,
+            deltaCaption = deltaCaption,
+            // Sprint has no live delta to point anywhere, so no switch.
+            showReferenceSwitch = isCircuit,
+            preferredReference = preferredReference,
+            onReferenceChange = vm::setDeltaReference,
             completedLaps = completedLaps,
             mapVisible  = mapVisible,
             onToggleMap = { mapVisible = it },
@@ -247,6 +268,10 @@ fun TimeAttackPortraitLayout(
     isConnected: Boolean,
     linesToShow : List<TrackCoordinatesData>,
     lapSplits: List<SectorSplit> = emptyList(),
+    deltaCaption: String = "Delta to best",
+    showReferenceSwitch: Boolean = false,
+    preferredReference: DeltaReference = DeltaReference.SESSION_BEST,
+    onReferenceChange: (DeltaReference) -> Unit = {},
     completedLaps: List<CompletedLap> = emptyList(),
     mapVisible: Boolean,
     onToggleMap: (Boolean) -> Unit,
@@ -283,7 +308,7 @@ fun TimeAttackPortraitLayout(
         ) {
             Readout(
                 value = String.format("%+.3f", delta),
-                caption = if (isLiveDelta) "Delta to best - live" else "Delta to best",
+                caption = deltaCaption,
                 valueColor = deltaColor,
                 valueSize = if (mapVisible) 60.sp else 84.sp,
                 trailing = {
@@ -308,6 +333,10 @@ fun TimeAttackPortraitLayout(
                 segments = 25,
                 height = if (mapVisible) 18.dp else 26.dp
             )
+            if (showReferenceSwitch) {
+                Spacer(Modifier.height(8.dp))
+                DeltaReferenceSwitch(preferredReference, onReferenceChange)
+            }
         }
 
         Bezel()
@@ -404,6 +433,10 @@ fun TimeAttackLandscapeLayout(
     isConnected: Boolean,
     linesToShow: List<TrackCoordinatesData>,
     lapSplits: List<SectorSplit> = emptyList(),
+    deltaCaption: String = "Delta to best",
+    showReferenceSwitch: Boolean = false,
+    preferredReference: DeltaReference = DeltaReference.SESSION_BEST,
+    onReferenceChange: (DeltaReference) -> Unit = {},
     completedLaps: List<CompletedLap> = emptyList(),
     mapVisible: Boolean,
     onToggleMap: (Boolean) -> Unit,
@@ -446,7 +479,7 @@ fun TimeAttackLandscapeLayout(
             ) {
                 Readout(
                     value = String.format("%+.3f", delta),
-                    caption = if (isLiveDelta) "Delta to best - live" else "Delta to best",
+                    caption = deltaCaption,
                     valueColor = deltaColor,
                     valueSize = 56.sp,
                     trailing = {
@@ -471,6 +504,10 @@ fun TimeAttackLandscapeLayout(
                     segments = 25,
                     height = 16.dp
                 )
+                if (showReferenceSwitch) {
+                    Spacer(Modifier.height(6.dp))
+                    DeltaReferenceSwitch(preferredReference, onReferenceChange)
+                }
             }
 
             Bezel()
@@ -588,6 +625,77 @@ private fun HudTrailing(
                 uncheckedBorderColor = TrackProTheme.colors.sectorLine
             )
         )
+    }
+}
+
+/**
+ * The placard under the delta: what the number is measured against.
+ *
+ * Says what is *actually* in use, which is not always what was chosen - a track best only
+ * exists once one has been set in the direction this session is running, and until then the
+ * session best stands in. A driver reading "-0.4" needs to know which of the two it is
+ * against, or the number means nothing.
+ */
+private fun captionForDelta(
+    isLive: Boolean,
+    active: DeltaReference?,
+    preferred: DeltaReference
+): String = when {
+    active == DeltaReference.TRACK_BEST ->
+        if (isLive) "Delta to track best - live" else "Delta to track best"
+    active == DeltaReference.SESSION_BEST && preferred == DeltaReference.TRACK_BEST ->
+        "Delta to session best - no track best yet"
+    active == DeltaReference.SESSION_BEST ->
+        if (isLive) "Delta to session best - live" else "Delta to session best"
+    // Nothing to measure against yet: before the first crossing, or lap 1 of a session
+    // measured against the session best.
+    preferred == DeltaReference.TRACK_BEST -> "Delta to track best"
+    else -> "Delta to session best"
+}
+
+/**
+ * Flips what the live delta is measured against. On the HUD rather than only in Settings
+ * because reaching Settings from here means leaving the screen, which ends the session.
+ *
+ * A labelled control rather than a tap on the delta itself: the readout is the thing most
+ * likely to be brushed while adjusting a windscreen mount, and a reference that changes
+ * unnoticed would make every number after it misleading.
+ */
+@Composable
+private fun DeltaReferenceSwitch(
+    preferred: DeltaReference,
+    onChange: (DeltaReference) -> Unit
+) {
+    val other = when (preferred) {
+        DeltaReference.SESSION_BEST -> DeltaReference.TRACK_BEST
+        DeltaReference.TRACK_BEST -> DeltaReference.SESSION_BEST
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .minimumInteractiveComponentSize()
+            .pressable(onClick = { onChange(other) }, haptic = Haptic.Selection),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "COMPARE TO",
+            style = TrackProType.label,
+            color = TrackProTheme.colors.markingDim
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            listOf(
+                DeltaReference.SESSION_BEST to "SESSION BEST",
+                DeltaReference.TRACK_BEST to "TRACK BEST"
+            ).forEach { (reference, label) ->
+                Text(
+                    text = label,
+                    style = TrackProType.label,
+                    color = if (reference == preferred) TrackProTheme.colors.accent
+                    else TrackProTheme.colors.textFaint
+                )
+            }
+        }
     }
 }
 

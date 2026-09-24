@@ -8,16 +8,42 @@ import com.example.trackpro.dataClasses.RawGPSData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.math.roundToLong
 
 /** One completed sector split for the lap currently in progress. deltaMs is vs. this session's best for that sector, or null if this is the first time it's been recorded. */
 data class SectorSplit(val sectorIndex: Int, val splitMs: Long, val deltaMs: Long?)
 
+/** What the live delta is measured against. */
+enum class DeltaReference {
+    /** The fastest lap driven so far in this session. Nothing to compare until lap 2. */
+    SESSION_BEST,
+    /** The fastest clean lap ever recorded on this track in this direction, from lap 1. */
+    TRACK_BEST
+}
+
+/**
+ * A lap to measure against: its time, and its progress as (distance into the lap in metres,
+ * elapsed ms), which is what the live delta interpolates along.
+ */
+data class ReferenceLap(val lapMs: Long, val trace: List<Pair<Double, Long>>)
+
+/**
+ * Circuit lap timing: laps, sectors, and a live delta.
+ *
+ * [clock] is the monotonic clock everything is timed on; [wallClock] is the clock GPS fixes
+ * are stamped with on receipt. Both are injectable so tests can drive time.
+ */
 class CircuitTimingManager(
     private val finishLine: List<TrackCoordinatesData>,
-    private val sectorLines: List<List<TrackCoordinatesData>> = emptyList()
+    private val sectorLines: List<List<TrackCoordinatesData>> = emptyList(),
+    private val clock: () -> Long = { SystemClock.elapsedRealtime() },
+    private val wallClock: () -> Long = { System.currentTimeMillis() }
 ) : TimingManager() {
-    private var lapStartTime = SystemClock.elapsedRealtime()
-    private var lastCrossTime = 0L
+
+    // Lap boundaries are instants on [clock], kept fractional: they are interpolated between
+    // fixes (see handleGpsUpdate) rather than snapped to whichever fix happened to follow them.
+    private var lapStartTime: Double = clock().toDouble()
+    private var lastCrossTime = Double.NEGATIVE_INFINITY
     private var lastSplitTime = lapStartTime
     private var bestLapSeconds = Double.POSITIVE_INFINITY
     private var hasStarted = false
@@ -40,13 +66,27 @@ class CircuitTimingManager(
     // final crossing (cool-down lap) still counts.
     private val minDirectionLockSpeedKmh = 15f
 
-    // Live delta vs. the session's best lap, updated continuously by distance travelled
-    // in the current lap rather than only once per lap/sector boundary. currentLapTrace
-    // records (distanceMeters, elapsedMs) as the lap is driven; if the lap turns out to be
-    // a new best on completion, it's promoted to bestLapTrace for future comparisons.
+    // Live delta, updated continuously by distance travelled in the current lap rather than
+    // only once per lap/sector boundary. currentLapTrace records (distanceMeters, elapsedMs)
+    // as the lap is driven; a clean lap that turns out to be a new session best is promoted
+    // to bestLapTrace for future comparisons.
     private var currentLapDistanceMeters = 0.0
     private val currentLapTrace = mutableListOf<Pair<Double, Long>>()
     private var bestLapTrace: List<Pair<Double, Long>> = emptyList()
+    /**
+     * The time of the lap [bestLapTrace] came from. Not always the session best: a lap with a
+     * GPS gap can set the best time without its trace being trusted as a reference.
+     */
+    private var bestLapTraceMs = Long.MAX_VALUE
+
+    /**
+     * What the driver has chosen to measure against. Read on every fix, so a change takes
+     * effect straight away, mid-lap included.
+     */
+    @Volatile var preferredReference: DeltaReference = DeltaReference.SESSION_BEST
+
+    /** Earlier sessions' best laps on this track, one per direction; see [setTrackBests]. */
+    @Volatile private var trackBests: Map<TrackGeometry.CrossingDirection, ReferenceLap> = emptyMap()
 
     val lapCompletedChannel = Channel<CompletedLap>(Channel.UNLIMITED)
 
@@ -60,24 +100,52 @@ class CircuitTimingManager(
     private val _liveDelta = MutableStateFlow<Double?>(null)
     val liveDelta: StateFlow<Double?> = _liveDelta.asStateFlow()
 
+    /**
+     * What [liveDelta] is actually being measured against, which is not always what was
+     * preferred: a track best is only available once one has been recorded in the direction
+     * this session is running. Null while there is nothing to measure against.
+     */
+    private val _activeReference = MutableStateFlow<DeltaReference?>(null)
+    val activeReference: StateFlow<DeltaReference?> = _activeReference.asStateFlow()
+
+    /**
+     * Supplies the best laps from earlier sessions on this track, keyed by the direction
+     * they were driven in. Loaded from the database after the timer is created, so this may
+     * land mid-session; it is picked up on the next fix.
+     */
+    fun setTrackBests(bests: Map<TrackGeometry.CrossingDirection, ReferenceLap>) {
+        trackBests = bests
+    }
+
     override fun handleGpsUpdate(
         prev: RawGPSData?,
         current: RawGPSData
     ) {
-        val now = SystemClock.elapsedRealtime()
+        val now = clock()
+        val nowWall = wallClock()
+
+        // Fixes are stamped with the wall clock when they arrive; timing runs on the monotonic
+        // clock. Converting through the offset between the two *now* measures an instant by
+        // how long ago it was, which ignores however long this fix waited to be processed -
+        // on the main thread, behind a map redraw, that wait varies from fix to fix - and is
+        // immune to the wall clock being stepped by a network time update.
+        fun onClock(wallMs: Double): Double = now - (nowWall - wallMs)
+
         prev?.let { prevData ->
             // Checked before the finish line below, so a gap that swallowed the line marks
             // the lap it merged rather than the one that follows.
             if (hasStarted && isSignalGap(prevData, current)) currentLapHadGap = true
 
-            if (hasStarted) {
-                currentLapDistanceMeters += haversineDistance(
-                    prevData.latitude, prevData.longitude,
-                    current.latitude, current.longitude
-                )
-            }
+            val segmentMeters = haversineDistance(
+                prevData.latitude, prevData.longitude,
+                current.latitude, current.longitude
+            )
+            if (hasStarted) currentLapDistanceMeters += segmentMeters
 
             val finishCrossing = TrackGeometry.checkLineCrossing(prevData, current, finishLine)
+            val finishCrossedAt = finishCrossing?.let {
+                onClock(TrackGeometry.crossingTimeMs(prevData, current, it.fraction))
+            }
             var finishHandled = false
 
             // The very first crossing is accepted in either direction and locks the
@@ -88,22 +156,22 @@ class CircuitTimingManager(
                 else -> finishCrossing.direction == lapDirection
             }
 
-            if (finishCrossing != null && finishMatchesDirection && now - lastCrossTime > 5000) {
+            if (finishCrossing != null && finishCrossedAt != null && finishMatchesDirection &&
+                finishCrossedAt - lastCrossTime > MIN_CROSSING_INTERVAL_MS
+            ) {
                 finishHandled = true
+                // The part of this segment driven after the line belongs to the new lap.
+                val metersPastLine = (1.0 - finishCrossing.fraction) * segmentMeters
+
                 if (!hasStarted) {
                     hasStarted = true
                     lapDirection = finishCrossing.direction
-                    currentLapHadGap = false
-                    lastCrossTime = now
-                    lapStartTime = now
-                    lastSplitTime = now
-                    currentSectorIndex = 0
-                    currentLapDistanceMeters = 0.0
-                    currentLapTrace.clear()
-                    _currentLapSplits.value = emptyList()
-                    _liveDelta.value = null
                 } else {
-                    val lapMs = now - lapStartTime
+                    val lapMs = (finishCrossedAt - lapStartTime).roundToLong()
+                    // Close the trace exactly on the line, so a lap promoted to the reference
+                    // ends at its true distance and time rather than one fix past them.
+                    currentLapTrace.add((currentLapDistanceMeters - metersPastLine) to lapMs)
+
                     val isNewBest = updateTimes(lapMs)
                     // A lap with a GPS gap can still hold the best time - both crossings may
                     // have been seen - but its trace cannot be the live-delta reference: the
@@ -112,26 +180,30 @@ class CircuitTimingManager(
                     // previous reference stays until a clean lap replaces it.
                     if (isNewBest && !currentLapHadGap) {
                         bestLapTrace = currentLapTrace.toList()
+                        bestLapTraceMs = lapMs
                     }
                     val finishedLap = CompletedLap(
                         number = _eventCount.value + 1,
                         timeMs = lapMs,
-                        splits = closeFinalSector(_currentLapSplits.value, now),
+                        splits = closeFinalSector(_currentLapSplits.value, finishCrossedAt),
                         signalGap = currentLapHadGap
                     )
-                    currentLapHadGap = false
-                    lastCrossTime = now
-                    lapStartTime = now
-                    lastSplitTime = now
-                    currentSectorIndex = 0
-                    currentLapDistanceMeters = 0.0
-                    currentLapTrace.clear()
-                    _currentLapSplits.value = emptyList()
-                    _liveDelta.value = null
                     _eventCount.value += 1
                     _completedLaps.value = _completedLaps.value + finishedLap
                     lapCompletedChannel.trySend(finishedLap)
                 }
+
+                currentLapHadGap = false
+                lastCrossTime = finishCrossedAt
+                lapStartTime = finishCrossedAt
+                lastSplitTime = finishCrossedAt
+                currentSectorIndex = 0
+                currentLapTrace.clear()
+                _currentLapSplits.value = emptyList()
+                // The new lap starts at the line, part-way through this segment, so it
+                // already has the distance and time driven since then.
+                currentLapDistanceMeters = metersPastLine
+                recordTracePoint(onClock(current.timestamp.toDouble()))
             }
 
             // Only look for the next expected sector gate while a lap is in progress, and
@@ -141,8 +213,13 @@ class CircuitTimingManager(
                 val sectorCrossing = TrackGeometry.checkLineCrossing(prevData, current, gate)
                 val sectorMatchesDirection = sectorCrossing != null &&
                         sectorCrossing.direction == lapDirection
-                if (sectorCrossing != null && sectorMatchesDirection && now - lastCrossTime > 5000) {
-                    val splitMs = now - lastSplitTime
+                val sectorCrossedAt = sectorCrossing?.let {
+                    onClock(TrackGeometry.crossingTimeMs(prevData, current, it.fraction))
+                }
+                if (sectorCrossing != null && sectorCrossedAt != null && sectorMatchesDirection &&
+                    sectorCrossedAt - lastCrossTime > MIN_CROSSING_INTERVAL_MS
+                ) {
+                    val splitMs = (sectorCrossedAt - lastSplitTime).roundToLong()
                     val best = bestSectorMs[currentSectorIndex]
                     val deltaMs = best?.let { splitMs - it }
                     if (best == null || splitMs < best) bestSectorMs[currentSectorIndex] = splitMs
@@ -151,22 +228,56 @@ class CircuitTimingManager(
                     _currentLapSplits.value = _currentLapSplits.value + split
                     sectorCompletedChannel.trySend(split)
 
-                    lastCrossTime = now
-                    lastSplitTime = now
+                    lastCrossTime = sectorCrossedAt
+                    lastSplitTime = sectorCrossedAt
                     currentSectorIndex += 1
                 }
             }
 
             // Record this point into the current lap's trace and compute the continuous
-            // delta against the best lap's trace at the same distance-into-lap.
+            // delta against the reference lap at the same distance-into-lap.
             if (!finishHandled && hasStarted) {
-                val elapsedMs = now - lapStartTime
-                currentLapTrace.add(currentLapDistanceMeters to elapsedMs)
-                _liveDelta.value = interpolatedElapsedAtDistance(currentLapDistanceMeters)
-                    ?.let { bestElapsedMs -> (elapsedMs - bestElapsedMs) / 1000.0 }
+                recordTracePoint(onClock(current.timestamp.toDouble()))
             }
         }
-        _currentTime.value = formatTime(now - lapStartTime)
+        _currentTime.value = formatTime((now - lapStartTime).roundToLong().coerceAtLeast(0))
+    }
+
+    /**
+     * Adds the current distance at [fixTime] to the lap's trace and updates the live delta.
+     * Timed by the fix, not by when it was processed, for the same reason crossings are.
+     */
+    private fun recordTracePoint(fixTime: Double) {
+        val elapsedMs = (fixTime - lapStartTime).roundToLong().coerceAtLeast(0)
+        currentLapTrace.add(currentLapDistanceMeters to elapsedMs)
+
+        val reference = referenceLap()
+        _activeReference.value = reference?.first
+        _liveDelta.value = reference
+            ?.let { (_, trace) -> interpolatedElapsedAtDistance(trace, currentLapDistanceMeters) }
+            ?.let { referenceElapsedMs -> (elapsedMs - referenceElapsedMs) / 1000.0 }
+    }
+
+    /**
+     * The lap to measure the live delta against, and which kind it is.
+     *
+     * With [DeltaReference.TRACK_BEST] preferred, the stored best for this direction is used
+     * until a clean lap this session beats it - at which point that lap *is* the new track
+     * best and becomes the reference. With no stored best for this direction yet, the session
+     * best stands in, and [activeReference] says so.
+     */
+    private fun referenceLap(): Pair<DeltaReference, List<Pair<Double, Long>>>? {
+        if (preferredReference == DeltaReference.TRACK_BEST) {
+            val stored = lapDirection?.let { trackBests[it] }
+            if (stored != null) {
+                return if (stored.lapMs <= bestLapTraceMs) {
+                    DeltaReference.TRACK_BEST to stored.trace
+                } else {
+                    DeltaReference.TRACK_BEST to bestLapTrace
+                }
+            }
+        }
+        return if (bestLapTrace.isEmpty()) null else DeltaReference.SESSION_BEST to bestLapTrace
     }
 
     /**
@@ -193,11 +304,11 @@ class CircuitTimingManager(
      * handler for the current lap id and could land it on the *next* lap in the database.
      * It lives on the [CompletedLap] record for the HUD only.
      */
-    private fun closeFinalSector(recorded: List<SectorSplit>, now: Long): List<SectorSplit> {
+    private fun closeFinalSector(recorded: List<SectorSplit>, crossedAt: Double): List<SectorSplit> {
         if (sectorLines.isEmpty() || recorded.size != sectorLines.size) return recorded
 
         val finalIndex = sectorLines.size
-        val finalMs = now - lastSplitTime
+        val finalMs = (crossedAt - lastSplitTime).roundToLong()
         val best = bestSectorMs[finalIndex]
         val deltaMs = best?.let { finalMs - it }
         if (best == null || finalMs < best) bestSectorMs[finalIndex] = finalMs
@@ -205,17 +316,17 @@ class CircuitTimingManager(
         return recorded + SectorSplit(finalIndex, finalMs, deltaMs)
     }
 
-    /** Linearly interpolates the best lap's elapsed time at the given distance into the lap. */
-    private fun interpolatedElapsedAtDistance(distance: Double): Long? {
-        if (bestLapTrace.isEmpty()) return null
-        val first = bestLapTrace.first()
-        val last = bestLapTrace.last()
+    /** Linearly interpolates a reference lap's elapsed time at the given distance into the lap. */
+    private fun interpolatedElapsedAtDistance(trace: List<Pair<Double, Long>>, distance: Double): Long? {
+        if (trace.isEmpty()) return null
+        val first = trace.first()
+        val last = trace.last()
         if (distance <= first.first) return first.second
         if (distance >= last.first) return last.second
 
-        for (i in 1 until bestLapTrace.size) {
-            val (d0, t0) = bestLapTrace[i - 1]
-            val (d1, t1) = bestLapTrace[i]
+        for (i in 1 until trace.size) {
+            val (d0, t0) = trace[i - 1]
+            val (d1, t1) = trace[i]
             if (distance <= d1) {
                 if (d1 <= d0) return t0
                 val frac = (distance - d0) / (d1 - d0)
@@ -240,8 +351,8 @@ class CircuitTimingManager(
 
 
     override fun reset() {
-        lapStartTime = SystemClock.elapsedRealtime()
-        lastCrossTime = 0L
+        lapStartTime = clock().toDouble()
+        lastCrossTime = Double.NEGATIVE_INFINITY
         lastSplitTime = lapStartTime
         hasStarted = false
         lapDirection = null
@@ -251,16 +362,18 @@ class CircuitTimingManager(
         currentLapDistanceMeters = 0.0
         currentLapTrace.clear()
         bestLapTrace = emptyList()
+        bestLapTraceMs = Long.MAX_VALUE
         _currentLapSplits.value = emptyList()
         _liveDelta.value = null
+        _activeReference.value = null
         _completedLaps.value = emptyList()
-        _stintStart.value = lapStartTime
+        _stintStart.value = lapStartTime.toLong()
         _eventCount.value = 0
     }
 
     override fun startNewEvent() {
         currentLapHadGap = false
-        lapStartTime = SystemClock.elapsedRealtime()
+        lapStartTime = clock().toDouble()
         lastSplitTime = lapStartTime
         currentSectorIndex = 0
         currentLapDistanceMeters = 0.0
@@ -268,5 +381,13 @@ class CircuitTimingManager(
         _currentLapSplits.value = emptyList()
         _liveDelta.value = null
         _currentTime.value = formatTime(0)
+    }
+
+    private companion object {
+        /**
+         * Two line crossings closer together than this are one crossing seen twice - GPS
+         * jitter either side of a gate - never two real ones.
+         */
+        const val MIN_CROSSING_INTERVAL_MS = 5_000.0
     }
 }

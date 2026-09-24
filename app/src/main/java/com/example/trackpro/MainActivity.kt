@@ -88,6 +88,7 @@ import com.example.trackpro.managerClasses.SessionManager
 import com.example.trackpro.managerClasses.gpsDataManagers.GpsManager
 import com.example.trackpro.managerClasses.gpsDataManagers.PhoneGpsProvider
 import com.example.trackpro.models.GpsProviderType
+import com.example.trackpro.managerClasses.timeAttackManagers.DeltaReference
 import com.example.trackpro.screens.vehicleScreens.CarCreationScreen
 import com.example.trackpro.screens.telemetricScreens.DragRaceScreen
 import com.example.trackpro.screens.ESPConnectionTestScreen
@@ -225,6 +226,21 @@ class TrackProApp : Application() {
     fun setDarkTheme(enabled: Boolean) {
         themePrefs.edit().putBoolean("dark_theme", enabled).apply()
         useDarkTheme.value = enabled
+    }
+
+    // What the live delta is measured against. Remembered, and switchable from the HUD as
+    // well as Settings - reaching Settings from a running session means leaving it.
+    private val deltaPrefs by lazy { getSharedPreferences("delta_prefs", MODE_PRIVATE) }
+    val deltaReference by lazy {
+        val stored = deltaPrefs.getString("reference", null)
+        val initial = runCatching { DeltaReference.valueOf(stored ?: "") }
+            .getOrDefault(DeltaReference.SESSION_BEST)
+        MutableStateFlow(initial)
+    }
+
+    fun setDeltaReference(reference: DeltaReference) {
+        deltaPrefs.edit().putString("reference", reference.name).apply()
+        deltaReference.value = reference
     }
 
     private val unitPrefs by lazy { getSharedPreferences("unit_prefs", MODE_PRIVATE) }

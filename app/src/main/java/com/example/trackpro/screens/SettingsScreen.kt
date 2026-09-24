@@ -1,5 +1,6 @@
 package com.example.trackpro.screens
 
+import com.example.trackpro.managerClasses.timeAttackManagers.DeltaReference
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +48,7 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
     val testServerAddress by app.testServerAddress.collectAsState()
     val useDarkTheme by app.useDarkTheme.collectAsState()
     val useMetric by app.useMetricUnits.collectAsState()
+    val deltaReference by app.deltaReference.collectAsState()
 
     val scrollState = rememberScrollState()
     val scrolled by scrollState.isScrolledUnderChrome()
@@ -122,6 +124,31 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
                     buttonText = if (useMetric) "Use mph" else "Use km/h",
                     isActive = true,
                     onClick = { app.setMetricUnits(!useMetric) }
+                )
+            }
+
+            // --- Section: Timing ---
+            DashGroup("Timing") {
+                SettingsToggleRow(
+                    label = "Live Delta",
+                    valueText = if (deltaReference == DeltaReference.TRACK_BEST) {
+                        "Against your best lap on the track"
+                    } else {
+                        "Against this session's best lap"
+                    },
+                    valueColor = TrackProTheme.colors.textMuted,
+                    buttonText = if (deltaReference == DeltaReference.TRACK_BEST) {
+                        "Use session best"
+                    } else {
+                        "Use track best"
+                    },
+                    isActive = true,
+                    onClick = {
+                        app.setDeltaReference(
+                            if (deltaReference == DeltaReference.TRACK_BEST) DeltaReference.SESSION_BEST
+                            else DeltaReference.TRACK_BEST
+                        )
+                    }
                 )
             }
 

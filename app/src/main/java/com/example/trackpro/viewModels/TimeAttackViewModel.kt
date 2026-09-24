@@ -14,6 +14,9 @@ import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.managerClasses.timeAttackManagers.CircuitTimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.CompletedLap
+import com.example.trackpro.managerClasses.timeAttackManagers.DeltaReference
+import com.example.trackpro.managerClasses.timeAttackManagers.ReferenceLap
+import com.example.trackpro.managerClasses.timeAttackManagers.ReferenceLapBuilder
 import com.example.trackpro.managerClasses.timeAttackManagers.SectorSplit
 import com.example.trackpro.managerClasses.timeAttackManagers.SprintTimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingManager
@@ -22,6 +25,7 @@ import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry.calculateFinishLine
 import com.example.trackpro.managerClasses.RecordingService
 import com.example.trackpro.managerClasses.utilities.LapStatus
+import com.example.trackpro.managerClasses.utilities.toLapTimeMillisOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.sync.Mutex
@@ -87,12 +91,23 @@ class TimeAttackViewModel(
         get() = (timingManager as? CircuitTimingManager)?.currentLapSplits
             ?: MutableStateFlow<List<SectorSplit>>(emptyList()).asStateFlow()
 
-    // Continuously-updating delta vs. the session's best lap, tracked by distance into the
-    // lap rather than only once at the finish line. Null until a best lap reference exists
-    // (i.e. before the first lap of the session has completed) or in Sprint mode.
+    // Continuously-updating delta, tracked by distance into the lap rather than only once at
+    // the finish line. Null until there is a reference lap to measure against, and in Sprint.
     val liveDelta: StateFlow<Double?>
         get() = (timingManager as? CircuitTimingManager)?.liveDelta
             ?: MutableStateFlow<Double?>(null).asStateFlow()
+
+    // What the live delta is actually measured against right now - which can differ from what
+    // was chosen: a track best only exists once one has been set in this direction.
+    val activeReference: StateFlow<DeltaReference?>
+        get() = (timingManager as? CircuitTimingManager)?.activeReference
+            ?: MutableStateFlow<DeltaReference?>(null).asStateFlow()
+
+    // What the driver chose to measure against. App-wide and remembered, so it can be flipped
+    // from the HUD mid-session as well as from Settings.
+    val preferredReference: StateFlow<DeltaReference> get() = app.deltaReference
+
+    fun setDeltaReference(reference: DeltaReference) = app.setDeltaReference(reference)
 
     // Every lap (or sprint run) closed this session, oldest first, with its sector splits.
     // Held by the timing manager rather than read back from the database so the HUD lists
@@ -118,6 +133,13 @@ class TimeAttackViewModel(
 
     init {
         startLapDataConsumer()
+        // Follows the preference for the life of the screen, so a switch takes effect on the
+        // next fix, mid-lap included. The timer also reads the current value when created.
+        viewModelScope.launch {
+            app.deltaReference.collect { reference ->
+                (timingManager as? CircuitTimingManager)?.preferredReference = reference
+            }
+        }
     }
 
     override fun onCleared() {
@@ -150,7 +172,14 @@ class TimeAttackViewModel(
                                 _startLine.value = emptyList()
                                 _sectorLines.value = TrackGeometry.calculateSectorLines(coords)
                                 val manager = CircuitTimingManager(_finishLine.value, _sectorLines.value)
+                                manager.preferredReference = app.deltaReference.value
                                 timingManager = manager
+                                // Off the main thread: this reads and rebuilds several laps'
+                                // worth of stored points. The timer uses them when they land.
+                                val finish = _finishLine.value
+                                viewModelScope.launch(Dispatchers.IO) {
+                                    manager.setTrackBests(loadTrackBests(trackId, finish))
+                                }
                                 viewModelScope.launch {
                                     manager.lapCompletedChannel.consumeAsFlow().collect { lap ->
                                         handleCompletedLap(lap)
@@ -205,7 +234,9 @@ class TimeAttackViewModel(
             spd = current.speed,
             alt = current.altitude,
             latgforce = null,
-            longforce = null
+            longforce = null,
+            // Lets this lap be replayed exactly as a delta reference in a later session.
+            timestamp = current.timestamp
         )
 
         lapDataChannel.trySend(lapInfoData).onFailure {
@@ -389,9 +420,45 @@ class TimeAttackViewModel(
         }
     }
 
+    /**
+     * The fastest clean lap from earlier sessions on this track in each direction it has been
+     * driven, rebuilt as delta references. Laps whose stored points cannot be turned into a
+     * trustworthy reference - no clear finish crossing, or missing their start - are skipped
+     * in favour of the next fastest.
+     */
+    private suspend fun loadTrackBests(
+        trackId: Long,
+        finishLine: List<TrackCoordinatesData>
+    ): Map<TrackGeometry.CrossingDirection, ReferenceLap> {
+        val bests = mutableMapOf<TrackGeometry.CrossingDirection, ReferenceLap>()
+        try {
+            val candidates = database.lapTimeDataDAO()
+                .getFastestCleanLapsForTrack(trackId, TRACK_BEST_CANDIDATES)
+            for (lap in candidates) {
+                val lapMs = lap.laptime.toLapTimeMillisOrNull() ?: continue
+                val points = database.lapInfoDataDAO().getLapData(lap.id)
+                val built = ReferenceLapBuilder.build(points, lapMs, finishLine) ?: continue
+                // Candidates arrive fastest first, so the first per direction is the best.
+                if (built.direction !in bests) bests[built.direction] = built.lap
+                if (bests.size == TrackGeometry.CrossingDirection.values().size) break
+            }
+            Log.d("TimeAttack", "Track bests loaded: ${bests.mapValues { it.value.lapMs }}")
+        } catch (e: Exception) {
+            Log.e("TimeAttack", "Could not load track bests: ${e.message}", e)
+        }
+        return bests
+    }
+
     private companion object {
         /** This screen's claim on RecordingService; see RecordingService.acquire. */
         const val RECORDING_HOLDER = "timeAttack"
+
+        /**
+         * How many of the fastest laps to consider when looking for the best in each
+         * direction. Enough to reach past a few laps that cannot be rebuilt, and past a
+         * long run of fast laps all driven one way.
+         */
+        const val TRACK_BEST_CANDIDATES = 20
     }
 
     suspend fun endSession() {

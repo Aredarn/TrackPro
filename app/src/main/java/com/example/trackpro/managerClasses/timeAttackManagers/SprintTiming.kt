@@ -5,13 +5,22 @@ import android.util.Log
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.RawGPSData
 import kotlinx.coroutines.channels.Channel
+import kotlin.math.roundToLong
 
+/**
+ * Point-to-point timing between a start line and a finish line.
+ *
+ * Crossing times are interpolated between fixes and mapped onto [clock] exactly as in
+ * CircuitTimingManager - see there for why. The clocks are injectable so tests can drive time.
+ */
 class SprintTimingManager(
     private val startLine: List<TrackCoordinatesData>,
     private val finishLine: List<TrackCoordinatesData>,
+    private val clock: () -> Long = { SystemClock.elapsedRealtime() },
+    private val wallClock: () -> Long = { System.currentTimeMillis() }
 ) : TimingManager() {
 
-    private var sprintStartTime = 0L
+    private var sprintStartTime = 0.0
     private var bestSprintSeconds = Double.POSITIVE_INFINITY
     private var hasStarted = false
     private var hasFinished = false
@@ -22,8 +31,12 @@ class SprintTimingManager(
     private var runHadGap = false
 
     override fun handleGpsUpdate(prev: RawGPSData?, current: RawGPSData) {
-        val now = SystemClock.elapsedRealtime()
+        val now = clock()
+        val nowWall = wallClock()
         if (prev == null) return
+
+        fun crossedAt(fraction: Double): Double =
+            now - (nowWall - TrackGeometry.crossingTimeMs(prev, current, fraction))
 
         // Before the finish check, so a gap that swallowed the line marks this run.
         if (hasStarted && !hasFinished && isSignalGap(prev, current)) runHadGap = true
@@ -32,7 +45,7 @@ class SprintTimingManager(
         if (!hasStarted) {
             val startResult = TrackGeometry.checkLineCrossing(prev, current, startLine)
             if (startResult != null && startResult.isForward) {
-                sprintStartTime = now
+                sprintStartTime = crossedAt(startResult.fraction)
                 hasStarted = true
                 hasFinished = false
                 runHadGap = false
@@ -44,7 +57,7 @@ class SprintTimingManager(
         else if (hasStarted && !hasFinished) {
             val finishResult = TrackGeometry.checkLineCrossing(prev, current, finishLine)
             if (finishResult != null && finishResult.isForward) {
-                val sprintMs = now - sprintStartTime
+                val sprintMs = (crossedAt(finishResult.fraction) - sprintStartTime).roundToLong()
                 updateTimes(sprintMs)
                 _eventCount.value += 1
                 val finishedRun = CompletedLap(
@@ -63,7 +76,7 @@ class SprintTimingManager(
 
         // 3. Live UI Update
         if (hasStarted && !hasFinished) {
-            _currentTime.value = formatTime(now - sprintStartTime)
+            _currentTime.value = formatTime((now - sprintStartTime).roundToLong().coerceAtLeast(0))
         }
     }
 
@@ -79,10 +92,10 @@ class SprintTimingManager(
 
     override fun reset() {
         runHadGap = false
-        sprintStartTime = 0L
+        sprintStartTime = 0.0
         hasStarted = false
         hasFinished = false
-        _stintStart.value = SystemClock.elapsedRealtime()
+        _stintStart.value = clock()
         _eventCount.value = 0
         _completedLaps.value = emptyList()
         _currentTime.value = formatTime(0)

@@ -23,5 +23,11 @@ data class LapInfoData(
     val alt: Double?,
     val spd: Float?,
     val latgforce: Double?,
-    val longforce: Double?
+    val longforce: Double?,
+    /**
+     * When this point's fix arrived (wall-clock ms). Lets an old lap be replayed as a live
+     * delta reference exactly. Null for laps recorded before this column existed; those are
+     * rebuilt assuming the fixes were evenly spaced across the lap's known time instead.
+     */
+    val timestamp: Long? = null
 )
