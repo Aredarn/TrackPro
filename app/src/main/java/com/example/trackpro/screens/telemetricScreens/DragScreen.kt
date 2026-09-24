@@ -99,6 +99,8 @@ fun DragRaceScreen(
 
     // --- GPS & CONNECTION STATE ---
     val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
+    // For display only - the speed readout and the weather anchor, both of which want just
+    // the newest fix. Recording does not read this; see the recording effect below.
     val gpsData by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
 
     // --- VEHICLE SELECTION ---
@@ -147,25 +149,44 @@ fun DragRaceScreen(
         }
     }
 
-    // --- GPS UPDATE & METRIC CALCULATION ---
-    LaunchedEffect(gpsData) {
-        val data = gpsData ?: return@LaunchedEffect
+    // --- RECORDING ---
+    //
+    // Consumes the GPS flow directly rather than reacting to the Compose state above.
+    // collectAsState conflates - it keeps only the newest value - so a fix that arrived
+    // while the previous frame was still rendering was dropped outright. At 10 Hz that
+    // needs a frame over 100 ms, which this screen produces routinely: the speed chart
+    // rebuilds a 500-point cubic-bezier dataset and invalidates on every sample. What got
+    // lost was not a dropped frame but a missing row in the recorded trace, and with it a
+    // hole in the distance the quarter mile is measured over. TimeAttackViewModel collects
+    // the flow itself for exactly this reason.
+    //
+    // On Dispatchers.Default so sampling never queues behind that chart redraw - a
+    // collector on the main thread cannot run mid-frame, and a suspended collector is
+    // precisely when a StateFlow drops values. Snapshot state is safe to write from any
+    // thread, and this is the only writer of the state it touches.
+    LaunchedEffect(isSessionActive) {
+        if (!isSessionActive) return@LaunchedEffect
+        withContext(Dispatchers.Default) {
+            app.gpsManager.activeGpsFlow.collect { fix ->
+                // Cancelling this effect takes until the next recomposition, so the flag is
+                // what actually stops recording the instant Stop is pressed.
+                if (fix == null || !isSessionActive) return@collect
+                val now = System.currentTimeMillis()
 
-        if (isSessionActive) {
-            val currentSpeed = data.speed ?: 0f
-            val currentTime = System.currentTimeMillis()
+                elapsedTime = formatElapsedTime(now - sessionStartTime)
+                currentMetrics = dragCalculator.processRealtimeGPS(fix, now)
 
-            // Update elapsed time
-            val elapsed = currentTime - sessionStartTime
-            elapsedTime = formatElapsedTime(elapsed)
+                // Re-checked under the lock, because Stop snapshots and clears the buffer
+                // under the same lock from the main thread. Either this append lands before
+                // that snapshot and is saved with the run, or it is refused - never appended
+                // to an already-drained buffer, where it would surface in the next session.
+                synchronized(dataBuffer) {
+                    if (isSessionActive) dataBuffer.add(fix.copy(sessionid = sessionID))
+                }
 
-            // Process GPS through drag calculator
-            currentMetrics = dragCalculator.processRealtimeGPS(data, currentTime)
-
-            // Buffer data
-            synchronized(dataBuffer) { dataBuffer.add(data.copy(sessionid = sessionID)) }
-            speedDataPoints.add(Entry(chartIndex++, currentSpeed))
-            if (speedDataPoints.size > 500) speedDataPoints.removeAt(0)
+                speedDataPoints.add(Entry(chartIndex++, fix.speed ?: 0f))
+                if (speedDataPoints.size > 500) speedDataPoints.removeAt(0)
+            }
         }
     }
 
@@ -516,8 +537,17 @@ fun DragRaceScreen(
                                     trackId = null
                                 )
                             }
-                            isSessionActive = true
+                            // Before isSessionActive, which is what starts the recording
+                            // collector: it must never see a calculator holding the last
+                            // session, nor chart points from it.
+                            dragCalculator.resetRealtimeTracking()
+                            currentMetrics = dragCalculator.getCurrentMetrics()
+                            speedDataPoints.clear()
+                            chartIndex = 0f
+                            synchronized(dataBuffer) { dataBuffer.clear() }
+
                             sessionStartTime = System.currentTimeMillis()
+                            isSessionActive = true
 
                             // Capture conditions in the background off the current GPS fix.
                             // A drag session has no track to anchor to, so this needs a live
@@ -533,14 +563,9 @@ fun DragRaceScreen(
                                 }
                             }
 
-                            // Reset calculator
-                            dragCalculator.resetRealtimeTracking()
-                            currentMetrics = dragCalculator.getCurrentMetrics()
-                            speedDataPoints.clear()
-                            chartIndex = 0f
-
                         } else if (isSessionActive) {
-                            // Stop appending first - the GPS effect above checks this flag.
+                            // Stop appending first - the recording collector checks this
+                            // flag, including under the buffer lock.
                             isSessionActive = false
                             // Snapshot the buffer now that nothing else writes to it.
                             val pointsToSave = synchronized(dataBuffer) {
