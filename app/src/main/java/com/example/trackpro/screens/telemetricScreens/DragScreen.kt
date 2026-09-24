@@ -44,7 +44,7 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.SessionManager
-import com.example.trackpro.managerClasses.calculationClasses.DragMetrics
+import com.example.trackpro.managerClasses.calculationClasses.DragSpeedScale
 import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.viewModels.VehicleFULLViewModel
@@ -114,8 +114,18 @@ fun DragRaceScreen(
     var chartIndex by remember { mutableFloatStateOf(0f) }
 
     // --- DRAG CALCULATOR ---
-    val dragCalculator = remember { DragTimeCalculation(session = null, database = database) }
-    var currentMetrics by remember { mutableStateOf(DragMetrics()) }
+    // Built for the unit system in force when the screen opened, so an imperial driver is
+    // timed to 0-60 mph rather than to 0-60 km/h under an mph label. Deliberately not keyed
+    // on useMetric: each split carries its own label from here, so a session that is running
+    // stays self-consistent even if the setting is flipped underneath it.
+    val dragCalculator = remember {
+        DragTimeCalculation(
+            session = null,
+            database = database,
+            scale = DragSpeedScale.of(useMetric)
+        )
+    }
+    var currentMetrics by remember { mutableStateOf(dragCalculator.getCurrentMetrics()) }
 
     // --- TELEMETRY STATE ---
     var sessionStartTime by remember { mutableLongStateOf(0L) }
@@ -176,6 +186,17 @@ fun DragRaceScreen(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     if (isSessionActive) {
+                        // Which launch of this session is being timed. The run counter
+                        // re-arms when the car comes back to a standstill, and this is
+                        // what tells the driver it did - the next launch is measured too,
+                        // and the splits below hold the best of the session.
+                        if (currentMetrics.runCount > 0) {
+                            Text(
+                                "RUN ${currentMetrics.runCount}",
+                                style = TrackProType.label,
+                                color = TrackProTheme.colors.textMuted
+                            )
+                        }
                         Text(
                             elapsedTime,
                             style = TrackProType.statValue.atSize(13.sp),
@@ -289,18 +310,20 @@ fun DragRaceScreen(
             }
 
             // 3. THE SPLIT JUST HIT
-            // The dominant readout is whichever split most recently landed, held at full
-            // scale until the next one lands. Before the first split there is nothing to
-            // hold, so live speed takes the slot - which is what you would be watching
-            // anyway on the launch.
-            val latestSplit: Triple<String, String, String>? = listOfNotNull(
-                currentMetrics.time0to60?.let { Triple("0-60", formatTime(it), "SEC") },
-                currentMetrics.time0to100?.let { Triple("0-100", formatTime(it), "SEC") },
-                currentMetrics.time0to160?.let { Triple("0-160", formatTime(it), "SEC") },
-                currentMetrics.time0to200?.let { Triple("0-200", formatTime(it), "SEC") },
-                currentMetrics.quarterMileTime?.let { Triple("1/4 MILE", formatTime(it), "SEC") },
-                currentMetrics.halfMileTime?.let { Triple("1/2 MILE", formatTime(it), "SEC") }
-            ).lastOrNull()
+            // The dominant readout is the furthest split reached, held at full scale until
+            // a further one lands. Before the first split there is nothing to hold, so live
+            // speed takes the slot - which is what you would be watching anyway on the
+            // launch. Like every split on this screen it is the session's best, so a second
+            // run improving on the first updates it in place rather than resetting it.
+            val reachedSplits: List<Pair<String, Double>> =
+                currentMetrics.standing.mapNotNull { split ->
+                    split.seconds?.let { split.label to it }
+                } + listOfNotNull(
+                    currentMetrics.quarterMileTime?.let { "1/4 MILE" to it },
+                    currentMetrics.halfMileTime?.let { "1/2 MILE" to it }
+                )
+            val latestSplit: Pair<String, String>? = reachedSplits.lastOrNull()
+                ?.let { (label, seconds) -> label to formatTime(seconds) }
 
             Column(
                 modifier = Modifier
@@ -311,7 +334,7 @@ fun DragRaceScreen(
                 Readout(
                     value = latestSplit?.second
                         ?: (gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0"),
-                    caption = latestSplit?.let { "${it.first}  \u00b7  ${it.third}" }
+                    caption = latestSplit?.let { "${it.first}  \u00b7  SEC" }
                         ?: "Live speed \u00b7 ${UnitFormatter.speedUnitLabel(useMetric)}",
                     valueColor = if (latestSplit != null) TrackProTheme.colors.accent
                     else TrackProTheme.colors.marking,
@@ -366,33 +389,31 @@ fun DragRaceScreen(
             // Every split the run can produce, always present so the range is visible.
             // Unreached splits sit dim rather than absent - the same discipline the
             // segment bar uses for its unlit blocks.
-            val splitRows = listOf(
-                listOf(
-                    Triple("0-60", currentMetrics.time0to60?.let { formatTime(it) }, "SEC"),
-                    Triple("0-100", currentMetrics.time0to100?.let { formatTime(it) }, "SEC"),
-                    Triple("0-160", currentMetrics.time0to160?.let { formatTime(it) }, "SEC")
-                ),
-                listOf(
-                    Triple("0-200", currentMetrics.time0to200?.let { formatTime(it) }, "SEC"),
-                    Triple("50-150", currentMetrics.time50to150?.let { formatTime(it) }, "SEC"),
-                    Triple("100-200", currentMetrics.time100to200?.let { formatTime(it) }, "SEC")
-                ),
-                listOf(
-                    Triple("1/4 mile", currentMetrics.quarterMileTime?.let { formatTime(it) }, "SEC"),
-                    Triple("1/4 trap", currentMetrics.quarterMileSpeed?.let {
-                        UnitFormatter.formatSpeed(it, useMetric)
-                    }, UnitFormatter.speedUnitLabel(useMetric)),
-                    Triple("1/2 mile", currentMetrics.halfMileTime?.let { formatTime(it) }, "SEC")
-                )
+            // Speed milestones come from the calculator already labelled, so the tile can
+            // never claim a threshold the timer was not actually measuring. The two mile
+            // splits are appended here because they are distances, not speeds, and are
+            // imperial in both unit systems.
+            val speedCells = (currentMetrics.standing + currentMetrics.rolling).map { split ->
+                split.label to split.seconds?.let { formatTime(it) }
+            }
+            val splitCells = speedCells + listOf(
+                "1/4 mile" to currentMetrics.quarterMileTime?.let { formatTime(it) },
+                // Trap speed is the one cell here holding a speed rather than a time, so it
+                // carries its unit in the placard - every other cell is seconds.
+                "1/4 trap ${UnitFormatter.speedUnitLabel(useMetric)}" to
+                        currentMetrics.quarterMileSpeed?.let {
+                            UnitFormatter.formatSpeed(it, useMetric)
+                        },
+                "1/2 mile" to currentMetrics.halfMileTime?.let { formatTime(it) }
             )
 
-            splitRows.forEachIndexed { rowIndex, row ->
+            splitCells.chunked(3).forEachIndexed { rowIndex, row ->
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    row.forEachIndexed { i, cell ->
+                    row.forEachIndexed { i, (label, value) ->
                         Instrument(
-                            label = cell.first,
-                            value = cell.second ?: "\u2013\u2013.\u2013",
-                            valueColor = if (cell.second != null) TrackProTheme.colors.marking
+                            label = label,
+                            value = value ?: "\u2013\u2013.\u2013",
+                            valueColor = if (value != null) TrackProTheme.colors.marking
                             else TrackProTheme.colors.markingDim,
                             valueSize = 22.sp,
                             modifier = Modifier.weight(1f)
@@ -402,7 +423,7 @@ fun DragRaceScreen(
                         }
                     }
                 }
-                if (rowIndex < splitRows.lastIndex) Bezel()
+                if (rowIndex < (splitCells.size - 1) / 3) Bezel()
             }
 
             Bezel()
@@ -514,7 +535,7 @@ fun DragRaceScreen(
 
                             // Reset calculator
                             dragCalculator.resetRealtimeTracking()
-                            currentMetrics = DragMetrics()
+                            currentMetrics = dragCalculator.getCurrentMetrics()
                             speedDataPoints.clear()
                             chartIndex = 0f
 

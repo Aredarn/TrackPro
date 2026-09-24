@@ -4,6 +4,7 @@ import com.example.trackpro.dataClasses.LatLonOffset
 import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.calculationClasses.DragMetrics
+import com.example.trackpro.managerClasses.calculationClasses.DragSpeedScale
 import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
 import org.junit.Assert.*
 import org.junit.Before
@@ -21,8 +22,16 @@ class DragTimeCalculationTest {
     @Before
     fun setUp() {
         mockDatabase = mock(ESPDatabase::class.java)
-        calc = DragTimeCalculation(session = 1L, database = mockDatabase)
+        calc = DragTimeCalculation(
+            session = 1L,
+            database = mockDatabase,
+            scale = DragSpeedScale.Metric
+        )
     }
+
+    /** The seconds recorded for a split, by the label its scale gives it. */
+    private fun DragMetrics.split(label: String): Double? =
+        (standing + rolling).firstOrNull { it.label == label }?.seconds
 
     // ─────────────────────────────────────────────
     // Helper builders
@@ -63,17 +72,18 @@ class DragTimeCalculationTest {
     @Test
     fun `initial metrics are all null or zero`() {
         val m = calc.getCurrentMetrics()
-        assertNull(m.time0to60)
-        assertNull(m.time0to100)
-        assertNull(m.time0to160)
-        assertNull(m.time0to200)
-        assertNull(m.time50to150)
-        assertNull(m.time100to200)
+        assertEquals(
+            listOf("0-60", "0-100", "0-160", "0-200"),
+            m.standing.map { it.label }
+        )
+        assertEquals(listOf("50-150", "100-200"), m.rolling.map { it.label })
+        assertTrue((m.standing + m.rolling).all { it.seconds == null })
         assertNull(m.quarterMileTime)
         assertNull(m.quarterMileSpeed)
         assertNull(m.halfMileTime)
         assertEquals(0f, m.maxSpeed, 0f)
         assertEquals(0f, m.totalDistance, 0f)
+        assertEquals(0, m.runCount)
     }
 
     // ─────────────────────────────────────────────
@@ -85,7 +95,7 @@ class DragTimeCalculationTest {
         // Feed only moving data without a standing start → no 0-60 recorded
         val speeds = List(20) { 30f + it * 3f }   // 30, 33, 36 … already moving
         feedSequence(speeds)
-        assertNull(calc.getCurrentMetrics().time0to60)
+        assertNull(calc.getCurrentMetrics().split("0-60"))
     }
 
     @Test
@@ -93,7 +103,7 @@ class DragTimeCalculationTest {
         // 0 km/h for 3 samples, then ramp up
         val speeds = listOf(0f, 0f, 0f) + (1..70).map { it.toFloat() }
         feedSequence(speeds)
-        assertNotNull(calc.getCurrentMetrics().time0to60)
+        assertNotNull(calc.getCurrentMetrics().split("0-60"))
     }
 
     // ─────────────────────────────────────────────
@@ -110,15 +120,15 @@ class DragTimeCalculationTest {
         feedSequence(speeds, intervalMs = 100L)
 
         val m = calc.getCurrentMetrics()
-        assertNotNull(m.time0to60)
-        assertEquals(0.5, m.time0to60!!, 0.01)   // 5 * 100 ms = 500 ms = 0.5 s
+        assertNotNull(m.split("0-60"))
+        assertEquals(0.5, m.split("0-60")!!, 0.01)   // 5 * 100 ms = 500 ms = 0.5 s
     }
 
     @Test
     fun `0-100 is null while max speed is below 100`() {
         val speeds = listOf(0f, 20f, 40f, 60f, 80f)
         feedSequence(speeds)
-        assertNull(calc.getCurrentMetrics().time0to100)
+        assertNull(calc.getCurrentMetrics().split("0-100"))
     }
 
     @Test
@@ -129,8 +139,8 @@ class DragTimeCalculationTest {
         feedSequence(speeds, intervalMs = 200L)
 
         val m = calc.getCurrentMetrics()
-        assertNotNull(m.time0to100)
-        assertEquals(1.8, m.time0to100!!, 0.01)
+        assertNotNull(m.split("0-100"))
+        assertEquals(1.8, m.split("0-100")!!, 0.01)
     }
 
     @Test
@@ -138,11 +148,137 @@ class DragTimeCalculationTest {
         val speeds = listOf(0f) + (1..100).map { it.toFloat() }
         feedSequence(speeds, intervalMs = 100L)
 
-        val firstCapture = calc.getCurrentMetrics().time0to60
+        val firstCapture = calc.getCurrentMetrics().split("0-60")
         // Feed more data
         calc.processRealtimeGPS(gps(150f), t0 + 200_000L)
 
-        assertEquals(firstCapture, calc.getCurrentMetrics().time0to60)
+        assertEquals(firstCapture, calc.getCurrentMetrics().split("0-60"))
+    }
+
+    // ─────────────────────────────────────────────
+    // 3b. Multiple runs in one session
+    // ─────────────────────────────────────────────
+
+    /** Stop, then launch at 10 km/h per step until [topSpeed]. */
+    private fun launch(topSpeed: Float): List<Float> =
+        listOf(0f, 0f) + generateSequence(10f) { it + 10f }.takeWhile { it <= topSpeed }.toList()
+
+    @Test
+    fun `a second run in the same session is timed`() {
+        // The regression: hasStartedRun latched on the first launch, so every later run in
+        // a session was ignored entirely.
+        feedSequence(launch(60f), intervalMs = 1000L)     // slow first run
+        val afterFirst = calc.getCurrentMetrics()
+        assertNotNull(afterFirst.split("0-60"))
+        assertEquals(1, afterFirst.runCount)
+
+        feedSequence(launch(60f), intervalMs = 100L)      // quicker second run
+        val afterSecond = calc.getCurrentMetrics()
+
+        assertEquals(2, afterSecond.runCount)
+        assertTrue(
+            "second run should have improved 0-60",
+            afterSecond.split("0-60")!! < afterFirst.split("0-60")!!
+        )
+    }
+
+    @Test
+    fun `a slower later run does not replace a quicker one`() {
+        feedSequence(launch(60f), intervalMs = 100L)      // quick first run
+        val quick = calc.getCurrentMetrics().split("0-60")!!
+
+        feedSequence(launch(60f), intervalMs = 1000L)     // slow second run
+
+        assertEquals(quick, calc.getCurrentMetrics().split("0-60")!!, 0.001)
+    }
+
+    @Test
+    fun `a rollout does not own the session`() {
+        // A crawl out of the paddock that reaches 60 slowly used to take the 0-60 slot for
+        // the whole session with no way to redo it.
+        feedSequence(launch(60f), intervalMs = 2000L)
+        val rollout = calc.getCurrentMetrics().split("0-60")!!
+
+        feedSequence(launch(60f), intervalMs = 100L)
+
+        assertTrue(calc.getCurrentMetrics().split("0-60")!! < rollout)
+    }
+
+    @Test
+    fun `each run is timed from its own launch, not from the session start`() {
+        // Run 1 at 1 s per 10 km/h, a long pause, then run 2 at 100 ms per 10 km/h.
+        feedSequence(launch(60f), intervalMs = 1000L)
+        calc.processRealtimeGPS(gps(0f), t0 + 600_000L)   // parked for ten minutes
+
+        var time = t0 + 700_000L
+        listOf(0f, 10f, 20f, 30f, 40f, 50f, 60f).forEach { speed ->
+            calc.processRealtimeGPS(gps(speed), time)
+            time += 100L
+        }
+
+        // 0.5 s, not ten minutes and change.
+        assertEquals(0.5, calc.getCurrentMetrics().split("0-60")!!, 0.01)
+    }
+
+    @Test
+    fun `runCount ignores GPS noise around a standstill`() {
+        // Parked, with speed flickering either side of the 2 km/h stopped threshold.
+        listOf(0f, 3f, 0f, 4f, 1f, 3f, 0f).forEachIndexed { i, speed ->
+            calc.processRealtimeGPS(gps(speed), t0 + i * 1000L)
+        }
+
+        assertEquals(0, calc.getCurrentMetrics().runCount)
+    }
+
+    // ─────────────────────────────────────────────
+    // 3c. Imperial scale
+    // ─────────────────────────────────────────────
+
+    @Test
+    fun `imperial splits are labelled for the milestones they measure`() {
+        val imperial = DragTimeCalculation(1L, mockDatabase, DragSpeedScale.Imperial)
+
+        val m = imperial.getCurrentMetrics()
+
+        assertEquals(listOf("0-30", "0-60", "0-100", "0-120"), m.standing.map { it.label })
+        assertEquals(listOf("40-100", "60-130"), m.rolling.map { it.label })
+    }
+
+    @Test
+    fun `imperial 0-60 means 60 mph, not 60 kmh`() {
+        // The bug: thresholds were hardcoded km/h while the tile said "0-60", so an imperial
+        // driver was shown 0-37 mph as their 0-60. 60 mph is 96.6 km/h.
+        val imperial = DragTimeCalculation(1L, mockDatabase, DragSpeedScale.Imperial)
+
+        // Stand still, then hold 90 km/h (56 mph) - past 60 km/h, short of 60 mph.
+        listOf(0f, 90f, 90f, 90f).forEachIndexed { i, speed ->
+            imperial.processRealtimeGPS(gps(speed), t0 + i * 1000L)
+        }
+        assertNull("56 mph must not satisfy 0-60 mph", imperial.getCurrentMetrics().split("0-60"))
+
+        // 97 km/h is just over 60 mph.
+        imperial.processRealtimeGPS(gps(97f), t0 + 4000L)
+        assertNotNull(imperial.getCurrentMetrics().split("0-60"))
+    }
+
+    @Test
+    fun `metric 0-60 still means 60 kmh`() {
+        feedSequence(listOf(0f, 30f, 61f), intervalMs = 1000L)
+
+        assertNotNull(calc.getCurrentMetrics().split("0-60"))
+    }
+
+    @Test
+    fun `imperial rolling interval uses mph bounds`() {
+        // 60-130 mph is 96.6-209.2 km/h.
+        val imperial = DragTimeCalculation(1L, mockDatabase, DragSpeedScale.Imperial)
+
+        listOf(0f to 0L, 97f to 1000L, 200f to 3000L)
+            .forEach { (speed, offset) -> imperial.processRealtimeGPS(gps(speed), t0 + offset) }
+        assertNull("200 km/h is short of 130 mph", imperial.getCurrentMetrics().split("60-130"))
+
+        imperial.processRealtimeGPS(gps(210f), t0 + 4000L)
+        assertEquals(3.0, imperial.getCurrentMetrics().split("60-130")!!, 0.05)
     }
 
     // ─────────────────────────────────────────────
@@ -156,8 +292,8 @@ class DragTimeCalculationTest {
         feedSequence(speeds, intervalMs = 100L)
 
         val m = calc.getCurrentMetrics()
-        assertNotNull(m.time50to150)
-        assertEquals(1.0, m.time50to150!!, 0.02)
+        assertNotNull(m.split("50-150"))
+        assertEquals(1.0, m.split("50-150")!!, 0.02)
     }
 
     @Test
@@ -174,16 +310,45 @@ class DragTimeCalculationTest {
         }
 
         // The result should be measured from the SECOND time 50 was hit
-        assertNotNull(calc.getCurrentMetrics().time50to150)
+        assertNotNull(calc.getCurrentMetrics().split("50-150"))
         // Phase 2: 50 at index 3 (t0+3s), 150 at index 5 (t0+5s) → 2 s
-        assertEquals(2.0, calc.getCurrentMetrics().time50to150!!, 0.05)
+        assertEquals(2.0, calc.getCurrentMetrics().split("50-150")!!, 0.05)
+    }
+
+    @Test
+    fun `50-150 is measured on every pull and keeps the quickest`() {
+        // First pull: 50 at t0, 150 at t0+4s. Drop back to 40, then a 2 s pull.
+        listOf(50f to 0L, 100f to 2000L, 150f to 4000L, 40f to 6000L,
+               50f to 7000L, 100f to 8000L, 150f to 9000L)
+            .forEach { (speed, offset) -> calc.processRealtimeGPS(gps(speed), t0 + offset) }
+
+        assertEquals(2.0, calc.getCurrentMetrics().split("50-150")!!, 0.05)
+    }
+
+    @Test
+    fun `50-150 does not re-open at speed after being recorded`() {
+        // Without requiring a drop back below the reset speed, clearing the timer at 150
+        // immediately re-started it from there and recorded an instant second interval.
+        listOf(50f to 0L, 150f to 4000L, 160f to 5000L, 170f to 6000L)
+            .forEach { (speed, offset) -> calc.processRealtimeGPS(gps(speed), t0 + offset) }
+
+        assertEquals(4.0, calc.getCurrentMetrics().split("50-150")!!, 0.05)
+    }
+
+    @Test
+    fun `50-150 is not timed when the recording joins above the band`() {
+        // Starting a session already at 140 km/h must not produce an instant 50-150.
+        listOf(140f to 0L, 150f to 1000L, 160f to 2000L)
+            .forEach { (speed, offset) -> calc.processRealtimeGPS(gps(speed), t0 + offset) }
+
+        assertNull(calc.getCurrentMetrics().split("50-150"))
     }
 
     @Test
     fun `50-150 is null when speed never reaches 150`() {
         val speeds = listOf(0f, 50f, 80f, 120f)
         feedSequence(speeds)
-        assertNull(calc.getCurrentMetrics().time50to150)
+        assertNull(calc.getCurrentMetrics().split("50-150"))
     }
 
     // ─────────────────────────────────────────────
@@ -198,8 +363,8 @@ class DragTimeCalculationTest {
         calc.processRealtimeGPS(gps(200f), t0 + 5000L)
 
         val m = calc.getCurrentMetrics()
-        assertNotNull(m.time100to200)
-        assertEquals(5.0, m.time100to200!!, 0.01)
+        assertNotNull(m.split("100-200"))
+        assertEquals(5.0, m.split("100-200")!!, 0.01)
     }
 
     @Test
@@ -210,8 +375,8 @@ class DragTimeCalculationTest {
         calc.processRealtimeGPS(gps(200f), t0 + 4000L)  // 200 km/h reached
 
         val m = calc.getCurrentMetrics()
-        assertNotNull(m.time100to200)
-        assertEquals(2.0, m.time100to200!!, 0.01)
+        assertNotNull(m.split("100-200"))
+        assertEquals(2.0, m.split("100-200")!!, 0.01)
     }
 
     // ─────────────────────────────────────────────
@@ -274,12 +439,13 @@ class DragTimeCalculationTest {
         calc.resetRealtimeTracking()
 
         val m = calc.getCurrentMetrics()
-        assertNull(m.time0to60)
-        assertNull(m.time0to100)
-        assertNull(m.time50to150)
-        assertNull(m.time100to200)
+        assertNull(m.split("0-60"))
+        assertNull(m.split("0-100"))
+        assertNull(m.split("50-150"))
+        assertNull(m.split("100-200"))
         assertEquals(0f, m.maxSpeed, 0f)
         assertEquals(0f, m.totalDistance, 0f)
+        assertEquals(0, m.runCount)
     }
 
     @Test
@@ -290,7 +456,7 @@ class DragTimeCalculationTest {
         val speeds = listOf(0f) + (1..7).map { it * 10f }
         feedSequence(speeds, intervalMs = 500L)
 
-        assertNotNull(calc.getCurrentMetrics().time0to60)
+        assertNotNull(calc.getCurrentMetrics().split("0-60"))
     }
 
     // ─────────────────────────────────────────────
@@ -311,8 +477,8 @@ class DragTimeCalculationTest {
 
         val result = calc.calculateFullSessionMetrics(sessionData)
         // 0-60: hit at step 6 (t0+6000 ms), run start at step 1 (t0+1000 ms) → 5 s
-        assertNotNull(result.time0to60)
-        assertEquals(5.0, result.time0to60!!, 0.1)
+        assertNotNull(result.split("0-60"))
+        assertEquals(5.0, result.split("0-60")!!, 0.1)
     }
 
     @Test
@@ -324,7 +490,7 @@ class DragTimeCalculationTest {
         )
         // Should not throw; 0-60 must be captured from sorted processing
         val result = calc.calculateFullSessionMetrics(data)
-        assertNotNull(result.time0to60)
+        assertNotNull(result.split("0-60"))
     }
 
     // ─────────────────────────────────────────────
