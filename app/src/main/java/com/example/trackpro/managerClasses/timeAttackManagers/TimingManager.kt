@@ -16,11 +16,18 @@ sealed class TimingMode {
  * database round trip, at full millisecond precision. [splits] are the sector splits driven
  * on that lap in driving order, including the final sector closed by the finish line;
  * empty for sprints and for tracks with no marked sectors.
+ *
+ * [signalGap] means GPS went quiet for longer than [TimingManager.SIGNAL_GAP_MS] at some
+ * point during the lap. The time may still be right - both line crossings can be seen either
+ * side of a short gap - but if the gap covered the finish line, the crossing was never seen
+ * and this "lap" is really two merged into one. There is no telling which from here, so the
+ * lap is flagged rather than discarded, and the driver judges.
  */
 data class CompletedLap(
     val number: Int,
     val timeMs: Long,
-    val splits: List<SectorSplit> = emptyList()
+    val splits: List<SectorSplit> = emptyList(),
+    val signalGap: Boolean = false
 )
 
 abstract class TimingManager {
@@ -42,6 +49,15 @@ abstract class TimingManager {
     val completedLaps get() = _completedLaps
 
     abstract fun handleGpsUpdate(prev: RawGPSData?, current: RawGPSData)
+
+    /**
+     * Whether two consecutive fixes are far enough apart that fixes were lost between them.
+     * Measured on the fixes' own receipt times, so it catches every cause alike: a dropped
+     * link, a reconnect, or phone GPS throttled while the app was in the background.
+     */
+    protected fun isSignalGap(prev: RawGPSData, current: RawGPSData): Boolean =
+        current.timestamp - prev.timestamp > SIGNAL_GAP_MS
+
     abstract fun reset()
     abstract fun startNewEvent()
 
@@ -51,4 +67,12 @@ abstract class TimingManager {
         (millis % 60000) / 1000,
         (millis % 1000) / 10
     )
+
+    companion object {
+        /**
+         * Silence between fixes that counts as lost signal. Every supported rate is 1 Hz or
+         * faster, so this is at least one whole missed fix at the slowest and twenty at 10 Hz.
+         */
+        const val SIGNAL_GAP_MS = 2_000L
+    }
 }

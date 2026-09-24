@@ -48,6 +48,7 @@ import androidx.core.graphics.toColorInt
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.pressable
 import com.example.trackpro.components.Haptic
+import com.example.trackpro.components.KeepScreenOn
 import com.example.trackpro.components.AppCard
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.Bezel
@@ -95,6 +96,9 @@ fun DragRaceScreen(
     val elapsedTime by recorder.elapsedTime.collectAsState()
     val speedSamples by recorder.speedSamples.collectAsState()
     val selectedVehicleId by recorder.selectedVehicleId.collectAsState()
+
+    // Only while recording: waiting on the start screen should not hold the display on.
+    KeepScreenOn(isSessionActive)
 
     // --- GPS & CONNECTION STATE ---
     val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)

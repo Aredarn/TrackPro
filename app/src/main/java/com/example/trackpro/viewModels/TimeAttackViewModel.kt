@@ -12,7 +12,6 @@ import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.LatLonOffset
-import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.timeAttackManagers.CircuitTimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.CompletedLap
 import com.example.trackpro.managerClasses.timeAttackManagers.SectorSplit
@@ -21,6 +20,7 @@ import com.example.trackpro.managerClasses.timeAttackManagers.TimingManager
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry
 import com.example.trackpro.managerClasses.timeAttackManagers.TrackGeometry.calculateFinishLine
+import com.example.trackpro.managerClasses.RecordingService
 import com.example.trackpro.managerClasses.utilities.LapStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,8 +43,6 @@ import kotlin.collections.emptyList
 class TimeAttackViewModel(
     context: Context
 ) : ViewModel() {
-    private var tcpClient: ESPTcpClient? = null
-
     private val app = context.applicationContext as TrackProApp
     val database = app.database
 
@@ -126,7 +124,7 @@ class TimeAttackViewModel(
         super.onCleared()
         gpsJob?.cancel()
         gpsJob = null
-        tcpClient?.disconnect()
+        RecordingService.release(app, RECORDING_HOLDER)
         timingManager?.reset()
         app.applicationScope.launch(Dispatchers.IO) {
             endSession()
@@ -154,8 +152,8 @@ class TimeAttackViewModel(
                                 val manager = CircuitTimingManager(_finishLine.value, _sectorLines.value)
                                 timingManager = manager
                                 viewModelScope.launch {
-                                    manager.lapCompletedChannel.consumeAsFlow().collect { lapMs ->
-                                        handleCompletedLap(lapMs)
+                                    manager.lapCompletedChannel.consumeAsFlow().collect { lap ->
+                                        handleCompletedLap(lap)
                                     }
                                 }
                                 viewModelScope.launch {
@@ -171,8 +169,8 @@ class TimeAttackViewModel(
                                 val manager = SprintTimingManager(start, finish)
                                 timingManager = manager
                                 viewModelScope.launch {
-                                    manager.sprintCompletedChannel.consumeAsFlow().collect { sprintMs ->
-                                        handleCompletedSprint(sprintMs)
+                                    manager.sprintCompletedChannel.consumeAsFlow().collect { run ->
+                                        handleCompletedSprint(run)
                                     }
                                 }
                             }
@@ -227,19 +225,20 @@ class TimeAttackViewModel(
         }
     }
 
-    private fun handleCompletedLap(lapMs: Long) {
+    private fun handleCompletedLap(lap: CompletedLap) {
         viewModelScope.launch(Dispatchers.IO) {
             if (_sessionId == -1L || _lapId == -1L) {
                 Log.w("TimeAttack", "Cannot complete lap: session or lap ID invalid")
                 return@launch
             }
 
-            val lapTimeStr = formatLapTime(lapMs)
+            val lapTimeStr = formatLapTime(lap.timeMs)
 
             try {
-                // 1. Mark the current lap as COMPLETED
-                database.lapTimeDataDAO().updateLapTime(_lapId, lapTimeStr)
-                Log.d("TimeAttack", "Lap $_lapId COMPLETED with time $lapTimeStr")
+                // 1. Mark the current lap as COMPLETED, with whether GPS dropped out during it
+                database.lapTimeDataDAO().completeLap(_lapId, lapTimeStr, lap.signalGap)
+                Log.d("TimeAttack", "Lap $_lapId COMPLETED with time $lapTimeStr" +
+                        if (lap.signalGap) " (GPS gap during lap)" else "")
 
                 // 2. For circuits, immediately start the next lap
                 if (_timingMode.value is TimingMode.Circuit) {
@@ -273,18 +272,18 @@ class TimeAttackViewModel(
         }
     }
 
-    private fun handleCompletedSprint(sprintMs: Long) {
+    private fun handleCompletedSprint(run: CompletedLap) {
         viewModelScope.launch(Dispatchers.IO) {
             if (_sessionId == -1L || _lapId == -1L) {
                 Log.w("TimeAttack", "Cannot complete sprint: session or lap ID invalid")
                 return@launch
             }
 
-            val sprintTimeStr = formatLapTime(sprintMs)
+            val sprintTimeStr = formatLapTime(run.timeMs)
 
             try {
-                // Mark the current sprint as COMPLETED
-                database.lapTimeDataDAO().updateLapTime(_lapId, sprintTimeStr)
+                // Mark the current sprint as COMPLETED, with whether GPS dropped out during it
+                database.lapTimeDataDAO().completeLap(_lapId, sprintTimeStr, run.signalGap)
                 Log.d("TimeAttack", "Sprint $_lapId COMPLETED with time $sprintTimeStr")
 
                 // Don't create a new lap for sprints - user manually starts each run
@@ -328,6 +327,9 @@ class TimeAttackViewModel(
 
                     // Start the first lap
                     startNewLap(lapNumber = 1)
+
+                    // Held until onCleared, which is when this session ends.
+                    RecordingService.acquire(app, RECORDING_HOLDER)
 
                     // Capture conditions in the background. The track's own coordinates are a
                     // better location source here than the live GPS fix: they're definitionally
@@ -385,6 +387,11 @@ class TimeAttackViewModel(
             _lapId = database.lapTimeDataDAO().insert(lapTimeData)
             Log.d("TimeAttack", "Started Lap $lapNumber with ID $_lapId (status: ${LapStatus.IN_PROGRESS})")
         }
+    }
+
+    private companion object {
+        /** This screen's claim on RecordingService; see RecordingService.acquire. */
+        const val RECORDING_HOLDER = "timeAttack"
     }
 
     suspend fun endSession() {

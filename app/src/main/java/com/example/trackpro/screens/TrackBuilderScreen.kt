@@ -1,4 +1,5 @@
 package com.example.trackpro.screens
+import com.example.trackpro.components.KeepScreenOn
 import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
@@ -86,6 +87,8 @@ fun TrackBuilderScreen(
 
     // State
     var isLiveRecording by remember { mutableStateOf(false) }
+    // Recording a circuit by driving or walking it is exactly when nobody touches the phone.
+    KeepScreenOn(isLiveRecording)
     var trackID by remember { mutableLongStateOf(-1) }
     var trackMode by remember { mutableStateOf("Circuit") }
     var trackName by remember { mutableStateOf("") }

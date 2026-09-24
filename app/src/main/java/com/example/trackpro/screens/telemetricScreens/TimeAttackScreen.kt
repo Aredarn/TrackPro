@@ -54,6 +54,7 @@ import com.example.trackpro.managerClasses.timeAttackManagers.SectorSplit
 import com.example.trackpro.managerClasses.timeAttackManagers.TimingMode
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import com.example.trackpro.components.Haptic
+import com.example.trackpro.components.KeepScreenOn
 import com.example.trackpro.components.rememberHaptics
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.Bezel
@@ -105,6 +106,10 @@ fun TimeAttackScreenView(
     val vm: TimeAttackViewModel = viewModel(
         factory = TimeAttackViewModelFactory(context)
     )
+
+    // The session is live the whole time this screen is up, and a mounted phone is never
+    // touched - left to its normal timeout it slept mid-lap.
+    KeepScreenOn()
 
     // ── Collect all state ──────────────────────────────────
     val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
@@ -798,6 +803,16 @@ private fun LapRow(lap: CompletedLap, isBest: Boolean, gapToBestMs: Long) {
                         style = TrackProType.statValue.atSize(18.sp),
                         color = if (isBest) TrackProTheme.colors.accent else TrackProTheme.colors.marking
                     )
+                    // GPS dropped out during this lap. In the fault colour because it may be
+                    // two laps merged into one - see CompletedLap.signalGap.
+                    if (lap.signalGap) {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "GPS GAP",
+                            style = TrackProType.label,
+                            color = TrackProTheme.colors.danger
+                        )
+                    }
                 }
                 if (isBest) {
                     Text(

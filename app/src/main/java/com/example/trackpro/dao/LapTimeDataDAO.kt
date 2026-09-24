@@ -70,6 +70,11 @@ interface LapTimeDataDAO {
     @Query("UPDATE lap_time_data SET laptime = :time WHERE id = :lapId")
     suspend fun updateLapTime(lapId: Long, time: String)
 
+    // Closes an in-progress lap: its time, and whether GPS dropped out during it. One write,
+    // so a lap is never left timed but unflagged.
+    @Query("UPDATE lap_time_data SET laptime = :time, signalGap = :signalGap WHERE id = :lapId")
+    suspend fun completeLap(lapId: Long, time: String, signalGap: Boolean)
+
 
     @Query("""
     SELECT * FROM lap_time_data 

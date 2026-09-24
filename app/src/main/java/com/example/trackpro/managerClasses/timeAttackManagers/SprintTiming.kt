@@ -16,11 +16,17 @@ class SprintTimingManager(
     private var hasStarted = false
     private var hasFinished = false
 
-    val sprintCompletedChannel = Channel<Long>(Channel.UNLIMITED)
+    val sprintCompletedChannel = Channel<CompletedLap>(Channel.UNLIMITED)
+
+    /** Whether the run in progress has seen a GPS gap; see [CompletedLap.signalGap]. */
+    private var runHadGap = false
 
     override fun handleGpsUpdate(prev: RawGPSData?, current: RawGPSData) {
         val now = SystemClock.elapsedRealtime()
         if (prev == null) return
+
+        // Before the finish check, so a gap that swallowed the line marks this run.
+        if (hasStarted && !hasFinished && isSignalGap(prev, current)) runHadGap = true
 
         // 1. START LOGIC: Only look for start if we haven't moved yet
         if (!hasStarted) {
@@ -29,6 +35,7 @@ class SprintTimingManager(
                 sprintStartTime = now
                 hasStarted = true
                 hasFinished = false
+                runHadGap = false
                 Log.d("SprintManager", "START LINE CROSSED")
             }
         }
@@ -40,9 +47,13 @@ class SprintTimingManager(
                 val sprintMs = now - sprintStartTime
                 updateTimes(sprintMs)
                 _eventCount.value += 1
-                _completedLaps.value = _completedLaps.value +
-                        CompletedLap(number = _eventCount.value, timeMs = sprintMs)
-                sprintCompletedChannel.trySend(sprintMs)
+                val finishedRun = CompletedLap(
+                    number = _eventCount.value,
+                    timeMs = sprintMs,
+                    signalGap = runHadGap
+                )
+                _completedLaps.value = _completedLaps.value + finishedRun
+                sprintCompletedChannel.trySend(finishedRun)
 
                 hasStarted = false // Reset for next run
                 hasFinished = true
@@ -67,6 +78,7 @@ class SprintTimingManager(
     }
 
     override fun reset() {
+        runHadGap = false
         sprintStartTime = 0L
         hasStarted = false
         hasFinished = false

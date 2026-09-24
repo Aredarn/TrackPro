@@ -587,6 +587,18 @@ private fun LapRow(
                 ) {
                     Text(badge.uppercase(), style = TrackProType.label.atSize(8.sp), color = accentColor)
                 }
+                // GPS dropped out during this lap, so its time may be two laps merged into
+                // one. Flagged rather than hidden - the driver knows whether it was.
+                if (lap.signalGap) {
+                    val fault = TrackProTheme.colors.danger
+                    Box(
+                        modifier = Modifier
+                            .background(fault.copy(alpha = 0.15f), TrackProShapes.badge)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text("GPS GAP", style = TrackProType.label.atSize(8.sp), color = fault)
+                    }
+                }
             }
 
             // Center: top speed

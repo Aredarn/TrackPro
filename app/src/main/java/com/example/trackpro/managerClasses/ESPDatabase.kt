@@ -39,7 +39,7 @@ import com.example.trackpro.dataClasses.VehicleInformationData
     LapTimeData::class,
     LapInfoData::class,
     SectorTimeData::class
-], version = 5, exportSchema = true)
+], version = 6, exportSchema = true)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun rawGPSDataDao(): RawGPSDataDao
@@ -174,6 +174,19 @@ abstract class ESPDatabase : RoomDatabase() {
         }
 
         /**
+         * v5 -> v6: flags laps during which GPS dropped out.
+         *
+         * A plain ALTER works here, unlike the NOT NULL column added in 2 -> 3, because the
+         * entity declares the same DEFAULT 0 - so the column this produces is exactly the
+         * one Room validates against.
+         */
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `lap_time_data` ADD COLUMN `signalGap` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /**
          * Every migration, in order. This is the single list the production database is
          * built with; the instrumented migration tests run exactly the same array so a
          * migration can't be tested but forgotten here, or vice versa.
@@ -182,7 +195,8 @@ abstract class ESPDatabase : RoomDatabase() {
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
-            MIGRATION_4_5
+            MIGRATION_4_5,
+            MIGRATION_5_6
         )
 
         fun getInstance(context: Context): ESPDatabase {

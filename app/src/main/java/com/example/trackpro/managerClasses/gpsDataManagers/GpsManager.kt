@@ -61,8 +61,9 @@ class GpsManager(
         }
 
         // Re-assert the desired rate whenever the active provider becomes
-        // connected — covers both a fresh connection and switching source onto
-        // an already-live provider. distinctUntilChanged() MUST precede
+        // connected — covers a fresh connection, switching source onto an
+        // already-live provider, and every automatic reconnect after a dropped
+        // link (the ESP32 may have rebooted and come back at its default rate). distinctUntilChanged() MUST precede
         // filter{it}: when switching sources the flattened sequence is
         // true(old)->false(new starting)->true(new connected); filtering first
         // would hide the intervening false, so distinctUntilChanged would then

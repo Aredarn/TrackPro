@@ -27,6 +27,12 @@
             </intent-filter>
         </activity>
 
+        <!-- Keeps a recording alive with the screen off. location for phone GPS,
+             connectedDevice for the ESP32 over Wi-Fi or Bluetooth. -->
+        <service
+            android:name=".managerClasses.RecordingService"
+            android:exported="false"
+            android:foregroundServiceType="location|connectedDevice" />
 
     </application>
 
@@ -42,5 +48,15 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Recording with the screen off. The typed permissions are required from Android 14.
+         connectedDevice additionally needs one of a set of permissions; CHANGE_WIFI_STATE
+         above is one, and is granted at install. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- Lets the recording notification be shown on Android 13+. Not requested at runtime:
+         the service runs either way, and without it the notification is only hidden. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 </manifest>

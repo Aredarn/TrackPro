@@ -48,7 +48,10 @@ class CircuitTimingManager(
     private val currentLapTrace = mutableListOf<Pair<Double, Long>>()
     private var bestLapTrace: List<Pair<Double, Long>> = emptyList()
 
-    val lapCompletedChannel = Channel<Long>(Channel.UNLIMITED)
+    val lapCompletedChannel = Channel<CompletedLap>(Channel.UNLIMITED)
+
+    /** Whether the lap in progress has seen a GPS gap; see [CompletedLap.signalGap]. */
+    private var currentLapHadGap = false
     val sectorCompletedChannel = Channel<SectorSplit>(Channel.UNLIMITED)
 
     private val _currentLapSplits = MutableStateFlow<List<SectorSplit>>(emptyList())
@@ -63,6 +66,10 @@ class CircuitTimingManager(
     ) {
         val now = SystemClock.elapsedRealtime()
         prev?.let { prevData ->
+            // Checked before the finish line below, so a gap that swallowed the line marks
+            // the lap it merged rather than the one that follows.
+            if (hasStarted && isSignalGap(prevData, current)) currentLapHadGap = true
+
             if (hasStarted) {
                 currentLapDistanceMeters += haversineDistance(
                     prevData.latitude, prevData.longitude,
@@ -86,6 +93,7 @@ class CircuitTimingManager(
                 if (!hasStarted) {
                     hasStarted = true
                     lapDirection = finishCrossing.direction
+                    currentLapHadGap = false
                     lastCrossTime = now
                     lapStartTime = now
                     lastSplitTime = now
@@ -97,14 +105,21 @@ class CircuitTimingManager(
                 } else {
                     val lapMs = now - lapStartTime
                     val isNewBest = updateTimes(lapMs)
-                    if (isNewBest) {
+                    // A lap with a GPS gap can still hold the best time - both crossings may
+                    // have been seen - but its trace cannot be the live-delta reference: the
+                    // gap is a straight chord where distance was under-counted, which would
+                    // skew every delta measured against it for the rest of the session. The
+                    // previous reference stays until a clean lap replaces it.
+                    if (isNewBest && !currentLapHadGap) {
                         bestLapTrace = currentLapTrace.toList()
                     }
                     val finishedLap = CompletedLap(
                         number = _eventCount.value + 1,
                         timeMs = lapMs,
-                        splits = closeFinalSector(_currentLapSplits.value, now)
+                        splits = closeFinalSector(_currentLapSplits.value, now),
+                        signalGap = currentLapHadGap
                     )
+                    currentLapHadGap = false
                     lastCrossTime = now
                     lapStartTime = now
                     lastSplitTime = now
@@ -115,7 +130,7 @@ class CircuitTimingManager(
                     _liveDelta.value = null
                     _eventCount.value += 1
                     _completedLaps.value = _completedLaps.value + finishedLap
-                    lapCompletedChannel.trySend(lapMs)
+                    lapCompletedChannel.trySend(finishedLap)
                 }
             }
 
@@ -230,6 +245,7 @@ class CircuitTimingManager(
         lastSplitTime = lapStartTime
         hasStarted = false
         lapDirection = null
+        currentLapHadGap = false
         currentSectorIndex = 0
         bestSectorMs.clear()
         currentLapDistanceMeters = 0.0
@@ -243,6 +259,7 @@ class CircuitTimingManager(
     }
 
     override fun startNewEvent() {
+        currentLapHadGap = false
         lapStartTime = SystemClock.elapsedRealtime()
         lastSplitTime = lapStartTime
         currentSectorIndex = 0
