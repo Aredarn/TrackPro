@@ -340,7 +340,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("drag") {
-                        DragRaceScreen(database, sessionManager, vehicleFULLViewModel, onBack = { navController.popBackStack() })
+                        DragRaceScreen(vehicleFULLViewModel, onBack = { navController.popBackStack() })
                     }
                     composable("esptest") {
                         ESPConnectionTestScreen(

@@ -21,17 +21,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,11 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.trackpro.TrackProApp
-import com.example.trackpro.dataClasses.VehicleInformationData
-import com.example.trackpro.managerClasses.ESPDatabase
-import com.example.trackpro.managerClasses.SessionManager
-import com.example.trackpro.managerClasses.calculationClasses.DragSpeedScale
-import com.example.trackpro.managerClasses.calculationClasses.DragTimeCalculation
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.trackpro.viewModels.DragRecordingViewModel
+import com.example.trackpro.viewModels.DragRecordingViewModelFactory
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.viewModels.VehicleFULLViewModel
 import com.github.mikephil.charting.charts.LineChart
@@ -53,11 +44,6 @@ import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import androidx.core.graphics.toColorInt
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.pressable
@@ -88,107 +74,38 @@ data class DragMetricDisplay(
 
 @Composable
 fun DragRaceScreen(
-    database: ESPDatabase,
-    sessionManager: SessionManager,
     vehicleViewModel: VehicleFULLViewModel,
     onBack: () -> Unit
 ) {
-    val app = LocalContext.current.applicationContext as TrackProApp
-    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val app = context.applicationContext as TrackProApp
     val useMetric by app.useMetricUnits.collectAsState()
+
+    // The recording itself lives here, not in this composition. The activity declares no
+    // configChanges, so rotating the phone destroys and recreates it - which used to take
+    // the buffered trace, the calculator and the start time with it while the saveable
+    // "still recording" flag survived, leaving a screen that claimed to be recording with
+    // nothing recorded. Scoped to the nav entry, so it outlives recreation and is cleared
+    // only when this screen is popped for good.
+    val recorder: DragRecordingViewModel = viewModel(
+        factory = DragRecordingViewModelFactory(context)
+    )
+    val isSessionActive by recorder.isRecording.collectAsState()
+    val currentMetrics by recorder.metrics.collectAsState()
+    val elapsedTime by recorder.elapsedTime.collectAsState()
+    val speedSamples by recorder.speedSamples.collectAsState()
+    val selectedVehicleId by recorder.selectedVehicleId.collectAsState()
 
     // --- GPS & CONNECTION STATE ---
     val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
     // For display only - the speed readout and the weather anchor, both of which want just
-    // the newest fix. Recording does not read this; see the recording effect below.
+    // the newest fix. The recorder subscribes to the flow itself and never reads this.
     val gpsData by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
 
     // --- VEHICLE SELECTION ---
     val vehicles by vehicleViewModel.vehicles.collectAsState()
-    var selectedVehicle by remember { mutableStateOf<VehicleInformationData?>(null) }
+    val selectedVehicle = vehicles.firstOrNull { it.vehicleId == selectedVehicleId }
     var showVehicleDropdown by remember { mutableStateOf(false) }
-
-    // --- SESSION STATE ---
-    var isSessionActive by rememberSaveable { mutableStateOf(false) }
-    var sessionID by rememberSaveable { mutableLongStateOf(-1) }
-    val speedDataPoints = remember { mutableStateListOf<Entry>() }
-    val dataBuffer = remember { mutableListOf<com.example.trackpro.dataClasses.RawGPSData>() }
-    var chartIndex by remember { mutableFloatStateOf(0f) }
-
-    // --- DRAG CALCULATOR ---
-    // Built for the unit system in force when the screen opened, so an imperial driver is
-    // timed to 0-60 mph rather than to 0-60 km/h under an mph label. Deliberately not keyed
-    // on useMetric: each split carries its own label from here, so a session that is running
-    // stays self-consistent even if the setting is flipped underneath it.
-    val dragCalculator = remember {
-        DragTimeCalculation(
-            session = null,
-            database = database,
-            scale = DragSpeedScale.of(useMetric)
-        )
-    }
-    var currentMetrics by remember { mutableStateOf(dragCalculator.getCurrentMetrics()) }
-
-    // --- TELEMETRY STATE ---
-    var sessionStartTime by remember { mutableLongStateOf(0L) }
-    var elapsedTime by remember { mutableStateOf("00:00.00") }
-
-    // --- CLEANUP ON DISPOSE ---
-    // Persisted on the application scope, never the composable's. onDispose runs at the
-    // exact moment rememberCoroutineScope is being cancelled, so a launch on it here was
-    // cancelled almost before it started and the run was silently lost.
-    DisposableEffect(Unit) {
-        onDispose {
-            if (isSessionActive) {
-                val pointsToSave = synchronized(dataBuffer) { dataBuffer.toList() }
-                app.applicationScope.launch(Dispatchers.IO) {
-                    sessionManager.endSession()
-                    database.rawGPSDataDao().insertAll(pointsToSave)
-                }
-            }
-        }
-    }
-
-    // --- RECORDING ---
-    //
-    // Consumes the GPS flow directly rather than reacting to the Compose state above.
-    // collectAsState conflates - it keeps only the newest value - so a fix that arrived
-    // while the previous frame was still rendering was dropped outright. At 10 Hz that
-    // needs a frame over 100 ms, which this screen produces routinely: the speed chart
-    // rebuilds a 500-point cubic-bezier dataset and invalidates on every sample. What got
-    // lost was not a dropped frame but a missing row in the recorded trace, and with it a
-    // hole in the distance the quarter mile is measured over. TimeAttackViewModel collects
-    // the flow itself for exactly this reason.
-    //
-    // On Dispatchers.Default so sampling never queues behind that chart redraw - a
-    // collector on the main thread cannot run mid-frame, and a suspended collector is
-    // precisely when a StateFlow drops values. Snapshot state is safe to write from any
-    // thread, and this is the only writer of the state it touches.
-    LaunchedEffect(isSessionActive) {
-        if (!isSessionActive) return@LaunchedEffect
-        withContext(Dispatchers.Default) {
-            app.gpsManager.activeGpsFlow.collect { fix ->
-                // Cancelling this effect takes until the next recomposition, so the flag is
-                // what actually stops recording the instant Stop is pressed.
-                if (fix == null || !isSessionActive) return@collect
-                val now = System.currentTimeMillis()
-
-                elapsedTime = formatElapsedTime(now - sessionStartTime)
-                currentMetrics = dragCalculator.processRealtimeGPS(fix, now)
-
-                // Re-checked under the lock, because Stop snapshots and clears the buffer
-                // under the same lock from the main thread. Either this append lands before
-                // that snapshot and is saved with the run, or it is refused - never appended
-                // to an already-drained buffer, where it would surface in the next session.
-                synchronized(dataBuffer) {
-                    if (isSessionActive) dataBuffer.add(fix.copy(sessionid = sessionID))
-                }
-
-                speedDataPoints.add(Entry(chartIndex++, fix.speed ?: 0f))
-                if (speedDataPoints.size > 500) speedDataPoints.removeAt(0)
-            }
-        }
-    }
 
     Column(
         Modifier
@@ -301,7 +218,7 @@ fun DragRaceScreen(
                                     }
                                 },
                                 onClick = {
-                                    selectedVehicle = vehicle
+                                    recorder.selectVehicle(vehicle.vehicleId)
                                     showVehicleDropdown = false
                                 }
                             )
@@ -483,8 +400,14 @@ fun DragRaceScreen(
                         },
                         modifier = Modifier.fillMaxSize(),
                         update = { chart ->
-                            if (speedDataPoints.isNotEmpty()) {
-                                val dataSet = LineDataSet(speedDataPoints.toList(), "Speed").apply {
+                            if (speedSamples.isNotEmpty()) {
+                                // x is the position in the rolling window rather than an
+                                // absolute sample counter: the window is what is drawn, and
+                                // the axis carries no other meaning.
+                                val entries = speedSamples.mapIndexed { i, speed ->
+                                    Entry(i.toFloat(), speed)
+                                }
+                                val dataSet = LineDataSet(entries, "Speed").apply {
                                     color = DataVizColors.chartLine.toColorInt()
                                     lineWidth = 3f
                                     setDrawCircles(false)
@@ -515,75 +438,28 @@ fun DragRaceScreen(
             horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             PrimaryButton(
+                // A running session is always stoppable, whatever the vehicle list is
+                // doing: it reloads asynchronously after the screen is recreated, and
+                // resolving the name first left Stop disabled mid-run until it arrived.
                 text = when {
-                    selectedVehicle == null -> "Select Vehicle First"
                     isSessionActive -> "Stop Session"
+                    selectedVehicleId == null -> "Select Vehicle First"
                     else -> "Start Drag"
                 },
                 onClick = {
-                    scope.launch {
-                        if (!isSessionActive && selectedVehicle != null) {
-                            // Start session
-                            val eventType =
-                                "Drag - ${
-                                    LocalDateTime
-                                        .now()
-                                        .format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"))
-                                }"
-                            sessionID = withContext(Dispatchers.IO) {
-                                sessionManager.startSession(
-                                    eventType = eventType,
-                                    vehicleId = selectedVehicle!!.vehicleId,
-                                    trackId = null
-                                )
-                            }
-                            // Before isSessionActive, which is what starts the recording
-                            // collector: it must never see a calculator holding the last
-                            // session, nor chart points from it.
-                            dragCalculator.resetRealtimeTracking()
-                            currentMetrics = dragCalculator.getCurrentMetrics()
-                            speedDataPoints.clear()
-                            chartIndex = 0f
-                            synchronized(dataBuffer) { dataBuffer.clear() }
-
-                            sessionStartTime = System.currentTimeMillis()
-                            isSessionActive = true
-
-                            // Capture conditions in the background off the current GPS fix.
-                            // A drag session has no track to anchor to, so this needs a live
-                            // fix; if there isn't one yet the session simply has no weather.
-                            gpsData?.let { fix ->
-                                val createdSessionId = sessionID
-                                app.applicationScope.launch(Dispatchers.IO) {
-                                    sessionManager.captureWeather(
-                                        sessionId = createdSessionId,
-                                        latitude = fix.latitude,
-                                        longitude = fix.longitude
-                                    )
-                                }
-                            }
-
-                        } else if (isSessionActive) {
-                            // Stop appending first - the recording collector checks this
-                            // flag, including under the buffer lock.
-                            isSessionActive = false
-                            // Snapshot the buffer now that nothing else writes to it.
-                            val pointsToSave = synchronized(dataBuffer) {
-                                dataBuffer.toList().also { dataBuffer.clear() }
-                            }
-                            // Then persist on the application scope. This handler runs in
-                            // the composable's scope, and Back is the natural gesture after
-                            // Stop: leaving mid-insert cancelled the write, and because the
-                            // flag was already false, onDispose did not save either. Every
-                            // run stopped and immediately exited was lost with no error.
-                            app.applicationScope.launch(Dispatchers.IO) {
-                                sessionManager.endSession()
-                                database.rawGPSDataDao().insertAll(pointsToSave)
-                            }
-                        }
+                    // Both sides open and close the session, write the trace and manage the
+                    // GPS subscription in the recorder, on a scope that outlives this screen.
+                    // Doing it here meant Back straight after Stop - the natural gesture -
+                    // cancelled the insert mid-write and lost the run.
+                    if (isSessionActive) {
+                        recorder.stop()
+                    } else if (selectedVehicleId != null) {
+                        // The current fix is the only position a drag session has to anchor
+                        // its conditions to; without one it simply records no weather.
+                        recorder.start(weatherAnchor = gpsData)
                     }
                 },
-                enabled = selectedVehicle != null,
+                enabled = isSessionActive || selectedVehicleId != null,
                 haptic = Haptic.Confirm,
                 accent = if (isSessionActive) TrackProTheme.colors.bgElevated else TrackProTheme.colors.accent,
                 contentColor = if (isSessionActive) TrackProTheme.colors.accent else null,
@@ -646,13 +522,6 @@ fun DragMetricCard(
             }
         }
     }
-}
-
-private fun formatElapsedTime(millis: Long): String {
-    val seconds = (millis / 1000) % 60
-    val minutes = (millis / 60000) % 60
-    val centiseconds = (millis % 1000) / 10
-    return String.format("%02d:%02d.%02d", minutes, seconds, centiseconds)
 }
 
 private fun formatTime(seconds: Double): String {
