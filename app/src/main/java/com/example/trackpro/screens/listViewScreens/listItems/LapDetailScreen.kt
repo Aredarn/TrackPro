@@ -47,6 +47,7 @@ import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.utilities.SpeedColorUtils
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.managerClasses.utilities.timed
+import com.example.trackpro.managerClasses.utilities.toLapDeltaString
 import com.example.trackpro.managerClasses.utilities.toLapTimeMillisOrNull
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import kotlinx.coroutines.Dispatchers
@@ -261,11 +262,10 @@ fun LapDetailScreen(
                             Text("Compare · Lap ${cl.lapnumber}", style = TrackProType.label.atSize(8.sp), color = COMPARE_COLOR)
                             Text(cl.laptime, style = TrackProType.titleMedium.atSize(13.sp), color = TrackProTheme.colors.textPrimary)
                             if (compareMs > 0) {
-                                val sign = if (deltaMs > 0) "+" else ""
                                 Text(
-                                    text = "${sign}${deltaMs.toLapTimeString()}",
+                                    text = deltaMs.toLapDeltaString(),
                                     style = TrackProType.body.atSize(10.sp),
-                                    color = if (deltaMs < 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
+                                    color = deltaColor(deltaMs)
                                 )
                             }
                         }
@@ -643,29 +643,34 @@ private fun StatsPanel(
         HorizontalDivider(color = TrackProTheme.colors.sectorLine)
 
         val speedUnit = UnitFormatter.speedUnitLabel(useMetric)
+        // Resolved here rather than inside buildList: that lambda is inline with builder
+        // inference, which is a poor place to read a CompositionLocal from.
+        val deltaRowColor = deltaColor(deltaMs)
         val rows = buildList {
-            add(Triple("Lap Time",    primaryLap.laptime, compareLap?.laptime ?: "—"))
-            add(Triple("Top Speed",   "${UnitFormatter.formatSpeed(primaryTopSpeed, useMetric)} $speedUnit",
+            add(StatRow("Lap Time",    primaryLap.laptime, compareLap?.laptime ?: "—"))
+            add(StatRow("Top Speed",   "${UnitFormatter.formatSpeed(primaryTopSpeed, useMetric)} $speedUnit",
                 if (compareLap != null) "${UnitFormatter.formatSpeed(compareTopSpeed, useMetric)} $speedUnit" else "—"))
-            add(Triple("Avg Speed",   "${UnitFormatter.formatSpeedPrecise(primaryAvgSpd.toDouble(), useMetric)} $speedUnit",
+            add(StatRow("Avg Speed",   "${UnitFormatter.formatSpeedPrecise(primaryAvgSpd.toDouble(), useMetric)} $speedUnit",
                 if (compareLap != null) "${UnitFormatter.formatSpeedPrecise(compareAvgSpd.toDouble(), useMetric)} $speedUnit" else "—"))
-            add(Triple("GPS Points",  "${primaryGps.size}",
+            add(StatRow("GPS Points",  "${primaryGps.size}",
                 if (compareLap != null) "${compareGps.size}" else "—"))
             primarySectors.sortedBy { it.sectorIndex }.forEach { sector ->
                 val compareSplit = compareSectors.find { it.sectorIndex == sector.sectorIndex }
-                add(Triple(
+                add(StatRow(
                     "Sector ${sector.sectorIndex + 1}",
                     String.format("%.2fs", sector.splitTimeMs / 1000.0),
                     if (compareLap != null) compareSplit?.let { String.format("%.2fs", it.splitTimeMs / 1000.0) } ?: "—" else "—"
                 ))
             }
             if (compareLap != null) {
-                val sign = if (deltaMs > 0) "+" else ""
-                add(Triple("Delta", "${sign}${deltaMs.toLapTimeString()}", ""))
+                // deltaMs describes the compare lap, so it belongs in the compare column -
+                // in the primary column it read as the delta of the lap being viewed, which
+                // inverted its meaning and coloured a slower lap green.
+                add(StatRow("Delta", "—", deltaMs.toLapDeltaString(), compareColor = deltaRowColor))
             }
         }
 
-        rows.forEachIndexed { i, (label, v1, v2) ->
+        rows.forEachIndexed { i, row ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -677,13 +682,14 @@ private fun StatsPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(label.uppercase(), style = TrackProType.label.atSize(9.sp), color = TrackProTheme.colors.textMuted,
+                Text(row.label.uppercase(), style = TrackProType.label.atSize(9.sp), color = TrackProTheme.colors.textMuted,
                     modifier = Modifier.weight(1.4f))
-                Text(v1, style = TrackProType.body.atSize(13.sp), color = if (label == "Delta" && deltaMs < 0) TrackProTheme.colors.deltaGood
-                    else TrackProTheme.colors.textPrimary,
+                Text(row.primary, style = TrackProType.body.atSize(13.sp),
+                    color = TrackProTheme.colors.textPrimary,
                     modifier = Modifier.weight(1f))
-                if (compareLap != null && v2.isNotEmpty()) {
-                    Text(v2, style = TrackProType.body.atSize(13.sp), color = TrackProTheme.colors.textPrimary,
+                if (compareLap != null && row.compare.isNotEmpty()) {
+                    Text(row.compare, style = TrackProType.body.atSize(13.sp),
+                        color = row.compareColor ?: TrackProTheme.colors.textPrimary,
                         modifier = Modifier.weight(1f))
                 }
             }
@@ -694,6 +700,30 @@ private fun StatsPanel(
 
         Spacer(Modifier.height(Spacing.sm))
     }
+}
+
+/**
+ * One row of the comparison table. Replaces a Triple so the delta row can colour its own
+ * cell instead of the renderer matching on the label text.
+ */
+private data class StatRow(
+    val label: String,
+    val primary: String,
+    val compare: String,
+    val compareColor: Color? = null
+)
+
+/**
+ * The colour for a delta, under the one convention on this screen: every delta describes some
+ * other lap measured against the lap being viewed, so negative means that other lap was
+ * quicker. A dead heat is neither, and is drawn as neither.
+ */
+@Composable
+@ReadOnlyComposable
+private fun deltaColor(deltaMs: Long): Color = when {
+    deltaMs < 0L -> TrackProTheme.colors.deltaGood
+    deltaMs > 0L -> TrackProTheme.colors.deltaBad
+    else -> TrackProTheme.colors.textMuted
 }
 
 // ── Lap Picker Sheet ───────────────────────────────────────
@@ -786,11 +816,10 @@ private fun LapPickerSheet(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                     ) {
                         // Delta vs primary
-                        val sign = if (deltaMs > 0) "+" else ""
                         Text(
-                            "${sign}${deltaMs.toLapTimeString()}",
+                            deltaMs.toLapDeltaString(),
                             style = TrackProType.body.atSize(11.sp),
-                            color = if (deltaMs < 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
+                            color = deltaColor(deltaMs)
                         )
                         Text(lap.laptime, style = TrackProType.titleMedium.atSize(15.sp), color = TrackProTheme.colors.textPrimary)
                         if (isSelected) {

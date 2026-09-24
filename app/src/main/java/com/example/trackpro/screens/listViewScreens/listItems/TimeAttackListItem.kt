@@ -62,6 +62,7 @@ import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.managerClasses.utilities.WeatherService
 import com.example.trackpro.managerClasses.utilities.timed
+import com.example.trackpro.managerClasses.utilities.toLapDeltaString
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -602,7 +603,7 @@ private fun LapRow(
                 )
                 if (!isBest && deltaMs > 0) {
                     Text(
-                        text = "+${deltaMs.toLapTimeString()}",
+                        text = deltaMs.toLapDeltaString(),
                         style = TrackProType.body.atSize(11.sp),
                         color = badColor.copy(alpha = 0.8f)
                     )

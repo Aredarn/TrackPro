@@ -54,8 +54,8 @@ fun List<LapTimeData>.timed(): List<TimedLap> =
 
 /**
  * Formats a duration as "MM:SS.hh". The exact inverse of [toLapTimeMillisOrNull] for any
- * non-negative value; note that it renders the magnitude only, so callers showing a signed
- * delta must supply the sign themselves.
+ * non-negative value. It renders the magnitude only - use [toLapDeltaString] for anything
+ * that can be negative.
  */
 fun Long.toLapTimeString(): String {
     val abs = if (this < 0) -this else this
@@ -63,4 +63,18 @@ fun Long.toLapTimeString(): String {
     val seconds = (abs % 60_000) / 1_000
     val hundredths = (abs % 1_000) / 10
     return String.format("%02d:%02d.%02d", minutes, seconds, hundredths)
+}
+
+/**
+ * Formats a signed time difference, e.g. "+00:01.20" or "-00:01.20".
+ *
+ * Every delta display has to go through this. [toLapTimeString] renders the magnitude only,
+ * so call sites that prefixed a "+" for positive values and nothing for negative ones drew a
+ * lap gained and a lap lost identically, leaving colour as the only thing telling them
+ * apart. An exact tie gets no sign, because neither one would be true.
+ */
+fun Long.toLapDeltaString(): String = when {
+    this < 0L -> "-" + toLapTimeString()
+    this > 0L -> "+" + toLapTimeString()
+    else -> toLapTimeString()
 }
