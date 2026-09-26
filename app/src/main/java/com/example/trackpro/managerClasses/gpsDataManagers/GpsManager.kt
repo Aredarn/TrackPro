@@ -46,6 +46,23 @@ class GpsManager(
             ?: MutableStateFlow<Int?>(null)
     }
 
+    /**
+     * The active provider's last link failure, or null when connected or when the source
+     * is the phone GPS (which is not a stream link and fails differently).
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val lastFailure = gpsSource.flatMapLatest { source ->
+        (providerFor(source) as? LineStreamGpsProvider)?.lastFailure
+            ?: MutableStateFlow<String?>(null)
+    }
+
+    /** Restarts the active link so the user can retry without leaving the screen. */
+    fun retryActiveProvider() {
+        val active = providerFor(gpsSource.value)
+        active.stop()
+        active.start()
+    }
+
     fun sendCommandToActive(cmd: String) {
         (providerFor(gpsSource.value) as? CommandableGpsProvider)?.sendCommand(cmd)
     }

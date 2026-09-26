@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.theme.TrackProType
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
 
 @Composable
 fun EmptyState(
@@ -24,14 +26,18 @@ fun EmptyState(
             Text(
                 text = message.uppercase(),
                 style = TrackProType.titleMedium,
-                color = TrackProTheme.colors.textFaint
+                // Was textFaint (3.35:1). An empty state is the only thing on the screen;
+                // it is the last place that should be the dimmest text in the app.
+                color = TrackProTheme.colors.marking
             )
             if (hint != null) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = hint,
                     style = TrackProType.body,
-                    color = TrackProTheme.colors.textFaint.copy(alpha = 0.7f)
+                    // Was textFaint at 70% alpha - composited to 2.21:1, the worst text
+                    // contrast in the build, on first-run copy telling people what to do.
+                    color = TrackProTheme.colors.markingDim
                 )
             }
         }

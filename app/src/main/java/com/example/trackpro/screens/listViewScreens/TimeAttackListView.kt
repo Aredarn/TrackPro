@@ -35,7 +35,9 @@ import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.ScreenScaffold
 import com.example.trackpro.components.pressable
 import com.example.trackpro.components.ConfirmDeleteDialog
+import com.example.trackpro.components.DataGate
 import com.example.trackpro.components.EmptyState
+import com.example.trackpro.components.VoidStamp
 import com.example.trackpro.components.ExpandableGroup
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
@@ -55,6 +57,7 @@ fun TimeAttackListViewScreen(
     vehicleViewModel: VehicleFULLViewModel,
 ) {
     val allSessions by viewModel.sessions.collectAsState()
+    val loadState by viewModel.loadState.collectAsState()
     val trackSessions = allSessions.filter { it.trackId != null }
     val vehicles by vehicleViewModel.vehicles.collectAsState()
     val tracks by trackViewModel.tracks.collectAsState()
@@ -78,34 +81,39 @@ fun TimeAttackListViewScreen(
             },
         contentScrolled = scrolled
     ) { contentPadding ->
-        if (trackSessions.isEmpty()) {
-            EmptyState(message = "No sessions recorded", hint = "Run a track session to see it here")
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding = PaddingValues(
-                    top = contentPadding.calculateTopPadding() + Spacing.md,
-                    bottom = Spacing.md,
-                    start = Spacing.md,
-                    end = Spacing.md
-                ),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                groupedByTrack.forEach { (trackName, sessions) ->
-                    item(key = trackName) {
-                        val track = tracks.find { it.trackName == trackName }
-                        ExpandableTrackGroup(
-                            trackName = trackName,
-                            trackMeta = "${track?.country} · ${track?.type}",
-                            sessions = sessions,
-                            vehicles = vehicles,
-                            navController = navController,
-                            onDelete = { viewModel.deleteSession(it) }
-                        )
+        DataGate(
+            state = loadState,
+            items = trackSessions,
+            emptyMessage = "No sessions recorded",
+            emptyHint = "Run a track session to see it here",
+            loadingLabel = "Reading sessions"
+        ) { _ ->
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    contentPadding = PaddingValues(
+                        top = contentPadding.calculateTopPadding() + Spacing.md,
+                        bottom = Spacing.md,
+                        start = Spacing.md,
+                        end = Spacing.md
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                ) {
+                    groupedByTrack.forEach { (trackName, sessions) ->
+                        item(key = trackName) {
+                            val track = tracks.find { it.trackName == trackName }
+                            ExpandableTrackGroup(
+                                trackName = trackName,
+                                trackMeta = "${track?.country} · ${track?.type}",
+                                sessions = sessions,
+                                vehicles = vehicles,
+                                navController = navController,
+                                onDelete = { viewModel.deleteSession(it) }
+                            )
+                        }
                     }
                 }
-            }
+        
         }
     }
 }
@@ -184,7 +192,11 @@ fun ExpandableTrackGroup(
                         }
                     }
 
-                    Text("Telemetry", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+                    if (session.voided) {
+                        VoidStamp()
+                    } else {
+                        Text("Telemetry", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+                    }
                 }
             }
         }

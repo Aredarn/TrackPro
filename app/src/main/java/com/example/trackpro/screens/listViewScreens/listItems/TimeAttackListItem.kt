@@ -29,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +50,8 @@ import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
+import com.example.trackpro.components.DashAction
+import com.example.trackpro.components.VoidStamp
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.StatCell
 import com.example.trackpro.components.StatCellDivider
@@ -65,6 +68,7 @@ import com.example.trackpro.managerClasses.utilities.timed
 import com.example.trackpro.managerClasses.utilities.toLapDeltaString
 import com.example.trackpro.managerClasses.utilities.toLapTimeString
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.util.Date
@@ -97,6 +101,7 @@ fun TimeAttackListItemScreen(
     val app = LocalContext.current.applicationContext as TrackProApp
     val useMetric by app.useMetricUnits.collectAsState()
 
+    val scope = rememberCoroutineScope()
     var sessionData by remember { mutableStateOf<SessionData?>(null) }
     var vehicleData by remember { mutableStateOf<VehicleInformationData?>(null) }
     var lapTimes by remember { mutableStateOf<List<LapTimeData>>(emptyList()) }
@@ -254,6 +259,10 @@ fun TimeAttackListItemScreen(
                             .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        if (session.voided) {
+                            VoidStamp()
+                            Spacer(Modifier.height(8.dp))
+                        }
                         Text(
                             text = session.eventType,
                             // The session leads its own readouts.
@@ -469,6 +478,36 @@ fun TimeAttackListItemScreen(
                             }
                         }
                         HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                    }
+                }
+
+                // ── Void / restore
+                // Voiding is reversible by design: the run is kept, so putting it back has
+                // to be as easy as taking it out. A destructive-feeling action that cannot
+                // be undone would push people toward deleting instead, which is worse.
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.md)
+                    ) {
+                        DashAction(
+                            label = if (session.voided) "Restore this session" else "Void this session",
+                            detail = if (session.voided)
+                                "Counts toward your bests again"
+                            else "Kept and stamped, but stops counting toward your bests",
+                            compact = true,
+                            accent = if (session.voided) TrackProTheme.colors.accent
+                            else TrackProTheme.colors.danger,
+                            onClick = {
+                                val target = !session.voided
+                                scope.launch(Dispatchers.IO) {
+                                    database.sessionDataDao().setVoided(session.id, target)
+                                    val reloaded = database.sessionDataDao().getSessionById(sessionId)
+                                    withContext(Dispatchers.Main) { sessionData = reloaded }
+                                }
+                            }
+                        )
                     }
                 }
 

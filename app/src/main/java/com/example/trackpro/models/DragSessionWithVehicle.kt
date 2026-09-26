@@ -9,5 +9,7 @@ data class DragSessionWithVehicle(
     val endTime: Long?,
     val eventType: String,
     val vehicleId: Long,
-    val trackId: Long?
+    val trackId: Long?,
+    /** See SessionData.voided - a run the driver discarded but kept. */
+    val voided: Boolean = false
 )

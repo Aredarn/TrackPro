@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -41,7 +42,11 @@ import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.StatCell
+import com.example.trackpro.components.EmptyState
+import com.example.trackpro.components.SegmentBar
 import com.example.trackpro.components.ToggleChip
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.DataVizColors
 import com.example.trackpro.theme.Spacing
@@ -77,6 +82,10 @@ fun TrackView(database: ESPDatabase, trackId: Long, onBack: () -> Unit) {
     val useMetric by app.useMetricUnits.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val trackParts = remember { mutableStateListOf<TrackCoordinatesData>() }
+    // Distinguishes 'still reading' from 'this track has no geometry'. Previously one
+    // branch covered loading, empty and failure, so a track saved without coordinates
+    // spun forever with no way to tell which had happened.
+    var coordsLoaded by remember(trackId) { mutableStateOf(false) }
     val trackInfo = remember {
         mutableStateOf(
             TrackMainData(
@@ -91,6 +100,7 @@ fun TrackView(database: ESPDatabase, trackId: Long, onBack: () -> Unit) {
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId).collect { parts ->
                 trackParts.clear()
                 trackParts.addAll(parts)
+                coordsLoaded = true
             }
         }
         launch(Dispatchers.IO) {
@@ -192,18 +202,30 @@ fun TrackView(database: ESPDatabase, trackId: Long, onBack: () -> Unit) {
                         modifier = Modifier.fillMaxSize()
 
                     )
-                } else {
+                } else if (!coordsLoaded) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(
-                                color = TrackProTheme.colors.accent,
-                                modifier = Modifier.size(32.dp),
-                                strokeWidth = 2.dp
+                            Text(
+                                "READING TRACK",
+                                style = TrackProType.label,
+                                color = TrackProTheme.colors.markingDim
                             )
-                            Spacer(Modifier.height(12.dp))
-                            Text("Loading track data", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
+                            Spacer(Modifier.height(10.dp))
+                            SegmentBar(
+                                signedFraction = 0f,
+                                activeColor = TrackProTheme.colors.marking,
+                                bidirectional = false,
+                                segments = 12,
+                                height = 8.dp,
+                                modifier = Modifier.width(120.dp)
+                            )
                         }
                     }
+                } else {
+                    EmptyState(
+                        message = "No geometry for this track",
+                        hint = "It was saved without coordinates. Rebuild it in the track builder to see the map and record sectors."
+                    )
                 }
             }
         }

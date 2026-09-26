@@ -48,6 +48,7 @@ import com.example.trackpro.components.ScreenScaffold
 import com.example.trackpro.components.Haptic
 import com.example.trackpro.components.pressable
 import com.example.trackpro.components.rememberHaptics
+import com.example.trackpro.components.DataGate
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.StatCell
 import com.example.trackpro.components.StatCellDivider
@@ -65,6 +66,7 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
     val context = LocalContext.current
     val database = remember { ESPDatabase.getInstance(context) }
     val vehicles by viewModel.vehicles.collectAsState()
+    val loadState by viewModel.loadState.collectAsState()
     val scope = rememberCoroutineScope()
 
 
@@ -103,43 +105,45 @@ fun CarListScreen(navController: NavController, viewModel: VehicleFULLViewModel)
             }
             Bezel()
 
-        if (vehicles.isEmpty()) {
-            EmptyState(
-                message = "No vehicles yet",
-                hint = "Every session is recorded against a car, so add one first"
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding = PaddingValues(
-                    top = Spacing.md,
-                    bottom = Spacing.md,
-                    start = Spacing.md,
-                    end = Spacing.md
-                ),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                items(vehicles) { vehicle ->
-                    VehicleCard(
-                        vehicle = vehicle,
-                        navController = navController,
-                        bgCard = TrackProTheme.colors.bgCard,
-                        bgElevated = TrackProTheme.colors.bgElevated,
-                        accent = TrackProTheme.colors.accent,
-                        dangerColor = TrackProTheme.colors.danger,
-                        textPrimary = TrackProTheme.colors.textPrimary,
-                        textMuted = TrackProTheme.colors.textMuted,
-                        sectorLine = TrackProTheme.colors.sectorLine,
-                        onDelete = { vehicleToDelete ->
-                            scope.launch(Dispatchers.IO) {
-                                database.vehicleInformationDAO()
-                                    .deleteVehicle(vehicleToDelete.vehicleId)
+        DataGate(
+            state = loadState,
+            items = vehicles,
+            emptyMessage = "No vehicles yet",
+            emptyHint = "Every session is recorded against a car, so add one first",
+            loadingLabel = "Reading garage"
+        ) { _ ->
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    contentPadding = PaddingValues(
+                        top = Spacing.md,
+                        bottom = Spacing.md,
+                        start = Spacing.md,
+                        end = Spacing.md
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                ) {
+                    items(vehicles) { vehicle ->
+                        VehicleCard(
+                            vehicle = vehicle,
+                            navController = navController,
+                            bgCard = TrackProTheme.colors.bgCard,
+                            bgElevated = TrackProTheme.colors.bgElevated,
+                            accent = TrackProTheme.colors.accent,
+                            dangerColor = TrackProTheme.colors.danger,
+                            textPrimary = TrackProTheme.colors.textPrimary,
+                            textMuted = TrackProTheme.colors.textMuted,
+                            sectorLine = TrackProTheme.colors.sectorLine,
+                            onDelete = { vehicleToDelete ->
+                                scope.launch(Dispatchers.IO) {
+                                    database.vehicleInformationDAO()
+                                        .deleteVehicle(vehicleToDelete.vehicleId)
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
-            }
+        
         }
         }
     }

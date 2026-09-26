@@ -35,5 +35,15 @@ data class SessionData(
     val weatherCode: Int? = null,
     val weatherWindKph: Double? = null,
     val weatherWindDirDeg: Int? = null,
-    val weatherPressureHpa: Double? = null
+    val weatherPressureHpa: Double? = null,
+
+    /**
+     * A session the driver discarded at the end.
+     *
+     * Voided rather than deleted: a red-flagged run, a session started by mistake, a lap
+     * set on the wrong tyres - the driver wants it out of their best times, not gone. The
+     * rows survive, the session is stamped VOID in the lists, and it stops counting toward
+     * anything. Deleting is still available separately and still means deleting.
+     */
+    val voided: Boolean = false
 )

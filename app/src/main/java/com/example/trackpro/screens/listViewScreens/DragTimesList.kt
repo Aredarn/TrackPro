@@ -35,7 +35,9 @@ import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.ScreenScaffold
 import com.example.trackpro.components.pressable
 import com.example.trackpro.components.ConfirmDeleteDialog
+import com.example.trackpro.components.DataGate
 import com.example.trackpro.components.EmptyState
+import com.example.trackpro.components.VoidStamp
 import com.example.trackpro.components.ExpandableGroup
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
@@ -53,6 +55,7 @@ fun DragTimesListView(
     navController: NavController
 ) {
     val dragSessions by viewModel.dragSessions.collectAsState()
+    val loadState by viewModel.loadState.collectAsState()
 
     val groupedSessions = remember(dragSessions) {
         dragSessions.groupBy { session ->
@@ -78,31 +81,36 @@ fun DragTimesListView(
             },
         contentScrolled = scrolled
     ) { contentPadding ->
-        if (dragSessions.isEmpty()) {
-            EmptyState(message = "No sessions recorded", hint = "Run a drag session to see it here")
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding = PaddingValues(
-                    top = contentPadding.calculateTopPadding() + Spacing.md,
-                    bottom = Spacing.md,
-                    start = Spacing.md,
-                    end = Spacing.md
-                ),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                groupedSessions.forEach { (groupKey, sessions) ->
-                    item(key = groupKey) {
-                        ExpandableSessionGroup(
-                            groupTitle = groupKey,
-                            sessions = sessions,
-                            navController = navController,
-                            onDelete = { viewModel.deleteSession(it) }
-                        )
+        DataGate(
+            state = loadState,
+            items = dragSessions,
+            emptyMessage = "No sessions recorded",
+            emptyHint = "Run a drag session to see it here",
+            loadingLabel = "Reading sessions"
+        ) { _ ->
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    contentPadding = PaddingValues(
+                        top = contentPadding.calculateTopPadding() + Spacing.md,
+                        bottom = Spacing.md,
+                        start = Spacing.md,
+                        end = Spacing.md
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                ) {
+                    groupedSessions.forEach { (groupKey, sessions) ->
+                        item(key = groupKey) {
+                            ExpandableSessionGroup(
+                                groupTitle = groupKey,
+                                sessions = sessions,
+                                navController = navController,
+                                onDelete = { viewModel.deleteSession(it) }
+                            )
+                        }
                     }
                 }
-            }
+        
         }
     }
 }
@@ -169,11 +177,15 @@ fun ExpandableSessionGroup(
                         )
                     }
 
-                    Text(
-                        "Details",
-                        style = TrackProType.label,
-                        color = TrackProTheme.colors.textMuted
-                    )
+                    if (session.voided) {
+                        VoidStamp()
+                    } else {
+                        Text(
+                            "Details",
+                            style = TrackProType.label,
+                            color = TrackProTheme.colors.textMuted
+                        )
+                    }
                 }
             }
         }

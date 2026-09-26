@@ -33,6 +33,7 @@ import androidx.navigation.NavController
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.components.Bezel
 import com.example.trackpro.components.ConfirmDeleteDialog
+import com.example.trackpro.components.DataGate
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.Instrument
 import com.example.trackpro.components.ScreenScaffold
@@ -55,6 +56,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
     val tracks by viewModel.tracks.collectAsState()
+    val loadState by viewModel.loadState.collectAsState()
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
     val useMetric by app.useMetricUnits.collectAsState()
@@ -77,42 +79,47 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
             },
         contentScrolled = scrolled
     ) { contentPadding ->
-        if (tracks.isEmpty()) {
-            EmptyState(message = "No tracks yet", hint = "Build a track to see it here")
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding = PaddingValues(
-                    top = contentPadding.calculateTopPadding() + 10.dp,
-                    bottom = 24.dp
-                ),
-                // Each track is its own aperture in the panel; the gap between them is the
-                // panel showing through, which is what gives the list air without inventing
-                // a card.
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(tracks) { track ->
-                    TrackCard(
-                        track = track,
-                        navController = navController,
-                        database = database,
-                        useMetric = useMetric,
-                        bgCard = TrackProTheme.colors.bgCard,
-                        bgElevated = TrackProTheme.colors.bgElevated,
-                        accent = TrackProTheme.colors.accent,
-                        dangerColor = TrackProTheme.colors.danger,
-                        textPrimary = TrackProTheme.colors.textPrimary,
-                        textMuted = TrackProTheme.colors.textMuted,
-                        sectorLine = TrackProTheme.colors.sectorLine,
-                        onDelete = { trackToDelete ->
-                            scope.launch(Dispatchers.IO) {
-                                database.trackMainDao().deleteTrack(trackToDelete.trackId)
+        DataGate(
+            state = loadState,
+            items = tracks,
+            emptyMessage = "No tracks yet",
+            emptyHint = "Build a track to see it here",
+            loadingLabel = "Reading tracks"
+        ) { _ ->
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    contentPadding = PaddingValues(
+                        top = contentPadding.calculateTopPadding() + 10.dp,
+                        bottom = 24.dp
+                    ),
+                    // Each track is its own aperture in the panel; the gap between them is the
+                    // panel showing through, which is what gives the list air without inventing
+                    // a card.
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(tracks) { track ->
+                        TrackCard(
+                            track = track,
+                            navController = navController,
+                            database = database,
+                            useMetric = useMetric,
+                            bgCard = TrackProTheme.colors.bgCard,
+                            bgElevated = TrackProTheme.colors.bgElevated,
+                            accent = TrackProTheme.colors.accent,
+                            dangerColor = TrackProTheme.colors.danger,
+                            textPrimary = TrackProTheme.colors.textPrimary,
+                            textMuted = TrackProTheme.colors.textMuted,
+                            sectorLine = TrackProTheme.colors.sectorLine,
+                            onDelete = { trackToDelete ->
+                                scope.launch(Dispatchers.IO) {
+                                    database.trackMainDao().deleteTrack(trackToDelete.trackId)
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
-            }
+        
         }
     }
 }

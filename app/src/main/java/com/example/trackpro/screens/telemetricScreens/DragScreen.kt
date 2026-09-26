@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -51,7 +54,17 @@ import com.example.trackpro.components.Haptic
 import com.example.trackpro.components.KeepScreenOn
 import com.example.trackpro.components.AppCard
 import com.example.trackpro.components.AppTopBar
+import android.content.res.Configuration
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.trackpro.components.Bezel
+import com.example.trackpro.components.ConfirmDeleteDialog
+import com.example.trackpro.components.DashAction
+import com.example.trackpro.components.SegmentBar
+import com.example.trackpro.components.SessionSummary
+import com.example.trackpro.components.Trend
+import com.example.trackpro.components.rememberTrend
+import com.example.trackpro.theme.segmentOff
 import com.example.trackpro.components.Instrument
 import com.example.trackpro.components.Readout
 import com.example.trackpro.theme.field
@@ -111,6 +124,51 @@ fun DragRaceScreen(
     val selectedVehicle = vehicles.firstOrNull { it.vehicleId == selectedVehicleId }
     var showVehicleDropdown by remember { mutableStateOf(false) }
 
+    // The tile table and the speed chart are reference material, not run material. During a
+    // launch the panel collapses to the split and the live instruments; everything else is
+    // one deliberate toggle away. Saved so rotating in a mount does not undo the choice.
+    var showData by rememberSaveable { mutableStateOf(false) }
+    var confirmStop by remember { mutableStateOf(false) }
+
+    val lastRunSessionId by recorder.lastRunSessionId.collectAsState()
+    val saveError by recorder.saveError.collectAsState()
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // Ladder progress: how far through the run's splits you are. Discrete by nature, which
+    // is exactly what a segment bar is for - and it pairs with the split readout above it.
+    val ladderTotal = (currentMetrics.standing.size + 2).coerceAtLeast(1)
+
+    if (lastRunSessionId != null) {
+        SessionSummary(
+            headline = currentMetrics.quarterMileTime?.let { formatTime(it) }
+                ?: currentMetrics.standing.lastOrNull { it.seconds != null }?.seconds
+                    ?.let { formatTime(it) } ?: "\u2014",
+            headlineCaption = if (currentMetrics.quarterMileTime != null) "Quarter mile"
+            else "Best split",
+            rows = listOf(
+                "Runs" to "${currentMetrics.runCount}",
+                "Top speed" to "${UnitFormatter.formatSpeed(currentMetrics.maxSpeed, useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)}",
+                "Distance" to UnitFormatter.formatDistance(currentMetrics.totalDistance.toDouble(), useMetric)
+            ),
+            saveFailed = saveError,
+            onKeep = { recorder.clearLastRun(); onBack() },
+            onVoid = { recorder.voidLastRun(); onBack() }
+        )
+        return
+    }
+
+    if (confirmStop) {
+        ConfirmDeleteDialog(
+            title = "Stop recording?",
+            message = "The run is written to the archive. You can void it on the next " +
+                "screen if it should not count.",
+            confirmLabel = "Stop",
+            dismissLabel = "Keep recording",
+            onConfirm = { confirmStop = false; recorder.stop() },
+            onDismiss = { confirmStop = false }
+        )
+    }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -120,44 +178,57 @@ fun DragRaceScreen(
         // 1. TOP STATUS BAR
         AppTopBar(
             title = "Drag Mode",
-            onBack = onBack,
+            // Guarded while live: Stop is a commit, and this arrow sits where a hand lands
+            // adjusting a mount.
+            onBack = { if (isSessionActive) confirmStop = true else onBack() },
             accent = TrackProTheme.colors.accent,
             trailing = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
-                    if (isSessionActive) {
-                        // Which launch of this session is being timed. The run counter
-                        // re-arms when the car comes back to a standstill, and this is
-                        // what tells the driver it did - the next launch is measured too,
-                        // and the splits below hold the best of the session.
-                        if (currentMetrics.runCount > 0) {
-                            Text(
-                                "RUN ${currentMetrics.runCount}",
-                                style = TrackProType.label,
-                                color = TrackProTheme.colors.textMuted
-                            )
-                        }
+                    if (isSessionActive && currentMetrics.runCount > 0) {
+                        // Which launch is being timed. The counter re-arms when the car
+                        // comes back to a standstill, and this is what tells the driver it
+                        // did - the next launch is measured too.
                         Text(
-                            elapsedTime,
-                            style = TrackProType.statValue.atSize(13.sp),
-                            color = TrackProTheme.colors.accent
+                            "RUN ${currentMetrics.runCount}",
+                            style = TrackProType.label,
+                            color = TrackProTheme.colors.markingDim
                         )
                     }
+                    // The elapsed clock used to be here AND in the readout below. One is
+                    // enough, and the readout is where the eye already is.
                     Text(
-                        if (isConnected) "GPS Locked" else "GPS Searching",
+                        if (isConnected) "GPS LOCKED" else "NO SIGNAL",
                         style = TrackProType.label,
-                        color = if (isConnected) TrackProTheme.colors.deltaGood else TrackProTheme.colors.textFaint
+                        // A fault is never dimmer than health.
+                        color = if (isConnected) TrackProTheme.colors.deltaGood
+                        else TrackProTheme.colors.deltaBad
+                    )
+                    Spacer(Modifier.width(Spacing.sm))
+                    Text(
+                        "DATA",
+                        style = TrackProType.label,
+                        color = if (showData) TrackProTheme.colors.marking
+                        else TrackProTheme.colors.markingDim,
+                        modifier = Modifier
+                            .pressable(onClick = { showData = !showData }, scale = 0.94f)
+                            .padding(horizontal = Spacing.sm, vertical = 12.dp)
                     )
                 }
             }
         )
 
+        // A HUD with a scroll position is a HUD whose readout can be anywhere. While a run
+        // is live and the data panel is closed, the surface is fixed; everywhere else it
+        // scrolls because there is genuinely more than a screenful.
+        val bodyScroll = rememberScrollState()
+        val fixedSurface = isSessionActive && !showData
         Column(
             Modifier
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
+                .then(if (fixedSurface) Modifier else Modifier.verticalScroll(bodyScroll))
         ) {
 
             // 2. VEHICLE SELECTOR
@@ -267,65 +338,79 @@ fun DragRaceScreen(
             val latestSplit: Pair<String, String>? = reachedSplits.lastOrNull()
                 ?.let { (label, seconds) -> label to formatTime(seconds) }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(TrackProTheme.colors.field)
-                    .padding(horizontal = 14.dp, vertical = 14.dp)
-            ) {
-                Readout(
-                    value = latestSplit?.second
-                        ?: (gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0"),
-                    caption = latestSplit?.let { "${it.first}  \u00b7  SEC" }
-                        ?: "Live speed \u00b7 ${UnitFormatter.speedUnitLabel(useMetric)}",
-                    valueColor = if (latestSplit != null) TrackProTheme.colors.accent
-                    else TrackProTheme.colors.marking,
-                    valueSize = 72.sp,
-                    trailing = {
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = if (isSessionActive) "REC" else "IDLE",
-                                style = TrackProType.label,
-                                color = if (isSessionActive) TrackProTheme.colors.danger
-                                else TrackProTheme.colors.markingDim
-                            )
-                            Text(
-                                text = elapsedTime,
-                                style = TrackProType.statValue.atSize(18.sp),
-                                color = TrackProTheme.colors.marking
-                            )
+            // Portrait stacks the split over the instruments; landscape sets them side by
+            // side so the split keeps its full scale instead of being pushed off a short
+            // screen. Both are first-class, which the product record requires and this
+            // screen previously ignored entirely.
+            AdaptiveSplit(
+                landscape = landscape,
+                primary = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(TrackProTheme.colors.field)
+                        .padding(horizontal = 14.dp, vertical = 14.dp)
+                ) {
+                    Readout(
+                        value = latestSplit?.second
+                            ?: (gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0"),
+                        caption = latestSplit?.let { "${it.first}  \u00b7  SEC" }
+                            ?: "Live speed \u00b7 ${UnitFormatter.speedUnitLabel(useMetric)}",
+                        valueColor = if (latestSplit != null) TrackProTheme.colors.accent
+                        else TrackProTheme.colors.marking,
+                        valueSize = 72.sp,
+                        trailing = {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = if (isSessionActive) "REC" else "IDLE",
+                                    style = TrackProType.label,
+                                    color = if (isSessionActive) TrackProTheme.colors.danger
+                                    else TrackProTheme.colors.markingDim
+                                )
+                                Text(
+                                    text = elapsedTime,
+                                    style = TrackProType.statValue.atSize(18.sp),
+                                    color = TrackProTheme.colors.marking
+                                )
+                            }
                         }
-                    }
-                )
-            }
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    // How far through the run's split ladder you are. Discrete by nature, which
+                    // is what a segment bar is for, and it pairs with the split held above it:
+                    // big number is the last one reached, bar is where that sits in the run.
+                    SegmentBar(
+                        signedFraction = reachedSplits.size.toFloat() / ladderTotal,
+                        activeColor = TrackProTheme.colors.accent,
+                        bidirectional = false,
+                        segments = ladderTotal,
+                        height = if (landscape) 16.dp else 22.dp
+                    )
+                }
+                },
+                secondary = {
+                    DragLiveInstruments(
+                        landscape = landscape,
+                        speedText = gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0",
+                        speedUnit = UnitFormatter.speedUnitLabel(useMetric),
+                        speedTrend = rememberTrend(
+                            UnitFormatter.convertSpeed(gpsData?.speed ?: 0f, useMetric).toFloat(),
+                            threshold = 2f
+                        ),
+                        maxText = UnitFormatter.formatSpeed(currentMetrics.maxSpeed, useMetric),
+                        distanceText = UnitFormatter.formatDistance(
+                            currentMetrics.totalDistance.toDouble(), useMetric
+                        )
+                    )
+                }
+            )
 
             Bezel()
 
-            // Live instruments: what is happening right now, under the held split.
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Instrument(
-                    label = "Speed \u00b7 ${UnitFormatter.speedUnitLabel(useMetric)}",
-                    value = gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0",
-                    valueSize = 24.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                Bezel(vertical = true, modifier = Modifier.height(62.dp))
-                Instrument(
-                    label = "Max",
-                    value = UnitFormatter.formatSpeed(currentMetrics.maxSpeed, useMetric),
-                    valueSize = 24.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                Bezel(vertical = true, modifier = Modifier.height(62.dp))
-                Instrument(
-                    label = "Distance",
-                    value = UnitFormatter.formatDistance(currentMetrics.totalDistance.toDouble(), useMetric),
-                    valueSize = 24.sp,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Bezel()
+            // Everything below is reference, not run material: hidden while recording
+            // unless the driver asks for it with DATA. At the strip the panel is the split
+            // and the instruments, and nothing else competes for the glance.
+            if (!isSessionActive || showData) {
 
             // 4. SPLIT TABLE
             // Every split the run can produce, always present so the range is visible.
@@ -431,6 +516,8 @@ fun DragRaceScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+            } // end reference panel
+
         }
 
         // 6. CONTROLS (Fixed at bottom)
@@ -441,14 +528,19 @@ fun DragRaceScreen(
                 .padding(Spacing.md),
             horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
-            PrimaryButton(
+            DashAction(
                 // A running session is always stoppable, whatever the vehicle list is
                 // doing: it reloads asynchronously after the screen is recreated, and
                 // resolving the name first left Stop disabled mid-run until it arrived.
-                text = when {
-                    isSessionActive -> "Stop Session"
-                    selectedVehicleId == null -> "Select Vehicle First"
-                    else -> "Start Drag"
+                label = when {
+                    isSessionActive -> "Stop"
+                    selectedVehicleId == null -> "Select a vehicle"
+                    else -> "Start drag"
+                },
+                detail = when {
+                    isSessionActive -> "Recording \u00b7 ${currentMetrics.runCount} run(s)"
+                    selectedVehicleId == null -> "Every run is recorded against a car"
+                    else -> "Arm the timer and launch"
                 },
                 onClick = {
                     // Both sides open and close the session, write the trace and manage the
@@ -456,7 +548,7 @@ fun DragRaceScreen(
                     // Doing it here meant Back straight after Stop - the natural gesture -
                     // cancelled the insert mid-write and lost the run.
                     if (isSessionActive) {
-                        recorder.stop()
+                        confirmStop = true
                     } else if (selectedVehicleId != null) {
                         // The current fix is the only position a drag session has to anchor
                         // its conditions to; without one it simply records no weather.
@@ -465,9 +557,11 @@ fun DragRaceScreen(
                 },
                 enabled = isSessionActive || selectedVehicleId != null,
                 haptic = Haptic.Confirm,
-                accent = if (isSessionActive) TrackProTheme.colors.bgElevated else TrackProTheme.colors.accent,
-                contentColor = if (isSessionActive) TrackProTheme.colors.accent else null,
-                modifier = Modifier.weight(1f).height(56.dp)
+                // Recording takes the danger accent: it is the one state that must be
+                // unmistakable at a glance from outside the car.
+                accent = if (isSessionActive) TrackProTheme.colors.danger
+                else TrackProTheme.colors.accent,
+                modifier = Modifier.weight(1f)
             )
         }
     }
@@ -530,4 +624,81 @@ fun DragMetricCard(
 
 private fun formatTime(seconds: Double): String {
     return String.format("%.2f", seconds)
+}
+
+/**
+ * Arranges the drag HUD's two blocks for the orientation the phone is actually mounted in.
+ *
+ * Landscape is not a reflow here: side by side is what keeps the split readout at full
+ * size on a short screen, which is the entire reason the number is large.
+ */
+@Composable
+private fun AdaptiveSplit(
+    landscape: Boolean,
+    primary: @Composable () -> Unit,
+    secondary: @Composable () -> Unit
+) {
+    if (landscape) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+        ) {
+            Box(Modifier.weight(0.58f)) { primary() }
+            Bezel(vertical = true, modifier = Modifier.fillMaxHeight())
+            Box(Modifier.weight(0.42f)) { secondary() }
+        }
+    } else {
+        Column(Modifier.fillMaxWidth()) {
+            primary()
+            Bezel()
+            secondary()
+        }
+    }
+}
+
+/** Speed, max and distance - stacked beside the split in landscape, in a row beneath it otherwise. */
+@Composable
+private fun DragLiveInstruments(
+    landscape: Boolean,
+    speedText: String,
+    speedUnit: String,
+    speedTrend: Trend,
+    maxText: String,
+    distanceText: String
+) {
+    val cells: List<Triple<String, String, Trend?>> = listOf(
+        Triple("Speed \u00b7 $speedUnit", speedText, speedTrend),
+        Triple("Max", maxText, null),
+        Triple("Distance", distanceText, null)
+    )
+    if (landscape) {
+        Column(Modifier.fillMaxWidth()) {
+            cells.forEachIndexed { i, (label, value, trend) ->
+                Instrument(
+                    label = label,
+                    value = value,
+                    valueSize = 20.sp,
+                    trend = trend,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (i < cells.lastIndex) Bezel()
+            }
+        }
+    } else {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            cells.forEachIndexed { i, (label, value, trend) ->
+                Instrument(
+                    label = label,
+                    value = value,
+                    valueSize = 24.sp,
+                    trend = trend,
+                    modifier = Modifier.weight(1f)
+                )
+                if (i < cells.lastIndex) {
+                    Bezel(vertical = true, modifier = Modifier.height(62.dp))
+                }
+            }
+        }
+    }
 }

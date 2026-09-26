@@ -39,7 +39,7 @@ import com.example.trackpro.dataClasses.VehicleInformationData
     LapTimeData::class,
     LapInfoData::class,
     SectorTimeData::class
-], version = 7, exportSchema = true)
+], version = 8, exportSchema = true)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun rawGPSDataDao(): RawGPSDataDao
@@ -198,6 +198,16 @@ abstract class ESPDatabase : RoomDatabase() {
         }
 
         /**
+         * Adds the discard flag. NOT NULL with a 0 default so every existing session
+         * reads as kept, which is what it was.
+         */
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `session_data` ADD COLUMN `voided` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /**
          * Every migration, in order. This is the single list the production database is
          * built with; the instrumented migration tests run exactly the same array so a
          * migration can't be tested but forgotten here, or vice versa.
@@ -208,7 +218,8 @@ abstract class ESPDatabase : RoomDatabase() {
             MIGRATION_3_4,
             MIGRATION_4_5,
             MIGRATION_5_6,
-            MIGRATION_6_7
+            MIGRATION_6_7,
+            MIGRATION_7_8
         )
 
         fun getInstance(context: Context): ESPDatabase {

@@ -50,11 +50,19 @@ interface LapTimeDataDAO {
     """)
     suspend fun getBestLapForSession(sessionId: Long): LapTimeData?
 
-    // Get best completed lap across all sessions recorded on a track
+    /**
+     * Best completed lap across every session on a track.
+     *
+     * Voided sessions are excluded here rather than filtered in the UI: this is the query
+     * the whole app asks for "the record", and a discarded run must not be able to hold one
+     * from any caller. That exclusion is the only thing that makes VOID mean anything
+     * beyond a badge.
+     */
     @Query("""
     SELECT lap_time_data.* FROM lap_time_data
     INNER JOIN session_data ON lap_time_data.sessionid = session_data.id
     WHERE session_data.trackId = :trackId
+    AND session_data.voided = 0
     AND lap_time_data.laptime != 'IN PROGRESS'
     AND lap_time_data.laptime != 'INVALID'
     ORDER BY lap_time_data.laptime ASC

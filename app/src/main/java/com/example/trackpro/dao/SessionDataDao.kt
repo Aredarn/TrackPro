@@ -28,6 +28,10 @@ interface SessionDataDao {
     @Update
     suspend fun updateSession(sessionData: SessionData)
 
+    /** Stamps a session discarded. The rows stay; see SessionData.voided. */
+    @Query("UPDATE session_data SET voided = :voided WHERE id = :sessionId")
+    suspend fun setVoided(sessionId: Long, voided: Boolean)
+
     @Query("DELETE FROM session_data WHERE id = :sessionId")
     suspend fun deleteSessionById(sessionId: Long)
 
@@ -89,7 +93,8 @@ interface SessionDataDao {
         session_data.endTime as endTime, 
         session_data.eventType as eventType,
         session_data.vehicleId as vehicleId,
-        session_data.trackId as trackId
+        session_data.trackId as trackId,
+        session_data.voided as voided
     FROM session_data
     INNER JOIN vehicle_information_data 
     ON session_data.vehicleId = vehicle_information_data.vehicleId
@@ -107,7 +112,8 @@ interface SessionDataDao {
         session_data.endTime as endTime, 
         session_data.eventType as eventType,
         session_data.vehicleId as vehicleId,
-        session_data.trackId as trackId
+        session_data.trackId as trackId,
+        session_data.voided as voided
     FROM session_data
     INNER JOIN vehicle_information_data 
     ON session_data.vehicleId = vehicle_information_data.vehicleId

@@ -461,6 +461,29 @@ class TimeAttackViewModel(
         const val TRACK_BEST_CANDIDATES = 20
     }
 
+    /**
+     * Marks the current session discarded, then ends it.
+     *
+     * Runs on the application scope, not the screen's: the driver taps this and leaves in
+     * the same breath, and a write cancelled by navigation is exactly the bug that lost
+     * drag runs. Captures the id first because [endSession] clears it.
+     */
+    fun voidAndEnd() {
+        val id = _sessionId
+        app.applicationScope.launch(Dispatchers.IO) {
+            if (id != -1L) {
+                runCatching { database.sessionDataDao().setVoided(id, true) }
+                    .onFailure { Log.e("TimeAttack", "Could not void session $id", it) }
+            }
+            endSession()
+        }
+    }
+
+    /** Ends and keeps. Same scope reasoning as [voidAndEnd]. */
+    fun keepAndEnd() {
+        app.applicationScope.launch(Dispatchers.IO) { endSession() }
+    }
+
     suspend fun endSession() {
         if (_sessionId == -1L) {
             Log.d("TimeAttack", "No active session to end")

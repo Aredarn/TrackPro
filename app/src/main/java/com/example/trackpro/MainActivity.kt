@@ -644,7 +644,9 @@ private fun DashBoard(
     var lastTrackName by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(sessions) {
-        val recent = sessions.maxByOrNull { it.startTime }
+        // The most recent session that still counts. A voided run stays in the archive
+        // and stays openable, but the panel does not report it as what you last did.
+        val recent = sessions.filter { !it.voided }.maxByOrNull { it.startTime }
         lastSession = recent
         if (recent == null) return@LaunchedEffect
         withContext(Dispatchers.IO) {

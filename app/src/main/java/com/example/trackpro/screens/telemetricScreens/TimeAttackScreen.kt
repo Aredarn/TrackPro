@@ -39,6 +39,7 @@ import androidx.compose.ui.layout.SubcomposeMeasureScope
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,9 +62,13 @@ import com.example.trackpro.components.KeepScreenOn
 import com.example.trackpro.components.rememberHaptics
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.Bezel
+import com.example.trackpro.components.ConfirmDeleteDialog
+import com.example.trackpro.components.DashAction
+import com.example.trackpro.components.SessionSummary
 import com.example.trackpro.components.Instrument
 import com.example.trackpro.components.Readout
 import com.example.trackpro.components.SegmentBar
+import com.example.trackpro.components.rememberTrend
 import com.example.trackpro.theme.field
 import com.example.trackpro.theme.marking
 import com.example.trackpro.theme.markingDim
@@ -157,6 +162,11 @@ fun TimeAttackScreenView(
         Log.d("TimeAttackScreen", "Finish line coords: $finishLine")
     }
 
+    // Initialisation can fail - a missing track, a database error - and this used to be
+    // logged and swallowed, dropping the driver into a live timing HUD with no track
+    // loaded and no indication anything was wrong.
+    var initError by remember { mutableStateOf<String?>(null) }
+
     // ── Init track + session FIRST ─────────────────────────
     LaunchedEffect(trackId) {
         if (trackId == null || vehicleId == null) {
@@ -179,6 +189,7 @@ fun TimeAttackScreenView(
             vm.ensureSession(trackId, vehicleId)
         } catch (e: Exception) {
             Log.e("TimeAttackScreen", "Initialization error: ${e.message}", e)
+            initError = e.message ?: "Could not load the track or start the session"
         }
     }
 
@@ -198,6 +209,80 @@ fun TimeAttackScreenView(
     // rotation - someone who turned the map off does not want it back every time the
     // phone shifts orientation in a windscreen mount.
     var mapVisible by rememberSaveable { mutableStateOf(true) }
+
+
+    // Leaving a live session used to be an unguarded back tap on a 48dp arrow in the
+    // corner your hand reaches for when adjusting a mount - and it saved silently, with no
+    // acknowledgement that a whole track day had been recorded. Now the exit is deliberate
+    // and it ends on a summary.
+    var confirmEnd by remember { mutableStateOf(false) }
+    var showSummary by remember { mutableStateOf(false) }
+
+    if (showSummary) {
+        SessionSummary(
+            headline = bestTime,
+            headlineCaption = "Best lap",
+            rows = listOf(
+                (if (timingMode is TimingMode.Circuit) "Laps" else "Runs") to "$eventCount",
+                "Last" to lastTime,
+                "Sectors logged" to "${lapSplits.size}"
+            ),
+            onKeep = { vm.keepAndEnd(); onBack() },
+            onVoid = { vm.voidAndEnd(); onBack() }
+        )
+        return
+    }
+
+    if (confirmEnd) {
+        ConfirmDeleteDialog(
+            title = "End session?",
+            message = "Timing stops and the session is written to the archive. You can " +
+                "void it on the next screen if it should not count.",
+            confirmLabel = "End session",
+            dismissLabel = "Keep driving",
+            onConfirm = { confirmEnd = false; showSummary = true },
+            onDismiss = { confirmEnd = false }
+        )
+    }
+
+    if (initError != null) {
+        // A blocking face, not a toast: every number on the HUD behind it would be
+        // meaningless, so the screen refuses to pretend it is timing anything.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(TrackProTheme.colors.panel)
+        ) {
+            AppTopBar(title = "Session failed", onBack = onBack, accent = TrackProTheme.colors.danger)
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                ) {
+                    Text(
+                        "COULD NOT START TIMING",
+                        style = TrackProType.titleMedium,
+                        color = TrackProTheme.colors.danger
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        initError ?: "",
+                        style = TrackProType.body,
+                        color = TrackProTheme.colors.markingDim,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    DashAction(
+                        label = "Back to panel",
+                        onClick = onBack,
+                        compact = true,
+                        modifier = Modifier.width(200.dp)
+                    )
+                }
+            }
+        }
+        return
+    }
 
     when (LocalConfiguration.current.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> TimeAttackLandscapeLayout(
@@ -222,7 +307,9 @@ fun TimeAttackScreenView(
             completedLaps = completedLaps,
             mapVisible  = mapVisible,
             onToggleMap = { mapVisible = it },
-            onBack      = onBack
+            // Guarded: ending a live session is the app's most destructive-by-omission
+            // action, and this arrow sits where a hand lands adjusting a mount.
+            onBack      = { confirmEnd = true }
         )
         else -> TimeAttackPortraitLayout(
             timingMode  = timingMode,
@@ -246,7 +333,9 @@ fun TimeAttackScreenView(
             completedLaps = completedLaps,
             mapVisible  = mapVisible,
             onToggleMap = { mapVisible = it },
-            onBack      = onBack
+            // Guarded: ending a live session is the app's most destructive-by-omission
+            // action, and this arrow sits where a hand lands adjusting a mount.
+            onBack      = { confirmEnd = true }
         )
     }
 
@@ -285,6 +374,9 @@ fun TimeAttackPortraitLayout(
     // it reaches the bar. Two seconds fills it; past that the exact figure has
     // stopped being actionable and pinning is the honest response.
     val deltaFraction = (-delta / 2.0).coerceIn(-1.0, 1.0).toFloat()
+    // Rising means gaining: the mark tracks -delta, so it points up when the gap to the
+    // reference is closing. 50ms of hysteresis - below that it is GPS noise, not driving.
+    val deltaTrend = rememberTrend(-delta.toFloat(), threshold = 0.05f)
 
     Column(
         modifier = Modifier
@@ -310,6 +402,7 @@ fun TimeAttackPortraitLayout(
                 value = String.format("%+.3f", delta),
                 caption = deltaCaption,
                 valueColor = deltaColor,
+                trend = deltaTrend,
                 valueSize = if (mapVisible) 60.sp else 84.sp,
                 trailing = {
                     Column(horizontalAlignment = Alignment.End) {
@@ -450,6 +543,9 @@ fun TimeAttackLandscapeLayout(
     // it reaches the bar. Two seconds fills it; past that the exact figure has
     // stopped being actionable and pinning is the honest response.
     val deltaFraction = (-delta / 2.0).coerceIn(-1.0, 1.0).toFloat()
+    // Rising means gaining: the mark tracks -delta, so it points up when the gap to the
+    // reference is closing. 50ms of hysteresis - below that it is GPS noise, not driving.
+    val deltaTrend = rememberTrend(-delta.toFloat(), threshold = 0.05f)
 
     // The right pane is the map or, with the map off, the lap board. Either way the
     // instruments keep the same column, so toggling the map never reflows the numbers a
@@ -481,6 +577,7 @@ fun TimeAttackLandscapeLayout(
                     value = String.format("%+.3f", delta),
                     caption = deltaCaption,
                     valueColor = deltaColor,
+                    trend = deltaTrend,
                     valueSize = 56.sp,
                     trailing = {
                         Column(horizontalAlignment = Alignment.End) {

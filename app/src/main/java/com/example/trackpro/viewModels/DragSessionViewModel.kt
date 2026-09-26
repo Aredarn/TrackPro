@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.models.DragSessionWithVehicle
+import com.example.trackpro.models.LoadState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -14,14 +15,26 @@ class DragSessionViewModel(private val database: ESPDatabase) : ViewModel() {
     private val _dragSessions = MutableStateFlow<List<DragSessionWithVehicle>>(emptyList())
     val dragSessions = _dragSessions.asStateFlow()
 
+    // Loading until the database actually answers; an empty list before that is
+    // 'not looked yet', not 'nothing here'.
+    private val _loadState = MutableStateFlow<LoadState>(LoadState.Loading)
+    val loadState = _loadState.asStateFlow()
+
     init {
         fetchDragSessions()
     }
 
     private fun fetchDragSessions() {
         viewModelScope.launch {
-            // Only fetch sessions where trackId is null or -1 (drag sessions)
-            database.sessionDataDao().getAllDragSessionsWithVehicles().collect { _dragSessions.value = it }
+            try {
+                // Only fetch sessions where trackId is null or -1 (drag sessions)
+                database.sessionDataDao().getAllDragSessionsWithVehicles().collect {
+                    _dragSessions.value = it
+                    _loadState.value = LoadState.Ready
+                }
+            } catch (e: Exception) {
+                _loadState.value = LoadState.Failed("Could not read drag sessions")
+            }
         }
     }
 
