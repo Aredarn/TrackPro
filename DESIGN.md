@@ -430,7 +430,23 @@ light scheme.
   lamp, never as a full-bleed fill (`components/AppTopBar.kt:32-110`).
 - **`ScreenScaffold`** — panel ground, full-bleed content inset by the bar height, opaque
   chrome, and a scroll-edge fade that renders only once content has actually scrolled
-  underneath (`components/ScreenScaffold.kt:41-101`).
+  underneath (`components/ScreenScaffold.kt:41-101`). An optional `header` slot holds a
+  `SectionSwitch` under the bar; content is inset by it too.
+- **`DashTabBar`** — the app's four places: Drive, History, Garage, Profile
+  (`components/DashNavigation.kt`, `MainActivity.kt`). Each tab is an aperture split by
+  vertical bezels; the current one is lit — field-live ground, marking ink, and a strip of
+  four accent segments across its top edge. The others keep their strip unlit rather than
+  omitted. Shown on the four tab roots only: every other screen is a step down with its own
+  back, and the two HUDs never carry it.
+- **`SectionSwitch`** — splits one tab into sections (Track | Drag, Cars | Tracks). Quieter
+  than the tab bar on purpose: the selected section is lit field in marking ink with a
+  two-segment accent underline, not a filled block, so "which tab" still outranks "which
+  half". A tab keeps one title whichever section is showing.
+- **`PhotoFrame`** — a car or driver photo in a square-cornered, bezel-edged aperture, from a
+  local file. With no photo the frame is still drawn, with initials or a car mark in
+  marking-dim, so a garage without photos is a set of empty frames, not a layout that jumps.
+- **Placard counts** — bar trailing counts go through `countLabel()`: uppercased, singular
+  at one ("1 CAR", "7 TRACKS").
 
 ### Signature Component: the segmented bar
 

@@ -62,6 +62,22 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Speed
+import com.example.trackpro.screens.profile.ProfileScreen
+import com.example.trackpro.screens.profile.EditProfileScreen
+import com.example.trackpro.screens.profile.AccountScreen
+import com.example.trackpro.screens.history.HistorySection
+import com.example.trackpro.screens.history.HistoryScreen
+import com.example.trackpro.screens.garage.GarageScreen
+import com.example.trackpro.dao.VehicleUsage
+import com.example.trackpro.components.PhotoFrame
+import com.example.trackpro.components.DashTabBar
+import com.example.trackpro.components.DashTab
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -80,7 +96,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.TrackSeeder
-import com.example.trackpro.managerClasses.VehicleSeeder
 import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.gpsDataManagers.BluetoothClassicClient
 import com.example.trackpro.managerClasses.JsonReader
@@ -100,10 +115,6 @@ import com.example.trackpro.screens.telemetricScreens.TimeAttackScreenView
 import com.example.trackpro.screens.TrackBuilderScreen
 import com.example.trackpro.screens.TrackScreen
 import com.example.trackpro.screens.TrackVehicleSelectorScreen
-import com.example.trackpro.screens.listViewScreens.CarListScreen
-import com.example.trackpro.screens.listViewScreens.DragTimesListView
-import com.example.trackpro.screens.listViewScreens.TimeAttackListViewScreen
-import com.example.trackpro.screens.listViewScreens.TrackListScreen
 import com.example.trackpro.screens.listViewScreens.lapDetail.LapDetailScreen
 import com.example.trackpro.screens.listViewScreens.listItems.CarViewScreen
 import com.example.trackpro.screens.listViewScreens.listItems.GraphScreen
@@ -288,7 +299,9 @@ class TrackProApp : Application() {
         // users pick up newly-added ones too; name-deduped, so this is always safe to re-run.
         applicationScope.launch(Dispatchers.IO) {
             TrackSeeder.syncPremadeTracks(this@TrackProApp, database)
-            VehicleSeeder.syncDefaultVehicles(database)
+            // No default car any more. The seeder re-added a Lexus IS200 on every launch, so a
+            // driver could never delete it, and with the garage backed up to an account it
+            // would have been uploaded as theirs. An empty garage now opens on Add car.
 
             // Off the main thread: reading the stored sign-in touches the Keystore.
             if (online.auth.isSignedIn) {
@@ -374,20 +387,64 @@ class MainActivity : ComponentActivity() {
             val useDarkTheme by (application as TrackProApp).useDarkTheme.collectAsState()
             TrackProTheme(darkTheme = useDarkTheme) {
                 val navController = rememberNavController()
-                NavHost(navController = navController, startDestination = "main") {
+                val backStack by navController.currentBackStackEntryAsState()
+                val currentRoute = backStack?.destination?.route
+                // The bar belongs to the four tab roots only. Every screen reached from a tab
+                // is a step down with its own back, and the HUDs must never carry it.
+                val selectedTab = MainTabs.firstOrNull { tab -> currentRoute?.substringBefore('?') == tab.route }
+
+                fun openTab(route: String) {
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+
+                Column(modifier = Modifier.fillMaxSize().background(TrackProTheme.colors.panel)) {
+                NavHost(
+                    navController = navController,
+                    startDestination = "main",
+                    modifier = Modifier.weight(1f)
+                ) {
                     composable("main") {
-                        MainScreen(
+                        DashBoard(
                             onNavigateToDragRace = { navController.navigate("drag") },
-                            onNavigateToESPTestScreen = { navController.navigate("esptest") },
-                            onNavigateToTrackListScreen = { navController.navigate("tracklist") },
-                            onNavigateToTrackBuilder = { navController.navigate("trackbuilder") },
-                            onNavigateToDragTimesList = { navController.navigate("dragsessions") },
-                            onNavigateToVehicleCreatorScreen = { navController.navigate("createvehicle") },
-                            onNavigateToVehicleList = { navController.navigate("vehicles") },
                             onNavigateToTrackVehicleSelector = { navController.navigate("trackandvehicle") },
-                            onNavigateToTimeAttackListView = { navController.navigate("timeattacklist") },
-                            onNavigateToSettings = { navController.navigate("settings") }
+                            onNavigateToESPTestScreen = { navController.navigate("esptest") },
+                            onOpenHistory = { section -> openTab("history?section=$section") },
+                            onOpenCar = { id -> navController.navigate("vehicle/$id") },
+                            onAddCar = { navController.navigate("createvehicle") }
                         )
+                    }
+                    composable(
+                        "history?section={section}",
+                        arguments = listOf(navArgument("section") { type = NavType.StringType; defaultValue = "track" })
+                    ) { entry ->
+                        HistoryScreen(
+                            navController = navController,
+                            sessionViewModel = sessionViewModel,
+                            dragSessionViewModel = dragSessionViewModel,
+                            trackViewModel = trackViewModel,
+                            vehicleViewModel = vehicleFULLViewModel,
+                            initial = if (entry.arguments?.getString("section") == "drag") HistorySection.Drag else HistorySection.Track
+                        )
+                    }
+                    composable("garage") {
+                        GarageScreen(
+                            navController = navController,
+                            vehicleViewModel = vehicleFULLViewModel,
+                            trackViewModel = trackViewModel
+                        )
+                    }
+                    composable("profile") {
+                        ProfileScreen(navController = navController)
+                    }
+                    composable("account") {
+                        AccountScreen(navController = navController)
+                    }
+                    composable("profile/edit") {
+                        EditProfileScreen(navController = navController)
                     }
                     composable("drag") {
                         DragRaceScreen(vehicleFULLViewModel, onBack = { navController.popBackStack() })
@@ -418,12 +475,6 @@ class MainActivity : ComponentActivity() {
                             onBack = { navController.popBackStack() }
                         )
                     }
-                    composable("dragsessions") {
-                        DragTimesListView(viewModel = dragSessionViewModel, navController = navController)
-                    }
-                    composable("vehicles") {
-                        CarListScreen(viewModel = vehicleFULLViewModel, navController = navController)
-                    }
                     composable(
                         route = "graph/{sessionId}",
                         arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
@@ -434,15 +485,17 @@ class MainActivity : ComponentActivity() {
                     composable(route = "trackbuilder") {
                         TrackBuilderScreen(database, onBack = { navController.popBackStack() })
                     }
-                    composable(route = "tracklist") {
-                        TrackListScreen(navController = navController, viewModel = trackViewModel)
-                    }
                     composable(
                         route = "vehicle/{vehicleid}",
                         arguments = listOf(navArgument("vehicleid") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val vehicleId = backStackEntry.arguments?.getLong("vehicleid") ?: 0L
-                        CarViewScreen(vehicleId = vehicleId, onBack = { navController.popBackStack() })
+                        CarViewScreen(
+                            vehicleId = vehicleId,
+                            onBack = { navController.popBackStack() },
+                            onSignIn = { navController.navigate("account") },
+                            onOpenTrack = { navController.navigate("track/$it") }
+                        )
                     }
                     composable(
                         route = "timeattacklistitem/{sessionid}",
@@ -466,21 +519,12 @@ class MainActivity : ComponentActivity() {
                     composable(route = "trackandvehicle") {
                         TrackVehicleSelectorScreen(trackViewModel = trackViewModel, vehicleViewModel, navController)
                     }
-                    composable(route = "timeattacklist") {
-                        TimeAttackListViewScreen(
-                            navController = navController,
-                            viewModel = sessionViewModel,
-                            vehicleViewModel = vehicleFULLViewModel,
-                            trackViewModel = trackViewModel,
-                        )
-                    }
                     composable(route = "settings") {
                         SettingsScreen(
                             onBack = { navController.popBackStack() },
                             onRequestBluetoothPermission = { requestBluetoothPermissionIfNeeded() }
                         )
                     }
-                    // In your NavHost setup
                     composable("lap_detail/{sessionId}/{lapId}") { backStackEntry ->
                         LapDetailScreen(
                             navController = navController,
@@ -490,144 +534,26 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+                if (selectedTab != null) {
+                    DashTabBar(
+                        tabs = MainTabs,
+                        selectedRoute = selectedTab.route,
+                        onSelect = { tab -> if (tab != selectedTab) openTab(tab.route) }
+                    )
+                }
+                }
             }
         }
     }
 }
 
-@Composable
-fun MainScreen(
-    onNavigateToDragRace: () -> Unit,
-    onNavigateToESPTestScreen: () -> Unit,
-    onNavigateToTrackListScreen: () -> Unit,
-    onNavigateToTrackBuilder: () -> Unit,
-    onNavigateToDragTimesList: () -> Unit,
-    onNavigateToVehicleCreatorScreen: () -> Unit,
-    onNavigateToVehicleList: () -> Unit,
-    onNavigateToTrackVehicleSelector: () -> Unit,
-    onNavigateToTimeAttackListView: () -> Unit,
-    onNavigateToSettings: () -> Unit
-) {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = TrackProTheme.colors.bgCard,
-                drawerContentColor = TrackProTheme.colors.textPrimary
-            ) {
-                // Drawer header
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(TrackProTheme.colors.bgElevated)
-                        .padding(horizontal = 20.dp, vertical = 18.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .background(TrackProTheme.colors.accent, CircleShape)
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "TRACKPRO",
-                                style = TrackProType.titleLarge,
-                                color = TrackProTheme.colors.textPrimary
-                            )
-                            Text(
-                                text = "Performance Telemetry",
-                                style = TrackProType.body.atSize(11.sp),
-                                color = TrackProTheme.colors.markingDim
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(4.dp))
-
-                DrawerSection(title = "SESSIONS") {
-                    DrawerItem(
-                        icon = Icons.Default.RocketLaunch,
-                        label = "Drag Sessions",
-                        tint = TrackProTheme.colors.accentMuted,
-                        onClick = { onNavigateToDragTimesList(); scope.launch { drawerState.close() } }
-                    )
-                    DrawerItem(
-                        icon = Icons.Default.FlagCircle,
-                        label = "Track Sessions",
-                        tint = TrackProTheme.colors.accentMuted,
-                        onClick = { onNavigateToTimeAttackListView(); scope.launch { drawerState.close() } }
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    thickness = 1.dp,
-                    color = TrackProTheme.colors.sectorLine
-                )
-
-                DrawerSection(title = "MANAGEMENT") {
-                    DrawerItem(
-                        icon = Icons.Default.Timelapse,
-                        label = "My Tracks",
-                        tint = TrackProTheme.colors.accentMuted,
-                        onClick = { onNavigateToTrackListScreen(); scope.launch { drawerState.close() } }
-                    )
-                    DrawerItem(
-                        icon = Icons.Default.CarRepair,
-                        label = "My Vehicles",
-                        tint = TrackProTheme.colors.accentMuted,
-                        onClick = { onNavigateToVehicleList(); scope.launch { drawerState.close() } }
-                    )
-                    DrawerItem(
-                        icon = Icons.Default.AddCircle,
-                        label = "Add Vehicle",
-                        tint = TrackProTheme.colors.accentMuted,
-                        onClick = { onNavigateToVehicleCreatorScreen(); scope.launch { drawerState.close() } }
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    thickness = 1.dp,
-                    color = TrackProTheme.colors.sectorLine
-                )
-
-                DrawerSection(title = "SYSTEM") {
-                    DrawerItem(
-                        icon = Icons.Default.Wifi,
-                        label = "ESP Connection",
-                        tint = TrackProTheme.colors.textMuted,
-                        onClick = { onNavigateToESPTestScreen(); scope.launch { drawerState.close() } }
-                    )
-                    DrawerItem(
-                        icon = Icons.Default.Settings,
-                        label = "Settings",
-                        tint = TrackProTheme.colors.textMuted,
-                        onClick = { onNavigateToSettings();scope.launch { drawerState.close() } }
-                    )
-                }
-            }
-        }
-    ) {
-        DashBoard(
-            onOpenDrawer = { scope.launch { drawerState.open() } },
-            onNavigateToDragRace = onNavigateToDragRace,
-            onNavigateToTrackVehicleSelector = onNavigateToTrackVehicleSelector,
-            onNavigateToDragTimesList = onNavigateToDragTimesList,
-            onNavigateToTimeAttackListView = onNavigateToTimeAttackListView,
-            onNavigateToVehicleList = onNavigateToVehicleList,
-            onNavigateToTrackListScreen = onNavigateToTrackListScreen,
-            onNavigateToESPTestScreen = onNavigateToESPTestScreen,
-            onNavigateToTrackBuilder = onNavigateToTrackBuilder,
-            onNavigateToSettings = onNavigateToSettings
-        )
-    }
-}
+/** The four places the app has. Everything else is reached from one of them. */
+private val MainTabs = listOf(
+    DashTab("main", "Drive", Icons.Default.Speed),
+    DashTab("history", "History", Icons.Default.History),
+    DashTab("garage", "Garage", Icons.Default.DirectionsCar),
+    DashTab("profile", "Profile", Icons.Default.Person),
+)
 
 // ── Action card ────────────────────────────────────────────
 
@@ -650,22 +576,19 @@ fun MainScreen(
  */
 @Composable
 private fun DashBoard(
-    onOpenDrawer: () -> Unit,
     onNavigateToDragRace: () -> Unit,
     onNavigateToTrackVehicleSelector: () -> Unit,
-    onNavigateToDragTimesList: () -> Unit,
-    onNavigateToTimeAttackListView: () -> Unit,
-    onNavigateToVehicleList: () -> Unit,
-    onNavigateToTrackListScreen: () -> Unit,
     onNavigateToESPTestScreen: () -> Unit,
-    onNavigateToTrackBuilder: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onOpenHistory: (section: String) -> Unit,
+    onOpenCar: (Long) -> Unit,
+    onAddCar: () -> Unit,
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
 
     val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
     val vehicles by app.database.vehicleInformationDAO().getAllVehicles().collectAsState(initial = emptyList())
+    val usage by remember { app.database.vehicleInformationDAO().observeUsage() }.collectAsState(initial = emptyList())
     val sessions by app.database.sessionDataDao().getAllSessions().collectAsState(initial = emptyList())
 
     // The most recent session and its best lap. Resolved off the main thread; until it
@@ -693,7 +616,9 @@ private fun DashBoard(
         }
     }
 
-    val vehicle: VehicleInformationData? = vehicles.firstOrNull()
+    // The car you drive most, not whichever row happens to be first in the table.
+    val mainId = usage.maxWithOrNull(compareBy<VehicleUsage>({ it.sessions }, { it.lastUsed ?: 0L }))?.vehicleId
+    val vehicle: VehicleInformationData? = vehicles.firstOrNull { it.vehicleId == mainId } ?: vehicles.firstOrNull()
     val dash = "\u2014"
 
     Column(
@@ -709,17 +634,11 @@ private fun DashBoard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 4.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
+                // The whole strip opens the rig page: it is the rig's lamp, so it is the way in.
+                .pressableRow(onClick = onNavigateToESPTestScreen)
+                .padding(horizontal = 14.dp, vertical = 17.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onOpenDrawer, modifier = Modifier.size(48.dp)) {
-                Icon(
-                    Icons.Default.Menu,
-                    contentDescription = "Open menu",
-                    tint = TrackProTheme.colors.marking,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
             SegmentBar(
                 signedFraction = if (isConnected) 1f else 0f,
                 activeColor = if (isConnected) TrackProTheme.colors.deltaGood
@@ -771,10 +690,16 @@ private fun DashBoard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .pressableRow(onClick = onNavigateToVehicleList)
-                .padding(horizontal = 12.dp, vertical = 14.dp),
+                .pressableRow(onClick = { if (vehicle != null) onOpenCar(vehicle.vehicleId) else onAddCar() })
+                .padding(horizontal = 12.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            PhotoFrame(
+                file = app.online.photos.file(vehicle?.photoFile),
+                contentDescription = vehicle?.let { "${it.manufacturer} ${it.model}" },
+                modifier = Modifier.size(width = 80.dp, height = 60.dp)
+            )
+            Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = if (vehicle != null) "${vehicle.manufacturer} ${vehicle.model}".uppercase()
@@ -831,108 +756,22 @@ private fun DashBoard(
         Bezel()
 
         // ── Secondary ──────────────────────────────────
+        // Counts that open the History tab. Tracks, the builder and Setup used to share
+        // this row; they now live in Garage and Profile, with the rest of their kind.
         Row(modifier = Modifier.fillMaxWidth()) {
             Instrument(
-                label = "Track records",
-                value = "${sessions.count { it.trackId != null }}",
-                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToTimeAttackListView)
+                label = "Track sessions",
+                value = "${sessions.count { it.trackId != null && it.trackId != -1L && !it.voided }}",
+                modifier = Modifier.weight(1f).pressableRow(onClick = { onOpenHistory("track") })
             )
             Bezel(vertical = true, modifier = Modifier.height(58.dp))
             Instrument(
-                label = "Drag records",
-                value = "${sessions.count { it.trackId == null }}",
-                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToDragTimesList)
-            )
-        }
-        Bezel()
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Instrument(
-                label = "Tracks",
-                value = "›",
-                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToTrackListScreen)
-            )
-            Bezel(vertical = true, modifier = Modifier.height(58.dp))
-            Instrument(
-                label = "Builder",
-                value = "›",
-                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToTrackBuilder)
-            )
-            Bezel(vertical = true, modifier = Modifier.height(58.dp))
-            Instrument(
-                label = "Rig",
-                value = "›",
-                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToESPTestScreen)
-            )
-            Bezel(vertical = true, modifier = Modifier.height(58.dp))
-            Instrument(
-                label = "Setup",
-                value = "›",
-                modifier = Modifier.weight(1f).pressableRow(onClick = onNavigateToSettings)
+                label = "Drag runs",
+                value = "${sessions.count { (it.trackId == null || it.trackId == -1L) && !it.voided }}",
+                modifier = Modifier.weight(1f).pressableRow(onClick = { onOpenHistory("drag") })
             )
         }
         Bezel()
         Spacer(Modifier.height(20.dp))
-    }
-}
-
-
-
-
-
-// ── Drawer helpers ─────────────────────────────────────────
-
-@Composable
-private fun DrawerSection(title: String, content: @Composable () -> Unit) {
-    SectionLabel(
-        text = title,
-        modifier = Modifier.padding(start = 20.dp, top = 14.dp, bottom = 4.dp)
-    )
-    content()
-}
-
-@Composable
-private fun DrawerItem(
-    icon: ImageVector,
-    label: String,
-    tint: Color,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressableRow(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .background(tint.copy(alpha = 0.12f), TrackProShapes.control),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(15.dp))
-        }
-        Text(label, style = TrackProType.body, color = TrackProTheme.colors.textPrimary)
-    }
-}
-
-
-@Preview(showBackground = true)
-@Composable
-fun MainScreenPreview() {
-    TrackProTheme {
-        MainScreen(
-            onNavigateToDragRace = {},
-            onNavigateToESPTestScreen = {},
-            onNavigateToTrackListScreen = {},
-            onNavigateToTrackBuilder = {},
-            onNavigateToDragTimesList = {},
-            onNavigateToVehicleCreatorScreen = {},
-            onNavigateToVehicleList = {},
-            onNavigateToTrackVehicleSelector = {},
-            onNavigateToTimeAttackListView = {},
-            onNavigateToSettings = {}
-        )
     }
 }

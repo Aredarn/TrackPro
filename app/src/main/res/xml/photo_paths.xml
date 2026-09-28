@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Camera captures land here, get re-encoded into files/photos, and are deleted. -->
+    <cache-path name="camera" path="camera/" />
+</paths>

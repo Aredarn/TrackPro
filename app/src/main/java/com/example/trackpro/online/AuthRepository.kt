@@ -55,6 +55,21 @@ class AuthRepository(
         }
     }
 
+    /**
+     * Ends the local sign-in without asking the server, for an account that no longer exists
+     * there. [notice] is shown where the sign-in form appears.
+     */
+    fun forgetLocally(notice: String? = null) {
+        store.clear()
+        _state.value = AccountState.SignedOut(notice)
+    }
+
+    /** Keeps the stored name in step after a rename, so every screen shows the new one. */
+    fun renamed(displayName: String) {
+        val session = store.load() ?: return
+        adoptSession(session.copy(displayName = displayName))
+    }
+
     /** The current access token for an optional-auth call, or null when signed out. */
     suspend fun currentAccessTokenOrNull(): String? =
         if (store.load() == null) null else runCatching { validAccessToken() }.getOrNull()
@@ -113,9 +128,13 @@ class AuthRepository(
             email = response.user.email,
             displayName = response.user.displayName,
         )
+        adoptSession(session)
+        return session
+    }
+
+    private fun adoptSession(session: StoredSession) {
         store.save(session)
         _state.value = stateOf(session)
-        return session
     }
 
     private companion object {

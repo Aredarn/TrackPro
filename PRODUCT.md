@@ -36,7 +36,10 @@ GPS module** — parts costing a fraction of a commercial logger — talking to 
 Wi-Fi TCP or Bluetooth, with open firmware published alongside the app.
 
 The app is open source (GPL-2.0) and the companion firmware is a separate public repo.
-Neither the app nor the data depends on a vendor account, subscription, or cloud service.
+Nothing in the app depends on an account, subscription, or network. An optional, free
+TrackBoard account (the author's own server, also open source) adds a driver profile, a
+backup of the garage with car photos, and per-track leaderboards. Signing in is the consent
+for the garage backup; posting laps to leaderboards is a separate, off-by-default switch.
 
 ## Operating Context
 
@@ -60,7 +63,11 @@ Neither the app nor the data depends on a vendor account, subscription, or cloud
 - Sprint (point-to-point) timing.
 - Drag timing — quarter mile, 0–100 km/h / 0–60 mph, and related metrics.
 - Track builder: record and store custom track geometry, start/finish and sector lines.
-- Vehicle garage: store vehicles with full spec and attribute sessions to them.
+- Vehicle garage: store vehicles with full spec and a photo, attribute sessions to them, and
+  (signed in) back them up to the account and restore them on a new phone.
+- Driver profile: a career sheet computed on the phone (laps, sessions, tracks, distance, a
+  personal best per track, main car); signed in, it adds a name, photo, bio, and the
+  leaderboard place next to each best. Export and account deletion live here too.
 - Session and lap analysis: lap breakdown, lap-vs-lap comparison, speed heatmap traces on a
   map, theoretical best from best sectors.
 - Automatic weather and track-conditions capture per session (Open-Meteo).

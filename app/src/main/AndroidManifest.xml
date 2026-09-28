@@ -27,6 +27,18 @@
             </intent-filter>
         </activity>
 
+        <!-- Hands the camera app a file to write a car or profile photo into. Only the
+             cache/camera directory is shared, and only for the length of one capture. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.photos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/photo_paths" />
+        </provider>
+
         <!-- Keeps a recording alive with the screen off. location for phone GPS,
              connectedDevice for the ESP32 over Wi-Fi or Bluetooth. -->
         <service

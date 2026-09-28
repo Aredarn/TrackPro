@@ -33,6 +33,7 @@ import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.ScreenScaffold
+import com.example.trackpro.components.countLabel
 import com.example.trackpro.components.pressable
 import com.example.trackpro.components.ConfirmDeleteDialog
 import com.example.trackpro.components.DataGate
@@ -55,6 +56,10 @@ fun TimeAttackListViewScreen(
     viewModel: SessionViewModel,
     trackViewModel: TrackViewModel,
     vehicleViewModel: VehicleFULLViewModel,
+    /** Null when shown as a tab root, where there is nothing to go back to. */
+    onBack: (() -> Unit)? = { navController.popBackStack() },
+    header: (@Composable () -> Unit)? = null,
+    title: String = "Track Records",
 ) {
     val allSessions by viewModel.sessions.collectAsState()
     val loadState by viewModel.loadState.collectAsState()
@@ -73,11 +78,12 @@ fun TimeAttackListViewScreen(
     val scrolled by listState.isScrolledUnderChrome()
 
     ScreenScaffold(
-            title = "Track Records",
-            onBack = { navController.popBackStack() },
+            title = title,
+            onBack = onBack,
+            header = header,
             accent = TrackProTheme.colors.accent,
             trailing = {
-                Text("${trackSessions.size} sessions", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+                Text(countLabel(trackSessions.size, "session"), style = TrackProType.label, color = TrackProTheme.colors.textMuted)
             },
         contentScrolled = scrolled
     ) { contentPadding ->

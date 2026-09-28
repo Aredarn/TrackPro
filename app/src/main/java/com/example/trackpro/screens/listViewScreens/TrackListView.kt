@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.DashAction
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +39,7 @@ import com.example.trackpro.components.DataGate
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.Instrument
 import com.example.trackpro.components.ScreenScaffold
+import com.example.trackpro.components.countLabel
 import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.pressableRow
 import com.example.trackpro.dataClasses.TrackMainData
@@ -54,7 +57,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
+fun TrackListScreen(
+    navController: NavController,
+    viewModel: TrackViewModel,
+    /** Null when shown as a tab root, where there is nothing to go back to. */
+    onBack: (() -> Unit)? = { navController.popBackStack() },
+    header: (@Composable () -> Unit)? = null,
+    /** When set, the list opens with the way to build a new track. */
+    onBuildTrack: (() -> Unit)? = null,
+    title: String = "My Tracks",
+) {
     val tracks by viewModel.tracks.collectAsState()
     val loadState by viewModel.loadState.collectAsState()
     val context = LocalContext.current
@@ -67,18 +79,34 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
     val scrolled by listState.isScrolledUnderChrome()
 
     ScreenScaffold(
-            title = "My Tracks",
-            onBack = { navController.popBackStack() },
+            title = title,
+            onBack = onBack,
+            header = header,
             accent = TrackProTheme.colors.accent,
             trailing = {
                 Text(
-                    text = "${tracks.size} tracks",
+                    text = countLabel(tracks.size, "track"),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.textMuted
                 )
             },
         contentScrolled = scrolled
     ) { contentPadding ->
+      Column(modifier = Modifier.fillMaxSize()) {
+        if (onBuildTrack != null) {
+            // The builder lives with the tracks it makes. It used to be an instrument on the
+            // home panel, one tap from the modes you drive with.
+            Box(modifier = Modifier.padding(top = contentPadding.calculateTopPadding()).padding(12.dp)) {
+                DashAction(
+                    label = "Build a track",
+                    detail = "Walk or drive it · or draw it on the map",
+                    onClick = onBuildTrack,
+                    compact = true
+                )
+            }
+            Bezel()
+        }
+        val listTop = if (onBuildTrack != null) 0.dp else contentPadding.calculateTopPadding()
         DataGate(
             state = loadState,
             items = tracks,
@@ -90,7 +118,7 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
                     modifier = Modifier.fillMaxSize(),
                     state = listState,
                     contentPadding = PaddingValues(
-                        top = contentPadding.calculateTopPadding() + 10.dp,
+                        top = listTop + 10.dp,
                         bottom = 24.dp
                     ),
                     // Each track is its own aperture in the panel; the gap between them is the
@@ -121,6 +149,7 @@ fun TrackListScreen(navController: NavController, viewModel: TrackViewModel) {
                 }
         
         }
+      }
     }
 }
 

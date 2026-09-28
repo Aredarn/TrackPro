@@ -40,6 +40,8 @@ class SyncEngine(
     private val appVersion: String?,
     private val newId: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Long = System::currentTimeMillis,
+    /** The garage backup. Null in tests that only exercise leaderboard sync. */
+    private val garage: GarageSync? = null,
 ) {
     private class TrackInfo(
         val track: TrackMainData,
@@ -67,6 +69,7 @@ class SyncEngine(
         if (!auth.isSignedIn) return SyncReport(clock(), problem = "Not signed in to TrackBoard.")
 
         val tally = Tally()
+        val garageTally = GarageTally()
         try {
             val published = dao.getPublishedTrackIds().toSet()
             val tracks = mutableMapOf<Long, TrackInfo?>()
@@ -80,16 +83,20 @@ class SyncEngine(
                 if (link.localId !in wanted) attempt(tally) { withdrawSession(link, tally) }
             }
 
+            // After withdrawals, so a car deleted together with its sessions is no longer
+            // held on the account by them; before uploads, so sessions find their car linked.
+            garage?.run(garageTally)
+
             syncUserTracks(published, ::track, tally)
 
             for (plan in plans) attempt(tally) { uploadSession(plan, tally) }
         } catch (e: NetworkException) {
-            return tally.report(offline = true, problem = e.message)
+            return tally.report(garageTally, offline = true, problem = e.message)
         } catch (e: ApiException) {
             // Only a 401 escapes attempt(): the refresh failed and the driver is now signed out.
-            return tally.report(problem = e.message)
+            return tally.report(garageTally, problem = e.message)
         }
-        return tally.report()
+        return tally.report(garageTally)
     }
 
     // ── Planning ──
@@ -291,12 +298,17 @@ class SyncEngine(
         }
     }
 
-    private fun Tally.report(offline: Boolean = false, problem: String? = this.problem) = SyncReport(
+    private fun Tally.report(
+        garage: GarageTally,
+        offline: Boolean = false,
+        problem: String? = this.problem ?: garage.problem,
+    ) = SyncReport(
         finishedAt = clock(),
-        uploaded = uploaded,
+        uploaded = uploaded + garage.uploaded,
         unchanged = unchanged,
         withdrawn = withdrawn,
-        failed = failed,
+        downloaded = garage.downloaded,
+        failed = failed + garage.failed,
         problem = problem,
         offline = offline,
     )

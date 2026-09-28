@@ -2,6 +2,7 @@ package com.example.trackpro.online
 
 import android.content.Context
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.utilities.PhotoStore
 
 /**
  * Everything TrackBoard, reached through `TrackProApp.online` the same way the rest of the
@@ -21,6 +22,15 @@ class OnlineServices(private val context: Context, private val database: ESPData
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
     }
 
+    /** Same client as [api]; the account endpoints are a second interface on it. */
+    val accountApi: TrackBoardAccountApi = api as TrackBoardAccountApi
+
+    val photos = PhotoStore(context)
+
+    val profile: ProfileRepository by lazy {
+        ProfileRepository(context, accountApi, auth, database, photos)
+    }
+
     fun syncEngine(): SyncEngine = SyncEngine(
         api = api,
         auth = auth,
@@ -28,6 +38,7 @@ class OnlineServices(private val context: Context, private val database: ESPData
         premade = premadeTracks,
         sharingEnabled = { settings.sharingEnabled.value },
         appVersion = appVersion,
+        garage = GarageSync(accountApi, api, auth, database.syncDao(), photos),
     )
 
     /** The server id a local track's leaderboard lives under, or null if it has none yet. */

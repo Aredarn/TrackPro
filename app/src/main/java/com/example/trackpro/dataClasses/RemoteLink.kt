@@ -40,5 +40,11 @@ data class RemoteLink(
          */
         const val KIND_PREMADE_TRACK = "premade_track"
         const val KIND_SESSION = "session"
+        /**
+         * A car's photo. [remoteId] holds the photo's public URL on the account, so a change
+         * made from another phone shows up as a different URL; [uploadedHash] is the content
+         * hash of the local file it was synced from.
+         */
+        const val KIND_VEHICLE_PHOTO = "vehicle_photo"
     }
 }

@@ -146,7 +146,7 @@ class EspDatabaseMigrationTest {
             assertNull("a pre-weather session reads as 'no weather captured'", session.weatherTempC)
             assertNull(session.weatherCode)
 
-            assertEquals("Mazda", db.vehicleInformationDAO().getVehicle(1L).first().manufacturer)
+            assertEquals("Mazda", db.vehicleInformationDAO().getVehicle(1L).first()?.manufacturer)
 
             val laps = db.lapTimeDataDAO().getLapsForSession(1L).sortedBy { it.lapnumber }
             assertEquals(listOf("01:42.35", "01:43.02"), laps.map { it.laptime })
@@ -269,7 +269,7 @@ class EspDatabaseMigrationTest {
         const val TEST_DB = "migration-test.db"
 
         /** ESPDatabase's current version. Bump with it, alongside the new schemas/N.json. */
-        const val LATEST_VERSION = 8
+        const val LATEST_VERSION = 10
 
         /**
          * The v1 schema as Room generated it: the v5 export minus the four migrations - no

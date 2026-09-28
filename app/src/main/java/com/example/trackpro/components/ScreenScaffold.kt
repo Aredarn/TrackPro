@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -15,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.extrasForUI.TrackProTheme
 
@@ -43,6 +45,12 @@ fun ScreenScaffold(
     trailing: @Composable (() -> Unit)? = null,
     contentScrolled: Boolean = false,
     bottomBar: (@Composable () -> Unit)? = null,
+    /**
+     * A fixed strip under the bar, e.g. the [SectionSwitch] that splits a tab in two. It is
+     * part of the chrome, so content is inset by [headerHeight] as well as the bar.
+     */
+    header: (@Composable () -> Unit)? = null,
+    headerHeight: Dp = if (header != null) SectionSwitchHeight else 0.dp,
     content: @Composable (PaddingValues) -> Unit
 ) {
     Box(
@@ -50,7 +58,7 @@ fun ScreenScaffold(
             .fillMaxSize()
             .background(TrackProTheme.colors.bgDeep)
     ) {
-        content(PaddingValues(top = AppTopBarHeight))
+        content(PaddingValues(top = AppTopBarHeight + headerHeight))
 
         Column(modifier = Modifier.align(Alignment.TopStart)) {
             AppTopBar(
@@ -63,6 +71,9 @@ fun ScreenScaffold(
                 containerColor = TrackProTheme.colors.bgCard.copy(alpha = TranslucentChromeAlpha),
                 showDivider = false
             )
+            if (header != null) {
+                Box(modifier = Modifier.fillMaxWidth().height(headerHeight)) { header() }
+            }
             ScrollEdgeFade(visible = contentScrolled)
         }
 

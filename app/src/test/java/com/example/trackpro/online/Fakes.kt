@@ -125,4 +125,16 @@ class FakeSyncDao : SyncDao {
     override suspend fun getTrack(trackId: Long) = tracks.find { it.trackId == trackId }
     override suspend fun getTrackPoints(trackId: Long) = points.filter { it.trackId == trackId }.sortedBy { it.id }
     override suspend fun getVehicle(vehicleId: Long) = vehicles.find { it.vehicleId == vehicleId }
+
+    override fun observeLinks(kind: String): Flow<List<RemoteLink>> = flowOf(links.values.filter { it.kind == kind })
+    override suspend fun getVehicles() = vehicles.sortedBy { it.vehicleId }
+    override suspend fun insertVehicle(vehicle: VehicleInformationData): Long {
+        val id = (vehicles.maxOfOrNull { it.vehicleId } ?: 0L) + 1
+        vehicles += vehicle.copy(vehicleId = id)
+        return id
+    }
+    override suspend fun updateVehicle(vehicle: VehicleInformationData) {
+        vehicles.replaceAll { if (it.vehicleId == vehicle.vehicleId) vehicle else it }
+    }
+    override suspend fun deleteAllLinks() { links.clear() }
 }

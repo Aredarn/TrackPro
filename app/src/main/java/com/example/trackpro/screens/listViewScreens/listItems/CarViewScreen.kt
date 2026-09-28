@@ -45,12 +45,21 @@ import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
+import com.example.trackpro.screens.garage.CarBackupStrip
+import com.example.trackpro.screens.garage.CarBests
+import com.example.trackpro.screens.garage.CarDeleteRow
+import com.example.trackpro.screens.garage.CarPhotoSection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 
 @Composable
-fun CarViewScreen(vehicleId: Long, onBack: () -> Unit) {
+fun CarViewScreen(
+    vehicleId: Long,
+    onBack: () -> Unit,
+    onSignIn: () -> Unit = {},
+    onOpenTrack: (Long) -> Unit = {},
+) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
     val useMetric by app.useMetricUnits.collectAsState()
@@ -97,6 +106,9 @@ fun CarViewScreen(vehicleId: Long, onBack: () -> Unit) {
                 contentPadding = PaddingValues(top = contentPadding.calculateTopPadding())
             ) {
 
+                    // ── Photo ─────────────────────────────
+                    item(key = "photo") { CarPhotoSection(vehicle) }
+
                     // ── Hero ──────────────────────────────
                     item {
                         Column(
@@ -123,6 +135,12 @@ fun CarViewScreen(vehicleId: Long, onBack: () -> Unit) {
                         }
                         HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                     }
+
+                    // ── Account backup ────────────────────
+                    item(key = "backup") { CarBackupStrip(vehicle, onSignIn = onSignIn) }
+
+                    // ── Its laps ──────────────────────────
+                    item(key = "bests") { CarBests(vehicle.vehicleId, onOpenTrack = onOpenTrack) }
 
                     // ── Performance stats ─────────────────
                     item {
@@ -212,6 +230,8 @@ fun CarViewScreen(vehicleId: Long, onBack: () -> Unit) {
                         VehicleInfoRow("Tyre Type", vehicle.tireType,
                             TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
                     }
+
+                    item(key = "delete") { CarDeleteRow(vehicle, onDeleted = onBack) }
 
                     item { Spacer(Modifier.height(Spacing.xl)) }
                 }

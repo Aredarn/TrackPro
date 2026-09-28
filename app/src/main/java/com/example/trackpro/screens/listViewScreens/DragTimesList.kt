@@ -33,6 +33,7 @@ import androidx.navigation.NavController
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.ScreenScaffold
+import com.example.trackpro.components.countLabel
 import com.example.trackpro.components.pressable
 import com.example.trackpro.components.ConfirmDeleteDialog
 import com.example.trackpro.components.DataGate
@@ -52,7 +53,11 @@ import java.util.Date
 @Composable
 fun DragTimesListView(
     viewModel: DragSessionViewModel,
-    navController: NavController
+    navController: NavController,
+    /** Null when shown as a tab root, where there is nothing to go back to. */
+    onBack: (() -> Unit)? = { navController.popBackStack() },
+    header: (@Composable () -> Unit)? = null,
+    title: String = "Drag Records",
 ) {
     val dragSessions by viewModel.dragSessions.collectAsState()
     val loadState by viewModel.loadState.collectAsState()
@@ -69,12 +74,13 @@ fun DragTimesListView(
     val scrolled by listState.isScrolledUnderChrome()
 
     ScreenScaffold(
-            title = "Drag Records",
-            onBack = { navController.popBackStack() },
+            title = title,
+            onBack = onBack,
+            header = header,
             accent = TrackProTheme.colors.accent,
             trailing = {
                 Text(
-                    "${dragSessions.size} sessions",
+                    countLabel(dragSessions.size, "run"),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.textMuted
                 )

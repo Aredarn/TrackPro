@@ -79,7 +79,54 @@ data class VehicleWrite(
     val suspensionType: String? = null,
 )
 
-// ── Tracks ──
+/** A vehicle as the server returns it. Mapped back to [VehicleWrite] to compare against local. */
+@Serializable
+data class VehicleResponse(
+    val id: String,
+    val manufacturer: String,
+    val model: String,
+    val year: Int,
+    val engineType: String,
+    val horsepower: Int,
+    val torque: Int? = null,
+    val weight: Double,
+    val topSpeed: Double? = null,
+    val acceleration: Double? = null,
+    val drivetrain: String,
+    val fuelType: String,
+    val tireType: String,
+    val fuelCapacity: Double? = null,
+    val transmission: String,
+    val suspensionType: String? = null,
+    val photoUrl: String? = null,
+) {
+    fun toWrite() = VehicleWrite(
+        manufacturer = manufacturer,
+        model = model,
+        year = year,
+        engineType = engineType,
+        horsepower = horsepower,
+        torque = torque,
+        weight = weight,
+        topSpeed = topSpeed,
+        acceleration = acceleration,
+        drivetrain = drivetrain,
+        fuelType = fuelType,
+        tireType = tireType,
+        fuelCapacity = fuelCapacity,
+        transmission = transmission,
+        suspensionType = suspensionType,
+    )
+}
+
+@Serializable
+data class VehiclePage(
+    val items: List<VehicleResponse>,
+    val page: Int,
+    val pageSize: Int,
+    val totalCount: Long,
+)
+
 
 @Serializable
 data class TrackPointWrite(
@@ -176,6 +223,80 @@ data class Leaderboard(
     val entries: List<LeaderboardEntry>,
     val me: LeaderboardEntry? = null,
 )
+
+// ── Profile ──
+
+@Serializable
+data class ProfileResponse(
+    val id: String,
+    val email: String,
+    val displayName: String,
+    val role: String = "Driver",
+    val bio: String? = null,
+    val country: String? = null,
+    val avatarUrl: String? = null,
+    val memberSince: String? = null,
+)
+
+/** Partial update: a null field is left out of the JSON and keeps its value on the server. */
+@Serializable
+data class UpdateProfileRequest(
+    val displayName: String? = null,
+    val bio: String? = null,
+    val country: String? = null,
+)
+
+@Serializable
+data class ProfileVehicleRef(
+    val id: String,
+    val manufacturer: String,
+    val model: String,
+    val year: Int,
+    val photoUrl: String? = null,
+)
+
+@Serializable
+data class PersonalBest(
+    val trackId: String,
+    val trackName: String,
+    val country: String = "",
+    val trackType: ApiTrackType = ApiTrackType.Circuit,
+    val bestLapMs: Int,
+    val setAt: String,
+    val vehicle: ProfileVehicleRef? = null,
+    val lapCount: Int = 0,
+    val rank: Int? = null,
+    val fieldSize: Int? = null,
+    val rankedLapMs: Int? = null,
+)
+
+@Serializable
+data class ProfileStats(
+    val sessionCount: Int = 0,
+    val lapCount: Int = 0,
+    val trackCount: Int = 0,
+    val vehicleCount: Int = 0,
+    val distanceKm: Double? = null,
+    val firstSessionAt: String? = null,
+    val lastSessionAt: String? = null,
+    val mainVehicle: ProfileVehicleRef? = null,
+    val personalBests: List<PersonalBest> = emptyList(),
+)
+
+@Serializable
+enum class MediaKind {
+    @SerialName("Avatar") Avatar,
+    @SerialName("VehiclePhoto") VehiclePhoto,
+}
+
+@Serializable
+data class UploadRequest(val kind: MediaKind, val vehicleId: String? = null, val contentType: String = "image/jpeg")
+
+@Serializable
+data class UploadTarget(val uploadUrl: String, val path: String, val publicUrl: String)
+
+@Serializable
+data class SetMediaRequest(val path: String)
 
 // ── Errors ──
 

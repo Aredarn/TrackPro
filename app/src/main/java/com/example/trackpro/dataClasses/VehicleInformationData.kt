@@ -23,5 +23,10 @@ data class VehicleInformationData(
     val fuelCapacity: Double?, // in liters
     val transmission: String, // e.g., "Manual", "Automatic", "Sequential"
     val suspensionType: String?, // e.g., "Independent", "Double Wishbone"
+    /**
+     * File name of the car's photo inside the app's private `photos` directory, or null.
+     * A name rather than a path so a restore to a different data directory still resolves.
+     */
+    val photoFile: String? = null,
 )
 

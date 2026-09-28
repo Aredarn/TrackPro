@@ -56,11 +56,38 @@ interface TrackBoardApi {
     suspend fun getLeaderboard(accessToken: String?, trackId: String, limit: Int): Leaderboard?
 }
 
+/**
+ * The profile, garage and photo endpoints. Kept apart from [TrackBoardApi] because they serve
+ * the account screens and garage sync, not leaderboard sync, and each side is tested against
+ * its own fake.
+ */
+interface TrackBoardAccountApi {
+    suspend fun getProfile(accessToken: String): ProfileResponse
+    suspend fun updateProfile(accessToken: String, body: UpdateProfileRequest): ProfileResponse
+    suspend fun getStats(accessToken: String): ProfileStats
+    /** The raw export document, exactly as the server wrote it. */
+    suspend fun exportAccount(accessToken: String): String
+    suspend fun deleteAccount(accessToken: String)
+
+    /** One page of the caller's vehicles, 1-based. */
+    suspend fun listVehicles(accessToken: String, page: Int, pageSize: Int = 100): VehiclePage
+    /** Succeeds when already gone. Throws a 409 `VehicleInUse` when uploaded sessions still use it. */
+    suspend fun deleteVehicle(accessToken: String, id: String)
+
+    suspend fun createUpload(accessToken: String, body: UploadRequest): UploadTarget
+    /** PUTs [bytes] to a signed storage URL. No TrackBoard token: the URL carries its own. */
+    suspend fun uploadBytes(url: String, bytes: ByteArray, contentType: String)
+    suspend fun setAvatar(accessToken: String, path: String?): ProfileResponse
+    suspend fun setVehiclePhoto(accessToken: String, vehicleId: String, path: String?): VehicleResponse
+    /** Fetches a public photo. Null when it no longer exists. */
+    suspend fun download(url: String): ByteArray?
+}
+
 class OkHttpTrackBoardApi(
     /** Read on every call, so a changed server address in Settings applies immediately. */
     private val baseUrl: () -> String?,
     private val client: OkHttpClient = defaultClient(),
-) : TrackBoardApi {
+) : TrackBoardApi, TrackBoardAccountApi {
 
     override suspend fun register(request: RegisterRequest): AuthResponse =
         send("POST", "auth/register", null, request, RegisterRequest.serializer(), AuthResponse.serializer())
@@ -111,7 +138,98 @@ class OkHttpTrackBoardApi(
             json.decodeFromString(Leaderboard.serializer(), response.bodyText())
         }
 
+    // ── Account ──
+
+    override suspend fun getProfile(accessToken: String): ProfileResponse =
+        get("me", accessToken, ProfileResponse.serializer())
+
+    override suspend fun updateProfile(accessToken: String, body: UpdateProfileRequest): ProfileResponse =
+        send("PATCH", "me", accessToken, body, UpdateProfileRequest.serializer(), ProfileResponse.serializer())
+
+    override suspend fun getStats(accessToken: String): ProfileStats =
+        get("me/stats", accessToken, ProfileStats.serializer())
+
+    override suspend fun exportAccount(accessToken: String): String =
+        call("GET", "me/export", accessToken, null).use { response ->
+            response.requireSuccess()
+            response.bodyText()
+        }
+
+    override suspend fun deleteAccount(accessToken: String) {
+        call("DELETE", "me", accessToken, null).use { it.requireSuccess() }
+    }
+
+    override suspend fun listVehicles(accessToken: String, page: Int, pageSize: Int): VehiclePage =
+        get("vehicles?page=$page&pageSize=$pageSize", accessToken, VehiclePage.serializer())
+
+    override suspend fun deleteVehicle(accessToken: String, id: String) {
+        call("DELETE", "vehicles/$id", accessToken, null).use { response ->
+            if (response.code != 404) response.requireSuccess()
+        }
+    }
+
+    override suspend fun createUpload(accessToken: String, body: UploadRequest): UploadTarget =
+        send("POST", "me/uploads", accessToken, body, UploadRequest.serializer(), UploadTarget.serializer())
+
+    override suspend fun uploadBytes(url: String, bytes: ByteArray, contentType: String) {
+        val target = url.toHttpUrlOrNull() ?: throw NetworkException("The server returned an unusable upload address.")
+        external(Request.Builder().url(target).put(bytes.toRequestBody(contentType.toMediaType())).build()).use { response ->
+            if (!response.isSuccessful) {
+                throw ApiException(response.code, "Photo storage refused the upload (${response.code}).")
+            }
+        }
+    }
+
+    override suspend fun setAvatar(accessToken: String, path: String?): ProfileResponse =
+        if (path == null) {
+            call("DELETE", "me/avatar", accessToken, null).use { response ->
+                response.requireSuccess()
+                json.decodeFromString(ProfileResponse.serializer(), response.bodyText())
+            }
+        } else {
+            send("PUT", "me/avatar", accessToken, SetMediaRequest(path), SetMediaRequest.serializer(), ProfileResponse.serializer())
+        }
+
+    override suspend fun setVehiclePhoto(accessToken: String, vehicleId: String, path: String?): VehicleResponse =
+        if (path == null) {
+            call("DELETE", "vehicles/$vehicleId/photo", accessToken, null).use { response ->
+                response.requireSuccess()
+                json.decodeFromString(VehicleResponse.serializer(), response.bodyText())
+            }
+        } else {
+            send(
+                "PUT", "vehicles/$vehicleId/photo", accessToken,
+                SetMediaRequest(path), SetMediaRequest.serializer(), VehicleResponse.serializer()
+            )
+        }
+
+    override suspend fun download(url: String): ByteArray? {
+        val target = url.toHttpUrlOrNull() ?: return null
+        return external(Request.Builder().url(target).get().build()).use { response ->
+            when {
+                response.code == 404 || response.code == 400 -> null
+                !response.isSuccessful -> throw NetworkException("Could not download a photo (${response.code}).")
+                else -> response.body?.bytes()
+            }
+        }
+    }
+
     // ── Plumbing ──
+
+    private suspend fun <Res> get(path: String, accessToken: String, serializer: KSerializer<Res>): Res =
+        call("GET", path, accessToken, null).use { response ->
+            response.requireSuccess()
+            json.decodeFromString(serializer, response.bodyText())
+        }
+
+    /** A request to a host other than the TrackBoard API: photo storage. Never carries our token. */
+    private suspend fun external(request: Request): Response = withContext(Dispatchers.IO) {
+        try {
+            client.newCall(request).execute()
+        } catch (e: IOException) {
+            throw NetworkException("Could not reach photo storage.", e)
+        }
+    }
 
     private suspend fun put(path: String, accessToken: String, body: String): Boolean =
         call("PUT", path, accessToken, body).use { response ->

@@ -42,10 +42,11 @@ import java.text.DateFormat
 import java.util.Date
 
 /**
- * The Settings group for TrackBoard: server, account, leaderboard sharing, and sync status.
+ * The Settings group for TrackBoard: only where the server is.
  *
- * Everything here is optional. The copy says so first, because the product promise is that
- * nothing in TrackPro depends on an account or a network.
+ * The account itself — signing in, sharing laps, sync, export, deletion — lives on the
+ * Profile tab, next to the career it belongs to. Settings used to hold all of it, which put a
+ * driver's identity between the unit toggle and the GPS source.
  */
 @Composable
 fun OnlineSettingsGroup() {
@@ -56,27 +57,21 @@ fun OnlineSettingsGroup() {
 
     DashGroup("Online · TrackBoard") {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            ServerRow(url = serverUrl, onChange = online.settings::setServerUrl)
             Text(
-                "Optional. Post lap times to per-track leaderboards. Recording never needs an account or a network.",
+                when (val state = account) {
+                    is AccountState.SignedIn -> "Signed in as ${state.displayName}. Your account, lap sharing and sync are on the Profile tab."
+                    is AccountState.SignedOut -> "Optional. Sign in from the Profile tab to back up your garage and post laps to leaderboards. Recording never needs an account or a network."
+                },
                 style = TrackProType.body,
                 color = TrackProTheme.colors.textMuted
             )
-
-            ServerRow(url = serverUrl, onChange = online.settings::setServerUrl)
-
-            when (val state = account) {
-                is AccountState.SignedOut -> SignInForm(
-                    notice = state.notice,
-                    serverSet = serverUrl.isNotBlank()
-                )
-                is AccountState.SignedIn -> SignedInRows(state)
-            }
         }
     }
 }
 
 @Composable
-private fun ServerRow(url: String, onChange: (String) -> Unit) {
+internal fun ServerRow(url: String, onChange: (String) -> Unit) {
     Column {
         Placard("Server")
         Spacer(Modifier.height(6.dp))
@@ -92,8 +87,9 @@ private fun ServerRow(url: String, onChange: (String) -> Unit) {
     }
 }
 
+/** Sign in or create an account. [onSignedIn] runs after the tokens are stored. */
 @Composable
-private fun SignInForm(notice: String?, serverSet: Boolean) {
+internal fun AccountSignInForm(notice: String?, serverSet: Boolean, onSignedIn: () -> Unit = {}) {
     val context = LocalContext.current
     val online = (context.applicationContext as TrackProApp).online
     val scope = rememberCoroutineScope()
@@ -162,7 +158,7 @@ private fun SignInForm(notice: String?, serverSet: Boolean) {
         error?.let { Text(it, style = TrackProType.body, color = TrackProTheme.colors.deltaBad) }
 
         if (!serverSet) {
-            Text("Set a server above first.", style = TrackProType.body, color = TrackProTheme.colors.textMuted)
+            Text("Set a server first.", style = TrackProType.body, color = TrackProTheme.colors.textMuted)
         }
 
         val formComplete = email.isNotBlank() && password.isNotEmpty() && (!creating || displayName.isNotBlank())
@@ -184,6 +180,7 @@ private fun SignInForm(notice: String?, serverSet: Boolean) {
                         password = ""
                         SyncScheduler.schedulePeriodic(context)
                         SyncScheduler.syncSoon(context)
+                        onSignedIn()
                     } catch (e: ApiException) {
                         error = e.message
                     } catch (e: NetworkException) {
@@ -199,111 +196,12 @@ private fun SignInForm(notice: String?, serverSet: Boolean) {
 }
 
 @Composable
-private fun SignedInRows(account: AccountState.SignedIn) {
-    val context = LocalContext.current
-    val online = (context.applicationContext as TrackProApp).online
-    val scope = rememberCoroutineScope()
-    val sharing by online.settings.sharingEnabled.collectAsState()
-    val lastSync by online.settings.lastSync.collectAsState()
-    val syncing by remember { SyncScheduler.isSyncing(context) }.collectAsState(initial = false)
-
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        ValueRow(
-            label = "Account",
-            value = "${account.displayName} · ${account.email}",
-            action = "Sign out",
-            actionSelected = false,
-            onAction = {
-                scope.launch {
-                    SyncScheduler.cancelAll(context)
-                    online.auth.signOut()
-                }
-            }
-        )
-
-        Column {
-            ValueRow(
-                label = "Leaderboards",
-                value = if (sharing) "Sharing your laps" else "Not sharing",
-                action = if (sharing) "Stop sharing" else "Share laps",
-                actionSelected = sharing,
-                onAction = {
-                    online.settings.setSharingEnabled(!sharing)
-                    SyncScheduler.syncSoon(context)
-                }
-            )
-            Spacer(Modifier.height(Spacing.xs))
-            Text(
-                // Says exactly what leaves the phone, so the choice is an informed one.
-                "Shared: your name, lap and sector times, session date, vehicle make, model and year, " +
-                    "and which GPS was used. Only sessions recorded from this version on, on premade or " +
-                    "published tracks. Stop sharing takes them back down.",
-                style = TrackProType.body,
-                color = TrackProTheme.colors.textMuted
-            )
-        }
-
-        ValueRow(
-            label = "Last sync",
-            value = describe(lastSync),
-            valueColor = if (lastSync?.problem != null && lastSync?.offline != true) {
-                TrackProTheme.colors.deltaBad
-            } else {
-                TrackProTheme.colors.textMuted
-            },
-            action = if (syncing) "Syncing…" else "Sync now",
-            actionSelected = false,
-            onAction = { if (!syncing) SyncScheduler.syncSoon(context) }
-        )
-    }
-}
-
-private fun describe(report: SyncReport?): String {
-    if (report == null) return "Not synced yet"
-    val at = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(report.finishedAt))
-    if (report.offline) return "Offline at $at · will retry"
-
-    val parts = buildList {
-        if (report.uploaded > 0) add("${report.uploaded} posted")
-        if (report.withdrawn > 0) add("${report.withdrawn} withdrawn")
-        if (report.unchanged > 0) add("${report.unchanged} up to date")
-        if (report.failed > 0) add("${report.failed} failed")
-    }
-    val summary = parts.ifEmpty { listOf("Nothing to post") }.joinToString(" · ")
-    return listOfNotNull("$summary · $at", report.problem).joinToString("\n")
-}
-
-@Composable
-private fun ValueRow(
-    label: String,
-    value: String,
-    action: String,
-    actionSelected: Boolean,
-    onAction: () -> Unit,
-    valueColor: androidx.compose.ui.graphics.Color = TrackProTheme.colors.textMuted,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Placard(label)
-            Spacer(Modifier.height(2.dp))
-            Text(value, style = TrackProType.body, color = valueColor)
-        }
-        Spacer(Modifier.width(Spacing.sm))
-        ToggleChip(text = action, selected = actionSelected, onClick = onAction)
-    }
-}
-
-@Composable
 private fun Placard(text: String) {
     Text(text.uppercase(), style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
 }
 
 @Composable
-private fun fieldColors() = OutlinedTextFieldDefaults.colors(
+internal fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedTextColor = TrackProTheme.colors.textPrimary,
     unfocusedTextColor = TrackProTheme.colors.textPrimary,
     focusedBorderColor = TrackProTheme.colors.accent,

@@ -13,12 +13,32 @@ data class SyncReport(
     val uploaded: Int = 0,
     val unchanged: Int = 0,
     val withdrawn: Int = 0,
+    /** Cars and photos restored from the account onto this phone. */
+    val downloaded: Int = 0,
     val failed: Int = 0,
     /** The first problem, phrased for the driver. */
     val problem: String? = null,
     /** The server was unreachable; the worker retries later on its own. */
     val offline: Boolean = false,
 )
+
+/** One line for the driver about the last sync, e.g. "3 sent · 1 restored · 14:02". */
+fun describe(report: SyncReport?): String {
+    if (report == null) return "Not synced yet"
+    val at = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
+        .format(java.util.Date(report.finishedAt))
+    if (report.offline) return "Offline at $at · will retry"
+
+    val parts = buildList {
+        if (report.uploaded > 0) add("${report.uploaded} sent")
+        if (report.downloaded > 0) add("${report.downloaded} restored")
+        if (report.withdrawn > 0) add("${report.withdrawn} withdrawn")
+        if (report.unchanged > 0) add("${report.unchanged} up to date")
+        if (report.failed > 0) add("${report.failed} failed")
+    }
+    val summary = parts.ifEmpty { listOf("Everything up to date") }.joinToString(" · ")
+    return listOfNotNull("$summary · $at", report.problem).joinToString("\n")
+}
 
 /**
  * TrackBoard preferences, persisted like the rest of TrackProApp's settings: a
@@ -31,8 +51,11 @@ class OnlineSettings(context: Context) {
 
     private val prefs = context.getSharedPreferences("trackboard_prefs", Context.MODE_PRIVATE)
 
-    private val _serverUrl = MutableStateFlow(prefs.getString(KEY_SERVER, "") ?: "")
-    /** No default: there is no public TrackBoard deployment to point at yet. */
+    private val _serverUrl = MutableStateFlow(prefs.getString(KEY_SERVER, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_SERVER)
+    /**
+     * Defaults to the public TrackBoard deployment. A driver who typed their own address keeps
+     * it; clearing the field falls back to this default on the next launch.
+     */
     val serverUrl: StateFlow<String> = _serverUrl.asStateFlow()
 
     private val _sharing = MutableStateFlow(prefs.getBoolean(KEY_SHARING, false))
@@ -63,9 +86,10 @@ class OnlineSettings(context: Context) {
         _lastSync.value = report
     }
 
-    private companion object {
-        const val KEY_SERVER = "server_url"
-        const val KEY_SHARING = "sharing_enabled"
-        const val KEY_LAST_SYNC = "last_sync"
+    companion object {
+        const val DEFAULT_SERVER = "https://trackboard-u9uj.onrender.com"
+        private const val KEY_SERVER = "server_url"
+        private const val KEY_SHARING = "sharing_enabled"
+        private const val KEY_LAST_SYNC = "last_sync"
     }
 }

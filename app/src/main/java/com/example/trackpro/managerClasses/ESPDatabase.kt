@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.trackpro.dao.CareerDao
 import com.example.trackpro.dao.DerivedDataDao
 import com.example.trackpro.dao.LapInfoDataDAO
 import com.example.trackpro.dao.LapTimeDataDAO
@@ -44,7 +45,7 @@ import com.example.trackpro.dataClasses.VehicleInformationData
     SectorTimeData::class,
     RemoteLink::class,
     TrackPublication::class
-], version = 9, exportSchema = true)
+], version = 10, exportSchema = true)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun rawGPSDataDao(): RawGPSDataDao
@@ -58,6 +59,8 @@ abstract class ESPDatabase : RoomDatabase() {
     abstract fun sectorTimeDataDAO(): SectorTimeDataDAO
 
     abstract fun syncDao(): SyncDao
+
+    abstract fun careerDao(): CareerDao
 
     companion object {
         @Volatile
@@ -243,6 +246,13 @@ abstract class ESPDatabase : RoomDatabase() {
             }
         }
 
+        /** A photo per vehicle. Nullable, so every existing car simply has none. */
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `vehicle_information_data` ADD COLUMN `photoFile` TEXT")
+            }
+        }
+
         /**
          * Every migration, in order. This is the single list the production database is
          * built with; the instrumented migration tests run exactly the same array so a
@@ -256,7 +266,8 @@ abstract class ESPDatabase : RoomDatabase() {
             MIGRATION_5_6,
             MIGRATION_6_7,
             MIGRATION_7_8,
-            MIGRATION_8_9
+            MIGRATION_8_9,
+            MIGRATION_9_10
         )
 
         fun getInstance(context: Context): ESPDatabase {

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.RemoteLink
 import com.example.trackpro.dataClasses.SectorTimeData
@@ -30,6 +31,10 @@ interface SyncDao {
 
     @Query("SELECT * FROM remote_link WHERE kind = :kind")
     suspend fun getLinks(kind: String): List<RemoteLink>
+
+    /** Live, so the garage shows a car's backup state change the moment sync finishes. */
+    @Query("SELECT * FROM remote_link WHERE kind = :kind")
+    fun observeLinks(kind: String): Flow<List<RemoteLink>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putLink(link: RemoteLink)
@@ -83,4 +88,19 @@ interface SyncDao {
 
     @Query("SELECT * FROM vehicle_information_data WHERE vehicleId = :vehicleId")
     suspend fun getVehicle(vehicleId: Long): VehicleInformationData?
+
+    // ── Garage sync writes ──
+
+    @Query("SELECT * FROM vehicle_information_data ORDER BY vehicleId")
+    suspend fun getVehicles(): List<VehicleInformationData>
+
+    @Insert
+    suspend fun insertVehicle(vehicle: VehicleInformationData): Long
+
+    @Update
+    suspend fun updateVehicle(vehicle: VehicleInformationData)
+
+    /** Forgets every server link. Used when the account they point into is deleted. */
+    @Query("DELETE FROM remote_link")
+    suspend fun deleteAllLinks()
 }
