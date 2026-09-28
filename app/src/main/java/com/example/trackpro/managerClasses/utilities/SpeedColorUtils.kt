@@ -1,5 +1,7 @@
 package com.example.trackpro.managerClasses.utilities
 
+import java.util.Locale
+
 /**
  * Maps a normalized speed value (0..1, slow..fast) to a hex color for heatmap-style
  * track/session traces.
@@ -45,6 +47,6 @@ object SpeedColorUtils {
         val g = (g0 + (g1 - g0) * f).toInt().coerceIn(0, 255)
         val b = (b0 + (b1 - b0) * f).toInt().coerceIn(0, 255)
 
-        return String.format("#%02X%02X%02X", r, g, b)
+        return String.format(Locale.US, "#%02X%02X%02X", r, g, b)
     }
 }

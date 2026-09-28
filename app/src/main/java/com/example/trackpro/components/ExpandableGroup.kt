@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.theme.Motion
+import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.Spacing
 
 /**
@@ -75,7 +76,7 @@ fun ExpandableGroup(
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
                 contentDescription = if (expanded) "Collapse" else "Expand",
-                tint = if (expanded) accent else TrackProTheme.colors.textFaint,
+                tint = if (expanded) accent else TrackProTheme.colors.markingDim,
                 modifier = Modifier
                     .size(18.dp)
                     .rotate(chevronRotation)

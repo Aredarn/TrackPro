@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.theme.atSize
+import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.TrackProType
 
 /** Height of the bar itself, exported so [ScreenScaffold] can inset content by it. */
@@ -93,7 +94,7 @@ fun AppTopBar(
                     Text(
                         text = subtitle,
                         style = TrackProType.body.atSize(11.sp),
-                        color = TrackProTheme.colors.textFaint
+                        color = TrackProTheme.colors.markingDim
                     )
                 }
             }

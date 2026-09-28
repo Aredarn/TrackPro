@@ -1,6 +1,7 @@
 package com.example.trackpro.managerClasses.utilities
 
 import kotlin.math.roundToInt
+import java.util.Locale
 
 /**
  * Converts and formats GPS-derived speed/distance values for display.
@@ -29,7 +30,7 @@ object UnitFormatter {
     /** Formats a Celsius temperature in the display unit, e.g. "23.7 °C" / "74.7 °F". */
     fun formatTemperature(celsius: Double, metric: Boolean): String {
         val value = if (metric) celsius else celsius * 9.0 / 5.0 + 32.0
-        return String.format("%.1f %s", value, temperatureUnitLabel(metric))
+        return String.format(Locale.US, "%.1f %s", value, temperatureUnitLabel(metric))
     }
 
     /** Formats a km/h speed as "123" / "76" (no unit suffix) rounded to the nearest whole number. */
@@ -41,7 +42,7 @@ object UnitFormatter {
 
     /** Formats a km/h speed with one decimal place, e.g. "123.4". */
     fun formatSpeedPrecise(kmh: Double, metric: Boolean): String =
-        String.format("%.1f", convertSpeed(kmh, metric))
+        String.format(Locale.US, "%.1f", convertSpeed(kmh, metric))
 
     /**
      * Formats a distance given in meters as e.g. "402 m" / "1320 ft" / "1.20 km" / "2.71 mi".
@@ -54,12 +55,12 @@ object UnitFormatter {
      */
     fun formatDistance(meters: Double, metric: Boolean): String {
         return if (metric) {
-            if (meters >= 1000) String.format("%.2f km", meters / 1000.0)
-            else String.format("%.0f m", meters)
+            if (meters >= 1000) String.format(Locale.US, "%.2f km", meters / 1000.0)
+            else String.format(Locale.US, "%.0f m", meters)
         } else {
             val feet = meters * METERS_TO_FEET
-            if (feet >= FEET_PER_MILE) String.format("%.2f mi", feet / FEET_PER_MILE)
-            else String.format("%.0f ft", feet)
+            if (feet >= FEET_PER_MILE) String.format(Locale.US, "%.2f mi", feet / FEET_PER_MILE)
+            else String.format(Locale.US, "%.0f ft", feet)
         }
     }
 }

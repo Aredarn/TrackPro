@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.components.DashGroup
+import com.example.trackpro.theme.markingDim
 import com.example.trackpro.components.ScreenScaffold
 import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.ToggleChip
@@ -253,7 +254,7 @@ private fun EspTargetRow(
                 value = testServerAddress,
                 onValueChange = onAddressChange,
                 label = { Text("Simulator IP Address", color = TrackProTheme.colors.textMuted) },
-                placeholder = { Text("e.g. 192.168.1.50", color = TrackProTheme.colors.textFaint) },
+                placeholder = { Text("e.g. 192.168.1.50", color = TrackProTheme.colors.markingDim) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(

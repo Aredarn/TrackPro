@@ -15,12 +15,14 @@ import androidx.compose.ui.unit.sp
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
-import androidx.compose.foundation.border
 import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.bezel
 import com.example.trackpro.theme.marking
 import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.TrackProType
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 
 /**
  * Solid action button — the accent fills only this small control, never a whole bar.
@@ -73,6 +75,9 @@ fun ToggleChip(
     modifier: Modifier = Modifier,
     accent: Color = TrackProTheme.colors.accent
 ) {
+    // Aliased because inside the semantics block the bare name `selected` resolves to the
+    // property being assigned, not to this parameter.
+    val isSelected = selected
     Box(
         modifier = modifier
             // Selection is a discrete commit, so this is one of the few taps that earns
@@ -83,6 +88,13 @@ fun ToggleChip(
                 haptic = Haptic.Selection,
                 role = Role.RadioButton
             )
+            // Role.RadioButton alone announces "radio button" without saying which one is
+            // chosen; the fill was the only thing carrying that, and a screen reader cannot
+            // see a fill.
+            .semantics { this.selected = isSelected }
+            // 13sp over 8dp of padding measured about 32dp. This is the sector-count
+            // picker and both Settings toggles, so it is worth the extra height.
+            .heightIn(min = 48.dp)
             .background(
                 if (selected) accent else TrackProTheme.colors.bgElevated,
                 TrackProShapes.control

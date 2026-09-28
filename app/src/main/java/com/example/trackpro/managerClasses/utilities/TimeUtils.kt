@@ -1,6 +1,7 @@
 package com.example.trackpro.managerClasses.utilities
 
 import com.example.trackpro.dataClasses.LapTimeData
+import java.util.Locale
 
 /**
  * The sentinel values stored in [LapTimeData.laptime] in place of a time.
@@ -62,7 +63,7 @@ fun Long.toLapTimeString(): String {
     val minutes = abs / 60_000
     val seconds = (abs % 60_000) / 1_000
     val hundredths = (abs % 1_000) / 10
-    return String.format("%02d:%02d.%02d", minutes, seconds, hundredths)
+    return String.format(Locale.US, "%02d:%02d.%02d", minutes, seconds, hundredths)
 }
 
 /**

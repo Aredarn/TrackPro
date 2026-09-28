@@ -66,6 +66,8 @@ import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
 
 
 @Composable
@@ -288,7 +290,12 @@ private fun SectorSlicerCard(
                 color = TrackProTheme.colors.danger,
                 modifier = Modifier
                     .pressable(onClick = onClear, scale = 0.94f, haptic = Haptic.Reject)
-                    .padding(vertical = 4.dp)
+                    // Destructive, and the smallest target in the app: 22dp tall with zero
+                    // horizontal padding, so the tap area was the width of the glyphs.
+                    // A full 48dp box now, text optically centred inside it.
+                    .heightIn(min = 48.dp)
+                    .wrapContentHeight(Alignment.CenterVertically)
+                    .padding(horizontal = Spacing.sm)
             )
         }
     }

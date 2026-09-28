@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,8 @@ import androidx.compose.ui.layout.SubcomposeMeasureScope
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -70,6 +73,7 @@ import com.example.trackpro.components.Readout
 import com.example.trackpro.components.SegmentBar
 import com.example.trackpro.components.rememberTrend
 import com.example.trackpro.theme.field
+import com.example.trackpro.theme.bezel
 import com.example.trackpro.theme.marking
 import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.panel
@@ -102,6 +106,7 @@ import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+import java.util.Locale
 
 @Composable
 fun TimeAttackScreenView(
@@ -399,7 +404,7 @@ fun TimeAttackPortraitLayout(
                 .padding(horizontal = 14.dp, vertical = 14.dp)
         ) {
             Readout(
-                value = String.format("%+.3f", delta),
+                value = String.format(Locale.US, "%+.3f", delta),
                 caption = deltaCaption,
                 valueColor = deltaColor,
                 trend = deltaTrend,
@@ -483,7 +488,11 @@ fun TimeAttackPortraitLayout(
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            "AWAITING GPS",
+                            // Not "awaiting GPS": this branch fires when the *stored track
+                            // geometry* is empty, which has nothing to do with the receiver.
+                            // A track saved without coordinates used to claim the GPS was
+                            // missing while it was locked and reporting fine.
+                            "NO TRACK GEOMETRY",
                             style = TrackProType.label,
                             color = TrackProTheme.colors.markingDim
                         )
@@ -574,7 +583,7 @@ fun TimeAttackLandscapeLayout(
                     .padding(horizontal = 14.dp, vertical = 12.dp)
             ) {
                 Readout(
-                    value = String.format("%+.3f", delta),
+                    value = String.format(Locale.US, "%+.3f", delta),
                     caption = deltaCaption,
                     valueColor = deltaColor,
                     trend = deltaTrend,
@@ -665,7 +674,7 @@ fun TimeAttackLandscapeLayout(
                 )
                 else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        "AWAITING GPS",
+                        "NO TRACK GEOMETRY",
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )
@@ -697,13 +706,18 @@ private fun HudTrailing(
         Text(
             text = if (isConnected) "LIVE" else "NO SIGNAL",
             style = TrackProType.label,
-            color = if (isConnected) TrackProTheme.colors.deltaGood else TrackProTheme.colors.textFaint
+            // Fault Is Never Dimmer. NO SIGNAL invalidates every number on this panel, so
+            // it cannot be the faintest thing on it - it was textFaint at 3.35:1 against
+            // LIVE at 9.82:1, three times less visible than the healthy state, in sunlight.
+            color = if (isConnected) TrackProTheme.colors.deltaGood
+            else TrackProTheme.colors.danger
         )
         Spacer(Modifier.width(Spacing.md))
         Text(
             text = "MAP",
             style = TrackProType.label,
-            color = if (mapVisible) TrackProTheme.colors.textPrimary else TrackProTheme.colors.textFaint
+            color = if (mapVisible) TrackProTheme.colors.marking
+            else TrackProTheme.colors.markingDim
         )
         Spacer(Modifier.width(4.dp))
         Switch(
@@ -780,17 +794,35 @@ private fun DeltaReferenceSwitch(
             style = TrackProType.label,
             color = TrackProTheme.colors.markingDim
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             listOf(
                 DeltaReference.SESSION_BEST to "SESSION BEST",
                 DeltaReference.TRACK_BEST to "TRACK BEST"
             ).forEach { (reference, label) ->
-                Text(
-                    text = label,
-                    style = TrackProType.label,
-                    color = if (reference == preferred) TrackProTheme.colors.accent
-                    else TrackProTheme.colors.textFaint
-                )
+                val isSelected = reference == preferred
+                // Selection is a lit aperture, not a hue swap. Colour alone failed twice
+                // over: unreadable to red-green colour-blind users, and at textFaint the
+                // unselected option sat at 3.35:1 while controlling what the largest
+                // number on the screen is measured against.
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (isSelected) TrackProTheme.colors.accent else TrackProTheme.colors.panel
+                        )
+                        .border(
+                            1.dp,
+                            if (isSelected) TrackProTheme.colors.accent else TrackProTheme.colors.bezel
+                        )
+                        .semantics { selected = isSelected }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = label,
+                        style = TrackProType.label,
+                        color = if (isSelected) TrackProTheme.colors.onAccent
+                        else TrackProTheme.colors.markingDim
+                    )
+                }
             }
         }
     }
@@ -806,7 +838,7 @@ private fun StintTimerCell(stintStart: Long, modifier: Modifier = Modifier) {
             val h = elapsed / 3_600_000
             val m = (elapsed % 3_600_000) / 60_000
             val s = (elapsed % 60_000) / 1_000
-            stintTime = String.format("%02d:%02d:%02d", h, m, s)
+            stintTime = String.format(Locale.US, "%02d:%02d:%02d", h, m, s)
         }
     }
     Instrument(label = "Stint", value = stintTime, valueSize = 22.sp, modifier = modifier)
@@ -851,7 +883,7 @@ private fun SectorSplitsRow(splits: List<SectorSplit>) {
                     color = TrackProTheme.colors.markingDim
                 )
                 Text(
-                    text = String.format("%.2f", split.splitMs / 1000.0),
+                    text = String.format(Locale.US, "%.2f", split.splitMs / 1000.0),
                     style = TrackProType.statValue.atSize(14.sp),
                     color = color
                 )
@@ -1028,7 +1060,7 @@ private fun LapRow(lap: CompletedLap, isBest: Boolean, gapToBestMs: Long) {
                     )
                 } else {
                     Text(
-                        text = String.format("+%.2f", gapToBestMs / 1000.0),
+                        text = String.format(Locale.US, "+%.2f", gapToBestMs / 1000.0),
                         style = TrackProType.statValue.atSize(16.sp),
                         color = TrackProTheme.colors.markingDim,
                         modifier = Modifier.layoutId(SLOT_GAP)
@@ -1083,7 +1115,7 @@ private fun SplitMark(split: SectorSplit, modifier: Modifier = Modifier) {
         else -> TrackProTheme.colors.deltaBad
     }
     Text(
-        text = String.format("%.2f", split.splitMs / 1000.0),
+        text = String.format(Locale.US, "%.2f", split.splitMs / 1000.0),
         style = TrackProType.statValue.atSize(12.sp),
         color = color,
         maxLines = 1,

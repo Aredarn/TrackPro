@@ -509,7 +509,7 @@ fun MainScreen(
                             Text(
                                 text = "Performance Telemetry",
                                 style = TrackProType.body.atSize(11.sp),
-                                color = TrackProTheme.colors.textFaint
+                                color = TrackProTheme.colors.markingDim
                             )
                         }
                     }
@@ -699,10 +699,13 @@ private fun DashBoard(
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                text = if (isConnected) "LINKED" else "NO LINK",
+                text = if (isConnected) "LINKED" else "NO SIGNAL",
                 style = TrackProType.label,
+                // Fault Is Never Dimmer, and the same word the HUD uses - the board said
+                // NO LINK in markingDim while the HUD said NO SIGNAL in textFaint, a third
+                // treatment of one concept.
                 color = if (isConnected) TrackProTheme.colors.deltaGood
-                else TrackProTheme.colors.markingDim
+                else TrackProTheme.colors.danger
             )
         }
 

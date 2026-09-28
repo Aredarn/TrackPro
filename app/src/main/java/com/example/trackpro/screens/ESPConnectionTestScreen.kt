@@ -61,6 +61,9 @@ import com.example.trackpro.models.GpsProviderType
 import com.example.trackpro.theme.segmentOff
 import kotlin.math.cos
 import kotlin.math.sin
+import java.util.Locale
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -117,7 +120,11 @@ fun ESPConnectionTestScreen(
                     GpsProviderType.BLUETOOTH -> "ESP32 (Bluetooth) Mode"
                     GpsProviderType.PHONE_GPS -> "Phone GPS Mode"
                 },
-                accent = if (isConnected) TrackProTheme.colors.accent else TrackProTheme.colors.textFaint,
+                // The bar's dot is the first thing read on this screen, and when the rig
+                // is down it is reporting a fault - so it takes danger, not the dimmest
+                // token in the palette.
+                accent = if (isConnected) TrackProTheme.colors.accent
+                else TrackProTheme.colors.danger,
                 onBack = onBack,
                 trailing = {
                     Text(
@@ -128,7 +135,12 @@ fun ESPConnectionTestScreen(
                         // real padding and a press response.
                         modifier = Modifier
                             .pressable(onClick = onNavigateToSettings, scale = 0.94f)
-                            .padding(horizontal = Spacing.sm, vertical = 4.dp)
+                            // Giving it "real padding" last time still only reached 22dp.
+                            // The bar is 48dp tall, so the target fills it without moving
+                            // anything else in the row.
+                            .heightIn(min = 48.dp)
+                            .wrapContentHeight(Alignment.CenterVertically)
+                            .padding(horizontal = Spacing.sm)
                     )
                 }
             )
@@ -275,9 +287,9 @@ fun ESPConnectionTestScreen(
                         )
                         GpsProviderType.PHONE_GPS -> {}
                     }
-                    TelemetryRow("Latitude", gpsData?.latitude?.let { String.format("%.6f\u00b0", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
-                    TelemetryRow("Longitude", gpsData?.longitude?.let { String.format("%.6f\u00b0", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
-                    TelemetryRow("Altitude", gpsData?.altitude?.let { String.format("%.1f m", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
+                    TelemetryRow("Latitude", gpsData?.latitude?.let { String.format(Locale.US, "%.6f\u00b0", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
+                    TelemetryRow("Longitude", gpsData?.longitude?.let { String.format(Locale.US, "%.6f\u00b0", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
+                    TelemetryRow("Altitude", gpsData?.altitude?.let { String.format(Locale.US, "%.1f m", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
                     TelemetryRow(
                         "Refresh",
                         when {

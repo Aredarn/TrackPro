@@ -78,6 +78,12 @@ import com.example.trackpro.theme.DataVizColors
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.TrackProType
+import java.util.Locale
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 
 data class DragMetricDisplay(
     val label: String,
@@ -213,8 +219,19 @@ fun DragRaceScreen(
                         color = if (showData) TrackProTheme.colors.marking
                         else TrackProTheme.colors.markingDim,
                         modifier = Modifier
-                            .pressable(onClick = { showData = !showData }, scale = 0.94f)
-                            .padding(horizontal = Spacing.sm, vertical = 12.dp)
+                            .pressable(
+                                onClick = { showData = !showData },
+                                scale = 0.94f,
+                                // It is a switch, not a button: it has an on state that
+                                // persists, and colour was the only thing saying which.
+                                role = Role.Switch
+                            )
+                            .semantics {
+                                stateDescription = if (showData) "Shown" else "Hidden"
+                            }
+                            .heightIn(min = 48.dp)
+                            .wrapContentHeight(Alignment.CenterVertically)
+                            .padding(horizontal = Spacing.sm)
                     )
                 }
             }
@@ -590,7 +607,10 @@ fun DragMetricCard(
                 Text(
                     metric.label.uppercase(),
                     style = TrackProType.label,
-                    color = if (metric.achieved) TrackProTheme.colors.textMuted else TrackProTheme.colors.textFaint
+                    // Unreached splits stay quieter than reached ones, but both clear AA;
+                    // textFaint measured 3.35:1 and this is a 10sp placard.
+                    color = if (metric.achieved) TrackProTheme.colors.marking
+                    else TrackProTheme.colors.markingDim
                 )
                 if (metric.achieved) {
                     Box(
@@ -623,7 +643,7 @@ fun DragMetricCard(
 }
 
 private fun formatTime(seconds: Double): String {
-    return String.format("%.2f", seconds)
+    return String.format(Locale.US, "%.2f", seconds)
 }
 
 /**

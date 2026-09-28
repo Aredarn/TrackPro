@@ -33,6 +33,7 @@ import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.Haptic
+import com.example.trackpro.theme.markingDim
 import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.DraggableSheet
@@ -65,6 +66,10 @@ import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
 import android.graphics.Color as AndroidColor
+import java.util.Locale
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 
 // ── Heatmap mode ───────────────────────────────────────────
 
@@ -166,7 +171,7 @@ fun LapDetailScreen(
             LoadingView()
         } else if (primaryLap == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Lap not found", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
+                Text("Lap not found", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
             }
         } else {
             val lap = primaryLap!!
@@ -207,10 +212,12 @@ fun LapDetailScreen(
                             RoundedCornerShape(0.dp)
                         )
                         .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     HeatmapMode.values().forEach { mode ->
-                        val selected = mode == heatmapMode
+                        // isSelected, not selected: inside the semantics block the bare name
+                        // resolves to the semantics property being assigned, not the local.
+                        val isSelected = mode == heatmapMode
                         Box(
                             modifier = Modifier
                                 .pressable(
@@ -218,18 +225,23 @@ fun LapDetailScreen(
                                     scale = 0.96f,
                                     haptic = Haptic.Selection
                                 )
+                                // Was 26dp tall with 2dp between chips. This is the control
+                                // that decides what the map is showing, and it gets used
+                                // one-thumbed with the other hand holding the phone.
+                                .heightIn(min = 48.dp)
                                 .clip(RoundedCornerShape(0.dp))
                                 .background(
-                                    if (selected) TrackProTheme.colors.accent
+                                    if (isSelected) TrackProTheme.colors.accent
                                     else Color.Transparent
                                 )
+                                .semantics { selected = isSelected }
                                 .padding(horizontal = Spacing.md, vertical = 6.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 mode.label,
                                 style = TrackProType.label,
-                                color = if (selected) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
+                                color = if (isSelected) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
                             )
                         }
                     }
@@ -515,7 +527,7 @@ private fun drawUniformLine(
     val geojson = """{"type":"Feature","geometry":{"type":"LineString","coordinates":[$coords]},"properties":{}}"""
     val srcId   = "$prefix-uniform-src"
     val layerId = "$prefix-uniform-layer"
-    val hex     = String.format("#%06X", 0xFFFFFF and color)
+    val hex     = String.format(Locale.US, "#%06X", 0xFFFFFF and color)
 
     style.addSource(GeoJsonSource(srcId, geojson))
     style.addLayer(LineLayer(layerId, srcId).apply {
@@ -658,8 +670,8 @@ private fun StatsPanel(
                 val compareSplit = compareSectors.find { it.sectorIndex == sector.sectorIndex }
                 add(StatRow(
                     "Sector ${sector.sectorIndex + 1}",
-                    String.format("%.2fs", sector.splitTimeMs / 1000.0),
-                    if (compareLap != null) compareSplit?.let { String.format("%.2fs", it.splitTimeMs / 1000.0) } ?: "—" else "—"
+                    String.format(Locale.US, "%.2fs", sector.splitTimeMs / 1000.0),
+                    if (compareLap != null) compareSplit?.let { String.format(Locale.US, "%.2fs", it.splitTimeMs / 1000.0) } ?: "—" else "—"
                 ))
             }
             if (compareLap != null) {
@@ -797,7 +809,7 @@ private fun LapPickerSheet(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                     ) {
                         Text(
-                            String.format("%02d", lap.lapnumber),
+                            String.format(Locale.US, "%02d", lap.lapnumber),
                             style = TrackProType.statValue.atSize(16.sp),
                             color = if (isBest) TrackProTheme.colors.accent else TrackProTheme.colors.textPrimary
                         )
@@ -845,7 +857,7 @@ private fun LoadingView() {
                 strokeWidth = 2.dp
             )
             Spacer(Modifier.height(12.dp))
-            Text("Loading lap", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
+            Text("Loading lap", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
         }
     }
 }

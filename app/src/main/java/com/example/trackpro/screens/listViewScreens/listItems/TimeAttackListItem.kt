@@ -49,6 +49,7 @@ import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.pressable
+import com.example.trackpro.theme.markingDim
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.DashAction
 import com.example.trackpro.components.VoidStamp
@@ -72,6 +73,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.util.Date
+import java.util.Locale
 
 class TimeAttackListItem : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -142,12 +144,12 @@ fun TimeAttackListItemScreen(
                     CircularProgressIndicator(color = TrackProTheme.colors.accent,
                         modifier = Modifier.size(36.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.height(12.dp))
-                    Text("Loading session", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
+                    Text("Loading session", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                 }
             }
         } else if (sessionData == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Session not found", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
+                Text("Session not found", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
             }
         } else {
             val session = sessionData!!
@@ -176,7 +178,7 @@ fun TimeAttackListItemScreen(
                 val mean = lapMillis.average()
                 val stdDev = Math.sqrt(lapMillis.map { (it - mean) * (it - mean) }.average())
                 val pct = (stdDev / mean * 100)
-                String.format("%.1f%%", pct)
+                String.format(Locale.US, "%.1f%%", pct)
             } else "—"
             // Top speed per lap from GPS
             val topSpeedOverall = lapGpsData.values.flatten()
@@ -344,7 +346,7 @@ fun TimeAttackListItemScreen(
                                 StatCell(
                                     label = "Time On Table",
                                     value = timeOnTableMs
-                                        ?.let { String.format("-%.2fs", it / 1000.0) } ?: "—",
+                                        ?.let { String.format(Locale.US, "-%.2fs", it / 1000.0) } ?: "—",
                                     valueColor = if (timeOnTableMs != null)
                                         TrackProTheme.colors.deltaGood
                                     else TrackProTheme.colors.textMuted,
@@ -357,7 +359,7 @@ fun TimeAttackListItemScreen(
                                     "${completeLapSectors.size} of ${timedLaps.size} laps " +
                                     "with a full set of splits.",
                                 style = TrackProType.body.atSize(11.sp),
-                                color = TrackProTheme.colors.textFaint
+                                color = TrackProTheme.colors.markingDim
                             )
                         }
                         HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
@@ -471,7 +473,7 @@ fun TimeAttackListItemScreen(
                             session.weatherPressureHpa?.let {
                                 StatRowItem(
                                     label = "Pressure",
-                                    value = String.format("%.0f hPa", it),
+                                    value = String.format(Locale.US, "%.0f hPa", it),
                                     textPrimary = TrackProTheme.colors.textPrimary,
                                     textMuted = TrackProTheme.colors.textMuted
                                 )
@@ -524,7 +526,7 @@ fun TimeAttackListItemScreen(
                                 .padding(Spacing.xl),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("No laps recorded", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
+                            Text("No laps recorded", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                         }
                     }
                 } else {
@@ -615,7 +617,7 @@ private fun LapRow(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 Text(
-                    text = String.format("%02d", lap.lapnumber),
+                    text = String.format(Locale.US, "%02d", lap.lapnumber),
                     style = TrackProType.statValue.atSize(18.sp),
                     color = accentColor
                 )

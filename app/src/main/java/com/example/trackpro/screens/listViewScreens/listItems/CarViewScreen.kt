@@ -35,6 +35,7 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.ScreenScaffold
+import com.example.trackpro.theme.markingDim
 import com.example.trackpro.components.isScrolledUnderChrome
 import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.StatCell
@@ -85,7 +86,7 @@ fun CarViewScreen(vehicleId: Long, onBack: () -> Unit) {
                         strokeWidth = 2.dp
                     )
                     Spacer(Modifier.height(12.dp))
-                    Text("Loading vehicle", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
+                    Text("Loading vehicle", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                 }
             }
         } else {

@@ -43,6 +43,7 @@ import com.example.trackpro.managerClasses.utilities.WeatherService
 import com.example.trackpro.screens.telemetricScreens.DragMetricCard
 import com.example.trackpro.screens.telemetricScreens.DragMetricDisplay
 import com.example.trackpro.components.Haptic
+import com.example.trackpro.theme.markingDim
 import com.example.trackpro.components.pressable
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.StatCell
@@ -74,6 +75,7 @@ import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
 import java.util.concurrent.TimeUnit
 import kotlin.math.*
+import java.util.Locale
 
 
 // Haversine distance between two GPS points (meters)
@@ -311,7 +313,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             ) {
                 DragMetricCard(DragMetricDisplay("TOP SPEED",  if (maxSpeed > 0) UnitFormatter.formatSpeed(maxSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), maxSpeed > 0), modifier = Modifier.weight(1f))
                 DragMetricCard(DragMetricDisplay("AVG SPEED",  if (avgSpeed > 0) UnitFormatter.formatSpeed(avgSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), avgSpeed > 0), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("MAX ACCEL",  if (maxAcceleration > 0) String.format("%.1f", UnitFormatter.convertSpeed(maxAcceleration, useMetric)) else "—", "${UnitFormatter.speedUnitLabel(useMetric)}/S", maxAcceleration > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("MAX ACCEL",  if (maxAcceleration > 0) String.format(Locale.US, "%.1f", UnitFormatter.convertSpeed(maxAcceleration, useMetric)) else "—", "${UnitFormatter.speedUnitLabel(useMetric)}/S", maxAcceleration > 0), modifier = Modifier.weight(1f))
             }
 
             Row(
@@ -319,9 +321,10 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 val hasElevation = elevationGain != 0.0 || elevationLoss != 0.0
-                val netLabel  = if (elevationNet >= 0) "+%.0f m".format(elevationNet) else "%.0f m".format(elevationNet)
+                val netLabel  = if (elevationNet >= 0) String.format(Locale.US, "+%.0f m", elevationNet)
+                                else String.format(Locale.US, "%.0f m", elevationNet)
                 val gainLabel = "+%.0f m".format(elevationGain)
-                val lossLabel = "%.0f m".format(elevationLoss)
+                val lossLabel = String.format(Locale.US, "%.0f m", elevationLoss)
                 DragMetricCard(DragMetricDisplay("ELEV NET",  if (hasElevation) netLabel  else "—", "", hasElevation), modifier = Modifier.weight(1f))
                 DragMetricCard(DragMetricDisplay("ELEV ↑",    if (hasElevation) gainLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
                 DragMetricCard(DragMetricDisplay("ELEV ↓",    if (hasElevation) lossLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
@@ -431,7 +434,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     DragSessionMapView(gpsData = mapGpsData, modifier = Modifier.fillMaxSize())
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No GPS data", style = TrackProType.label, color = TrackProTheme.colors.textFaint)
+                        Text("No GPS data", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                     }
                 }
             } else if (traceState != TraceState.Loaded) {
@@ -440,7 +443,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                         text = if (traceState == TraceState.Loading) "LOADING TRACE"
                         else "NO GPS TRACE RECORDED FOR THIS RUN",
                         style = TrackProType.label,
-                        color = TrackProTheme.colors.textFaint
+                        color = TrackProTheme.colors.markingDim
                     )
                 }
             } else {
@@ -617,9 +620,9 @@ fun formatTime(milliseconds: Long): String {
     val minutes = TimeUnit.MILLISECONDS.toMinutes(milliseconds)
     val seconds = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60
     val millis = milliseconds % 1000
-    return String.format("%02d:%02d.%02d", minutes, seconds, millis / 10)
+    return String.format(Locale.US, "%02d:%02d.%02d", minutes, seconds, millis / 10)
 }
 
 private fun formatMetric(value: Double?): String {
-    return value?.let { String.format("%.2f", it) } ?: "—"
+    return value?.let { String.format(Locale.US, "%.2f", it) } ?: "—"
 }

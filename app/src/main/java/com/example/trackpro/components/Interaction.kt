@@ -72,7 +72,13 @@ fun Modifier.pressableRow(
     onClick: () -> Unit,
     enabled: Boolean = true,
     haptic: Haptic? = null,
-    role: Role? = null
+    /**
+     * Defaults to [Role.Button] rather than null. 28 of 30 call sites passed nothing, so
+     * TalkBack announced every nav tile, drawer entry and list row as undifferentiated
+     * clickable text. A navigable row is a button as far as an assistive service is
+     * concerned; pass something else where it genuinely is not.
+     */
+    role: Role? = Role.Button
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -115,7 +121,8 @@ fun Modifier.pressable(
     enabled: Boolean = true,
     scale: Float = 0.98f,
     haptic: Haptic? = null,
-    role: Role? = null,
+    /** See [pressableRow]: defaulted so the whole app stops announcing as bare text. */
+    role: Role? = Role.Button,
     onLongClick: (() -> Unit)? = null
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
