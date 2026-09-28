@@ -51,11 +51,26 @@ class PhotoStore(private val context: Context) : PhotoFiles {
      * new name is safely recorded.
      */
     suspend fun import(uri: Uri, prefix: String): String? = withContext(Dispatchers.IO) {
+        // A picked file can vanish or lose its grant between picking and reading; that is an
+        // unreadable picture to the driver, not a crash.
+        try {
+            importOrThrow(uri, prefix)
+        } catch (e: java.io.IOException) {
+            null
+        } catch (e: SecurityException) {
+            null
+        }
+    }
+
+    private fun importOrThrow(uri: Uri, prefix: String): String? {
         val resolver = context.contentResolver
 
+        // A bounds-only decode always returns null by design: it fills in outWidth/outHeight and
+        // nothing else. So "could the stream be opened" has to be answered separately, not by
+        // the decode's return value - reading that as failure rejected every photo there was.
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return@withContext null
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
+        val opened = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds); true } ?: false
+        if (!opened || bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
         // Power-of-two subsampling gets close cheaply; the exact scale happens after.
         var sample = 1
@@ -63,7 +78,7 @@ class PhotoStore(private val context: Context) : PhotoFiles {
 
         val decoded = resolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
-        } ?: return@withContext null
+        } ?: return null
 
         val rotation = resolver.openInputStream(uri)?.use { stream ->
             runCatching {
@@ -92,7 +107,7 @@ class PhotoStore(private val context: Context) : PhotoFiles {
         if (uri.authority == "${context.packageName}.photos") {
             runCatching { resolver.delete(uri, null, null) }
         }
-        name
+        return name
     }
 
     /** Stores bytes that are already a finished photo, e.g. one downloaded from the account. */
