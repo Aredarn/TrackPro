@@ -17,7 +17,10 @@ import com.example.trackpro.managerClasses.utilities.WeatherService
  */
 class SessionManager private constructor(
     private val sessionDataDao: SessionDataDao,
-
+    /** The GPS source active right now, recorded on each new session. */
+    private val currentGpsSource: () -> String?,
+    /** Told when a session closes, so it can be offered to TrackBoard sync. */
+    private val onSessionEnded: () -> Unit,
 ) {
 
     /** Creates a session and returns its id. The caller owns that id from here on. */
@@ -28,6 +31,7 @@ class SessionManager private constructor(
             endTime = null ,// Active session,
             vehicleId = vehicleId,
             trackId = trackId,
+            gpsSource = currentGpsSource(),
             )
         val sessionId = sessionDataDao.insertSession(session)
         Log.d("SessionManager", "Inserted session with ID: $sessionId")
@@ -76,16 +80,23 @@ class SessionManager private constructor(
         if (sessionId < 0) return
         sessionDataDao.markSessionEnded(sessionId, System.currentTimeMillis())
         Log.d("SessionManager", "Ended session $sessionId")
+        onSessionEnded()
     }
 
     companion object {
         @Volatile
         private var INSTANCE: SessionManager? = null
 
-        fun getInstance(database: ESPDatabase): SessionManager {
+        fun getInstance(
+            database: ESPDatabase,
+            currentGpsSource: () -> String? = { null },
+            onSessionEnded: () -> Unit = {},
+        ): SessionManager {
             return INSTANCE ?: synchronized(this) {
                 val instance = SessionManager(
                     database.sessionDataDao(),
+                    currentGpsSource,
+                    onSessionEnded,
                 )
                 INSTANCE = instance
                 instance

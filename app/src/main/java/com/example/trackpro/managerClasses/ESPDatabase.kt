@@ -13,6 +13,7 @@ import com.example.trackpro.dao.RawGPSDataDao
 import com.example.trackpro.dao.SectorTimeDataDAO
 import com.example.trackpro.dao.SessionDataDao
 import com.example.trackpro.dao.SmoothedGPSDataDAO
+import com.example.trackpro.dao.SyncDao
 import com.example.trackpro.dao.TrackCoordinatesDataDAO
 import com.example.trackpro.dao.TrackMainDataDAO
 import com.example.trackpro.dao.VehicleInformationDAO
@@ -20,11 +21,13 @@ import com.example.trackpro.dataClasses.DerivedData
 import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.RawGPSData
+import com.example.trackpro.dataClasses.RemoteLink
 import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.SmoothedGPSData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
+import com.example.trackpro.dataClasses.TrackPublication
 import com.example.trackpro.dataClasses.VehicleInformationData
 
 @Database(entities =
@@ -38,8 +41,10 @@ import com.example.trackpro.dataClasses.VehicleInformationData
     VehicleInformationData::class,
     LapTimeData::class,
     LapInfoData::class,
-    SectorTimeData::class
-], version = 8, exportSchema = true)
+    SectorTimeData::class,
+    RemoteLink::class,
+    TrackPublication::class
+], version = 9, exportSchema = true)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun rawGPSDataDao(): RawGPSDataDao
@@ -51,6 +56,8 @@ abstract class ESPDatabase : RoomDatabase() {
     abstract fun lapTimeDataDAO(): LapTimeDataDAO
     abstract fun lapInfoDataDAO(): LapInfoDataDAO
     abstract fun sectorTimeDataDAO(): SectorTimeDataDAO
+
+    abstract fun syncDao(): SyncDao
 
     companion object {
         @Volatile
@@ -208,6 +215,35 @@ abstract class ESPDatabase : RoomDatabase() {
         }
 
         /**
+         * v8 -> v9: TrackBoard sync.
+         *
+         * - `session_data.gpsSource`: nullable, so existing sessions read as "source unknown",
+         *   which is the truth - and is why they are never posted to a leaderboard.
+         * - `remote_link`: local row -> server UUID, plus what was last uploaded.
+         * - `track_publication`: which user-built tracks the driver chose to publish.
+         *
+         * The DDL is copied from Room's own export (schemas/.../9.json) so the result is
+         * exactly the schema Room validates against, down to the foreign key clause.
+         */
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `session_data` ADD COLUMN `gpsSource` TEXT")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `remote_link` (`kind` TEXT NOT NULL, " +
+                        "`localId` INTEGER NOT NULL, `remoteId` TEXT NOT NULL, " +
+                        "`uploadedHash` TEXT, `uploadedAt` INTEGER, `lastError` TEXT, " +
+                        "PRIMARY KEY(`kind`, `localId`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `track_publication` (`trackId` INTEGER NOT NULL, " +
+                        "`publishedAt` INTEGER NOT NULL, PRIMARY KEY(`trackId`), " +
+                        "FOREIGN KEY(`trackId`) REFERENCES `track_main_data`(`trackId`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )"
+                )
+            }
+        }
+
+        /**
          * Every migration, in order. This is the single list the production database is
          * built with; the instrumented migration tests run exactly the same array so a
          * migration can't be tested but forgotten here, or vice versa.
@@ -219,7 +255,8 @@ abstract class ESPDatabase : RoomDatabase() {
             MIGRATION_4_5,
             MIGRATION_5_6,
             MIGRATION_6_7,
-            MIGRATION_7_8
+            MIGRATION_7_8,
+            MIGRATION_8_9
         )
 
         fun getInstance(context: Context): ESPDatabase {

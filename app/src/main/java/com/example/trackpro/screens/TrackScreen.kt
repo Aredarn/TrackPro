@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.example.trackpro.online.ui.TrackOnlineStrip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -71,15 +72,20 @@ import androidx.compose.foundation.layout.wrapContentHeight
 
 
 @Composable
-fun TrackScreen(trackId: Long, onBack: () -> Unit) {
+fun TrackScreen(trackId: Long, onBack: () -> Unit, onOpenLeaderboard: () -> Unit = {}) {
     val context = LocalContext.current
     val app = context.applicationContext as TrackProApp
     val database = app.database
-    TrackView(database, trackId, onBack)
+    TrackView(database, trackId, onBack, onOpenLeaderboard)
 }
 
 @Composable
-fun TrackView(database: ESPDatabase, trackId: Long, onBack: () -> Unit) {
+fun TrackView(
+    database: ESPDatabase,
+    trackId: Long,
+    onBack: () -> Unit,
+    onOpenLeaderboard: () -> Unit = {}
+) {
     val app = LocalContext.current.applicationContext as TrackProApp
     val useMetric by app.useMetricUnits.collectAsState()
     val coroutineScope = rememberCoroutineScope()
@@ -189,6 +195,9 @@ fun TrackView(database: ESPDatabase, trackId: Long, onBack: () -> Unit) {
                 )
                 HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
             }
+
+            TrackOnlineStrip(trackId = trackId, onOpenLeaderboard = onOpenLeaderboard)
+            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 
             // ── Map ───────────────────────────────────────────
             Box(

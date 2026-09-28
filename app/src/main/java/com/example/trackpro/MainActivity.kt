@@ -85,6 +85,9 @@ import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.gpsDataManagers.BluetoothClassicClient
 import com.example.trackpro.managerClasses.JsonReader
 import com.example.trackpro.managerClasses.SessionManager
+import com.example.trackpro.online.OnlineServices
+import com.example.trackpro.online.SyncScheduler
+import com.example.trackpro.online.ui.LeaderboardScreen
 import com.example.trackpro.managerClasses.gpsDataManagers.GpsManager
 import com.example.trackpro.managerClasses.gpsDataManagers.PhoneGpsProvider
 import com.example.trackpro.models.GpsProviderType
@@ -131,7 +134,17 @@ import org.maplibre.android.MapLibre
 class TrackProApp : Application() {
 
     val database: ESPDatabase by lazy { ESPDatabase.getInstance(this) }
-    val sessionManager: SessionManager by lazy { SessionManager.getInstance(database) }
+    val sessionManager: SessionManager by lazy {
+        SessionManager.getInstance(
+            database,
+            currentGpsSource = { gpsSource.value.name },
+            // A finished session is offered to TrackBoard as soon as there is a network.
+            onSessionEnded = { if (online.auth.isSignedIn) SyncScheduler.syncSoon(this) }
+        )
+    }
+
+    /** TrackBoard: account, leaderboard sharing and sync. Entirely optional. */
+    val online: OnlineServices by lazy { OnlineServices(this, database) }
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     val espTcpClient: ESPTcpClient by lazy {
         val config = JsonReader.loadConfig(this)
@@ -276,6 +289,12 @@ class TrackProApp : Application() {
         applicationScope.launch(Dispatchers.IO) {
             TrackSeeder.syncPremadeTracks(this@TrackProApp, database)
             VehicleSeeder.syncDefaultVehicles(database)
+
+            // Off the main thread: reading the stored sign-in touches the Keystore.
+            if (online.auth.isSignedIn) {
+                SyncScheduler.schedulePeriodic(this@TrackProApp)
+                SyncScheduler.syncSoon(this@TrackProApp)
+            }
         }
     }
 
@@ -384,7 +403,20 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("trackId") { type = NavType.LongType })
                     ) { backStackEntry ->
                         val trackId = backStackEntry.arguments?.getLong("trackId") ?: 0L
-                        TrackScreen(trackId = trackId, onBack = { navController.popBackStack() })
+                        TrackScreen(
+                            trackId = trackId,
+                            onBack = { navController.popBackStack() },
+                            onOpenLeaderboard = { navController.navigate("leaderboard/$trackId") }
+                        )
+                    }
+                    composable(
+                        "leaderboard/{trackId}",
+                        arguments = listOf(navArgument("trackId") { type = NavType.LongType })
+                    ) { backStackEntry ->
+                        LeaderboardScreen(
+                            trackId = backStackEntry.arguments?.getLong("trackId") ?: 0L,
+                            onBack = { navController.popBackStack() }
+                        )
                     }
                     composable("dragsessions") {
                         DragTimesListView(viewModel = dragSessionViewModel, navController = navController)

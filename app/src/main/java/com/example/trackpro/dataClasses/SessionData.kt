@@ -45,5 +45,13 @@ data class SessionData(
      * rows survive, the session is stamped VOID in the lists, and it stops counting toward
      * anything. Deleting is still available separately and still means deleting.
      */
-    val voided: Boolean = false
+    val voided: Boolean = false,
+    /**
+     * The [com.example.trackpro.models.GpsProviderType] name active when the session started.
+     *
+     * Null for sessions recorded before this was captured. Those are never posted to a
+     * leaderboard: guessing the source would present a derived fact as a measured one, and
+     * the source is exactly what tells a phone-timed lap apart from an ESP32 one.
+     */
+    val gpsSource: String? = null
 )

@@ -33,6 +33,7 @@ import com.example.trackpro.components.ToggleChip
 import com.example.trackpro.extrasForUI.AppDropdownField
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.models.GpsProviderType
+import com.example.trackpro.online.ui.OnlineSettingsGroup
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
@@ -152,6 +153,8 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
                     }
                 )
             }
+
+            OnlineSettingsGroup()
 
             // --- Section: System ---
             DashGroup("Application") {

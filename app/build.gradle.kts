@@ -111,6 +111,11 @@ dependencies {
     implementation(libs.androidx.ktx)
     implementation ("com.squareup.okhttp3:okhttp:4.11.0")
 
+    // TrackBoard sync: background uploads that survive process death and wait for a network.
+    implementation(libs.androidx.work.runtime.ktx)
+    // Replays the TrackBoard API's real responses in JVM tests.
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.11.0")
+
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     testImplementation ("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2")
