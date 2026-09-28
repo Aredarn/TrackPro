@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-26T00:00:00Z",
+  "title": "Design System: TrackPro",
+  "extensions": {
+    "colorMeta": {
+      "panel": { "role": "neutral", "displayName": "Panel (Unlit Ground)", "canonical": "#0A0C0B", "tonalRamp": ["#000000", "#050706", "#0A0C0B", "#14171A", "#1E2225", "#2A2F31", "#5E6669", "#9AA1A4"] },
+      "field": { "role": "neutral", "displayName": "Instrument Field", "canonical": "#14171A", "tonalRamp": ["#000000", "#0B0E10", "#14171A", "#1E2225", "#2A2F31", "#454C4F", "#7C8488", "#C2C8CB"] },
+      "field-live": { "role": "neutral", "displayName": "Field Under The Eye", "canonical": "#1E2225", "tonalRamp": ["#0A0C0B", "#14171A", "#1E2225", "#2A2F31", "#3C4346", "#5E6669", "#9AA1A4", "#D3D8DA"] },
+      "session-best": { "role": "primary", "displayName": "Session Purple", "canonical": "#B473E8", "tonalRamp": ["#1D1029", "#301A44", "#492868", "#66399A", "#8A51C8", "#B473E8", "#D9A6FF", "#F0DCFF"] },
+      "on-session-best": { "role": "primary", "displayName": "Knockout Ink", "canonical": "#150E1C", "tonalRamp": ["#0A060E", "#150E1C", "#241834", "#38264F", "#4F3670", "#7A56A6", "#AE8FD2", "#E0D2F0"] },
+      "marking": { "role": "neutral", "displayName": "Luminous Marking", "canonical": "#F2F4F3", "tonalRamp": ["#2A2F31", "#454C4F", "#5E6669", "#7C8488", "#9AA1A4", "#C2C8CB", "#F2F4F3", "#FFFFFF"] },
+      "marking-dim": { "role": "neutral", "displayName": "Marking Dim", "canonical": "#9AA1A4", "tonalRamp": ["#14171A", "#2A2F31", "#454C4F", "#5E6669", "#7C8488", "#9AA1A4", "#C2C8CB", "#F2F4F3"] },
+      "marking-faint": { "role": "neutral", "displayName": "Marking Faint (large marks only)", "canonical": "#5E6669", "tonalRamp": ["#0A0C0B", "#14171A", "#2A2F31", "#454C4F", "#5E6669", "#7C8488", "#9AA1A4", "#C2C8CB"] },
+      "personal-best": { "role": "secondary", "displayName": "Gain Green", "canonical": "#3FD07A", "tonalRamp": ["#08190F", "#0F2F1C", "#17482B", "#22693F", "#2F9459", "#3FD07A", "#4FF08C", "#B6F7CE"] },
+      "down-on-time": { "role": "secondary", "displayName": "Down Amber", "canonical": "#E8B33A", "tonalRamp": ["#251A05", "#3E2C09", "#5C410E", "#845D15", "#B3801F", "#E8B33A", "#FFC64A", "#FCE6AD"] },
+      "bezel": { "role": "neutral", "displayName": "Milled Bezel Hairline", "canonical": "#2A2F31", "tonalRamp": ["#000000", "#0A0C0B", "#14171A", "#1E2225", "#2A2F31", "#333A3D", "#5E6669", "#9AA1A4"] },
+      "fault": { "role": "tertiary", "displayName": "Fault Red", "canonical": "#E5453A", "tonalRamp": ["#2B0B08", "#45110C", "#631912", "#8C241A", "#BC3127", "#E5453A", "#FF5A47", "#FFC0B7"] }
+    },
+    "typographyMeta": {
+      "display-numeric": { "displayName": "Display Numeric", "purpose": "The dominant readout - live delta, the split just crossed, the running clock. Largest thing in every frame. Never used below ~20sp." },
+      "stat-value": { "displayName": "Stat Value", "purpose": "A secondary instrument value: best, last, split, speed, count." },
+      "title-large": { "displayName": "Title Large", "purpose": "A field's own name, a car on its placard, the label of a compact control." },
+      "title-medium": { "displayName": "Title Medium", "purpose": "A row label; the empty-state headline." },
+      "label": { "displayName": "Placard Cap", "purpose": "The cap under every instrument, every section title, every status word. Always uppercased at the call site." },
+      "body": { "displayName": "Body", "purpose": "Running text, where any survives. A dash has almost no prose." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "standard", "value": "spring(dampingRatio = 1.0, stiffness = 247) // response 0.4s", "purpose": "Default for anything not gesture-driven, including the segmented bar fill. Critically damped - no overshoot." },
+      { "name": "snappy", "value": "spring(dampingRatio = 1.0, stiffness = 439) // response 0.3s", "purpose": "Press states and selection. Wants to feel immediate." },
+      { "name": "sheet", "value": "spring(dampingRatio = 0.8, stiffness = 439)", "purpose": "The only bouncy spec in the system - a sheet is only ever moved by a gesture, so it may carry momentum." },
+      { "name": "contentSize", "value": "spring(dampingRatio = 1.0, stiffness = 247, visibilityThreshold = IntSize(1,1))", "purpose": "Integer-valued animations need an explicit threshold or the spring never formally finishes." },
+      { "name": "decay", "value": "exponentialDecay(frictionMultiplier = 1f)", "purpose": "Flick projection - snap against where the gesture would come to rest, not the release position." },
+      { "name": "reduced-motion", "value": "Settings.Global.ANIMATOR_DURATION_SCALE == 0f -> snap()", "purpose": "Android's honest reduced-motion signal. Springs become snaps; press transforms become a non-vestibular opacity dip." }
+    ],
+    "breakpoints": [
+      { "name": "hud-landscape", "value": "LocalConfiguration.orientation == ORIENTATION_LANDSCAPE (implemented only on TimeAttackScreen and DragScreen)" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Lit Block (DashAction)",
+      "kind": "button",
+      "refersTo": "dash-action",
+      "description": "The dash's only promoted control: a lit ground, a milled accent edge, and a segment strip that unlights when disabled.",
+      "html": "<button class=\"ds-dash-action\"><span class=\"ds-dash-action-text\"><span class=\"ds-dash-action-label\">KEEP</span><span class=\"ds-dash-action-detail\">SAVE TO THE ARCHIVE</span></span><span class=\"ds-dash-action-strip\"><i></i><i></i><i></i><i></i></span></button>",
+      "css": ".ds-dash-action { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 16px; background: #1E2225; border: 1px solid #B473E8; border-radius: 0; color: #F2F4F3; text-align: left; cursor: pointer; transition: transform 0.12s cubic-bezier(0.2,0,0,1), background 0.12s; } .ds-dash-action-text { display: flex; flex-direction: column; flex: 1; } .ds-dash-action-label { font-family: sans-serif; font-size: 34px; font-weight: 900; letter-spacing: -1.33px; line-height: 1.04; text-transform: uppercase; font-variant-numeric: tabular-nums lining-nums; } .ds-dash-action-detail { margin-top: 3px; font-family: sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: #9AA1A4; } .ds-dash-action-strip { display: flex; gap: 2px; width: 34px; height: 26px; } .ds-dash-action-strip i { flex: 1; background: #B473E8; } .ds-dash-action:hover { background: #262B2F; } .ds-dash-action:active { transform: scale(0.98); } .ds-dash-action:focus-visible { outline: 2px solid #F2F4F3; outline-offset: 2px; } .ds-dash-action:disabled { background: #14171A; border-color: #2A2F31; color: #9AA1A4; } .ds-dash-action:disabled .ds-dash-action-strip i { background: #2A2F31; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "A lit block at control scale: accent fill, accent milled edge, knockout ink. Not a pill.",
+      "html": "<button class=\"ds-btn-primary\">START SESSION</button>",
+      "css": ".ds-btn-primary { background: #B473E8; color: #150E1C; border: 1px solid #B473E8; border-radius: 0; padding: 12px 16px; font-family: sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.26px; text-transform: uppercase; font-variant-numeric: tabular-nums lining-nums; cursor: pointer; transition: transform 0.12s cubic-bezier(0.2,0,0,1); } .ds-btn-primary:active { transform: scale(0.96); } .ds-btn-primary:focus-visible { outline: 2px solid #F2F4F3; outline-offset: 2px; } .ds-btn-primary:disabled { background: #1E2225; border-color: #2A2F31; color: #9AA1A4; }"
+    },
+    {
+      "name": "Toggle Chip",
+      "kind": "chip",
+      "refersTo": "toggle-chip",
+      "description": "Mode / unit / sector-count picker. Square, filled when selected, hairline when not.",
+      "html": "<div class=\"ds-chip-row\"><button class=\"ds-chip ds-chip-selected\">KM/H</button><button class=\"ds-chip\">MPH</button></div>",
+      "css": ".ds-chip-row { display: flex; gap: 8px; } .ds-chip { background: #1E2225; color: #F2F4F3; border: 1px solid #2A2F31; border-radius: 0; padding: 8px 12px; font-family: sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.2px; font-variant-numeric: tabular-nums lining-nums; cursor: pointer; transition: transform 0.12s, background 0.12s; } .ds-chip:active { transform: scale(0.96); } .ds-chip:focus-visible { outline: 2px solid #F2F4F3; outline-offset: 2px; } .ds-chip-selected { background: #B473E8; color: #150E1C; border-color: transparent; }"
+    },
+    {
+      "name": "Instrument",
+      "kind": "card",
+      "refersTo": "instrument",
+      "description": "A placard cap over a value on a field ground. The dash's only container - there are no cards.",
+      "html": "<div class=\"ds-instrument\"><span class=\"ds-instrument-cap\">LAST LAP</span><span class=\"ds-instrument-value\">1:42.318</span></div>",
+      "css": ".ds-instrument { display: flex; flex-direction: column; background: #14171A; border-radius: 0; padding: 10px 12px; } .ds-instrument-cap { font-family: sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: #9AA1A4; } .ds-instrument-value { margin-top: 3px; font-family: sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.2; color: #F2F4F3; font-variant-numeric: tabular-nums lining-nums; }"
+    },
+    {
+      "name": "Readout",
+      "kind": "custom",
+      "refersTo": "readout",
+      "description": "The dominant number, sized to be caught peripherally, with its placard caption beneath. The value leads; the caption identifies it afterwards.",
+      "html": "<div class=\"ds-readout\"><div class=\"ds-readout-row\"><span class=\"ds-trend ds-trend-falling\"></span><span class=\"ds-readout-value\">-0.412</span></div><span class=\"ds-readout-caption\">DELTA TO SESSION BEST - LIVE</span></div>",
+      "css": ".ds-readout { display: flex; flex-direction: column; background: #0A0C0B; padding: 16px; } .ds-readout-row { display: flex; align-items: flex-end; gap: 8px; } .ds-readout-value { font-family: sans-serif; font-size: 56px; font-weight: 900; letter-spacing: -2.2px; line-height: 1.04; color: #3FD07A; font-variant-numeric: tabular-nums lining-nums; } .ds-trend { width: 8px; height: 6px; margin-bottom: 10px; } .ds-trend-falling { background: #3FD07A; clip-path: polygon(50% 100%, 100% 0, 0 0); } .ds-readout-caption { margin-top: 2px; font-family: sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: #9AA1A4; }"
+    },
+    {
+      "name": "Segment Bar",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The system's one bar language: discrete lit blocks filling outward from a fixed centre datum. Unlit segments are drawn, never omitted, so the range stays visible.",
+      "html": "<div class=\"ds-segbar\"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class=\"ds-seg-datum\"></i><i class=\"ds-seg-on\"></i><i class=\"ds-seg-on\"></i><i class=\"ds-seg-on\"></i><i class=\"ds-seg-on\"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>",
+      "css": ".ds-segbar { display: flex; gap: 2px; height: 14px; width: 100%; } .ds-segbar i { flex: 1; background: #2A2F31; } .ds-segbar .ds-seg-on { background: #3FD07A; } .ds-segbar .ds-seg-datum { flex: 0.6; background: #F2F4F3; }"
+    },
+    {
+      "name": "Section Placard",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "A section is announced by a struck accent tick and a caption, never by a larger heading. The type scale is reserved for readouts.",
+      "html": "<div class=\"ds-placard\"><span class=\"ds-placard-tick\"></span><span class=\"ds-placard-text\">RIG STATUS</span></div>",
+      "css": ".ds-placard { display: flex; flex-direction: column; } .ds-placard-tick { width: 18px; height: 2px; background: #B473E8; } .ds-placard-text { margin-top: 6px; font-family: sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: #9AA1A4; }"
+    },
+    {
+      "name": "Top Bar",
+      "kind": "nav",
+      "refersTo": "top-bar",
+      "description": "A 48dp opaque header. The section accent appears only as a 6dp lamp beside the title, never as a full-bleed fill.",
+      "html": "<header class=\"ds-topbar\"><button class=\"ds-topbar-back\" aria-label=\"Back\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M19 12H5M12 19l-7-7 7-7\"/></svg></button><span class=\"ds-topbar-lamp\"></span><span class=\"ds-topbar-titles\"><span class=\"ds-topbar-title\">SESSION HISTORY</span><span class=\"ds-topbar-sub\">Hungaroring</span></span></header>",
+      "css": ".ds-topbar { display: flex; align-items: center; height: 48px; padding-right: 12px; background: #14171A; border-radius: 0; } .ds-topbar-back { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: none; border: none; color: #F2F4F3; cursor: pointer; } .ds-topbar-back:focus-visible { outline: 2px solid #F2F4F3; outline-offset: -2px; } .ds-topbar-lamp { width: 6px; height: 6px; border-radius: 50%; background: #B473E8; } .ds-topbar-titles { display: flex; flex-direction: column; margin-left: 10px; } .ds-topbar-title { font-family: sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 1.68px; text-transform: uppercase; color: #F2F4F3; } .ds-topbar-sub { font-family: sans-serif; font-size: 11px; color: #9AA1A4; }"
+    },
+    {
+      "name": "VOID Stamp",
+      "kind": "custom",
+      "refersTo": "void-stamp",
+      "description": "The mark on a discarded run. Outlined, not filled - it reads as something applied on top of the row, like a scrutineering sticker. The session stays; it stops counting.",
+      "html": "<span class=\"ds-void\">VOID</span>",
+      "css": ".ds-void { display: inline-block; border: 1px solid #E5453A; border-radius: 0; padding: 1px 5px; font-family: sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 1.4px; color: #E5453A; }"
+    },
+    {
+      "name": "Data Gate - Loading",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Loading is a placard and an unlit bar, never a spinner: a spinner says something is happening, a placard says what.",
+      "html": "<div class=\"ds-gate\"><span class=\"ds-gate-label\">READING</span><div class=\"ds-gate-bar\"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>",
+      "css": ".ds-gate { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px; background: #0A0C0B; } .ds-gate-label { font-family: sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: #9AA1A4; } .ds-gate-bar { display: flex; gap: 2px; width: 120px; height: 8px; } .ds-gate-bar i { flex: 1; background: #2A2F31; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Blackout Dash",
+    "overview": "TrackPro's surfaces are a purpose-built instrument panel in the AiM / MoTeC / Racelogic lineage: an unlit ground that says nothing until it has something to say, luminous markings rather than coloured decoration, and numerals that are the largest thing in any frame. The reference is real racing hardware plus motorsport print and livery. It is explicitly not a sim-racing skin and not a premium consumer fitness app; fake carbon, elevated cards, and glossy hero imagery are the two failure modes this world sits between.\n\nThe panel has no cards. Containment comes from two things only: a field ground one step lighter than the panel, and a 1dp milled bezel hairline. Nothing carries a radius, nothing casts a shadow, nothing floats. Density is high on parked surfaces and brutally sparse on the two driving surfaces, where the panel collapses to one number plus a segmented bar.\n\nThe world has one accent, not a palette of brand colours: purple is session best because that is the sport's own timing convention, and the Material bridge fills primary/secondary/tertiary with the same value rather than inventing two more. Severity colour is borrowed from timing gear, not designed: green personal best, amber down on your own time, red genuine fault only.",
+    "keyCharacteristics": [
+      "Unlit blackout ground; markings are luminous, never decorative.",
+      "Zero radius everywhere; square is a law with two named exceptions.",
+      "No shadows, no elevation, no translucency - depth is ground steps plus hairlines.",
+      "One segmented bar language; no gradients, no smooth fills.",
+      "Tabular numerals at every size, tracking scaled with size.",
+      "Two luminances of one face (Night / Day), not a light/dark pair."
+    ],
+    "rules": [
+      { "name": "The Two Luminances Rule", "body": "Night and Day are one face at two brightnesses, not a light/dark pair. Day drops the ground to true black and drives every marking harder, because against direct glare the limiting factor is marking-to-ground difference, not page brightness. Never author a light surface: if you find yourself picking a dark foreground on a pale ground, you have left the world.", "section": "colors" },
+      { "name": "The One Accent Rule", "body": "The palette has exactly one accent. Material needs three slots filled and all three take the same value. A new brand colour is not a design decision available to a new screen.", "section": "colors" },
+      { "name": "The Convention Rule", "body": "Severity colour is the sport's, not ours: purple session best, green personal best, amber down on your own time, red genuine fault. Red never means \"slower\".", "section": "colors" },
+      { "name": "The Fault Is Never Dimmer Rule", "body": "A fault state is drawn at least as bright as its healthy state. NO SIGNAL takes deltaBad minimum, never textFaint.", "section": "colors" },
+      { "name": "The Tabular Rule", "body": "Every type token carries tnum, lnum. Without fixed advances a running lap timer physically shifts left and right as digits change - the number dances while the driver is reading it. Tabular figures are enforced at the token, so no call site can opt out by accident.", "section": "typography" },
+      { "name": "The atSize Rule", "body": "Never resize a style with copy(fontSize = ...). Use TextStyle.atSize(), which scales leading and tracking by the same ratio. Display Numeric's -2.2sp is correct at 56sp; carried unchanged to 15sp it is roughly -15% per character and glyphs physically overlap.", "section": "typography" },
+      { "name": "The Value Leads Rule", "body": "A number is never centred under a heading. The value is read first and identified second, so the readout leads and its placard caption follows beneath it, uppercased and dim.", "section": "typography" },
+      { "name": "The Placard Rule", "body": "All caps for labels, captions, section titles, status words, and control labels - uppercasing happens at the call site, not in the token. The type scale is reserved for readouts; a section never announces itself with a larger heading.", "section": "typography" },
+      { "name": "The Full-Bleed Rule", "body": "Panel apertures touch the screen edge. Do not inset a group in a margin to make it look like a card; the hairline is the boundary.", "section": "layout" },
+      { "name": "The Flat Panel Rule", "body": "No shadow, no elevation, no blur, no translucency. If a surface needs to separate from what is under it, change its ground or draw a bezel.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do draw every new value as a real readout: a placard cap in Label, uppercased and dim, over a value in the numeral face. Instrument and Readout are the containers.",
+      "Do use TextStyle.atSize() for every resize, so tracking and leading scale with the size.",
+      "Do keep corners at 0dp. The only radii in the system are 6dp status lamps and <=2dp bar caps.",
+      "Do negate a lower-is-better value before handing it to SegmentBar - positive fills right and means better, always.",
+      "Do damp every live value and give every trend mark a hysteresis threshold. GPS is noisy and a snapping number is a lie about how confidently the value is known.",
+      "Do gate every data surface through DataGate with a real LoadState. Four states, four branches.",
+      "Do draw disabled states rather than hiding them: keep the block, drop the border to the bezel, unlight the strip.",
+      "Do guard destructive-by-omission actions and land them on a summary, and prefer a reversible VOID stamp to a delete.",
+      "Do honour reduced motion through rememberReducedMotion() - swap springs for snap() and transforms for an opacity dip.",
+      "Do reserve haptics for commits. Every-tap haptics train people to ignore haptics.",
+      "Do draw indicators as geometry (Canvas, Box) rather than reaching for a glyph."
+    ],
+    "donts": [
+      "Don't add a shadow, an elevation, a blur, or a translucent chrome layer. Depth is a ground step plus a hairline.",
+      "Don't add a radius to a surface, a button, or a chip. Square is the law; lamps and 2dp caps are the only exceptions.",
+      "Don't draw a continuous or gradient-filled bar for a value. Segments, always.",
+      "Don't introduce a second accent or a decorative colour. The palette has one accent and three severity colours, all conventional.",
+      "Don't use red for \"slower\". Red is genuine fault and destruction only; amber is down on your own time.",
+      "Don't render a fault state dimmer than its healthy state.",
+      "Don't use marking-faint below 14sp, or under an alpha. It is documented as large marks only and it does not clear 4.5:1 at any measured combination.",
+      "Don't author a light surface. If a screen needs to be readable in sunlight, take it to Day - true black ground, markings driven harder.",
+      "Don't build a new \"card\". If the answer to containment is a box with a radius and a shadow, the answer is wrong for this world.",
+      "Don't resize a type token with copy(fontSize = ...).",
+      "Don't put the display numeral face on a small control. Below ~20sp the numeral face is a display face pretending to be a label; use Title Large."
+    ]
+  }
+}

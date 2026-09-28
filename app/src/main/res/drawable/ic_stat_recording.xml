@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status bar icon for the recording notification: a record mark, ring and dot.
+     Status bar icons are drawn as a white silhouette, so this is one flat colour. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2A10,10 0,1 0,22 12A10,10 0,0 0,12 2ZM12,20A8,8 0,1 1,20 12A8,8 0,0 1,12 20Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,7A5,5 0,1 0,17 12A5,5 0,0 0,12 7Z" />
+</vector>
