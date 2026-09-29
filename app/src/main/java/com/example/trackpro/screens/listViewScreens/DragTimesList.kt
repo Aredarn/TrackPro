@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.SessionRow
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -90,9 +91,11 @@ fun DragTimesListView(
         DataGate(
             state = loadState,
             items = dragSessions,
-            emptyMessage = "No sessions recorded",
-            emptyHint = "Run a drag session to see it here",
-            loadingLabel = "Reading sessions"
+            emptyMessage = "No drag runs yet",
+            emptyHint = "Time your 0-100 and quarter mile, then find every run here",
+            loadingLabel = "Reading runs",
+            emptyActionLabel = "Start a drag run",
+            onEmptyAction = { navController.navigate("drag") }
         ) { _ ->
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -100,8 +103,8 @@ fun DragTimesListView(
                     contentPadding = PaddingValues(
                         top = contentPadding.calculateTopPadding() + Spacing.md,
                         bottom = Spacing.md,
-                        start = Spacing.md,
-                        end = Spacing.md
+                        start = Spacing.gutter,
+                        end = Spacing.gutter
                     ),
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
@@ -146,53 +149,25 @@ fun ExpandableSessionGroup(
         accent = TrackProTheme.colors.accent,
         header = {
             Column(modifier = Modifier.weight(1f)) {
-                Text(groupTitle, style = TrackProType.titleMedium.atSize(13.sp), color = TrackProTheme.colors.textPrimary)
+                Text(groupTitle, style = TrackProType.titleMedium, color = TrackProTheme.colors.textPrimary)
                 Text(
-                    "${sessions.size} runs completed",
-                    style = TrackProType.body.atSize(11.sp),
+                    "${sessions.size} run${if (sessions.size == 1) "" else "s"}",
+                    style = TrackProType.label,
                     color = TrackProTheme.colors.textMuted
                 )
             }
         }
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            sessions.forEach { session ->
-                val time = DateFormatterUtil.getTimeFormat().format(Date(session.startTime))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .pressable(
-                            onClick = { navController.navigate("graph/${session.sessionId}") },
-                            onLongClick = { pendingDelete = session }
-                        )
-                        .background(TrackProTheme.colors.bgElevated, TrackProShapes.control)
-                        .padding(Spacing.sm),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier.size(6.dp).background(TrackProTheme.colors.accentMuted, RoundedCornerShape(100))
-                        )
-                        Spacer(Modifier.width(Spacing.sm))
-                        Text(
-                            "Run at $time",
-                            style = TrackProType.body,
-                            color = TrackProTheme.colors.textPrimary
-                        )
-                    }
-
-                    if (session.voided) {
-                        VoidStamp()
-                    } else {
-                        Text(
-                            "Details",
-                            style = TrackProType.label,
-                            color = TrackProTheme.colors.textMuted
-                        )
-                    }
-                }
+        Column {
+            sessions.sortedByDescending { it.startTime }.forEach { session ->
+                SessionRow(
+                    startTime = session.startTime,
+                    title = "Run at ${DateFormatterUtil.getTimeFormat().format(Date(session.startTime))}",
+                    subtitle = "${session.manufacturer} ${session.model}",
+                    voided = session.voided,
+                    onClick = { navController.navigate("graph/${session.sessionId}") },
+                    onLongClick = { pendingDelete = session }
+                )
             }
         }
     }

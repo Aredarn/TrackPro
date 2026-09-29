@@ -376,7 +376,7 @@ fun MapLibreBuilderView(
                     map.addMarker(MarkerOptions()
                         .position(LatLng(lastPoint.latitude, lastPoint.longitude))
                         // Change title based on intent
-                        .title(if (trackMode == "Circuit") "LAP COMPLETE" else "FINISH LINE")
+                        .title(if (trackMode == "Circuit") "Start / finish" else "Finish line")
                     )
                 }
 

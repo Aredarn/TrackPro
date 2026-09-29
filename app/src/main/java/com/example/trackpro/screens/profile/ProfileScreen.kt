@@ -456,7 +456,7 @@ private fun PersonalBests(
                 Column(Modifier.weight(1f)) {
                     Text(row.trackName, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        listOfNotNull(row.detail, row.fieldSize?.let { "of $it drivers" }).joinToString(" · "),
+                        listOfNotNull(row.detail, row.fieldSize?.let { "of $it driver${if (it == 1) "" else "s"}" }).joinToString(" · "),
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim,
                         maxLines = 1,

@@ -188,7 +188,7 @@ fun DragRaceScreen(
 
         // 1. TOP STATUS BAR
         AppTopBar(
-            title = "Drag Mode",
+            title = "Drag",
             // Guarded while live: Stop is a commit, and this arrow sits where a hand lands
             // adjusting a mount.
             onBack = { if (isSessionActive) confirmStop = true else onBack() },
@@ -267,11 +267,11 @@ fun DragRaceScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Vehicle", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+                            Text("Car", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 selectedVehicle?.let { "${it.manufacturer} ${it.model}" }
-                                    ?: "Select Vehicle",
+                                    ?: "Select a car",
                                 style = TrackProType.titleMedium,
                                 color = selectedVehicle?.let { TrackProTheme.colors.textPrimary }
                                     ?: TrackProTheme.colors.textMuted.copy(alpha = 0.5f),
@@ -515,6 +515,10 @@ fun DragRaceScreen(
                                 setPinchZoom(true)
                                 setDrawBorders(false)
                                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                // The library's default is a yellow sentence that reads as
+                                // a warning. An empty chart before a run is not one.
+                                setNoDataText("Speed appears here once you start a run")
+                                setNoDataTextColor(DataVizColors.chartAxisText.toColorInt())
                             }
                         },
                         modifier = Modifier.fillMaxSize(),
