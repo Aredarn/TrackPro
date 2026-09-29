@@ -16,6 +16,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.components.pressable
+import com.example.trackpro.components.SectionTitle
+import com.example.trackpro.components.PaddockCard
+import com.example.trackpro.components.DashAction
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.Icons
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,11 +98,12 @@ fun CarPhotoSection(vehicle: VehicleInformationData) {
     PhotoFrame(
         file = app.online.photos.file(vehicle.photoFile),
         contentDescription = "${vehicle.manufacturer} ${vehicle.model}",
-        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+        shape = TrackProShapes.card,
+        modifier = Modifier.padding(horizontal = Spacing.gutter).fillMaxWidth().aspectRatio(16f / 10f)
     )
     Row(
-        modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.panel).padding(horizontal = 12.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.gutter, vertical = Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         ToggleChip(text = "Take photo", selected = false, onClick = { if (!busy) picker.fromCamera() }, modifier = Modifier.weight(1f))
@@ -103,9 +113,8 @@ fun CarPhotoSection(vehicle: VehicleInformationData) {
         }
     }
     error?.let {
-        Text(it, style = TrackProType.label, color = TrackProTheme.colors.deltaBad, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+        Text(it, style = TrackProType.label, color = TrackProTheme.colors.deltaBad, modifier = Modifier.padding(horizontal = Spacing.gutter))
     }
-    Bezel()
 }
 
 /**
@@ -124,19 +133,19 @@ fun CarBackupStrip(vehicle: VehicleInformationData, onSignIn: () -> Unit) {
     val own = link.firstOrNull { it.localId == vehicle.vehicleId }
     val status = vehicleSyncStatus(vehicle, own, signedIn)
 
+    val tone = statusLamp(status) ?: TrackProTheme.colors.accent
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProTheme.colors.field)
-            .then(if (!signedIn) Modifier.pressableRow(onClick = onSignIn) else Modifier)
+            .then(if (!signedIn) Modifier.pressable(onClick = onSignIn, scale = 0.98f) else Modifier)
+            .clip(TrackProShapes.control)
+            .background(tone.copy(alpha = 0.10f))
             .heightIn(min = 48.dp)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        statusLamp(status)?.let { lamp ->
-            Box(Modifier.size(6.dp).background(lamp, CircleShape))
-            Spacer(Modifier.width(8.dp))
-        }
+        Box(Modifier.size(8.dp).clip(CircleShape).background(tone))
+        Spacer(Modifier.width(Spacing.md))
         Column(Modifier.weight(1f)) {
             Text(
                 status.label,
@@ -154,7 +163,7 @@ fun CarBackupStrip(vehicle: VehicleInformationData, onSignIn: () -> Unit) {
             }
         }
         when (status) {
-            VehicleSyncStatus.OnThisPhone -> Text("Sign in ›", style = TrackProType.label, color = TrackProTheme.colors.accent)
+            VehicleSyncStatus.OnThisPhone -> Text("Sign in", style = TrackProType.label, color = TrackProTheme.colors.accent)
             VehicleSyncStatus.LocalOnly, VehicleSyncStatus.Failed -> ToggleChip(
                 text = if (status == VehicleSyncStatus.LocalOnly) "Back up again" else "Retry",
                 selected = false,
@@ -171,7 +180,6 @@ fun CarBackupStrip(vehicle: VehicleInformationData, onSignIn: () -> Unit) {
             else -> Unit
         }
     }
-    Bezel()
 }
 
 /** This car's best lap on each track it has been driven on, from the phone's own records. */
@@ -186,36 +194,35 @@ fun CarBests(vehicleId: Long, onOpenTrack: (Long) -> Unit) {
         }
     }.collectAsState(initial = LocalCareer.EMPTY)
 
-    SectionLabel("Bests in this car", modifier = Modifier.padding(start = 16.dp, top = 18.dp, bottom = 8.dp))
-    Bezel()
-    if (career.bests.isEmpty()) {
-        Text(
-            if (career.sessionCount == 0) "NOT DRIVEN ON A TRACK YET" else "NO TIMED LAPS YET",
-            style = TrackProType.label,
-            color = TrackProTheme.colors.markingDim,
-            modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(14.dp)
-        )
-        Bezel()
-        return
-    }
-    career.bests.forEach { best ->
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .pressableRow(onClick = { onOpenTrack(best.trackId) })
-                .background(TrackProTheme.colors.field)
-                .heightIn(min = 56.dp)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(best.trackName, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(2.dp))
-                Text("${best.lapCount} LAP${if (best.lapCount == 1) "" else "S"}", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+    SectionTitle("Bests in this car")
+    Column(Modifier.padding(horizontal = Spacing.gutter)) {
+        PaddockCard(padding = 0.dp) {
+            if (career.bests.isEmpty()) {
+                Text(
+                    if (career.sessionCount == 0) "Not driven on a track yet" else "No timed laps yet",
+                    style = TrackProType.body,
+                    color = TrackProTheme.colors.markingDim,
+                    modifier = Modifier.fillMaxWidth().padding(Spacing.lg)
+                )
             }
-            Text(best.bestLapMs.toLapTimeString(), style = TrackProType.statValue.atSize(18.sp), color = TrackProTheme.colors.marking)
+            career.bests.forEachIndexed { i, best ->
+                if (i > 0) Bezel(Modifier.padding(horizontal = Spacing.lg))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pressableRow(onClick = { onOpenTrack(best.trackId) })
+                        .heightIn(min = 56.dp)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(best.trackName, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${best.lapCount} lap${if (best.lapCount == 1) "" else "s"}", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                    }
+                    Text(best.bestLapMs.toLapTimeString(), style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+                }
+            }
         }
-        Bezel()
     }
 }
 
@@ -247,19 +254,13 @@ fun CarDeleteRow(vehicle: VehicleInformationData, onDeleted: () -> Unit) {
         )
     }
 
-    Spacer(Modifier.height(18.dp))
-    Bezel()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressableRow(onClick = { confirm = true })
-            .background(TrackProTheme.colors.field)
-            .heightIn(min = 56.dp)
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text("Delete car", style = TrackProType.titleMedium, color = TrackProTheme.colors.danger, modifier = Modifier.weight(1f))
-        Text("›", style = TrackProType.titleLarge, color = TrackProTheme.colors.danger)
+    Column(Modifier.padding(horizontal = Spacing.gutter, vertical = Spacing.xl)) {
+        DashAction(
+            label = "Delete car",
+            onClick = { confirm = true },
+            compact = true,
+            accent = TrackProTheme.colors.danger,
+            icon = Icons.Default.DeleteOutline
+        )
     }
-    Bezel()
 }

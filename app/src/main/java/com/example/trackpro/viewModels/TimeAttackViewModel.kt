@@ -52,6 +52,14 @@ class TimeAttackViewModel(
 
     // Timing state
     private var timingManager: TimingManager? = null
+    /**
+     * The driver's best on this track before this session started, or null if they have never
+     * timed a lap here. Read once at load, before this session has written a lap, so the
+     * summary can tell a new personal best apart from a good day.
+     */
+    private val _priorTrackBestMs = MutableStateFlow<Long?>(null)
+    val priorTrackBestMs = _priorTrackBestMs.asStateFlow()
+
     private val _timingMode = MutableStateFlow<TimingMode>(TimingMode.Circuit)
     val timingMode: StateFlow<TimingMode> = _timingMode.asStateFlow()
 
@@ -159,6 +167,11 @@ class TimeAttackViewModel(
         if (trackLoaded) return
         trackLoaded = true
         _timingMode.value = mode
+        viewModelScope.launch(Dispatchers.IO) {
+            _priorTrackBestMs.value = database.lapTimeDataDAO().getCountedLapTimesForTrack(trackId)
+                .mapNotNull { it.toLapTimeMillisOrNull() }
+                .minOrNull()
+        }
         viewModelScope.launch {
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
                 .collect { coords ->

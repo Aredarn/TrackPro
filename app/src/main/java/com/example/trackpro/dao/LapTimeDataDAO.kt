@@ -86,6 +86,22 @@ interface LapTimeDataDAO {
     """)
     suspend fun getFastestCleanLapsForTrack(trackId: Long, limit: Int): List<LapTimeData>
 
+    /**
+     * Every clean lap time on a track from sessions that count: not voided, no GPS gap, and
+     * actually finished. Parsed by the caller, which is why it returns the raw strings.
+     * Read once when a session starts, it is the personal best the session has to beat.
+     */
+    @Query("""
+    SELECT lap_time_data.laptime FROM lap_time_data
+    INNER JOIN session_data ON lap_time_data.sessionid = session_data.id
+    WHERE session_data.trackId = :trackId
+    AND session_data.voided = 0
+    AND lap_time_data.signalGap = 0
+    AND lap_time_data.laptime != 'IN PROGRESS'
+    AND lap_time_data.laptime != 'INVALID'
+    """)
+    suspend fun getCountedLapTimesForTrack(trackId: Long): List<String>
+
     // Get total number of laps in a session
     @Query("SELECT COUNT(*) FROM lap_time_data WHERE sessionid = :sessionId")
     suspend fun getLapCountForSession(sessionId: Long): Int

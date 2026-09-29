@@ -253,6 +253,15 @@ class TrackProApp : Application() {
         useDarkTheme.value = enabled
     }
 
+    // Paddock night's high-contrast variant, for a phone on a mount in direct sun.
+    // A separate key: the old dark/light value meant something else and is not carried over.
+    val useSunlightContrast by lazy { MutableStateFlow(themePrefs.getBoolean("sunlight_contrast", false)) }
+
+    fun setSunlightContrast(enabled: Boolean) {
+        themePrefs.edit().putBoolean("sunlight_contrast", enabled).apply()
+        useSunlightContrast.value = enabled
+    }
+
     // What the live delta is measured against. Remembered, and switchable from the HUD as
     // well as Settings - reaching Settings from a running session means leaving it.
     private val deltaPrefs by lazy { getSharedPreferences("delta_prefs", MODE_PRIVATE) }
@@ -385,8 +394,8 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
-            val useDarkTheme by (application as TrackProApp).useDarkTheme.collectAsState()
-            TrackProTheme(darkTheme = useDarkTheme) {
+            val sunlight by (application as TrackProApp).useSunlightContrast.collectAsState()
+            TrackProTheme(sunlight = sunlight) {
                 val navController = rememberNavController()
                 val backStack by navController.currentBackStackEntryAsState()
                 val currentRoute = backStack?.destination?.route

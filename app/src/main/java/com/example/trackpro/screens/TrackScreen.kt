@@ -16,6 +16,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.components.paddockCard
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -126,7 +129,7 @@ fun TrackView(
         Column(modifier = Modifier.fillMaxSize()) {
 
             AppTopBar(
-                title = "Track Overview",
+                title = "Track",
                 accent = TrackProTheme.colors.accent,
                 onBack = onBack
             )
@@ -135,8 +138,9 @@ fun TrackView(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(TrackProTheme.colors.bgCard)
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                    .padding(horizontal = Spacing.gutter)
+                    .paddockCard()
+                    .padding(Spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs)
             ) {
                 Text(
@@ -146,12 +150,16 @@ fun TrackView(
                 )
                 Text(
                     text = "${trackInfo.value.country} · ${trackInfo.value.type}",
-                    style = TrackProType.body,
+                    style = TrackProType.label,
                     color = TrackProTheme.colors.textMuted
                 )
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = Spacing.md)
+                        .clip(TrackProShapes.control)
+                        .background(TrackProTheme.colors.bgElevated)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     StatCell(
@@ -166,15 +174,17 @@ fun TrackView(
                         value = trackInfo.value.type,
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
+                    // The number of stored GPS points - it was labelled "Corners", which it
+                    // never was.
                     StatCell(
-                        label = "Corners",
+                        label = "Track points",
                         value = "${trackParts.size}",
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
                 }
             }
 
-            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+            Spacer(Modifier.height(Spacing.md))
 
             // ── Sectors card ────────────────────────────────────
             if (trackParts.isNotEmpty()) {
@@ -193,17 +203,20 @@ fun TrackView(
                         }
                     }
                 )
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                Spacer(Modifier.height(Spacing.md))
             }
 
-            TrackOnlineStrip(trackId = trackId, onOpenLeaderboard = onOpenLeaderboard)
-            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+            Box(Modifier.padding(horizontal = Spacing.gutter).paddockCard()) {
+                TrackOnlineStrip(trackId = trackId, onOpenLeaderboard = onOpenLeaderboard)
+            }
 
             // ── Map ───────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .padding(Spacing.gutter)
+                    .clip(TrackProShapes.card)
                     .background(TrackProTheme.colors.bgCard)
             ) {
                 if (trackParts.isNotEmpty()) {
@@ -260,9 +273,10 @@ private fun SectorSlicerCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProTheme.colors.bgCard)
-            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            .padding(horizontal = Spacing.gutter)
+            .paddockCard()
+            .padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -272,7 +286,7 @@ private fun SectorSlicerCard(
             SectionLabel("Sectors")
             Text(
                 text = if (sectorCount > 0) "$sectorCount marked" else "None marked",
-                style = TrackProType.body.atSize(11.sp),
+                style = TrackProType.label,
                 color = if (sectorCount > 0) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted
             )
         }

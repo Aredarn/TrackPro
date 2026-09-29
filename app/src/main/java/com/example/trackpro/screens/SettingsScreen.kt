@@ -16,6 +16,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -48,7 +49,10 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
     val selectedBtDeviceMac by app.selectedBtDeviceMac.collectAsState()
     val useTestServer by app.useTestServer.collectAsState()
     val testServerAddress by app.testServerAddress.collectAsState()
-    val useDarkTheme by app.useDarkTheme.collectAsState()
+    val sunlight by app.useSunlightContrast.collectAsState()
+    val appVersion = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "—"
+    }
     val useMetric by app.useMetricUnits.collectAsState()
     val deltaReference by app.deltaReference.collectAsState()
 
@@ -108,12 +112,12 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
             // --- Section: Appearance ---
             DashGroup("Appearance") {
                 SettingsToggleRow(
-                    label = "Theme",
-                    valueText = if (useDarkTheme) "Dark" else "Light",
+                    label = "Sunlight contrast",
+                    valueText = if (sunlight) "On: black ground, brighter text for direct sun" else "Off: standard Paddock night",
                     valueColor = TrackProTheme.colors.textMuted,
-                    buttonText = if (useDarkTheme) "Use Light" else "Use Dark",
-                    isActive = true,
-                    onClick = { app.setDarkTheme(!useDarkTheme) }
+                    buttonText = if (sunlight) "On" else "Off",
+                    isActive = sunlight,
+                    onClick = { app.setSunlightContrast(!sunlight) }
                 )
             }
 
@@ -159,8 +163,7 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
             // --- Section: System ---
             DashGroup("Application") {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    SettingsInfoRow(label = "App Version", value = "1.0.4-PRO")
-                    SettingsInfoRow(label = "Database Status", value = "Connected")
+                    SettingsInfoRow(label = "App version", value = appVersion)
                     SettingsInfoRow(label = "Map & Track Data", value = "© OpenStreetMap contributors")
                 }
             }
