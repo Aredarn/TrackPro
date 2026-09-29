@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -15,9 +16,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,52 +34,151 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.theme.Motion
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.TrackProType
+import com.example.trackpro.theme.accentGlow
 import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.bezel
+import com.example.trackpro.theme.cardShadow
 import com.example.trackpro.theme.field
-import com.example.trackpro.theme.fieldLive
+import com.example.trackpro.theme.highlight
 import com.example.trackpro.theme.marking
-import com.example.trackpro.theme.panel
 import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.segmentOff
 import kotlin.math.abs
-import kotlin.math.roundToInt
+
+// ── Surfaces ──────────────────────────────────────────────────
 
 /**
- * The dash's one bar language: discrete lit segments, never a gradient or a smooth fill.
- *
- * A purpose-built display uses segments because a driver counts blocks in peripheral
- * vision far faster than they judge the length of a continuous bar - the quantisation is
- * the feature. Unlit segments are drawn rather than omitted so the bar's full range stays
- * visible and a value near zero still reads as "near zero" rather than "no data".
+ * The raised card every screen is built from: rounded, a soft shadow in the ground's own
+ * hue, and a hairline highlight across the top edge that catches light like a pressed panel.
+ */
+fun Modifier.paddockCard(
+    shape: Shape = TrackProShapes.card,
+    color: Color? = null,
+    elevation: Dp = 10.dp,
+): Modifier = composed {
+    val colors = TrackProTheme.colors
+    Modifier
+        .shadow(elevation, shape, clip = false, ambientColor = colors.cardShadow, spotColor = colors.cardShadow)
+        .clip(shape)
+        .background(color ?: colors.field)
+        .border(1.dp, Brush.verticalGradient(listOf(colors.highlight, Color.Transparent)), shape)
+}
+
+/** A card container with default padding. */
+@Composable
+fun PaddockCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    padding: Dp = Spacing.lg,
+    color: Color? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.pressable(onClick = onClick, onLongClick = onLongClick, scale = 0.98f) else Modifier)
+            .paddockCard(color = color)
+            .padding(padding),
+        content = content
+    )
+}
+
+/** A section's own title, sentence case, with an optional action on the right. */
+@Composable
+fun SectionTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+    action: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = Spacing.gutter, end = Spacing.sm, top = Spacing.xl, bottom = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking, modifier = Modifier.weight(1f))
+        if (action != null && onAction != null) {
+            Text(
+                action,
+                style = TrackProType.label.copy(fontWeight = TrackProType.titleMedium.fontWeight),
+                color = TrackProTheme.colors.accent,
+                modifier = Modifier
+                    .pressable(onClick = onAction, scale = 0.96f)
+                    .heightIn(min = 44.dp)
+                    .wrapContentHeight(Alignment.CenterVertically)
+                    .padding(horizontal = Spacing.sm)
+            )
+        }
+    }
+}
+
+/** An icon on a soft circle of its own tint - the category mark of a row or tile. */
+@Composable
+fun IconCircle(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    tint: Color = TrackProTheme.colors.accent,
+    size: Dp = 40.dp,
+    filled: Boolean = false,
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(if (filled) tint else tint.copy(alpha = 0.14f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (filled) TrackProTheme.colors.onAccent else tint,
+            modifier = Modifier.size(size * 0.5f)
+        )
+    }
+}
+
+// ── Bars ──────────────────────────────────────────────────────
+
+/**
+ * A rounded bar for a live value.
  *
  * [signedFraction] runs -1..1 in bidirectional mode. **Positive fills right and means
- * better** - faster, gaining - which is the orientation this app settled on: gaining
- * pushes the bar forward. Callers with a lower-is-better value (a lap delta) pass its
- * negation. In unidirectional mode the range is 0..1 filling from the left.
- *
- * The fill is spring-damped. Live GPS delta is noisy enough that an undamped bar strobes,
- * and a snapping readout is a lie about how confidently the value is known.
+ * better** - faster, gaining - so callers with a lower-is-better value (a lap delta) pass its
+ * negation. In unidirectional mode the range is 0..1 from the left. The fill is
+ * spring-damped: live GPS is noisy enough that an undamped bar strobes. [segments] is kept
+ * for older call sites and no longer changes the drawing.
  */
 @Composable
 fun SegmentBar(
     signedFraction: Float,
     activeColor: Color,
     modifier: Modifier = Modifier,
-    segments: Int = 21,
+    @Suppress("UNUSED_PARAMETER") segments: Int = 21,
     bidirectional: Boolean = true,
-    height: Dp = 14.dp,
+    height: Dp = 12.dp,
     showDatum: Boolean = true
 ) {
     val reducedMotion = rememberReducedMotion()
@@ -80,54 +186,57 @@ fun SegmentBar(
     val animated by animateFloatAsState(
         targetValue = target,
         animationSpec = if (reducedMotion) snap() else Motion.standard(),
-        label = "segmentFill"
+        label = "barFill"
     )
+    val track = TrackProTheme.colors.segmentOff
+    val datum = TrackProTheme.colors.marking
 
-    // An odd segment count gives a true centre block to sit the datum on.
-    val count = if (bidirectional && segments % 2 == 0) segments + 1 else segments
-    val centre = count / 2
-    val lit = (abs(animated) * (if (bidirectional) centre else count)).roundToInt()
-
-    Row(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .height(height),
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
+            .height(height)
+            .clip(TrackProShapes.pill)
+            .background(track)
     ) {
-        repeat(count) { i ->
-            val isCentre = bidirectional && i == centre
-            val on = if (bidirectional) {
-                if (animated >= 0f) i > centre && i <= centre + lit
-                else i < centre && i >= centre - lit
-            } else {
-                i < lit
-            }
-            val color = when {
-                on -> activeColor
-                isCentre && showDatum -> TrackProTheme.colors.marking
-                else -> TrackProTheme.colors.segmentOff
-            }
+        val full = maxWidth
+        if (bidirectional) {
+            val half = full / 2
+            val fill = half * abs(animated)
             Box(
-                modifier = Modifier
-                    .weight(if (isCentre && showDatum) 0.6f else 1f)
+                Modifier
+                    .offset(x = if (animated >= 0f) half else half - fill)
+                    .width(fill)
                     .fillMaxHeight()
-                    .background(color)
+                    .clip(TrackProShapes.pill)
+                    .background(activeColor)
+            )
+            if (showDatum) {
+                Box(
+                    Modifier
+                        .offset(x = half - 1.5.dp)
+                        .width(3.dp)
+                        .fillMaxHeight()
+                        .background(datum)
+                )
+            }
+        } else {
+            Box(
+                Modifier
+                    .width(full * animated)
+                    .fillMaxHeight()
+                    .clip(TrackProShapes.pill)
+                    .background(activeColor)
             )
         }
     }
 }
 
+// ── Trend ─────────────────────────────────────────────────────
+
 /**
- * Which way a value is moving, with hysteresis.
- *
- * A trend mark that flips every frame is worse than no mark: it reads as noise and trains
- * the eye to ignore that corner of the panel. [threshold] is how far the value must travel
- * from the last committed reading before the direction is allowed to change, so a delta
- * jittering by milliseconds holds Steady while a real gain flips it.
- *
- * This is the six-pack discipline the direction contract took: an instrument that shows
- * only its current value says where you are and not where you are going, and on a lap the
- * second one is what changes your driving.
+ * Which way a value is moving, with hysteresis: [threshold] is how far it must travel from
+ * the last committed reading before the direction may change, so millisecond jitter holds
+ * Steady while a real gain flips it.
  */
 @Composable
 fun rememberTrend(value: Float, threshold: Float): Trend {
@@ -143,24 +252,17 @@ fun rememberTrend(value: Float, threshold: Float): Trend {
     return trend
 }
 
-/** Which way a value is moving. Drawn, never a glyph. */
 enum class Trend { Rising, Falling, Steady }
 
-/**
- * A trend mark.
- *
- * The six-pack discipline the direction inherited: an instrument that shows only its
- * current value tells you where you are but not where you are going, and on a lap the
- * second one is what changes your driving.
- */
 @Composable
 private fun TrendMark(trend: Trend, color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(width = 8.dp, height = 6.dp)) {
+    Canvas(modifier = modifier.size(width = 10.dp, height = 8.dp)) {
         if (trend == Trend.Steady) {
-            drawRect(
+            drawRoundRect(
                 color = color,
-                topLeft = Offset(0f, size.height / 2f - 0.75.dp.toPx()),
-                size = androidx.compose.ui.geometry.Size(size.width, 1.5.dp.toPx())
+                topLeft = Offset(0f, size.height / 2f - 1.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(size.width, 2.dp.toPx()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.dp.toPx())
             )
             return@Canvas
         }
@@ -176,12 +278,11 @@ private fun TrendMark(trend: Trend, color: Color, modifier: Modifier = Modifier)
     }
 }
 
+// ── Stats ─────────────────────────────────────────────────────
+
 /**
- * One instrument: a placard cap, a value, and optionally where that value is heading.
- *
- * This is the dash's only container. There are no cards - a field is distinguished by its
- * ground and a bezel hairline, the way a panel is milled rather than the way a web page
- * stacks boxes.
+ * A stat: a small caption and its value. The value leads visually - it is the larger, brighter
+ * of the two - so a screen never makes "Laps" louder than "342".
  */
 @Composable
 fun Instrument(
@@ -194,70 +295,61 @@ fun Instrument(
     alignEnd: Boolean = false
 ) {
     Column(
-        modifier = modifier
-            .background(TrackProTheme.colors.field)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier = modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
         horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start
     ) {
-        Text(
-            text = label.uppercase(),
-            style = TrackProType.label,
-            color = TrackProTheme.colors.markingDim
-        )
-        Spacer(Modifier.height(3.dp))
+        Text(text = label, style = TrackProType.label, color = TrackProTheme.colors.markingDim, maxLines = 1)
+        Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (trend != null && alignEnd) {
                 TrendMark(trend, valueColor ?: TrackProTheme.colors.marking)
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(6.dp))
             }
             Text(
                 text = value,
                 style = TrackProType.statValue.atSize(valueSize),
                 color = valueColor ?: TrackProTheme.colors.marking,
-                textAlign = if (alignEnd) TextAlign.End else TextAlign.Start
+                textAlign = if (alignEnd) TextAlign.End else TextAlign.Start,
+                maxLines = 1
             )
             if (trend != null && !alignEnd) {
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(6.dp))
                 TrendMark(trend, valueColor ?: TrackProTheme.colors.marking)
             }
         }
     }
 }
 
-/** A milled hairline between fields. The panel's only divider. */
+/** A hairline divider inside a card. */
 @Composable
 fun Bezel(modifier: Modifier = Modifier, vertical: Boolean = false) {
     Box(
         modifier = modifier
-            .then(if (vertical) Modifier.width(1.dp).fillMaxHeight() else Modifier.fillMaxWidth().height(1.dp))
+            .then(if (vertical) Modifier.width(1.dp).fillMaxHeight().padding(vertical = 10.dp) else Modifier.fillMaxWidth().height(1.dp))
             .background(TrackProTheme.colors.bezel)
     )
 }
 
-/**
- * The dominant readout: one number, sized to be caught peripherally.
- *
- * [caption] is the placard beneath it. The number is never centred under a heading - it
- * leads, and the placard explains it afterwards, because at speed the value is read first
- * and identified second.
- */
+/** The screen's one headline number, with its caption beneath. */
 @Composable
 fun Readout(
     value: String,
     caption: String,
     modifier: Modifier = Modifier,
     valueColor: Color? = null,
-    valueSize: TextUnit = 56.sp,
+    valueSize: TextUnit = 40.sp,
     trend: Trend? = null,
     trailing: (@Composable () -> Unit)? = null
 ) {
     Column(modifier = modifier) {
+        Text(text = caption, style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+        Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             if (trend != null) {
                 TrendMark(
                     trend = trend,
                     color = valueColor ?: TrackProTheme.colors.marking,
-                    modifier = Modifier.padding(end = 8.dp, bottom = 10.dp)
+                    modifier = Modifier.padding(end = 8.dp, bottom = 12.dp)
                 )
             }
             Text(
@@ -271,25 +363,19 @@ fun Readout(
                 trailing()
             }
         }
-        Text(
-            text = caption.uppercase(),
-            style = TrackProType.label,
-            color = TrackProTheme.colors.markingDim
-        )
     }
 }
 
+// ── Actions ───────────────────────────────────────────────────
+
 /**
- * A lit block: the dash's only promoted control.
+ * An action tile.
  *
- * Everything else on a panel is a readout you look at; this is the one thing you press.
- * It earns its weight from a lit ground plus a hairline in the accent, not from a shadow
- * or a rounded card - the world has neither. Corners stay square because a milled panel
- * has square apertures.
- *
- * Disabled is drawn, not hidden: the block stays, the border drops to the bezel, and the
- * segment strip unlights. A control that vanishes when unavailable teaches nothing about
- * what would make it available.
+ * [primary] is the screen's one orange, filled block with a soft orange glow beneath it -
+ * at most one per screen. Everything else is secondary: a card-toned tile whose icon and
+ * label carry the accent at low strength. [accent] overrides the tint, e.g. red for a stop.
+ * [compact] is a 52dp button for toolbars and pairs; the full tile is 96dp with room for an
+ * icon and a detail line.
  */
 @Composable
 fun DashAction(
@@ -298,72 +384,82 @@ fun DashAction(
     modifier: Modifier = Modifier,
     detail: String? = null,
     enabled: Boolean = true,
-    labelSize: TextUnit = 34.sp,
+    @Suppress("UNUSED_PARAMETER") labelSize: TextUnit = 20.sp,
     accent: Color? = null,
-    /** Inline control: shorter, centred, no segment strip. For toolbars and pairs. */
     compact: Boolean = false,
-    /** Only for genuine commits - recording started, a sector marked, a track saved. */
-    haptic: Haptic? = null
+    haptic: Haptic? = null,
+    primary: Boolean = false,
+    icon: ImageVector? = null,
 ) {
-    val lit = accent ?: TrackProTheme.colors.accent
-    val edge = if (enabled) lit else TrackProTheme.colors.bezel
-    val ink = if (enabled) TrackProTheme.colors.marking else TrackProTheme.colors.markingDim
+    val tint = accent ?: TrackProTheme.colors.accent
+    val onTint = if (accent == null) TrackProTheme.colors.onAccent else Color.White
+    val shape = if (compact) TrackProShapes.control else TrackProShapes.card
+    val glow = TrackProTheme.colors.accentGlow
+    val ink = if (primary) onTint else TrackProTheme.colors.marking
+    val sub = if (primary) onTint.copy(alpha = 0.72f) else TrackProTheme.colors.markingDim
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .pressableRow(onClick = onClick, enabled = enabled, haptic = haptic)
-            .background(if (enabled) TrackProTheme.colors.fieldLive else TrackProTheme.colors.field)
-            .border(1.dp, edge)
-            .heightIn(min = if (compact) 48.dp else 72.dp)
-            .padding(horizontal = 16.dp, vertical = if (compact) 10.dp else 16.dp),
+            .alpha(if (enabled) 1f else 0.4f)
+            .pressable(onClick = onClick, enabled = enabled, haptic = haptic, scale = 0.97f)
+            .then(
+                if (primary) Modifier
+                    .shadow(if (enabled) 18.dp else 0.dp, shape, clip = false, ambientColor = glow, spotColor = glow)
+                    .clip(shape)
+                    .background(tint)
+                else Modifier.paddockCard(shape, elevation = if (compact) 4.dp else 10.dp)
+            )
+            .heightIn(min = if (compact) 52.dp else 96.dp)
+            .padding(horizontal = if (compact) Spacing.lg else Spacing.xl, vertical = if (compact) Spacing.md else Spacing.lg),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = if (compact) Arrangement.Center else Arrangement.Start
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        if (icon != null) {
+            if (compact) {
+                Icon(icon, contentDescription = null, tint = if (primary) onTint else tint, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(Spacing.sm))
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (primary) onTint.copy(alpha = 0.14f) else tint.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = if (primary) onTint else tint, modifier = Modifier.size(24.dp))
+                }
+                Spacer(Modifier.width(Spacing.lg))
+            }
+        }
+        Column(modifier = if (compact) Modifier else Modifier.weight(1f)) {
             Text(
-                text = label.uppercase(),
-                // Compact controls take the title face, not the display face: a numeral
-                // face shrunk to button size is a display face pretending to be a label.
-                style = if (compact) TrackProType.titleLarge.atSize(15.sp)
-                else TrackProType.displayNumeric.atSize(labelSize),
+                text = label,
+                style = if (compact) TrackProType.titleMedium else TrackProType.titleLarge,
                 color = ink,
                 textAlign = if (compact) TextAlign.Center else TextAlign.Start,
                 maxLines = 1,
-                modifier = if (compact) Modifier.fillMaxWidth() else Modifier
+                overflow = TextOverflow.Ellipsis
             )
-            if (detail != null) {
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    text = detail.uppercase(),
-                    style = TrackProType.label,
-                    color = TrackProTheme.colors.markingDim,
-                    textAlign = if (compact) TextAlign.Center else TextAlign.Start,
-                    maxLines = 1,
-                    modifier = if (compact) Modifier.fillMaxWidth() else Modifier
-                )
+            if (detail != null && !compact) {
+                Spacer(Modifier.height(2.dp))
+                Text(text = detail, style = TrackProType.label, color = sub, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
         if (!compact) {
-            Spacer(Modifier.width(12.dp))
-            SegmentBar(
-                signedFraction = if (enabled) 1f else 0f,
-                activeColor = lit,
-                bidirectional = false,
-                segments = 4,
-                height = 26.dp,
-                modifier = Modifier.width(34.dp)
+            Spacer(Modifier.width(Spacing.sm))
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = if (primary) onTint else TrackProTheme.colors.markingDim,
+                modifier = Modifier.size(20.dp)
             )
         }
     }
 }
 
 /**
- * A flat titled group.
- *
- * The dash has no cards, so a section is a placard on the panel with its contents on a
- * field ground, closed top and bottom by bezels. Full bleed - a milled panel does not
- * inset its apertures from the edge.
+ * A titled card section: the title in the page margin, the contents in one raised card.
  */
 @Composable
 fun DashGroup(
@@ -372,23 +468,7 @@ fun DashGroup(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = title.uppercase(),
-            style = TrackProType.label,
-            color = TrackProTheme.colors.markingDim,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(TrackProTheme.colors.panel)
-                .padding(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 6.dp)
-        )
-        Bezel()
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(TrackProTheme.colors.field)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            content = content
-        )
-        Bezel()
+        SectionTitle(title)
+        PaddockCard(modifier = Modifier.padding(horizontal = Spacing.gutter), content = content)
     }
 }

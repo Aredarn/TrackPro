@@ -15,6 +15,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.components.PaddockCard
+import com.example.trackpro.components.IconCircle
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.AddLocationAlt
+import androidx.compose.material.icons.Icons
 import com.example.trackpro.components.DashAction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.LaunchedEffect
@@ -96,15 +105,18 @@ fun TrackListScreen(
         if (onBuildTrack != null) {
             // The builder lives with the tracks it makes. It used to be an instrument on the
             // home panel, one tap from the modes you drive with.
-            Box(modifier = Modifier.padding(top = contentPadding.calculateTopPadding()).padding(12.dp)) {
+            Box(
+                modifier = Modifier
+                    .padding(top = contentPadding.calculateTopPadding() + Spacing.xs)
+                    .padding(horizontal = Spacing.gutter)
+            ) {
                 DashAction(
                     label = "Build a track",
-                    detail = "Walk or drive it · or draw it on the map",
+                    detail = "Walk or drive it, or draw it on the map",
                     onClick = onBuildTrack,
-                    compact = true
+                    icon = Icons.Default.AddLocationAlt
                 )
             }
-            Bezel()
         }
         val listTop = if (onBuildTrack != null) 0.dp else contentPadding.calculateTopPadding()
         DataGate(
@@ -118,13 +130,15 @@ fun TrackListScreen(
                     modifier = Modifier.fillMaxSize(),
                     state = listState,
                     contentPadding = PaddingValues(
-                        top = listTop + 10.dp,
-                        bottom = 24.dp
+                        start = Spacing.gutter,
+                        end = Spacing.gutter,
+                        top = listTop + Spacing.md,
+                        bottom = Spacing.xl
                     ),
                     // Each track is its own aperture in the panel; the gap between them is the
                     // panel showing through, which is what gives the list air without inventing
                     // a card.
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     items(tracks) { track ->
                         TrackCard(
@@ -189,55 +203,48 @@ fun TrackCard(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressableRow(onClick = { navController.navigate("track/${track.trackId}") })
-            .background(TrackProTheme.colors.field)
+    PaddockCard(
+        onClick = { navController.navigate("track/${track.trackId}") },
+        onLongClick = { showDeleteDialog = true },
+        padding = Spacing.lg
     ) {
-        // The name leads by a clear margin - 26sp against 17sp readouts. The previous
-        // pass set it at 19sp beside 18sp values, so nothing led and every row read as
-        // one undifferentiated block.
-        Column(
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 14.dp)
-        ) {
-            Text(
-                text = track.trackName,
-                style = TrackProType.titleLarge.atSize(26.sp),
-                color = TrackProTheme.colors.marking,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = listOf(track.type, track.country)
-                    .filter { it.isNotBlank() }
-                    .joinToString("  ·  ")
-                    .uppercase(),
-                style = TrackProType.label,
-                color = TrackProTheme.colors.markingDim
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconCircle(icon = Icons.Default.Flag, size = 44.dp)
+            Spacer(Modifier.width(Spacing.md))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = track.trackName,
+                    style = TrackProType.titleMedium,
+                    color = TrackProTheme.colors.marking,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = listOf(track.type, track.country).filter { it.isNotBlank() }.joinToString(" · "),
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.markingDim
+                )
+            }
         }
-
-        Bezel()
-
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Spacer(Modifier.height(Spacing.md))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(TrackProShapes.control)
+                .background(TrackProTheme.colors.bgElevated)
+        ) {
             Instrument(
                 label = "Length",
                 // totalLength is stored in km; formatDistance takes meters.
-                value = track.totalLength?.let {
-                    UnitFormatter.formatDistance(it * 1000.0, useMetric)
-                } ?: "—",
-                valueSize = 17.sp,
+                value = track.totalLength?.let { UnitFormatter.formatDistance(it * 1000.0, useMetric) } ?: "—",
+                valueSize = 15.sp,
                 modifier = Modifier.weight(1f)
             )
-            Bezel(vertical = true, modifier = Modifier.height(56.dp))
             Instrument(
-                label = "Lap record",
+                label = "Your record",
                 value = bestLapTime ?: "—",
-                valueColor = if (bestLapTime != null) TrackProTheme.colors.accent
-                else TrackProTheme.colors.markingDim,
-                valueSize = 17.sp,
+                valueColor = if (bestLapTime != null) TrackProTheme.colors.accent else TrackProTheme.colors.markingDim,
+                valueSize = 15.sp,
                 modifier = Modifier.weight(1f)
             )
         }

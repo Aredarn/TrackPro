@@ -163,7 +163,7 @@ fun TrackView(
                     )
                     StatCell(
                         label = "Type",
-                        value = trackInfo.value.type.uppercase(),
+                        value = trackInfo.value.type,
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
                     StatCell(
@@ -217,7 +217,7 @@ fun TrackView(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                "READING TRACK",
+                                "Reading track",
                                 style = TrackProType.label,
                                 color = TrackProTheme.colors.markingDim
                             )

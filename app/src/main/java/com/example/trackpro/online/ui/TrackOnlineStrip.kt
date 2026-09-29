@@ -73,7 +73,7 @@ fun TrackOnlineStrip(trackId: Long, onOpenLeaderboard: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("LEADERBOARD", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+            Text("Leaderboard", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
             Spacer(Modifier.height(2.dp))
             Text(status, style = TrackProType.body, color = TrackProTheme.colors.textMuted)
         }

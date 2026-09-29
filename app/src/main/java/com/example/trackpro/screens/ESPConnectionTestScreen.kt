@@ -202,7 +202,7 @@ fun ESPConnectionTestScreen(
                     Bezel(vertical = true, modifier = Modifier.height(58.dp))
                     Instrument(
                         label = "Link",
-                        value = if (isConnected) "LIVE" else "OFFLINE",
+                        value = if (isConnected) "Live" else "Offline",
                         valueColor = if (isConnected) TrackProTheme.colors.deltaGood
                         else TrackProTheme.colors.deltaBad,
                         valueSize = 15.sp,
@@ -211,7 +211,7 @@ fun ESPConnectionTestScreen(
                     Bezel(vertical = true, modifier = Modifier.height(58.dp))
                     Instrument(
                         label = "Fix",
-                        value = if (fix) "LOCKED" else "SEARCHING",
+                        value = if (fix) "Locked" else "Searching",
                         valueColor = if (fix) TrackProTheme.colors.deltaGood
                         else TrackProTheme.colors.deltaBad,
                         valueSize = 15.sp,
@@ -234,7 +234,7 @@ fun ESPConnectionTestScreen(
                             .padding(horizontal = 14.dp, vertical = 14.dp)
                     ) {
                         Text(
-                            text = cause.uppercase(),
+                            text = cause,
                             style = TrackProType.label,
                             color = if (!isConnected) TrackProTheme.colors.deltaBad
                             else TrackProTheme.colors.markingDim
@@ -328,7 +328,7 @@ private fun TelemetryRow(label: String, value: String, textPrimary: Color, textM
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label.uppercase(), style = TrackProType.label, color = textMuted)
+        Text(label, style = TrackProType.label, color = textMuted)
         Text(
             value,
             style = TrackProType.body.atSize(13.sp).copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),

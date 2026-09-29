@@ -5,12 +5,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,8 +18,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -35,24 +47,28 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.TrackProApp
 import com.example.trackpro.components.Bezel
-import com.example.trackpro.components.DashAction
 import com.example.trackpro.components.Haptic
+import com.example.trackpro.components.IconCircle
 import com.example.trackpro.components.Instrument
+import com.example.trackpro.components.PaddockCard
 import com.example.trackpro.components.PhotoFrame
-import com.example.trackpro.components.Readout
+import com.example.trackpro.components.PrimaryButton
 import com.example.trackpro.components.ScreenScaffold
-import com.example.trackpro.components.SectionLabel
+import com.example.trackpro.components.SectionTitle
 import com.example.trackpro.components.ToggleChip
 import com.example.trackpro.components.initialsOf
 import com.example.trackpro.components.isScrolledUnderChrome
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.pressableRow
 import com.example.trackpro.components.rememberHaptics
 import com.example.trackpro.dataClasses.VehicleInformationData
@@ -63,11 +79,13 @@ import com.example.trackpro.online.ApiException
 import com.example.trackpro.online.LocalCareer
 import com.example.trackpro.online.NetworkException
 import com.example.trackpro.online.PersonalBest
+import com.example.trackpro.online.ProfileStats
 import com.example.trackpro.online.SyncScheduler
 import com.example.trackpro.online.describe
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.TrackProType
-import com.example.trackpro.theme.atSize
-import com.example.trackpro.theme.field
+import com.example.trackpro.theme.accentSoft
 import com.example.trackpro.theme.marking
 import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.panel
@@ -77,10 +95,10 @@ import java.time.OffsetDateTime
 import java.util.Date
 
 /**
- * The Profile tab: a driver's career sheet, then their account, then the app.
+ * The Profile tab: who you are as a driver, then your account, then the app.
  *
- * The sheet is built from this phone's own records, so it is complete with no account and
- * no network. Signing in lays the account on top — a name and face, and the leaderboard
+ * The career is built from this phone's own records, so it is complete with no account and
+ * no network. Signing in lays the account on top - a name and face, and the leaderboard
  * place next to each personal best, which only the server can know.
  */
 @Composable
@@ -121,41 +139,31 @@ fun ProfileScreen(navController: NavController) {
                 .verticalScroll(scroll)
                 .padding(top = padding.calculateTopPadding())
         ) {
-            DriverPlacard(
-                name = snapshot?.profile?.displayName ?: signedIn?.displayName,
-                country = snapshot?.profile?.country,
-                bio = snapshot?.profile?.bio,
-                memberSince = snapshot?.profile?.memberSince,
-                avatar = online.photos.file(snapshot?.avatarFile),
-                signedIn = signedIn != null,
-                onEdit = { navController.navigate("profile/edit") },
-            )
-            Bezel()
-
-            if (signedIn == null) {
-                Box(Modifier.padding(12.dp)) {
-                    DashAction(
-                        label = "Sign in",
-                        detail = "Back up your garage · see your leaderboard places",
-                        onClick = { navController.navigate("account") },
-                        labelSize = 28.sp
-                    )
-                }
-                Bezel()
-            } else if (problem != null) {
-                Notice(problem!!)
-                Bezel()
+            Column(Modifier.padding(horizontal = Spacing.gutter), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                Spacer(Modifier.height(Spacing.xs))
+                DriverCard(
+                    name = snapshot?.profile?.displayName ?: signedIn?.displayName,
+                    country = snapshot?.profile?.country,
+                    bio = snapshot?.profile?.bio,
+                    memberSince = snapshot?.profile?.memberSince,
+                    avatar = online.photos.file(snapshot?.avatarFile),
+                    signedIn = signedIn != null,
+                    onEdit = { navController.navigate("profile/edit") },
+                    onSignIn = { navController.navigate("account") },
+                )
+                if (signedIn != null && problem != null) Notice(problem!!)
+                CareerCard(career = career, server = snapshot?.stats?.takeIf { career.isEmpty })
             }
 
-            CareerReadouts(career = career, server = snapshot?.stats?.takeIf { career.isEmpty })
-
-            MainCarPlacard(
+            SectionTitle("Main car")
+            MainCarCard(
                 vehicle = vehicles.firstOrNull { it.vehicleId == career.mainVehicleId } ?: vehicles.singleOrNull(),
                 photo = { online.photos.file(it) },
                 onOpen = { navController.navigate("vehicle/$it") },
                 onAdd = { navController.navigate("createvehicle") },
             )
 
+            SectionTitle("Personal bests")
             PersonalBests(
                 career = career,
                 serverBests = snapshot?.stats?.personalBests.orEmpty(),
@@ -166,27 +174,28 @@ fun ProfileScreen(navController: NavController) {
             )
 
             if (signedIn != null) {
+                SectionTitle("Account")
                 AccountGroup(
                     onEdit = { navController.navigate("profile/edit") },
                     onSignedOut = { scope.launch { online.profile.clear() } },
                 )
             }
 
-            SectionLabel("App", modifier = Modifier.padding(start = 14.dp, top = 18.dp, bottom = 8.dp))
-            Bezel()
-            LinkRow("Settings", "Units · theme · GPS source · server") { navController.navigate("settings") }
-            Bezel()
-            LinkRow("Rig connection", "ESP32 link and diagnostics") { navController.navigate("esptest") }
-            Bezel()
-            Spacer(Modifier.height(24.dp))
+            SectionTitle("App")
+            ListCard {
+                LinkRow(Icons.Default.Settings, "Settings", "Units, contrast, GPS source, server") { navController.navigate("settings") }
+                RowDivider()
+                LinkRow(Icons.Default.Router, "Rig connection", "ESP32 link and diagnostics") { navController.navigate("esptest") }
+            }
+            Spacer(Modifier.height(Spacing.xl))
         }
     }
 }
 
-// ── Driver placard ────────────────────────────────────────────
+// ── Driver ────────────────────────────────────────────────────
 
 @Composable
-private fun DriverPlacard(
+private fun DriverCard(
     name: String?,
     country: String?,
     bio: String?,
@@ -194,54 +203,53 @@ private fun DriverPlacard(
     avatar: java.io.File?,
     signedIn: Boolean,
     onEdit: () -> Unit,
+    onSignIn: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(TrackProTheme.colors.field)
-            .then(if (signedIn) Modifier.pressableRow(onClick = onEdit) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        PhotoFrame(
-            file = avatar,
-            contentDescription = if (avatar != null) "Profile photo" else null,
-            initials = initialsOf(name ?: "Driver"),
-            modifier = Modifier.size(84.dp)
-        )
-        Spacer(Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = (name ?: "Driver").uppercase(),
-                style = TrackProType.titleLarge.atSize(22.sp),
-                color = TrackProTheme.colors.marking,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+    PaddockCard(onClick = if (signedIn) onEdit else null, padding = Spacing.lg) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PhotoFrame(
+                file = avatar,
+                contentDescription = if (avatar != null) "Profile photo" else null,
+                initials = initialsOf(name ?: "Driver"),
+                shape = CircleShape,
+                modifier = Modifier.size(72.dp)
             )
-            Spacer(Modifier.height(4.dp))
-            val since = memberSince?.let { runCatching { OffsetDateTime.parse(it).year }.getOrNull() }
+            Spacer(Modifier.width(Spacing.lg))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name ?: "Driver",
+                    style = TrackProType.titleLarge,
+                    color = TrackProTheme.colors.marking,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                val since = memberSince?.let { runCatching { OffsetDateTime.parse(it).year }.getOrNull() }
+                Text(
+                    text = when {
+                        !signedIn -> "Racing on this phone"
+                        else -> listOfNotNull(country, since?.let { "Driver since $it" }).joinToString(" · ").ifEmpty { "TrackBoard driver" }
+                    },
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.markingDim
+                )
+            }
+            if (signedIn) {
+                IconCircle(Icons.Default.Edit, size = 36.dp)
+            }
+        }
+        if (!bio.isNullOrBlank()) {
+            Spacer(Modifier.height(Spacing.md))
+            Text(text = bio, style = TrackProType.body, color = TrackProTheme.colors.markingDim, maxLines = 4, overflow = TextOverflow.Ellipsis)
+        }
+        if (!signedIn) {
+            Spacer(Modifier.height(Spacing.lg))
             Text(
-                text = when {
-                    !signedIn -> "On this phone"
-                    else -> listOfNotNull(country, since?.let { "Since $it" }).joinToString("  ·  ").ifEmpty { "TrackBoard driver" }
-                }.uppercase(),
+                "Sign in to back up your garage and see where you place on every track.",
                 style = TrackProType.label,
                 color = TrackProTheme.colors.markingDim
             )
-            if (!bio.isNullOrBlank()) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = bio,
-                    style = TrackProType.body,
-                    color = TrackProTheme.colors.markingDim,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-        if (signedIn) {
-            Spacer(Modifier.width(8.dp))
-            Text("EDIT", style = TrackProType.label, color = TrackProTheme.colors.accent)
+            Spacer(Modifier.height(Spacing.md))
+            PrimaryButton(text = "Sign in", onClick = onSignIn, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -249,20 +257,21 @@ private fun DriverPlacard(
 @Composable
 private fun Notice(text: String) {
     Text(
-        text = text.uppercase(),
+        text = text,
         style = TrackProType.label,
-        color = TrackProTheme.colors.deltaBad,
+        color = TrackProTheme.colors.marking,
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProTheme.colors.field)
-            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .clip(TrackProShapes.control)
+            .background(TrackProTheme.colors.deltaBad.copy(alpha = 0.12f))
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md)
     )
 }
 
 // ── Career ────────────────────────────────────────────────────
 
 @Composable
-private fun CareerReadouts(career: LocalCareer, server: com.example.trackpro.online.ProfileStats?) {
+private fun CareerCard(career: LocalCareer, server: ProfileStats?) {
     // A fresh phone signed into an existing account has no local history yet; until its
     // sessions are recorded here, the account's own totals are the honest numbers to show.
     val laps = server?.lapCount ?: career.lapCount
@@ -272,95 +281,92 @@ private fun CareerReadouts(career: LocalCareer, server: com.example.trackpro.onl
     val first = career.firstSessionAt
     val dash = "—"
 
-    SectionLabel("Career", modifier = Modifier.padding(start = 14.dp, top = 18.dp, bottom = 8.dp))
-    Bezel()
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(TrackProTheme.colors.field)
-            .padding(horizontal = 14.dp, vertical = 14.dp)
-    ) {
-        Readout(
-            value = if (sessions == 0) dash else "$laps",
-            caption = if (first != null) "Laps timed since ${DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(first))}"
-            else "Laps timed",
-            valueColor = if (sessions == 0) TrackProTheme.colors.markingDim else TrackProTheme.colors.marking,
-            valueSize = 52.sp
+    PaddockCard {
+        Text(
+            if (first != null) "Laps timed since ${DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(first))}" else "Laps timed",
+            style = TrackProType.label,
+            color = TrackProTheme.colors.markingDim
         )
+        Text(
+            if (sessions == 0) dash else "$laps",
+            style = TrackProType.displayNumeric,
+            color = if (sessions == 0) TrackProTheme.colors.markingDim else TrackProTheme.colors.marking
+        )
+        Spacer(Modifier.height(Spacing.md))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(TrackProShapes.control)
+                .background(TrackProTheme.colors.bgElevated)
+        ) {
+            Instrument("Sessions", if (sessions == 0) dash else "$sessions", Modifier.weight(1f), valueSize = TrackProType.titleMedium.fontSize)
+            Instrument("Tracks", if (tracks == 0) dash else "$tracks", Modifier.weight(1f), valueSize = TrackProType.titleMedium.fontSize)
+            Instrument(
+                "Km lapped",
+                km?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: dash,
+                Modifier.weight(1f),
+                valueSize = TrackProType.titleMedium.fontSize
+            )
+        }
     }
-    Bezel()
-    Row(modifier = Modifier.fillMaxWidth().height(IntrinsicRowHeight)) {
-        Instrument("Sessions", if (sessions == 0) dash else "$sessions", Modifier.weight(1f).fillMaxHeight())
-        Bezel(vertical = true, modifier = Modifier.height(IntrinsicRowHeight))
-        Instrument("Tracks", if (tracks == 0) dash else "$tracks", Modifier.weight(1f).fillMaxHeight())
-        Bezel(vertical = true, modifier = Modifier.height(IntrinsicRowHeight))
-        Instrument("Km lapped", km?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: dash, Modifier.weight(1f).fillMaxHeight())
-    }
-    Bezel()
 }
-
-private val IntrinsicRowHeight = 58.dp
 
 // ── Main car ──────────────────────────────────────────────────
 
 @Composable
-private fun MainCarPlacard(
+private fun MainCarCard(
     vehicle: VehicleInformationData?,
     photo: (String?) -> java.io.File?,
     onOpen: (Long) -> Unit,
     onAdd: () -> Unit,
 ) {
-    SectionLabel("Main car", modifier = Modifier.padding(start = 14.dp, top = 18.dp, bottom = 8.dp))
-    Bezel()
-    if (vehicle == null) {
-        Box(Modifier.background(TrackProTheme.colors.panel).padding(12.dp)) {
-            DashAction(label = "Add your car", detail = "Sessions are timed against it", onClick = onAdd, compact = true)
-        }
-        Bezel()
-        return
-    }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressableRow(onClick = { onOpen(vehicle.vehicleId) })
-            .background(TrackProTheme.colors.field)
-    ) {
-        val file = photo(vehicle.photoFile)
-        if (file != null) {
+    Column(Modifier.padding(horizontal = Spacing.gutter)) {
+        if (vehicle == null) {
+            PaddockCard(onClick = onAdd) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconCircle(Icons.Default.EmojiEvents, size = 44.dp)
+                    Spacer(Modifier.width(Spacing.lg))
+                    Column(Modifier.weight(1f)) {
+                        Text("Add your car", style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+                        Text("Every lap is filed against the car that set it", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                    }
+                }
+            }
+        } else {
+        PaddockCard(onClick = { onOpen(vehicle.vehicleId) }, padding = Spacing.md) {
             PhotoFrame(
-                file = file,
+                file = photo(vehicle.photoFile),
                 contentDescription = "${vehicle.manufacturer} ${vehicle.model}",
                 modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
             )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = "${vehicle.manufacturer} ${vehicle.model}".uppercase(),
-                    style = TrackProType.titleLarge.atSize(20.sp),
-                    color = TrackProTheme.colors.marking,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    text = listOfNotNull(
-                        vehicle.year.takeIf { it > 0 }?.toString(),
-                        vehicle.horsepower.takeIf { it > 0 }?.let { "$it HP" },
-                        vehicle.drivetrain.takeIf { it.isNotBlank() }?.uppercase(),
-                        vehicle.weight.takeIf { it > 0 }?.let { "${it.toInt()} KG" },
-                    ).joinToString("  ·  "),
-                    style = TrackProType.label,
-                    color = TrackProTheme.colors.markingDim
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xs, vertical = Spacing.md),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "${vehicle.manufacturer} ${vehicle.model}",
+                        style = TrackProType.titleMedium,
+                        color = TrackProTheme.colors.marking,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = listOfNotNull(
+                            vehicle.year.takeIf { it > 0 }?.toString(),
+                            vehicle.horsepower.takeIf { it > 0 }?.let { "$it hp" },
+                            vehicle.drivetrain.takeIf { it.isNotBlank() },
+                            vehicle.weight.takeIf { it > 0 }?.let { "${it.toInt()} kg" },
+                        ).joinToString(" · "),
+                        style = TrackProType.label,
+                        color = TrackProTheme.colors.markingDim
+                    )
+                }
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TrackProTheme.colors.markingDim)
             }
-            Text(if (file == null) "ADD PHOTO ›" else "›", style = TrackProType.label, color = TrackProTheme.colors.accent)
+        }
         }
     }
-    Bezel()
 }
 
 // ── Personal bests ────────────────────────────────────────────
@@ -390,10 +396,7 @@ private fun PersonalBests(
             add(
                 BestRow(
                     trackName = best.trackName,
-                    detail = listOfNotNull(
-                        "${best.lapCount} lap${if (best.lapCount == 1) "" else "s"}",
-                        vehicleName(best.vehicleId),
-                    ).joinToString("  ·  "),
+                    detail = listOfNotNull("${best.lapCount} lap${if (best.lapCount == 1) "" else "s"}", vehicleName(best.vehicleId)).joinToString(" · "),
                     bestMs = best.bestLapMs,
                     rank = server?.rank,
                     fieldSize = server?.fieldSize,
@@ -411,7 +414,7 @@ private fun PersonalBests(
                         "${best.lapCount} lap${if (best.lapCount == 1) "" else "s"}",
                         best.vehicle?.let { "${it.manufacturer} ${it.model}" },
                         "from your account",
-                    ).joinToString("  ·  "),
+                    ).joinToString(" · "),
                     bestMs = best.bestLapMs.toLong(),
                     rank = best.rank,
                     fieldSize = best.fieldSize,
@@ -421,91 +424,83 @@ private fun PersonalBests(
         }
     }.sortedWith(compareBy<BestRow>({ it.rank == null }, { it.rank }, { it.trackName.lowercase() }))
 
-    SectionLabel("Personal bests", modifier = Modifier.padding(start = 14.dp, top = 18.dp, bottom = 8.dp))
-    Bezel()
     if (rows.isEmpty()) {
-        Text(
-            text = "NO TIMED LAPS YET · YOUR BEST ON EACH TRACK LANDS HERE",
-            style = TrackProType.label,
-            color = TrackProTheme.colors.markingDim,
-            modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(14.dp)
-        )
-        Bezel()
-        return
-    }
-
-    // Column heads, placard style, aligned with the values below them.
-    Row(
-        modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.panel).padding(horizontal = 14.dp, vertical = 6.dp)
-    ) {
-        Text("TRACK", style = TrackProType.label, color = TrackProTheme.colors.markingDim, modifier = Modifier.weight(1f))
-        Text("BEST", style = TrackProType.label, color = TrackProTheme.colors.markingDim, modifier = Modifier.width(96.dp))
-        Text("PLACE", style = TrackProType.label, color = TrackProTheme.colors.markingDim, modifier = Modifier.width(64.dp))
-    }
-    Bezel()
-    rows.forEach { row ->
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(row.localTrackId?.let { id -> Modifier.pressableRow(onClick = { onOpenTrack(id) }) } ?: Modifier)
-                .background(TrackProTheme.colors.field)
-                .heightIn(min = 56.dp)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    row.trackName.uppercase(),
-                    style = TrackProType.titleMedium,
-                    color = TrackProTheme.colors.marking,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    row.detail.uppercase(),
-                    style = TrackProType.label,
-                    color = TrackProTheme.colors.markingDim,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Text(
-                row.bestMs.toLapTimeString(),
-                style = TrackProType.statValue.atSize(18.sp),
-                // P1 is the fastest anyone has gone there: the one place purple is earned here.
-                color = if (row.rank == 1) TrackProTheme.colors.accent else TrackProTheme.colors.marking,
-                modifier = Modifier.width(96.dp)
-            )
-            Row(Modifier.width(64.dp), verticalAlignment = Alignment.Bottom) {
-                if (row.rank != null) {
-                    Text(
-                        "P${row.rank}",
-                        style = TrackProType.statValue.atSize(18.sp),
-                        color = if (row.rank == 1) TrackProTheme.colors.accent else TrackProTheme.colors.marking
-                    )
-                    row.fieldSize?.let {
-                        Text("/$it", style = TrackProType.label, color = TrackProTheme.colors.markingDim, modifier = Modifier.padding(bottom = 3.dp))
+        Column(Modifier.padding(horizontal = Spacing.gutter)) {
+            PaddockCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconCircle(Icons.Default.EmojiEvents, size = 44.dp)
+                    Spacer(Modifier.width(Spacing.lg))
+                    Column {
+                        Text("No personal bests yet", style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+                        Text("Your best on each track lands here after a timed lap", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                     }
-                } else {
-                    Text(
-                        "—",
-                        style = TrackProType.statValue.atSize(18.sp),
-                        color = TrackProTheme.colors.markingDim
-                    )
                 }
             }
         }
-        Bezel()
+        return
+    }
+
+    ListCard {
+        rows.forEachIndexed { i, row ->
+            if (i > 0) RowDivider()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(row.localTrackId?.let { id -> Modifier.pressableRow(onClick = { onOpenTrack(id) }) } ?: Modifier)
+                    .heightIn(min = 64.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PlaceBadge(row.rank)
+                Spacer(Modifier.width(Spacing.md))
+                Column(Modifier.weight(1f)) {
+                    Text(row.trackName, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        listOfNotNull(row.detail, row.fieldSize?.let { "of $it drivers" }).joinToString(" · "),
+                        style = TrackProType.label,
+                        color = TrackProTheme.colors.markingDim,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(Modifier.width(Spacing.sm))
+                Text(
+                    row.bestMs.toLapTimeString(),
+                    style = TrackProType.statValue.copy(fontSize = TrackProType.titleMedium.fontSize),
+                    color = if (row.rank == 1) TrackProTheme.colors.accent else TrackProTheme.colors.marking
+                )
+            }
+        }
     }
     if (!signedIn) {
         Text(
-            "PLACES APPEAR WHEN YOU SIGN IN AND SHARE YOUR LAPS",
+            "Places appear when you sign in and share your laps.",
             style = TrackProType.label,
             color = TrackProTheme.colors.markingDim,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = Spacing.gutter + Spacing.xs, vertical = Spacing.sm)
         )
     }
+}
+
+/** A leaderboard place as a round badge: orange for P1, raised for the rest, a dash for none. */
+@Composable
+private fun PlaceBadge(rank: Int?) {
+    val p1 = rank == 1
+    Text(
+        text = rank?.let { "P$it" } ?: "—",
+        style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold),
+        color = when {
+            p1 -> TrackProTheme.colors.onAccent
+            rank != null -> TrackProTheme.colors.marking
+            else -> TrackProTheme.colors.markingDim
+        },
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(if (p1) TrackProTheme.colors.accent else TrackProTheme.colors.bgElevated)
+            .padding(top = 11.dp),
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+    )
 }
 
 // ── Account ───────────────────────────────────────────────────
@@ -525,7 +520,7 @@ private fun AccountGroup(onEdit: () -> Unit, onSignedOut: () -> Unit) {
         if (uri != null) scope.launch {
             message = try {
                 online.profile.export(uri)
-                "Export saved."
+                "Export saved"
             } catch (e: ApiException) {
                 e.message
             } catch (e: NetworkException) {
@@ -535,63 +530,61 @@ private fun AccountGroup(onEdit: () -> Unit, onSignedOut: () -> Unit) {
     }
 
     if (confirmDelete) {
-        DeleteAccountDialog(
-            onDismiss = { confirmDelete = false },
-            onDeleted = { confirmDelete = false },
-        )
+        DeleteAccountDialog(onDismiss = { confirmDelete = false }, onDeleted = { confirmDelete = false })
     }
 
-    SectionLabel("Account", modifier = Modifier.padding(start = 14.dp, top = 18.dp, bottom = 8.dp))
-    Bezel()
-    LinkRow("Edit profile", "Name · photo · country · bio", onClick = onEdit)
-    Bezel()
-    ActionRow(
-        label = "Leaderboards",
-        value = if (sharing) "Sharing your laps" else "Not sharing your laps",
-        action = if (sharing) "On" else "Off",
-        selected = sharing,
-    ) {
-        online.settings.setSharingEnabled(!sharing)
-        SyncScheduler.syncSoon(context)
-    }
-    Text(
-        // Says exactly what leaves the phone, so the choice is an informed one.
-        "Shared: your name, lap and sector times, session date, car make, model and year, and which " +
-            "GPS timed it. Only sessions on premade or published tracks. Stopping takes them back down.",
-        style = TrackProType.body.atSize(12.sp),
-        color = TrackProTheme.colors.markingDim,
-        modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(start = 14.dp, end = 14.dp, bottom = 12.dp)
-    )
-    Bezel()
-    ActionRow(
-        label = "Sync",
-        value = describe(lastSync),
-        valueColor = if (lastSync?.problem != null && lastSync?.offline != true) TrackProTheme.colors.deltaBad else null,
-        action = if (syncing) "Syncing…" else "Sync now",
-        selected = false,
-    ) {
-        if (!syncing) {
+    ListCard {
+        LinkRow(Icons.Default.Edit, "Edit profile", "Name, photo, country, bio", onClick = onEdit)
+        RowDivider()
+        ActionRow(
+            icon = Icons.Default.Leaderboard,
+            label = "Share laps on leaderboards",
+            value = if (sharing) "Your laps are on the leaderboards" else "Your laps stay private",
+            action = if (sharing) "On" else "Off",
+            selected = sharing,
+        ) {
+            online.settings.setSharingEnabled(!sharing)
             SyncScheduler.syncSoon(context)
-            scope.launch { online.profile.refresh() }
         }
-    }
-    Bezel()
-    LinkRow("Export my data", "Everything the server holds, as one JSON file") {
-        exporter.launch("trackboard-export.json")
-    }
-    Bezel()
-    LinkRow("Sign out", "Your records stay on this phone") {
-        scope.launch {
-            SyncScheduler.cancelAll(context)
-            online.auth.signOut()
-            onSignedOut()
+        Text(
+            // Says exactly what leaves the phone, so the choice is an informed one.
+            "Shared: your name, lap and sector times, session date, car make, model and year, and which " +
+                "GPS timed it. Only sessions on premade or published tracks. Turning it off takes them back down.",
+            style = TrackProType.label,
+            color = TrackProTheme.colors.markingDim,
+            modifier = Modifier.padding(start = 72.dp, end = Spacing.lg, bottom = Spacing.md)
+        )
+        RowDivider()
+        ActionRow(
+            icon = Icons.Default.Sync,
+            label = "Sync",
+            value = describe(lastSync),
+            valueColor = if (lastSync?.problem != null && lastSync?.offline != true) TrackProTheme.colors.deltaBad else null,
+            action = if (syncing) "Syncing…" else "Sync now",
+            selected = false,
+        ) {
+            if (!syncing) {
+                SyncScheduler.syncSoon(context)
+                scope.launch { online.profile.refresh() }
+            }
         }
+        RowDivider()
+        LinkRow(Icons.Default.Download, "Export your data", "Everything the server holds, as one JSON file") {
+            exporter.launch("trackboard-export.json")
+        }
+        RowDivider()
+        LinkRow(Icons.AutoMirrored.Filled.Logout, "Sign out", "Your records stay on this phone") {
+            scope.launch {
+                SyncScheduler.cancelAll(context)
+                online.auth.signOut()
+                onSignedOut()
+            }
+        }
+        RowDivider()
+        LinkRow(Icons.Default.DeleteForever, "Delete account", "Removes it from the server for good", danger = true) { confirmDelete = true }
     }
-    Bezel()
-    LinkRow("Delete account", "Removes it from the server for good", danger = true) { confirmDelete = true }
-    Bezel()
     message?.let {
-        Text(it.uppercase(), style = TrackProType.label, color = TrackProTheme.colors.markingDim, modifier = Modifier.padding(14.dp))
+        Text(it, style = TrackProType.label, color = TrackProTheme.colors.markingDim, modifier = Modifier.padding(horizontal = Spacing.gutter + Spacing.xs, vertical = Spacing.sm))
     }
 }
 
@@ -616,7 +609,7 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
         textContentColor = TrackProTheme.colors.textMuted,
         title = { Text("Delete your TrackBoard account?") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 Text(
                     "Your profile, backed-up cars, photos and every lap you shared are removed from the " +
                         "server, and you leave every leaderboard. The cars, tracks and sessions on this " +
@@ -625,11 +618,10 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
                 OutlinedTextField(
                     value = typed,
                     onValueChange = { typed = it },
-                    label = { Text("Type DELETE to confirm", color = TrackProTheme.colors.textMuted) },
+                    label = { Text("Type DELETE to confirm") },
                     singleLine = true,
+                    shape = TrackProShapes.control,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TrackProTheme.colors.textPrimary,
-                        unfocusedTextColor = TrackProTheme.colors.textPrimary,
                         focusedBorderColor = TrackProTheme.colors.danger,
                         unfocusedBorderColor = TrackProTheme.colors.sectorLine
                     )
@@ -669,32 +661,43 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
 
 // ── Rows ──────────────────────────────────────────────────────
 
+/** A card holding a list of rows, inside the page margin. */
 @Composable
-internal fun LinkRow(label: String, detail: String, danger: Boolean = false, onClick: () -> Unit) {
+internal fun ListCard(content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.padding(horizontal = Spacing.gutter)) {
+        PaddockCard(padding = 0.dp, content = content)
+    }
+}
+
+@Composable
+internal fun RowDivider() {
+    Bezel(modifier = Modifier.padding(start = 72.dp))
+}
+
+@Composable
+internal fun LinkRow(icon: ImageVector, label: String, detail: String, danger: Boolean = false, onClick: () -> Unit) {
+    val tone = if (danger) TrackProTheme.colors.danger else TrackProTheme.colors.accent
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .pressableRow(onClick = onClick)
-            .background(TrackProTheme.colors.field)
-            .heightIn(min = 56.dp)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .heightIn(min = 64.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        IconCircle(icon, tint = tone, size = 40.dp)
+        Spacer(Modifier.width(Spacing.lg))
         Column(Modifier.weight(1f)) {
-            Text(
-                label.uppercase(),
-                style = TrackProType.titleMedium,
-                color = if (danger) TrackProTheme.colors.danger else TrackProTheme.colors.marking
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(detail, style = TrackProType.body.atSize(12.sp), color = TrackProTheme.colors.markingDim)
+            Text(label, style = TrackProType.titleMedium, color = if (danger) TrackProTheme.colors.danger else TrackProTheme.colors.marking)
+            Text(detail, style = TrackProType.label, color = TrackProTheme.colors.markingDim)
         }
-        Text("›", style = TrackProType.titleLarge, color = if (danger) TrackProTheme.colors.danger else TrackProTheme.colors.markingDim)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TrackProTheme.colors.markingDim)
     }
 }
 
 @Composable
 private fun ActionRow(
+    icon: ImageVector,
     label: String,
     value: String,
     action: String,
@@ -705,16 +708,17 @@ private fun ActionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProTheme.colors.field)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .heightIn(min = 64.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        IconCircle(icon, size = 40.dp)
+        Spacer(Modifier.width(Spacing.lg))
         Column(Modifier.weight(1f)) {
-            Text(label.uppercase(), style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
-            Spacer(Modifier.height(2.dp))
-            Text(value, style = TrackProType.body.atSize(12.sp), color = valueColor ?: TrackProTheme.colors.markingDim)
+            Text(label, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+            Text(value, style = TrackProType.label, color = valueColor ?: TrackProTheme.colors.markingDim)
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(Spacing.md))
         ToggleChip(text = action, selected = selected, onClick = onAction)
     }
 }

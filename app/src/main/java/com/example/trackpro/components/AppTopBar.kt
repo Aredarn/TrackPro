@@ -5,108 +5,109 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.trackpro.extrasForUI.TrackProTheme
-import com.example.trackpro.theme.atSize
-import com.example.trackpro.theme.markingDim
+import com.example.trackpro.theme.Spacing
 import com.example.trackpro.theme.TrackProType
+import com.example.trackpro.theme.fieldLive
+import com.example.trackpro.theme.marking
+import com.example.trackpro.theme.markingDim
+import com.example.trackpro.theme.panel
 
-/** Height of the bar itself, exported so [ScreenScaffold] can inset content by it. */
-val AppTopBarHeight = 48.dp
+/** Height of the bar, exported so [ScreenScaffold] can inset content by it. */
+val AppTopBarHeight = 64.dp
 
 /**
- * Compact 48dp header shared by every screen. The section accent shows up only as a
- * small dot next to the title, never as a full-bleed fill.
+ * The screen's header: a round back button, the title in sentence case, and room for one
+ * trailing element. It sits on the page ground rather than a bar of its own, so the cards
+ * below read as the content and the header as the page's name.
  *
- * [containerColor] and [showDivider] exist so [ScreenScaffold] can host this as a
- * floating translucent layer - it draws the material and the scroll-edge fade itself, so
- * it hands the bar a transparent container and suppresses the hard divider. Screens
- * should generally use [ScreenScaffold] rather than placing this directly.
+ * [accent] and [showDivider] are accepted for older call sites and no longer drawn.
  */
 @Composable
 fun AppTopBar(
     title: String,
     modifier: Modifier = Modifier,
-    accent: Color = TrackProTheme.colors.textMuted,
+    @Suppress("UNUSED_PARAMETER") accent: Color = TrackProTheme.colors.textMuted,
     subtitle: String? = null,
     onBack: (() -> Unit)? = null,
-    containerColor: Color = TrackProTheme.colors.bgCard,
-    showDivider: Boolean = true,
+    containerColor: Color = TrackProTheme.colors.panel,
+    @Suppress("UNUSED_PARAMETER") showDivider: Boolean = true,
     trailing: @Composable (() -> Unit)? = null
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(containerColor)
-                .height(AppTopBarHeight)
-                // Back is the primary nav control on nearly every screen, so it gets a
-                // full 48dp target. The bar is exactly 48dp tall, so IconButton's default
-                // size fits flush; the reduced start inset keeps the arrow optically in
-                // the same place it sat when the button was a (too small) 32dp box.
-                .padding(start = if (onBack != null) 0.dp else 12.dp, end = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Back",
-                        tint = TrackProTheme.colors.textPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(containerColor)
+            .height(AppTopBarHeight)
+            .padding(start = if (onBack != null) Spacing.sm else Spacing.gutter, end = Spacing.md),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (onBack != null) {
             Box(
                 modifier = Modifier
-                    .size(6.dp)
-                    .background(accent, CircleShape)
-            )
-
-            Column(
-                modifier = Modifier
-                    .padding(start = 10.dp)
-                    .weight(1f)
+                    .size(48.dp)
+                    .pressable(onClick = onBack, scale = 0.92f),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = title.uppercase(),
-                    style = TrackProType.label.atSize(12.sp),
-                    color = TrackProTheme.colors.textPrimary
-                )
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle,
-                        style = TrackProType.body.atSize(11.sp),
-                        color = TrackProTheme.colors.markingDim
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(TrackProTheme.colors.fieldLive),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = TrackProTheme.colors.marking,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
+            Spacer(Modifier.width(Spacing.sm))
+        }
 
-            if (trailing != null) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-                    trailing()
-                }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = TrackProType.titleLarge,
+                color = TrackProTheme.colors.marking,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.markingDim,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
-        if (showDivider) {
-            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+
+        if (trailing != null) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
+                trailing()
+            }
         }
     }
 }

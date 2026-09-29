@@ -225,14 +225,14 @@ fun TimeAttackListItemScreen(
                 val secondHalfAvg = lapMillis.drop(half).average()
                 val diff = secondHalfAvg - firstHalfAvg
                 when {
-                    diff < -500 -> "IMPROVING ↑"
-                    diff > 500  -> "FADING ↓"
+                    diff < -500 -> "Improving ↑"
+                    diff > 500  -> "Fading ↓"
                     else        -> "CONSISTENT →"
                 }
             } else "—"
             val trendColor = when {
-                trend.contains("IMPROVING") -> TrackProTheme.colors.deltaGood
-                trend.contains("FADING")    -> TrackProTheme.colors.deltaBad
+                trend.contains("Improving") -> TrackProTheme.colors.deltaGood
+                trend.contains("Fading")    -> TrackProTheme.colors.deltaBad
                 else                        -> TrackProTheme.colors.textMuted
             }
 
@@ -274,7 +274,7 @@ fun TimeAttackListItemScreen(
                         Spacer(Modifier.height(6.dp))
                         if (vehicle != null) {
                             Text(
-                                text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})".uppercase(),
+                                text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
                                 style = TrackProType.label,
                                 color = TrackProTheme.colors.textMuted
                             )
@@ -626,7 +626,7 @@ private fun LapRow(
                         .background(accentColor.copy(alpha = 0.15f), TrackProShapes.badge)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
-                    Text(badge.uppercase(), style = TrackProType.label.atSize(8.sp), color = accentColor)
+                    Text(badge, style = TrackProType.label.atSize(8.sp), color = accentColor)
                 }
                 // GPS dropped out during this lap, so its time may be two laps merged into
                 // one. Flagged rather than hidden - the driver knows whether it was.
@@ -637,7 +637,7 @@ private fun LapRow(
                             .background(fault.copy(alpha = 0.15f), TrackProShapes.badge)
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text("GPS GAP", style = TrackProType.label.atSize(8.sp), color = fault)
+                        Text("GPS gap", style = TrackProType.label.atSize(8.sp), color = fault)
                     }
                 }
             }
@@ -692,7 +692,7 @@ private fun StatRowItem(label: String, value: String, textPrimary: Color, textMu
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label.uppercase(), style = TrackProType.label, color = textMuted)
+        Text(label, style = TrackProType.label, color = textMuted)
         Text(value, style = TrackProType.body, color = textPrimary)
     }
 }

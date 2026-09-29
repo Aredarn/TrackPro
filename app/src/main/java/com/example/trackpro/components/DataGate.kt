@@ -52,7 +52,7 @@ fun <T> DataGate(
                 modifier = Modifier.padding(horizontal = 24.dp)
             ) {
                 Text(
-                    text = "READ FAILED",
+                    text = "Read failed",
                     style = TrackProType.titleMedium,
                     color = TrackProTheme.colors.deltaBad
                 )
@@ -81,7 +81,7 @@ fun <T> DataGate(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = loadingLabel.uppercase(),
+                    text = loadingLabel,
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim
                 )

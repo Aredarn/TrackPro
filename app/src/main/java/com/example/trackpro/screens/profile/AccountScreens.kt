@@ -82,7 +82,7 @@ fun AccountScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("TRACKBOARD", style = TrackProType.titleLarge.atSize(20.sp), color = TrackProTheme.colors.marking)
+                Text("TrackBoard", style = TrackProType.titleLarge.atSize(20.sp), color = TrackProTheme.colors.marking)
                 Benefit("Your garage and car photos, backed up and restored on a new phone")
                 Benefit("Your place on every track's leaderboard, next to your personal best")
                 Benefit("Optional. Recording never needs an account or a network")
@@ -185,7 +185,7 @@ fun EditProfileScreen(navController: NavController) {
                 Spacer(Modifier.width(14.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
                     Text(
-                        if (photoBusy) "UPLOADING…" else "PROFILE PHOTO",
+                        if (photoBusy) "UPLOADING…" else "Profile photo",
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )
@@ -193,7 +193,7 @@ fun EditProfileScreen(navController: NavController) {
                     ToggleChip(text = "Choose photo", selected = false, onClick = { if (!photoBusy) picker.fromGallery() }, modifier = Modifier.fillMaxWidth())
                     if (snapshot?.avatarFile != null) {
                         Text(
-                            "REMOVE PHOTO",
+                            "Remove photo",
                             style = TrackProType.label,
                             color = TrackProTheme.colors.danger,
                             modifier = Modifier

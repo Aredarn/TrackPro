@@ -311,9 +311,9 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                DragMetricCard(DragMetricDisplay("TOP SPEED",  if (maxSpeed > 0) UnitFormatter.formatSpeed(maxSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), maxSpeed > 0), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("AVG SPEED",  if (avgSpeed > 0) UnitFormatter.formatSpeed(avgSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), avgSpeed > 0), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("MAX ACCEL",  if (maxAcceleration > 0) String.format(Locale.US, "%.1f", UnitFormatter.convertSpeed(maxAcceleration, useMetric)) else "—", "${UnitFormatter.speedUnitLabel(useMetric)}/S", maxAcceleration > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("Top speed",  if (maxSpeed > 0) UnitFormatter.formatSpeed(maxSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), maxSpeed > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("Avg speed",  if (avgSpeed > 0) UnitFormatter.formatSpeed(avgSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), avgSpeed > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("Max accel",  if (maxAcceleration > 0) String.format(Locale.US, "%.1f", UnitFormatter.convertSpeed(maxAcceleration, useMetric)) else "—", "${UnitFormatter.speedUnitLabel(useMetric)}/S", maxAcceleration > 0), modifier = Modifier.weight(1f))
             }
 
             Row(
@@ -325,7 +325,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                                 else String.format(Locale.US, "%.0f m", elevationNet)
                 val gainLabel = "+%.0f m".format(elevationGain)
                 val lossLabel = String.format(Locale.US, "%.0f m", elevationLoss)
-                DragMetricCard(DragMetricDisplay("ELEV NET",  if (hasElevation) netLabel  else "—", "", hasElevation), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("Elev net",  if (hasElevation) netLabel  else "—", "", hasElevation), modifier = Modifier.weight(1f))
                 DragMetricCard(DragMetricDisplay("ELEV ↑",    if (hasElevation) gainLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
                 DragMetricCard(DragMetricDisplay("ELEV ↓",    if (hasElevation) lossLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
             }
@@ -349,7 +349,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     )
                 }
                 DragMetricCard(DragMetricDisplay("\u00bc MILE",   formatMetric(metrics.quarterMileTime),            "SEC",   metrics.quarterMileTime != null), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("TRAP SPD", metrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "\u2014", UnitFormatter.speedUnitLabel(useMetric), metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay("Trap spd", metrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "\u2014", UnitFormatter.speedUnitLabel(useMetric), metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
             }
         }
 
@@ -441,7 +441,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = if (traceState == TraceState.Loading) "LOADING TRACE"
-                        else "NO GPS TRACE RECORDED FOR THIS RUN",
+                        else "No GPS trace recorded for this run",
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )

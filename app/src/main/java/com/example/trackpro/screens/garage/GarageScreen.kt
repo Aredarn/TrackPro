@@ -19,6 +19,19 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.theme.accentSoft
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.components.PaddockCard
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -171,23 +184,20 @@ private fun GarageCars(
         LazyColumn(
             modifier = Modifier.fillMaxSize().background(TrackProTheme.colors.panel),
             state = listState,
-            contentPadding = PaddingValues(top = contentPadding.calculateTopPadding(), bottom = 24.dp)
+            contentPadding = PaddingValues(
+                start = Spacing.gutter,
+                end = Spacing.gutter,
+                top = contentPadding.calculateTopPadding() + Spacing.xs,
+                bottom = Spacing.xl
+            ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             item {
-                Box(modifier = Modifier.padding(12.dp)) {
-                    DashAction(
-                        label = "Add car",
-                        detail = "Every session is timed against one",
-                        onClick = { navController.navigate("createvehicle") },
-                        compact = true
-                    )
-                }
                 BackupStrip(
                     signedIn = signedIn,
                     statuses = statuses.values,
                     onSignIn = { navController.navigate("account") }
                 )
-                Bezel()
             }
 
             if (ordered.isEmpty()) {
@@ -195,16 +205,16 @@ private fun GarageCars(
                     DataGate(
                         state = loadState,
                         items = ordered,
-                        emptyMessage = "No cars yet",
-                        emptyHint = "Add the car you drive and every lap is filed against it",
+                        emptyMessage = "Add your first car",
+                        emptyHint = "Every lap is filed against the car that set it, so this is where it starts.",
                         loadingLabel = "Reading garage",
-                        modifier = Modifier.fillMaxWidth().height(240.dp)
+                        modifier = Modifier.fillMaxWidth().height(260.dp)
                     ) { }
                 }
             }
 
             items(ordered, key = { it.vehicleId }) { vehicle ->
-                CarRow(
+                CarCard(
                     vehicle = vehicle,
                     photo = app.online.photos.file(vehicle.photoFile),
                     sessions = usageById[vehicle.vehicleId]?.sessions ?: 0,
@@ -213,15 +223,23 @@ private fun GarageCars(
                     onOpen = { navController.navigate("vehicle/${vehicle.vehicleId}") },
                     onLongPress = { pendingDelete = vehicle }
                 )
-                Bezel()
+            }
+
+            item {
+                DashAction(
+                    label = "Add car",
+                    onClick = { navController.navigate("createvehicle") },
+                    compact = true,
+                    icon = Icons.Default.Add
+                )
             }
         }
     }
 }
 
 /**
- * One line that says whether the garage is safe. Signed out it is an invitation, and the
- * whole strip is the way to act on it.
+ * Whether the garage is safe, as one small pill. Signed out it is an invitation, and the
+ * whole pill is the way to act on it.
  */
 @Composable
 private fun BackupStrip(
@@ -231,38 +249,33 @@ private fun BackupStrip(
 ) {
     val backedUp = statuses.count { it == VehicleSyncStatus.Synced }
     val failed = statuses.count { it == VehicleSyncStatus.Failed }
-    val (lamp, text) = when {
-        !signedIn -> null to "Not backed up · sign in to keep your garage"
-        failed > 0 -> TrackProTheme.colors.danger to "$failed car${if (failed == 1) "" else "s"} could not be backed up"
-        backedUp == statuses.size -> TrackProTheme.colors.deltaGood to "Garage backed up to your account"
-        else -> TrackProTheme.colors.deltaBad to "$backedUp of ${statuses.size} backed up · the rest go on the next sync"
+    val (tone, icon, text) = when {
+        !signedIn -> Triple(TrackProTheme.colors.accent, Icons.Default.CloudOff, "Not backed up. Sign in to keep your garage safe.")
+        failed > 0 -> Triple(TrackProTheme.colors.danger, Icons.Default.ErrorOutline, "$failed car${if (failed == 1) "" else "s"} could not be backed up")
+        backedUp == statuses.size -> Triple(TrackProTheme.colors.deltaGood, Icons.Default.CloudDone, "Garage backed up to your account")
+        else -> Triple(TrackProTheme.colors.deltaBad, Icons.Default.CloudSync, "$backedUp of ${statuses.size} backed up, the rest go on the next sync")
     }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProTheme.colors.field)
-            .then(if (!signedIn) Modifier.pressableRow(onClick = onSignIn) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .then(if (!signedIn) Modifier.pressable(onClick = onSignIn, scale = 0.98f) else Modifier)
+            .clip(TrackProShapes.control)
+            .background(tone.copy(alpha = 0.10f))
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (lamp != null) {
-            Box(Modifier.size(6.dp).background(lamp, CircleShape))
-            Spacer(Modifier.width(8.dp))
-        }
-        Text(
-            text = text.uppercase(),
-            style = TrackProType.label,
-            color = if (failed > 0 && signedIn) TrackProTheme.colors.danger else TrackProTheme.colors.markingDim,
-            modifier = Modifier.weight(1f)
-        )
+        Icon(icon, contentDescription = null, tint = tone, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(Spacing.md))
+        Text(text = text, style = TrackProType.label, color = TrackProTheme.colors.marking, modifier = Modifier.weight(1f))
         if (!signedIn) {
-            Text("SIGN IN ›", style = TrackProType.label, color = TrackProTheme.colors.accent)
+            Spacer(Modifier.width(Spacing.sm))
+            Text("Sign in", style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold), color = TrackProTheme.colors.accent)
         }
     }
 }
 
 @Composable
-private fun CarRow(
+private fun CarCard(
     vehicle: VehicleInformationData,
     photo: java.io.File?,
     sessions: Int,
@@ -271,61 +284,63 @@ private fun CarRow(
     onOpen: () -> Unit,
     onLongPress: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressable(onClick = onOpen, onLongClick = onLongPress, scale = 0.99f)
-            .background(TrackProTheme.colors.field)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        PhotoFrame(
-            file = photo,
-            contentDescription = "${vehicle.manufacturer} ${vehicle.model}",
-            modifier = Modifier.size(width = 112.dp, height = 84.dp)
-        )
-        Spacer(Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "${vehicle.manufacturer} ${vehicle.model}".uppercase(),
-                    style = TrackProType.titleLarge.atSize(17.sp),
-                    color = TrackProTheme.colors.marking,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-                if (isMain) {
-                    Spacer(Modifier.width(8.dp))
-                    Text("MAIN", style = TrackProType.label, color = TrackProTheme.colors.accent)
-                }
-            }
-            Spacer(Modifier.height(3.dp))
-            Text(
-                text = listOfNotNull(
-                    vehicle.year.takeIf { it > 0 }?.toString(),
-                    vehicle.horsepower.takeIf { it > 0 }?.let { "$it HP" },
-                    vehicle.drivetrain.takeIf { it.isNotBlank() }?.uppercase(),
-                ).joinToString("  ·  "),
-                style = TrackProType.label,
-                color = TrackProTheme.colors.markingDim,
-                maxLines = 1
+    PaddockCard(onClick = onOpen, onLongClick = onLongPress, padding = Spacing.md) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PhotoFrame(
+                file = photo,
+                contentDescription = "${vehicle.manufacturer} ${vehicle.model}",
+                modifier = Modifier.size(width = 104.dp, height = 80.dp)
             )
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                statusLamp(status)?.let { lamp ->
-                    Box(Modifier.size(6.dp).background(lamp, CircleShape))
-                    Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(Spacing.lg))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${vehicle.manufacturer} ${vehicle.model}",
+                        style = TrackProType.titleMedium,
+                        color = TrackProTheme.colors.marking,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isMain) {
+                        Spacer(Modifier.width(Spacing.sm))
+                        Text(
+                            "Main",
+                            style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold),
+                            color = TrackProTheme.colors.accent,
+                            modifier = Modifier
+                                .clip(TrackProShapes.pill)
+                                .background(TrackProTheme.colors.accentSoft)
+                                .padding(horizontal = Spacing.sm, vertical = 2.dp)
+                        )
+                    }
                 }
                 Text(
-                    text = "${status.label} · $sessions session${if (sessions == 1) "" else "s"}".uppercase(),
+                    text = listOfNotNull(
+                        vehicle.year.takeIf { it > 0 }?.toString(),
+                        vehicle.horsepower.takeIf { it > 0 }?.let { "$it hp" },
+                        vehicle.drivetrain.takeIf { it.isNotBlank() }?.uppercase(),
+                    ).joinToString(" · "),
                     style = TrackProType.label,
-                    // A failed backup is a fault; it is never drawn dimmer than a healthy one.
-                    color = if (status == VehicleSyncStatus.Failed) TrackProTheme.colors.danger
-                    else TrackProTheme.colors.markingDim,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = TrackProTheme.colors.markingDim,
+                    maxLines = 1
                 )
+                Spacer(Modifier.height(Spacing.sm))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    statusLamp(status)?.let { lamp ->
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(lamp))
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = "${status.label} · $sessions session${if (sessions == 1) "" else "s"}",
+                        style = TrackProType.label,
+                        // A failed backup is a fault; never drawn dimmer than a healthy one.
+                        color = if (status == VehicleSyncStatus.Failed) TrackProTheme.colors.danger
+                        else TrackProTheme.colors.markingDim,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

@@ -55,7 +55,7 @@ fun SessionSummary(
 
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             Text(
-                text = if (saveFailed != null) "SESSION NOT SAVED" else "SESSION COMPLETE",
+                text = if (saveFailed != null) "Session not saved" else "Session complete",
                 style = TrackProType.label,
                 color = if (saveFailed != null) TrackProTheme.colors.danger
                 else TrackProTheme.colors.deltaGood

@@ -74,8 +74,8 @@ import androidx.compose.ui.semantics.selected
 // ── Heatmap mode ───────────────────────────────────────────
 
 enum class HeatmapMode(val label: String, val icon: String) {
-    SPEED("SPEED",    "⚡"),
-    UNIFORM("LINE",   "—")
+    SPEED("Speed",    "⚡"),
+    UNIFORM("Line",   "—")
 }
 
 // ── Activity ───────────────────────────────────────────────
@@ -694,7 +694,7 @@ private fun StatsPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(row.label.uppercase(), style = TrackProType.label.atSize(9.sp), color = TrackProTheme.colors.textMuted,
+                Text(row.label, style = TrackProType.label.atSize(9.sp), color = TrackProTheme.colors.textMuted,
                     modifier = Modifier.weight(1.4f))
                 Text(row.primary, style = TrackProType.body.atSize(13.sp),
                     color = TrackProTheme.colors.textPrimary,

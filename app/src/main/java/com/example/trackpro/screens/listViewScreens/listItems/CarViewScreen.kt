@@ -118,7 +118,7 @@ fun CarViewScreen(
                                 .padding(horizontal = Spacing.lg, vertical = Spacing.md)
                         ) {
                             Text(
-                                text = "${vehicle.manufacturer} ${vehicle.model}".uppercase(),
+                                text = "${vehicle.manufacturer} ${vehicle.model}",
                                 // The car leads its own spec sheet.
                                 style = TrackProType.titleLarge.atSize(26.sp),
                                 color = TrackProTheme.colors.textPrimary
@@ -128,7 +128,7 @@ fun CarViewScreen(
                                 text = listOfNotNull(
                                     vehicle.year.takeIf { it > 0 }?.toString(),
                                     vehicle.drivetrain.takeIf { it.isNotBlank() }
-                                ).joinToString("  ·  ").uppercase(),
+                                ).joinToString("  ·  "),
                                 style = TrackProType.label,
                                 color = TrackProTheme.colors.textMuted
                             )
@@ -260,7 +260,7 @@ private fun VehicleInfoRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label.uppercase(), style = TrackProType.label, color = textMuted)
+            Text(label, style = TrackProType.label, color = textMuted)
             Text(value, style = TrackProType.body, color = textPrimary)
         }
         HorizontalDivider(color = sectorLine, thickness = 1.dp)

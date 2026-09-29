@@ -265,7 +265,7 @@ fun TimeAttackScreenView(
                     modifier = Modifier.padding(horizontal = 24.dp)
                 ) {
                     Text(
-                        "COULD NOT START TIMING",
+                        "Could not start timing",
                         style = TrackProType.titleMedium,
                         color = TrackProTheme.colors.danger
                     )
@@ -373,7 +373,7 @@ fun TimeAttackPortraitLayout(
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
-    val modeLabel  = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
+    val modeLabel  = if (timingMode is TimingMode.Circuit) "Circuit" else "Sprint"
     val modeColor  = TrackProTheme.colors.accent
     // Gaining pushes the bar forward, so a lower-is-better delta is negated before
     // it reaches the bar. Two seconds fills it; past that the exact figure has
@@ -492,7 +492,7 @@ fun TimeAttackPortraitLayout(
                             // geometry* is empty, which has nothing to do with the receiver.
                             // A track saved without coordinates used to claim the GPS was
                             // missing while it was locked and reporting fine.
-                            "NO TRACK GEOMETRY",
+                            "No track geometry",
                             style = TrackProType.label,
                             color = TrackProTheme.colors.markingDim
                         )
@@ -546,7 +546,7 @@ fun TimeAttackLandscapeLayout(
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
     val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
-    val modeLabel  = if (timingMode is TimingMode.Circuit) "CIRCUIT" else "SPRINT"
+    val modeLabel  = if (timingMode is TimingMode.Circuit) "Circuit" else "Sprint"
     val modeColor  = TrackProTheme.colors.accent
     // Gaining pushes the bar forward, so a lower-is-better delta is negated before
     // it reaches the bar. Two seconds fills it; past that the exact figure has
@@ -674,7 +674,7 @@ fun TimeAttackLandscapeLayout(
                 )
                 else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        "NO TRACK GEOMETRY",
+                        "No track geometry",
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )
@@ -704,7 +704,7 @@ private fun HudTrailing(
     val haptics = rememberHaptics()
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = if (isConnected) "LIVE" else "NO SIGNAL",
+            text = if (isConnected) "Live" else "No signal",
             style = TrackProType.label,
             // Fault Is Never Dimmer. NO SIGNAL invalidates every number on this panel, so
             // it cannot be the faintest thing on it - it was textFaint at 3.35:1 against
@@ -790,14 +790,14 @@ private fun DeltaReferenceSwitch(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = "COMPARE TO",
+            text = "Compare to",
             style = TrackProType.label,
             color = TrackProTheme.colors.markingDim
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             listOf(
-                DeltaReference.SESSION_BEST to "SESSION BEST",
-                DeltaReference.TRACK_BEST to "TRACK BEST"
+                DeltaReference.SESSION_BEST to "Session best",
+                DeltaReference.TRACK_BEST to "Track best"
             ).forEach { (reference, label) ->
                 val isSelected = reference == preferred
                 // Selection is a lit aperture, not a hue swap. Colour alone failed twice
@@ -918,7 +918,7 @@ private fun RecentLapsPanel(
                 color = TrackProTheme.colors.markingDim
             )
             Text(
-                text = "GAP TO BEST",
+                text = "Gap to best",
                 style = TrackProType.label,
                 color = TrackProTheme.colors.markingDim
             )
@@ -1045,7 +1045,7 @@ private fun LapRow(lap: CompletedLap, isBest: Boolean, gapToBestMs: Long) {
                     if (lap.signalGap) {
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "GPS GAP",
+                            text = "GPS gap",
                             style = TrackProType.label,
                             color = TrackProTheme.colors.danger
                         )
@@ -1053,7 +1053,7 @@ private fun LapRow(lap: CompletedLap, isBest: Boolean, gapToBestMs: Long) {
                 }
                 if (isBest) {
                     Text(
-                        text = "BEST",
+                        text = "Best",
                         style = TrackProType.label.atSize(11.sp),
                         color = TrackProTheme.colors.accent,
                         modifier = Modifier.layoutId(SLOT_GAP)
