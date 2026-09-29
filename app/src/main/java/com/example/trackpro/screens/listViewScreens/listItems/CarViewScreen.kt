@@ -18,6 +18,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.theme.marking
+import com.example.trackpro.components.SectionTitle
+import com.example.trackpro.components.PaddockCard
+import com.example.trackpro.components.Bezel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -81,7 +85,7 @@ fun CarViewScreen(
     // The bar now wraps both states - previously it only existed in the loaded branch,
     // so the screen had no header (and no back affordance) while loading.
     ScreenScaffold(
-        title = "Vehicle Profile",
+        title = "Car",
         onBack = onBack,
         accent = TrackProTheme.colors.accent,
         contentScrolled = scrolled
@@ -103,169 +107,97 @@ fun CarViewScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
-                contentPadding = PaddingValues(top = contentPadding.calculateTopPadding())
+                contentPadding = PaddingValues(top = contentPadding.calculateTopPadding(), bottom = Spacing.xl)
             ) {
+                item(key = "photo") { CarPhotoSection(vehicle) }
 
-                    // ── Photo ─────────────────────────────
-                    item(key = "photo") { CarPhotoSection(vehicle) }
-
-                    // ── Hero ──────────────────────────────
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(TrackProTheme.colors.bgCard)
-                                .padding(horizontal = Spacing.lg, vertical = Spacing.md)
-                        ) {
-                            Text(
-                                text = "${vehicle.manufacturer} ${vehicle.model}",
-                                // The car leads its own spec sheet.
-                                style = TrackProType.titleLarge.atSize(26.sp),
-                                color = TrackProTheme.colors.textPrimary
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = listOfNotNull(
-                                    vehicle.year.takeIf { it > 0 }?.toString(),
-                                    vehicle.drivetrain.takeIf { it.isNotBlank() }
-                                ).joinToString("  ·  "),
-                                style = TrackProType.label,
-                                color = TrackProTheme.colors.textMuted
-                            )
-                        }
-                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                item(key = "hero") {
+                    Column(Modifier.padding(horizontal = Spacing.gutter, vertical = Spacing.lg)) {
+                        Text(
+                            text = "${vehicle.manufacturer} ${vehicle.model}",
+                            style = TrackProType.titleLarge,
+                            color = TrackProTheme.colors.marking
+                        )
+                        Text(
+                            text = listOfNotNull(
+                                vehicle.year.takeIf { it > 0 }?.toString(),
+                                vehicle.engineType.takeIf { it.isNotBlank() },
+                                vehicle.drivetrain.takeIf { it.isNotBlank() }
+                            ).joinToString(" · "),
+                            style = TrackProType.label,
+                            color = TrackProTheme.colors.markingDim
+                        )
+                        Spacer(Modifier.height(Spacing.md))
+                        CarBackupStrip(vehicle, onSignIn = onSignIn)
                     }
-
-                    // ── Account backup ────────────────────
-                    item(key = "backup") { CarBackupStrip(vehicle, onSignIn = onSignIn) }
-
-                    // ── Its laps ──────────────────────────
-                    item(key = "bests") { CarBests(vehicle.vehicleId, onOpenTrack = onOpenTrack) }
-
-                    // ── Performance stats ─────────────────
-                    item {
-                        SectionLabel("Performance", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(TrackProTheme.colors.bgCard)
-                                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            StatCell(label = "Power", value = "${vehicle.horsepower}", unit = "hp", size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
-                            StatCell(label = "Torque", value = vehicle.torque?.toString() ?: "—", unit = "Nm", size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
-                            StatCell(label = "Weight", value = "${vehicle.weight}", unit = "kg", size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
-                        }
-                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-                    }
-
-                    // ── Speed stats ───────────────────────
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(TrackProTheme.colors.bgElevated)
-                                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            StatCell(
-                                label = "Top Speed",
-                                value = vehicle.topSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "—",
-                                unit = UnitFormatter.speedUnitLabel(useMetric).lowercase(),
-                                size = StatCellSize.Large,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            )
-                            StatCell(
-                                label = "0–100",
-                                value = vehicle.acceleration?.toString() ?: "—",
-                                unit = "sec",
-                                size = StatCellSize.Large,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            )
-                            StatCell(
-                                label = "Drivetrain",
-                                value = vehicle.drivetrain,
-                                size = StatCellSize.Large,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            )
-                        }
-                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-                    }
-
-                    // ── Mechanical details ────────────────
-                    item {
-                        SectionLabel("Mechanical", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
-                    }
-                    item {
-                        VehicleInfoRow("Engine Type", vehicle.engineType,
-                            TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
-                    }
-                    item {
-                        VehicleInfoRow("Transmission", vehicle.transmission,
-                            TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
-                    }
-                    item {
-                        VehicleInfoRow("Fuel Type", vehicle.fuelType,
-                            TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
-                    }
-                    vehicle.fuelCapacity?.let {
-                        item {
-                            VehicleInfoRow("Fuel Capacity", "$it L",
-                                TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
-                        }
-                    }
-                    vehicle.suspensionType?.let {
-                        item {
-                            VehicleInfoRow("Suspension", it,
-                                TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
-                        }
-                    }
-
-                    // ── Tyres ─────────────────────────────
-                    item {
-                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-                        SectionLabel("Tyres & Setup", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
-                    }
-                    item {
-                        VehicleInfoRow("Tyre Type", vehicle.tireType,
-                            TrackProTheme.colors.textPrimary, TrackProTheme.colors.textMuted, TrackProTheme.colors.sectorLine, TrackProTheme.colors.bgCard)
-                    }
-
-                    item(key = "delete") { CarDeleteRow(vehicle, onDeleted = onBack) }
-
-                    item { Spacer(Modifier.height(Spacing.xl)) }
                 }
+
+                item(key = "bests") { CarBests(vehicle.vehicleId, onOpenTrack = onOpenTrack) }
+
+                item(key = "performance") {
+                    SectionTitle("Performance")
+                    Column(Modifier.padding(horizontal = Spacing.gutter)) {
+                        PaddockCard {
+                            Row(Modifier.fillMaxWidth()) {
+                                StatCell(label = "Power", value = "${vehicle.horsepower}", unit = "hp", modifier = Modifier.weight(1f))
+                                StatCell(label = "Torque", value = vehicle.torque?.toString() ?: "—", unit = "Nm", modifier = Modifier.weight(1f))
+                                StatCell(label = "Weight", value = "${vehicle.weight.toInt()}", unit = "kg", modifier = Modifier.weight(1f))
+                            }
+                            Spacer(Modifier.height(Spacing.lg))
+                            Row(Modifier.fillMaxWidth()) {
+                                StatCell(
+                                    label = "Top speed",
+                                    value = vehicle.topSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "—",
+                                    unit = UnitFormatter.speedUnitLabel(useMetric).lowercase(),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                StatCell(label = "0–100", value = vehicle.acceleration?.toString() ?: "—", unit = "s", modifier = Modifier.weight(1f))
+                                StatCell(label = "Drivetrain", value = vehicle.drivetrain.ifBlank { "—" }, modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+
+                item(key = "specs") {
+                    SectionTitle("Specs")
+                    Column(Modifier.padding(horizontal = Spacing.gutter)) {
+                        PaddockCard(padding = 0.dp) {
+                            val specs = listOfNotNull(
+                                "Engine" to vehicle.engineType,
+                                "Transmission" to vehicle.transmission,
+                                "Fuel" to vehicle.fuelType,
+                                vehicle.fuelCapacity?.let { "Fuel capacity" to "$it L" },
+                                vehicle.suspensionType?.let { "Suspension" to it },
+                                "Tyres" to vehicle.tireType,
+                            )
+                            specs.forEachIndexed { i, (label, value) ->
+                                if (i > 0) Bezel(Modifier.padding(horizontal = Spacing.lg))
+                                VehicleInfoRow(label, value)
+                            }
+                        }
+                    }
+                }
+
+                item(key = "delete") { CarDeleteRow(vehicle, onDeleted = onBack) }
+            }
         }
     }
 }
 
 @Composable
-private fun VehicleInfoRow(
-    label: String,
-    value: String,
-    textPrimary: Color,
-    textMuted: Color,
-    sectorLine: Color,
-    bgCard: Color
-) {
-    Column(
+private fun VehicleInfoRow(label: String, value: String) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(bgCard)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(label, style = TrackProType.label, color = textMuted)
-            Text(value, style = TrackProType.body, color = textPrimary)
-        }
-        HorizontalDivider(color = sectorLine, thickness = 1.dp)
+        Text(label, style = TrackProType.body, color = TrackProTheme.colors.markingDim)
+        Text(value.ifBlank { "—" }, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
     }
 }
+
 @Preview(
     showBackground = true,
 )

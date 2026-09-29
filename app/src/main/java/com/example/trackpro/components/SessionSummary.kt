@@ -1,5 +1,9 @@
 package com.example.trackpro.components
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,31 +14,62 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.TrackProType
+import com.example.trackpro.theme.accentGlow
 import com.example.trackpro.theme.atSize
-import com.example.trackpro.theme.field
 import com.example.trackpro.theme.marking
 import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.panel
+import java.util.Locale
 
 /**
- * What the driver sees in the five seconds after a stint.
+ * A session that beat the driver's previous best on this track, or set the first time there.
+ * [previousMs] is null for a first time on the track.
+ */
+data class PersonalBestMoment(val newMs: Long, val previousMs: Long?)
+
+/**
+ * What the driver sees after a stint: the end of the experience, so it closes with a
+ * summary rather than a silent save.
  *
- * Previously: nothing. Back was tapped, the session saved silently in `onCleared()`, and
- * the panel reappeared showing dashes until an async query landed. That is the emotional
- * peak of the whole product and the one moment the app had the driver's full attention,
- * and it said nothing at all.
+ * When the session set a personal best this is also the peak: a trophy that springs in with
+ * a soft orange glow and says by how much. Nothing moves while driving - the celebration
+ * waits for this screen, where there is attention to spare.
  *
- * This is also the only correct home for VOID. A discard decision is made here, once,
- * while the run is still in mind - not later from a list where every session looks the
- * same. Keep is the default and the larger target; voiding is deliberate.
+ * It is the one place a run is voided, decided while the run is still in mind. Keep is the
+ * default and the larger target.
  */
 @Composable
 fun SessionSummary(
@@ -44,85 +79,167 @@ fun SessionSummary(
     onKeep: () -> Unit,
     onVoid: () -> Unit,
     modifier: Modifier = Modifier,
-    saveFailed: String? = null
+    saveFailed: String? = null,
+    personalBest: PersonalBestMoment? = null,
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(TrackProTheme.colors.panel)
+            .statusBarsPadding()
+            .padding(horizontal = Spacing.gutter)
     ) {
-        Spacer(Modifier.weight(1f))
-
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Text(
-                text = if (saveFailed != null) "Session not saved" else "Session complete",
-                style = TrackProType.label,
-                color = if (saveFailed != null) TrackProTheme.colors.danger
-                else TrackProTheme.colors.deltaGood
-            )
-            Spacer(Modifier.height(12.dp))
-            Readout(
-                value = headline,
-                caption = headlineCaption,
-                valueColor = TrackProTheme.colors.accent,
-                valueSize = 64.sp
-            )
-        }
-
-        Spacer(Modifier.height(20.dp))
-        Bezel()
-
-        rows.forEachIndexed { i, (label, value) ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Instrument(label = label, value = value, valueSize = 20.sp, modifier = Modifier.weight(1f))
-            }
-            if (i < rows.lastIndex) Bezel()
-        }
-        Bezel()
-
-        if (saveFailed != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(TrackProTheme.colors.field)
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                Text(
-                    text = saveFailed,
-                    style = TrackProType.body.atSize(12.sp),
-                    color = TrackProTheme.colors.danger
-                )
-            }
-            Bezel()
-        }
-
-        Spacer(Modifier.weight(1f))
-
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
-            DashAction(
-                label = "Keep",
-                detail = "Save to the archive",
+            Spacer(Modifier.height(Spacing.xl))
+
+            when {
+                saveFailed != null -> StatusHeader(Icons.Default.ErrorOutline, "Session not saved", TrackProTheme.colors.danger)
+                personalBest != null -> PersonalBestCelebration(personalBest)
+                else -> StatusHeader(Icons.Default.CheckCircle, "Session complete", TrackProTheme.colors.deltaGood)
+            }
+
+            PaddockCard {
+                Text(headlineCaption, style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                Text(
+                    headline,
+                    style = TrackProType.displayNumeric.atSize(56.sp),
+                    color = if (personalBest != null) TrackProTheme.colors.accent else TrackProTheme.colors.marking
+                )
+            }
+
+            if (rows.isNotEmpty()) {
+                PaddockCard(padding = 0.dp) {
+                    rows.forEachIndexed { i, (label, value) ->
+                        if (i > 0) Bezel(Modifier.padding(horizontal = Spacing.lg))
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(label, style = TrackProType.body, color = TrackProTheme.colors.markingDim, modifier = Modifier.weight(1f))
+                            Text(value, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+                        }
+                    }
+                }
+            }
+
+            if (saveFailed != null) {
+                Text(
+                    text = saveFailed,
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.marking,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(TrackProShapes.control)
+                        .background(TrackProTheme.colors.danger.copy(alpha = 0.14f))
+                        .padding(Spacing.lg)
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
+        ) {
+            PrimaryButton(
+                text = "Keep session",
                 onClick = onKeep,
-                haptic = Haptic.Confirm
+                haptic = Haptic.Confirm,
+                modifier = Modifier.fillMaxWidth()
             )
             DashAction(
                 label = "Void this run",
                 onClick = onVoid,
                 compact = true,
                 accent = TrackProTheme.colors.danger,
+                icon = Icons.Default.Block,
                 haptic = Haptic.Reject
             )
             Text(
-                text = "A voided run is kept but stamped, and stops counting toward your bests.",
+                text = "A voided run is kept but marked, and stops counting toward your bests.",
                 style = TrackProType.label,
                 color = TrackProTheme.colors.markingDim,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+}
+
+@Composable
+private fun StatusHeader(icon: ImageVector, text: String, tone: Color) {
+    Row(
+        modifier = Modifier
+            .clip(TrackProShapes.pill)
+            .background(tone.copy(alpha = 0.14f))
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = tone, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.size(Spacing.sm))
+        Text(text, style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold), color = tone)
+    }
+}
+
+/**
+ * The peak: a trophy springing in on a soft glow, the words "New personal best", and the
+ * margin. Proportional - a spring and a glow, no confetti - because it is a timing app.
+ */
+@Composable
+private fun PersonalBestCelebration(moment: PersonalBestMoment) {
+    val reducedMotion = rememberReducedMotion()
+    var shown by remember { mutableStateOf(reducedMotion) }
+    LaunchedEffect(Unit) { shown = true }
+
+    val scale by animateFloatAsState(
+        targetValue = if (shown) 1f else 0.4f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "trophyScale"
+    )
+    val fade by animateFloatAsState(
+        targetValue = if (shown) 1f else 0f,
+        animationSpec = tween(360),
+        label = "trophyFade"
+    )
+    val glow = TrackProTheme.colors.accentGlow
+
+    PaddockCard {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(Spacing.sm))
+            Box(
+                modifier = Modifier
+                    .graphicsLayer { scaleX = scale; scaleY = scale; alpha = fade }
+                    .shadow(28.dp, CircleShape, clip = false, ambientColor = glow, spotColor = glow)
+                    .size(88.dp)
+                    .clip(CircleShape)
+                    .background(TrackProTheme.colors.accent),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = TrackProTheme.colors.onAccent, modifier = Modifier.size(44.dp))
+            }
+            Spacer(Modifier.height(Spacing.lg))
+            Text(
+                if (moment.previousMs == null) "First time on the board" else "New personal best",
+                style = TrackProType.titleLarge,
+                color = TrackProTheme.colors.marking,
+                modifier = Modifier.graphicsLayer { alpha = fade }
+            )
+            Spacer(Modifier.height(Spacing.xs))
+            Text(
+                text = moment.previousMs?.let { prev ->
+                    val gain = (prev - moment.newMs) / 1000.0
+                    "${String.format(Locale.US, "%.2f", gain)} s faster than your previous best on this track"
+                } ?: "Your first timed lap on this track. That's the one to beat now.",
+                style = TrackProType.body,
+                color = TrackProTheme.colors.markingDim,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.graphicsLayer { alpha = fade }
+            )
+            Spacer(Modifier.height(Spacing.sm))
         }
     }
 }

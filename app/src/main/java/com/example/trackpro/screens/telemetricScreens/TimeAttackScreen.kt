@@ -22,6 +22,11 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import com.example.trackpro.managerClasses.utilities.toLapTimeMillisOrNull
+import com.example.trackpro.components.PersonalBestMoment
+import com.example.trackpro.components.paddockCard
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -224,7 +229,12 @@ fun TimeAttackScreenView(
     var showSummary by remember { mutableStateOf(false) }
 
     if (showSummary) {
+        val priorBest by vm.priorTrackBestMs.collectAsState()
+        val sessionBest = bestTime.toLapTimeMillisOrNull()
         SessionSummary(
+            // Only a real improvement, or the first time here, is a peak worth marking.
+            personalBest = sessionBest?.takeIf { priorBest == null || it < priorBest!! }
+                ?.let { PersonalBestMoment(newMs = it, previousMs = priorBest) },
             headline = bestTime,
             headlineCaption = "Best lap",
             rows = listOf(
@@ -372,7 +382,7 @@ fun TimeAttackPortraitLayout(
     onBack: () -> Unit
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
-    val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
+    val eventName  = if (timingMode is TimingMode.Circuit) "Lap" else "Run"
     val modeLabel  = if (timingMode is TimingMode.Circuit) "Circuit" else "Sprint"
     val modeColor  = TrackProTheme.colors.accent
     // Gaining pushes the bar forward, so a lower-is-better delta is negated before
@@ -400,8 +410,9 @@ fun TimeAttackPortraitLayout(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(TrackProTheme.colors.field)
-                .padding(horizontal = 14.dp, vertical = 14.dp)
+                .padding(horizontal = Spacing.gutter)
+                .paddockCard()
+                .padding(Spacing.lg)
         ) {
             Readout(
                 value = String.format(Locale.US, "%+.3f", delta),
@@ -424,12 +435,12 @@ fun TimeAttackPortraitLayout(
                     }
                 }
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Spacing.md))
             SegmentBar(
                 signedFraction = deltaFraction,
                 activeColor = deltaColor,
                 segments = 25,
-                height = if (mapVisible) 18.dp else 26.dp
+                height = if (mapVisible) 16.dp else 24.dp
             )
             if (showReferenceSwitch) {
                 Spacer(Modifier.height(8.dp))
@@ -437,12 +448,12 @@ fun TimeAttackPortraitLayout(
             }
         }
 
-        Bezel()
+        Spacer(Modifier.height(Spacing.md))
 
         // -- Clocks ---------------------------------------
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.gutter).paddockCard()) {
             Instrument(
-                label = "Current $eventName",
+                label = "Current ${eventName.lowercase()}",
                 value = currentTime,
                 valueSize = 24.sp,
                 modifier = Modifier.weight(1f)
@@ -464,11 +475,11 @@ fun TimeAttackPortraitLayout(
             )
         }
 
-        Bezel()
+        Spacer(Modifier.height(Spacing.md))
 
         if (lapSplits.isNotEmpty()) {
             SectorSplitsRow(splits = lapSplits)
-            Bezel()
+            Spacer(Modifier.height(Spacing.md))
         }
 
         if (mapVisible) {
@@ -476,7 +487,9 @@ fun TimeAttackPortraitLayout(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(TrackProTheme.colors.panel)
+                    .padding(start = Spacing.gutter, end = Spacing.gutter, bottom = Spacing.gutter)
+                    .clip(TrackProShapes.card)
+                    .background(TrackProTheme.colors.bgCard)
             ) {
                 if (gpsPoints.isNotEmpty()) {
                     MapLibreTrackView(
@@ -506,12 +519,12 @@ fun TimeAttackPortraitLayout(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .padding(horizontal = Spacing.gutter)
             )
-            Bezel()
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Spacer(Modifier.height(Spacing.md))
+            Row(modifier = Modifier.fillMaxWidth().padding(start = Spacing.gutter, end = Spacing.gutter, bottom = Spacing.gutter).paddockCard()) {
                 StintTimerCell(stintStart = stintStart, modifier = Modifier.weight(1f))
             }
-            Bezel()
         }
     }
 }
@@ -545,7 +558,7 @@ fun TimeAttackLandscapeLayout(
     onBack: () -> Unit
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
-    val eventName  = if (timingMode is TimingMode.Circuit) "LAP" else "RUN"
+    val eventName  = if (timingMode is TimingMode.Circuit) "Lap" else "Run"
     val modeLabel  = if (timingMode is TimingMode.Circuit) "Circuit" else "Sprint"
     val modeColor  = TrackProTheme.colors.accent
     // Gaining pushes the bar forward, so a lower-is-better delta is negated before
@@ -579,8 +592,9 @@ fun TimeAttackLandscapeLayout(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(TrackProTheme.colors.field)
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .padding(horizontal = Spacing.gutter)
+                    .paddockCard()
+                    .padding(Spacing.md)
             ) {
                 Readout(
                     value = String.format(Locale.US, "%+.3f", delta),
@@ -616,11 +630,12 @@ fun TimeAttackLandscapeLayout(
                 }
             }
 
-            Bezel()
+            Spacer(Modifier.height(Spacing.sm))
 
+            Column(Modifier.padding(horizontal = Spacing.gutter).paddockCard()) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 Instrument(
-                    label = "Current $eventName",
+                    label = "Current ${eventName.lowercase()}",
                     value = currentTime,
                     valueSize = 22.sp,
                     modifier = Modifier.weight(1f)
@@ -634,7 +649,7 @@ fun TimeAttackLandscapeLayout(
                     modifier = Modifier.weight(1f)
                 )
             }
-            Bezel()
+            Bezel(Modifier.padding(horizontal = Spacing.lg))
             Row(modifier = Modifier.fillMaxWidth()) {
                 Instrument(
                     label = "Last",
@@ -645,20 +660,21 @@ fun TimeAttackLandscapeLayout(
                 Bezel(vertical = true, modifier = Modifier.height(58.dp))
                 StintTimerCell(stintStart = stintStart, modifier = Modifier.weight(1f))
             }
-            Bezel()
+            }
+            Spacer(Modifier.height(Spacing.sm))
 
             if (lapSplits.isNotEmpty()) {
                 SectorSplitsRow(splits = lapSplits)
             }
         }
 
-        Bezel(vertical = true)
-
         Box(
             modifier = Modifier
                 .weight(0.54f)
                 .fillMaxSize()
-                .background(TrackProTheme.colors.panel)
+                .padding(top = Spacing.md, end = Spacing.gutter, bottom = Spacing.md)
+                .clip(TrackProShapes.card)
+                .background(TrackProTheme.colors.bgCard)
         ) {
             when {
                 !mapVisible -> RecentLapsPanel(
@@ -703,9 +719,14 @@ private fun HudTrailing(
 ) {
     val haptics = rememberHaptics()
     Row(verticalAlignment = Alignment.CenterVertically) {
+        val tone = if (isConnected) TrackProTheme.colors.deltaGood else TrackProTheme.colors.danger
         Text(
             text = if (isConnected) "Live" else "No signal",
-            style = TrackProType.label,
+            style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold),
+            modifier = Modifier
+                .clip(TrackProShapes.pill)
+                .background(tone.copy(alpha = 0.14f))
+                .padding(horizontal = Spacing.sm, vertical = 4.dp),
             // Fault Is Never Dimmer. NO SIGNAL invalidates every number on this panel, so
             // it cannot be the faintest thing on it - it was textFaint at 3.35:1 against
             // LIVE at 9.82:1, three times less visible than the healthy state, in sunlight.
@@ -714,7 +735,7 @@ private fun HudTrailing(
         )
         Spacer(Modifier.width(Spacing.md))
         Text(
-            text = "MAP",
+            text = "Map",
             style = TrackProType.label,
             color = if (mapVisible) TrackProTheme.colors.marking
             else TrackProTheme.colors.markingDim
@@ -806,15 +827,10 @@ private fun DeltaReferenceSwitch(
                 // number on the screen is measured against.
                 Box(
                     modifier = Modifier
-                        .background(
-                            if (isSelected) TrackProTheme.colors.accent else TrackProTheme.colors.panel
-                        )
-                        .border(
-                            1.dp,
-                            if (isSelected) TrackProTheme.colors.accent else TrackProTheme.colors.bezel
-                        )
+                        .clip(TrackProShapes.pill)
+                        .background(if (isSelected) TrackProTheme.colors.accent else TrackProTheme.colors.bgElevated)
                         .semantics { selected = isSelected }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = Spacing.md, vertical = 6.dp)
                 ) {
                     Text(
                         text = label,
@@ -854,9 +870,10 @@ private fun SectorSplitsRow(splits: List<SectorSplit>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProTheme.colors.field)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp)
+            .padding(horizontal = Spacing.gutter)
+            .paddockCard()
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         splits.forEach { split ->
             val gained = (split.deltaMs ?: 0L) <= 0L
@@ -874,6 +891,7 @@ private fun SectorSplitsRow(splits: List<SectorSplit>) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(6.dp)
+                        .clip(TrackProShapes.pill)
                         .background(color)
                 )
                 Spacer(Modifier.height(5.dp))
@@ -905,15 +923,15 @@ private fun RecentLapsPanel(
     eventName: String,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.background(TrackProTheme.colors.panel)) {
+    Column(modifier = modifier.paddockCard()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 6.dp),
+                .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.md, bottom = Spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "LAST ${eventName}S",
+                text = "Last ${eventName.lowercase()}s",
                 style = TrackProType.label,
                 color = TrackProTheme.colors.markingDim
             )
@@ -923,7 +941,7 @@ private fun RecentLapsPanel(
                 color = TrackProTheme.colors.markingDim
             )
         }
-        Bezel()
+        Bezel(Modifier.padding(horizontal = Spacing.lg))
 
         if (laps.isEmpty()) {
             Box(
@@ -933,7 +951,7 @@ private fun RecentLapsPanel(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "NO ${eventName}S YET",
+                    text = "No ${eventName.lowercase()}s yet",
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim
                 )
@@ -1022,8 +1040,7 @@ private fun LapRow(lap: CompletedLap, isBest: Boolean, gapToBestMs: Long) {
         Layout(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(TrackProTheme.colors.field)
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             content = {
                 Row(
                     modifier = Modifier.layoutId(SLOT_LEAD),
@@ -1102,7 +1119,7 @@ private fun LapRow(lap: CompletedLap, isBest: Boolean, gapToBestMs: Long) {
                 }
             }
         }
-        Bezel()
+        Bezel(Modifier.padding(horizontal = Spacing.lg))
     }
 }
 
