@@ -1,21 +1,21 @@
 package com.example.trackpro.extrasForUI
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.ui.graphics.Color
-import com.example.trackpro.theme.DarkTrackProColors
-import com.example.trackpro.theme.LightTrackProColors
+import androidx.compose.ui.unit.dp
+import com.example.trackpro.theme.PaddockNight
+import com.example.trackpro.theme.PaddockSunlight
 import com.example.trackpro.theme.TrackProColorScheme
 
-private val LocalTrackProColors = staticCompositionLocalOf { DarkTrackProColors }
+private val LocalTrackProColors = staticCompositionLocalOf { PaddockNight }
 
-// 2. Create an elegant accessor object for UI code
 object TrackProTheme {
     val colors: TrackProColorScheme
         @Composable
@@ -24,65 +24,56 @@ object TrackProTheme {
 }
 
 /**
- * Maps our racing-HUD palette onto Material3's ColorScheme so that stock Material3
- * components (OutlinedTextField, DropdownMenu, AlertDialog, etc.) that don't explicitly
- * override every color still fall back to something themed instead of Material3's
- * default light/purple scheme.
+ * Stock Material components (text fields, dialogs, menus, switches) read these, so they land
+ * in Paddock night without per-call overrides. Both contrasts are dark schemes.
  */
-private fun TrackProColorScheme.toMaterialColorScheme(dark: Boolean): androidx.compose.material3.ColorScheme =
-    if (dark) {
-        darkColorScheme(
-            // primary/secondary/tertiary intentionally all map to the same accent - the
-            // palette has exactly one. Material needs three slots filled; that is not a
-            // reason to invent two more brand colors.
-            primary = accent,
-            onPrimary = onAccent,
-            secondary = accent,
-            onSecondary = onAccent,
-            tertiary = accent,
-            onTertiary = onAccent,
-            background = bgDeep,
-            onBackground = textPrimary,
-            surface = bgCard,
-            onSurface = textPrimary,
-            surfaceVariant = bgElevated,
-            onSurfaceVariant = textMuted,
-            outline = sectorLine,
-            error = deltaBad,
-            onError = Color.Black
-        )
-    } else {
-        lightColorScheme(
-            primary = accent,
-            onPrimary = onAccent,
-            secondary = accent,
-            onSecondary = onAccent,
-            tertiary = accent,
-            onTertiary = onAccent,
-            background = bgDeep,
-            onBackground = textPrimary,
-            surface = bgCard,
-            onSurface = textPrimary,
-            surfaceVariant = bgElevated,
-            onSurfaceVariant = textMuted,
-            outline = sectorLine,
-            error = deltaBad,
-            onError = Color.White
-        )
-    }
+private fun TrackProColorScheme.toMaterialColorScheme() = darkColorScheme(
+    primary = accent,
+    onPrimary = onAccent,
+    primaryContainer = accent.copy(alpha = 0.16f),
+    onPrimaryContainer = accent,
+    secondary = accent,
+    onSecondary = onAccent,
+    tertiary = deltaGood,
+    onTertiary = onAccent,
+    background = bgDeep,
+    onBackground = textPrimary,
+    surface = bgCard,
+    onSurface = textPrimary,
+    surfaceVariant = bgElevated,
+    onSurfaceVariant = textMuted,
+    surfaceContainerHigh = bgCard,
+    surfaceContainerHighest = bgElevated,
+    outline = sectorLine,
+    outlineVariant = sectorLine,
+    error = danger,
+    onError = textPrimary
+)
 
+private val PaddockShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp)
+)
+
+/**
+ * Always dark. [sunlight] swaps in [PaddockSunlight], the high-contrast variant for a phone
+ * on a mount in direct sun. [darkTheme] is ignored and only kept so older call sites compile.
+ */
 @Composable
 fun TrackProTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    @Suppress("UNUSED_PARAMETER") darkTheme: Boolean = isSystemInDarkTheme(),
+    sunlight: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkTrackProColors else LightTrackProColors
+    val colorScheme = if (sunlight) PaddockSunlight else PaddockNight
 
-    CompositionLocalProvider(
-        LocalTrackProColors provides colorScheme
-    ) {
+    CompositionLocalProvider(LocalTrackProColors provides colorScheme) {
         MaterialTheme(
-            colorScheme = colorScheme.toMaterialColorScheme(darkTheme),
+            colorScheme = colorScheme.toMaterialColorScheme(),
+            shapes = PaddockShapes,
             content = content
         )
     }

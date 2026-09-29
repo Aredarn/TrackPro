@@ -197,7 +197,7 @@ internal fun AccountSignInForm(notice: String?, serverSet: Boolean, onSignedIn: 
 
 @Composable
 private fun Placard(text: String) {
-    Text(text.uppercase(), style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+    Text(text, style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
 }
 
 @Composable

@@ -109,7 +109,7 @@ fun LeaderboardScreen(trackId: Long, onBack: () -> Unit) {
                 if (myPinned != null) {
                     item {
                         Text(
-                            "YOUR BEST",
+                            "Your best",
                             style = TrackProType.label,
                             color = TrackProTheme.colors.textMuted,
                             modifier = Modifier.padding(start = Spacing.lg, top = Spacing.lg, bottom = Spacing.xs)
@@ -203,7 +203,7 @@ private fun EntryRow(entry: LeaderboardEntry, isMe: Boolean) {
 
 private fun sourceLabel(source: ApiGpsSource): String = when (source) {
     ApiGpsSource.Wifi, ApiGpsSource.Bluetooth -> "ESP32"
-    ApiGpsSource.PhoneGps -> "PHONE GPS"
+    ApiGpsSource.PhoneGps -> "Phone GPS"
 }
 
 private const val LIMIT = 50

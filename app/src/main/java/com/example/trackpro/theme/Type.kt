@@ -7,33 +7,18 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 
-/**
- * The dash's face.
- *
- * Intended face: a condensed grotesque with hard-edged, high-x-height numerals - the
- * lettering a purpose-built display uses, where a 9 and an 8 can never be confused at a
- * glance. Not bundled yet, so this resolves to the platform sans; swapping it is this one
- * constant plus a file in `res/font/`.
- */
+/** One family throughout. Hierarchy comes from size, weight and tone, not from a second face. */
 val TrackProFontFamily: FontFamily = FontFamily.SansSerif
 
 /**
- * Tabular, lining figures.
- *
- * `tnum` is not cosmetic on a live readout. Without it every digit has its own advance, so
- * a running lap timer physically shifts left and right as the digits change - the number
- * dances while you are trying to read it at speed. Fixed advances hold it still.
+ * Tabular, lining figures: the monospaced variant of the numerals. A running lap timer with
+ * proportional digits physically shifts as it counts; fixed advances hold it still.
  */
 private const val TabularFigures = "tnum, lnum"
 
 /**
- * Resize a style, scaling leading **and tracking** with it.
- *
- * Tracking is size-relative, not absolute. [displayNumeric] carries -2.2sp because that is
- * right at 56sp; carried unchanged to 15sp the same -2.2sp is roughly -15% per character
- * and the glyphs physically overlap. Scaling by the size ratio keeps the optical spacing
- * the style was drawn with at every size, which is the whole reason this helper exists
- * rather than a bare `copy(fontSize = ...)`.
+ * Resize a style, scaling leading and tracking with it, so a style keeps the spacing it was
+ * drawn with at any size.
  */
 fun TextStyle.atSize(size: TextUnit): TextStyle {
     if (!fontSize.isSpecified || fontSize.value <= 0f) return copy(fontSize = size)
@@ -48,74 +33,72 @@ fun TextStyle.atSize(size: TextUnit): TextStyle {
 }
 
 /**
- * A dash's scale is brutally top-heavy: one readout dominates every frame and everything
- * else is a placard beneath it. There is no display tier for prose, because a dash has no
- * prose.
+ * Four sizes, two weights.
+ *
+ * - **Display** 40 SemiBold - the one number a screen exists to show.
+ * - **Title** 20 SemiBold - card titles, stat values, a car's name.
+ * - **Body** 15 Regular / SemiBold - running text, row labels.
+ * - **Caption** 12 Regular / SemiBold - supporting lines and metadata.
+ *
+ * Labels are sentence case; nothing is set in capitals. The live HUDs enlarge [displayNumeric]
+ * with [atSize] - reading at speed is the one place size outranks the scale.
  */
 object TrackProType {
 
-    /**
-     * The readout. Delta on track, the split just crossed on the strip, the running clock
-     * everywhere else. Sized to be read peripherally, tracked tight because at this scale
-     * default spacing reads as gappy.
-     */
     val displayNumeric = TextStyle(
         fontFamily = TrackProFontFamily,
-        fontSize = 56.sp,
-        lineHeight = 58.sp,            // 1.04 - a lone figure needs no leading
-        fontWeight = FontWeight.Black,
-        letterSpacing = (-2.2).sp,
+        fontSize = 40.sp,
+        lineHeight = 46.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = (-0.8).sp,
         fontFeatureSettings = TabularFigures
     )
 
-    /** A secondary instrument value: best, last, split, speed, count. */
+    /** A stat value: best, last, split, speed, count. */
     val statValue = TextStyle(
         fontFamily = TrackProFontFamily,
         fontSize = 20.sp,
-        lineHeight = 24.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = (-0.4).sp,
+        lineHeight = 26.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = (-0.2).sp,
         fontFeatureSettings = TabularFigures
     )
 
-    /** A field's own name, or the car on its placard. */
+    /** Card titles, a car's name, a screen's own heading. */
     val titleLarge = TextStyle(
         fontFamily = TrackProFontFamily,
-        fontSize = 16.sp,
-        lineHeight = 20.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 0.3.sp,
+        fontSize = 20.sp,
+        lineHeight = 26.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = (-0.1).sp,
         fontFeatureSettings = TabularFigures
     )
 
-    /** A row label. */
+    /** Row labels and emphasised body. */
     val titleMedium = TextStyle(
         fontFamily = TrackProFontFamily,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
-        fontWeight = FontWeight.Medium,
-        letterSpacing = 0.2.sp,
+        fontSize = 15.sp,
+        lineHeight = 22.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.sp,
         fontFeatureSettings = TabularFigures
     )
 
-    /**
-     * The placard cap under every instrument. Always upper case at the call site, tracked
-     * open because small caps close up and a placard has to be legible without being read.
-     */
+    /** Captions, metadata, the name under a stat. Sentence case. */
     val label = TextStyle(
         fontFamily = TrackProFontFamily,
-        fontSize = 10.sp,
-        lineHeight = 14.sp,
-        fontWeight = FontWeight.Medium,
-        letterSpacing = 1.4.sp,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontWeight = FontWeight.Normal,
+        letterSpacing = 0.1.sp,
         fontFeatureSettings = TabularFigures
     )
 
-    /** Running text, where any survives. */
+    /** Running text. */
     val body = TextStyle(
         fontFamily = TrackProFontFamily,
-        fontSize = 13.sp,
-        lineHeight = 19.sp,
+        fontSize = 15.sp,
+        lineHeight = 22.sp,
         fontWeight = FontWeight.Normal,
         letterSpacing = 0.sp,
         fontFeatureSettings = TabularFigures

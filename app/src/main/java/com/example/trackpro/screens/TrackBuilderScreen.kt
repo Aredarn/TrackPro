@@ -368,7 +368,7 @@ fun MapLibreBuilderView(
                 // Start Marker is always there
                 map.addMarker(MarkerOptions()
                     .position(LatLng(points.first().latitude, points.first().longitude))
-                    .title("START")
+                    .title("Start")
                 )
 
                 if (points.size > 1) {
@@ -444,7 +444,7 @@ private fun TrackInfoCard(name: String, country: String, mode: String, onClick: 
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    listOf(country, mode.uppercase()).filter { it.isNotBlank() }.joinToString("  \u00b7  "),
+                    listOf(country, mode).filter { it.isNotBlank() }.joinToString("  \u00b7  "),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim
                 )
@@ -655,12 +655,12 @@ fun TrackInfoAlert(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name, country, mode) }) {
-                Text("DONE", color = TrackProTheme.colors.accent, fontWeight = FontWeight.Bold)
+                Text("Done", color = TrackProTheme.colors.accent, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = TrackProTheme.colors.textMuted)
+                Text("Cancel", color = TrackProTheme.colors.textMuted)
             }
         }
     )

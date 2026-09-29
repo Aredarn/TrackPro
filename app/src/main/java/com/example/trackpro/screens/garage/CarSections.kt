@@ -103,7 +103,7 @@ fun CarPhotoSection(vehicle: VehicleInformationData) {
         }
     }
     error?.let {
-        Text(it.uppercase(), style = TrackProType.label, color = TrackProTheme.colors.deltaBad, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+        Text(it, style = TrackProType.label, color = TrackProTheme.colors.deltaBad, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
     }
     Bezel()
 }
@@ -139,7 +139,7 @@ fun CarBackupStrip(vehicle: VehicleInformationData, onSignIn: () -> Unit) {
         }
         Column(Modifier.weight(1f)) {
             Text(
-                status.label.uppercase(),
+                status.label,
                 style = TrackProType.label,
                 color = if (status == VehicleSyncStatus.Failed) TrackProTheme.colors.danger else TrackProTheme.colors.marking
             )
@@ -154,7 +154,7 @@ fun CarBackupStrip(vehicle: VehicleInformationData, onSignIn: () -> Unit) {
             }
         }
         when (status) {
-            VehicleSyncStatus.OnThisPhone -> Text("SIGN IN ›", style = TrackProType.label, color = TrackProTheme.colors.accent)
+            VehicleSyncStatus.OnThisPhone -> Text("Sign in ›", style = TrackProType.label, color = TrackProTheme.colors.accent)
             VehicleSyncStatus.LocalOnly, VehicleSyncStatus.Failed -> ToggleChip(
                 text = if (status == VehicleSyncStatus.LocalOnly) "Back up again" else "Retry",
                 selected = false,
@@ -209,7 +209,7 @@ fun CarBests(vehicleId: Long, onOpenTrack: (Long) -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text(best.trackName.uppercase(), style = TrackProType.titleMedium, color = TrackProTheme.colors.marking, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(best.trackName, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(2.dp))
                 Text("${best.lapCount} LAP${if (best.lapCount == 1) "" else "S"}", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
             }
@@ -258,7 +258,7 @@ fun CarDeleteRow(vehicle: VehicleInformationData, onDeleted: () -> Unit) {
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("DELETE CAR", style = TrackProType.titleMedium, color = TrackProTheme.colors.danger, modifier = Modifier.weight(1f))
+        Text("Delete car", style = TrackProType.titleMedium, color = TrackProTheme.colors.danger, modifier = Modifier.weight(1f))
         Text("›", style = TrackProType.titleLarge, color = TrackProTheme.colors.danger)
     }
     Bezel()

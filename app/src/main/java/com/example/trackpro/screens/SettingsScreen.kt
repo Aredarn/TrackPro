@@ -173,7 +173,7 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
 @Composable
 private fun GpsSourceRow(selected: GpsProviderType, onSelect: (GpsProviderType) -> Unit) {
     Column {
-        Text("GPS SOURCE", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+        Text("GPS source", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
         Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -235,7 +235,7 @@ private fun EspTargetRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("ESP TARGET", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+                Text("ESP target", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = if (useTestServer) "Test Simulator" else "Real Device (192.168.4.1)",
@@ -275,7 +275,7 @@ private fun EspTargetRow(
 private fun GpsRateRow(selectedHz: Int, confirmedHz: Int?, onSelect: (Int) -> Unit) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("GPS RATE", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+            Text("GPS rate", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
             if (confirmedHz != null) {
                 Text(
                     text = if (confirmedHz == selectedHz) "· confirmed" else "· device at ${confirmedHz}Hz",
@@ -324,7 +324,7 @@ private fun SettingsToggleRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text(label.uppercase(), style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+            Text(label, style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
             Spacer(Modifier.height(2.dp))
             Text(valueText, style = TrackProType.body, color = valueColor)
         }

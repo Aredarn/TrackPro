@@ -206,7 +206,7 @@ fun DragRaceScreen(
                     // The elapsed clock used to be here AND in the readout below. One is
                     // enough, and the readout is where the eye already is.
                     Text(
-                        if (isConnected) "GPS LOCKED" else "NO SIGNAL",
+                        if (isConnected) "GPS locked" else "No signal",
                         style = TrackProType.label,
                         // A fault is never dimmer than health.
                         color = if (isConnected) TrackProTheme.colors.deltaGood
@@ -214,7 +214,7 @@ fun DragRaceScreen(
                     )
                     Spacer(Modifier.width(Spacing.sm))
                     Text(
-                        "DATA",
+                        "Data",
                         style = TrackProType.label,
                         color = if (showData) TrackProTheme.colors.marking
                         else TrackProTheme.colors.markingDim,
@@ -379,7 +379,7 @@ fun DragRaceScreen(
                         trailing = {
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = if (isSessionActive) "REC" else "IDLE",
+                                    text = if (isSessionActive) "REC" else "Idle",
                                     style = TrackProType.label,
                                     color = if (isSessionActive) TrackProTheme.colors.danger
                                     else TrackProTheme.colors.markingDim
@@ -605,7 +605,7 @@ fun DragMetricCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    metric.label.uppercase(),
+                    metric.label,
                     style = TrackProType.label,
                     // Unreached splits stay quieter than reached ones, but both clear AA;
                     // textFaint measured 3.35:1 and this is a 10sp placard.

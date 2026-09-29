@@ -19,21 +19,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.theme.panel
 
 /**
- * Standard screen shell: content runs full-bleed beneath an opaque chrome strip.
- *
- * **On the material.** The chrome is opaque. Translucency belonged to the previous visual
- * direction; a milled panel does not show what is behind it, and a half-transparent bar
- * over live telemetry costs legibility for nothing. This doc used to describe a floating
- * translucent scrim long after the alpha had been set to 1 - if the material changes
- * again, change both.
- *
- * **On the edge.** There is no permanent divider. The bezel appears only once content is
- * actually scrolled underneath, so a short screen carries no line at all and a scrolled
- * one gets the same 1dp hairline that separates every other field on the panel. It was a
- * vertical gradient until the world went hard-edged; a gradient is the one thing the
- * segment language explicitly refuses.
+ * Standard screen shell: the header floats over content on the page ground, content scrolls
+ * beneath it inset by the header's height, and a hairline appears under the header only
+ * once something has actually scrolled under it.
  */
 @Composable
 fun ScreenScaffold(
@@ -46,8 +37,8 @@ fun ScreenScaffold(
     contentScrolled: Boolean = false,
     bottomBar: (@Composable () -> Unit)? = null,
     /**
-     * A fixed strip under the bar, e.g. the [SectionSwitch] that splits a tab in two. It is
-     * part of the chrome, so content is inset by [headerHeight] as well as the bar.
+     * A fixed strip under the header, e.g. the [SectionSwitch] that splits a tab in two.
+     * Content is inset by [headerHeight] as well as the header.
      */
     header: (@Composable () -> Unit)? = null,
     headerHeight: Dp = if (header != null) SectionSwitchHeight else 0.dp,
@@ -56,21 +47,12 @@ fun ScreenScaffold(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(TrackProTheme.colors.bgDeep)
+            .background(TrackProTheme.colors.panel)
     ) {
         content(PaddingValues(top = AppTopBarHeight + headerHeight))
 
-        Column(modifier = Modifier.align(Alignment.TopStart)) {
-            AppTopBar(
-                title = title,
-                accent = accent,
-                subtitle = subtitle,
-                onBack = onBack,
-                trailing = trailing,
-                // The scaffold owns the material and the edge treatment.
-                containerColor = TrackProTheme.colors.bgCard.copy(alpha = TranslucentChromeAlpha),
-                showDivider = false
-            )
+        Column(modifier = Modifier.align(Alignment.TopStart).background(TrackProTheme.colors.panel)) {
+            AppTopBar(title = title, accent = accent, subtitle = subtitle, onBack = onBack, trailing = trailing)
             if (header != null) {
                 Box(modifier = Modifier.fillMaxWidth().height(headerHeight)) { header() }
             }
@@ -82,7 +64,7 @@ fun ScreenScaffold(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .background(TrackProTheme.colors.bgCard.copy(alpha = TranslucentChromeAlpha))
+                    .background(TrackProTheme.colors.panel)
             ) {
                 bottomBar()
             }
@@ -90,29 +72,20 @@ fun ScreenScaffold(
     }
 }
 
-/**
- * Content dissolving under floating chrome, instead of being cut off by a rule.
- * Renders nothing at all when there's no overlap to soften.
- */
+/** A hairline under the header, drawn only once content has scrolled beneath it. */
 @Composable
 fun ScrollEdgeFade(visible: Boolean) {
     if (!visible) return
     Bezel()
 }
 
-/**
- * Kept at 1 and kept named so the call sites read unchanged. The chrome is opaque; see
- * the composable's note on the material.
- */
-private const val TranslucentChromeAlpha = 1f
-
-/** True once the list has moved at all - drives the scroll-edge bezel. */
+/** True once the list has moved at all. */
 @Composable
 fun LazyListState.isScrolledUnderChrome(): State<Boolean> = remember(this) {
     derivedStateOf { firstVisibleItemIndex > 0 || firstVisibleItemScrollOffset > 0 }
 }
 
-/** True once the scroll container has moved at all - drives the scroll-edge fade. */
+/** True once the scroll container has moved at all. */
 @Composable
 fun ScrollState.isScrolledUnderChrome(): State<Boolean> = remember(this) {
     derivedStateOf { value > 0 }
