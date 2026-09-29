@@ -51,10 +51,11 @@ class OnlineSettings(context: Context) {
 
     private val prefs = context.getSharedPreferences("trackboard_prefs", Context.MODE_PRIVATE)
 
-    private val _serverUrl = MutableStateFlow(prefs.getString(KEY_SERVER, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_SERVER)
+    private val _serverUrl = MutableStateFlow(storedServerUrl() ?: DEFAULT_SERVER)
     /**
      * Defaults to the public TrackBoard deployment. A driver who typed their own address keeps
-     * it; clearing the field falls back to this default on the next launch.
+     * it; clearing the field falls back to this default on the next launch. An address of a
+     * retired TrackBoard deployment is dropped, so those phones move to the current one.
      */
     val serverUrl: StateFlow<String> = _serverUrl.asStateFlow()
 
@@ -86,8 +87,21 @@ class OnlineSettings(context: Context) {
         _lastSync.value = report
     }
 
+    private fun storedServerUrl(): String? {
+        val stored = prefs.getString(KEY_SERVER, null)?.takeIf { it.isNotBlank() } ?: return null
+        if (stored.trim().trimEnd('/').lowercase() in RETIRED_SERVERS) {
+            prefs.edit().remove(KEY_SERVER).apply()
+            return null
+        }
+        return stored
+    }
+
     companion object {
-        const val DEFAULT_SERVER = "https://trackboard-u9uj.onrender.com"
+        const val DEFAULT_SERVER = "https://trackboard-backend.onrender.com"
+
+        /** Former public deployments. Same accounts and data; the host alone changed. */
+        private val RETIRED_SERVERS = setOf("https://trackboard-u9uj.onrender.com")
+
         private const val KEY_SERVER = "server_url"
         private const val KEY_SHARING = "sharing_enabled"
         private const val KEY_LAST_SYNC = "last_sync"
