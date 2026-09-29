@@ -40,6 +40,8 @@ fun <T> DataGate(
     modifier: Modifier = Modifier,
     loadingLabel: String = "Reading",
     onRetry: (() -> Unit)? = null,
+    emptyActionLabel: String? = null,
+    onEmptyAction: (() -> Unit)? = null,
     content: @Composable (List<T>) -> Unit
 ) {
     when {
@@ -101,6 +103,8 @@ fun <T> DataGate(
         items.isEmpty() -> EmptyState(
             message = emptyMessage,
             hint = emptyHint,
+            actionLabel = emptyActionLabel,
+            onAction = onEmptyAction,
             modifier = modifier.fillMaxWidth()
         )
 

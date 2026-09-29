@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.paddockCard
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -157,8 +158,9 @@ fun ESPConnectionTestScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProTheme.colors.field)
-                        .padding(horizontal = 14.dp, vertical = 14.dp)
+                        .padding(horizontal = Spacing.gutter)
+                        .paddockCard()
+                        .padding(Spacing.lg)
                 ) {
                     Readout(
                         // 2 km/h of hysteresis: enough that a stationary module reading
@@ -185,16 +187,16 @@ fun ESPConnectionTestScreen(
                     )
                 }
 
-                Bezel()
+                Spacer(Modifier.height(Spacing.md))
 
                 // -- Link state ----------------------------
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.gutter).paddockCard()) {
                     Instrument(
                         label = "Source",
                         value = when (gpsSource) {
-                            GpsProviderType.WIFI -> "ESP32 WIFI"
+                            GpsProviderType.WIFI -> "ESP32 Wi-Fi"
                             GpsProviderType.BLUETOOTH -> "ESP32 BT"
-                            GpsProviderType.PHONE_GPS -> "INTERNAL"
+                            GpsProviderType.PHONE_GPS -> "Phone GPS"
                         },
                         valueSize = 15.sp,
                         modifier = Modifier.weight(1f)
@@ -204,7 +206,7 @@ fun ESPConnectionTestScreen(
                         label = "Link",
                         value = if (isConnected) "Live" else "Offline",
                         valueColor = if (isConnected) TrackProTheme.colors.deltaGood
-                        else TrackProTheme.colors.deltaBad,
+                        else TrackProTheme.colors.danger,
                         valueSize = 15.sp,
                         modifier = Modifier.weight(1f)
                     )
@@ -219,7 +221,7 @@ fun ESPConnectionTestScreen(
                     )
                 }
 
-                Bezel()
+                Spacer(Modifier.height(Spacing.md))
 
                 // -- Diagnosis -----------------------------
                 // PRODUCT.md principle 2: a stranger has to succeed alone. This screen used
@@ -230,19 +232,20 @@ fun ESPConnectionTestScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(TrackProTheme.colors.field)
-                            .padding(horizontal = 14.dp, vertical = 14.dp)
+                            .padding(horizontal = Spacing.gutter)
+                            .paddockCard()
+                            .padding(Spacing.lg)
                     ) {
                         Text(
                             text = cause,
-                            style = TrackProType.label,
-                            color = if (!isConnected) TrackProTheme.colors.deltaBad
-                            else TrackProTheme.colors.markingDim
+                            style = TrackProType.titleMedium,
+                            color = if (!isConnected) TrackProTheme.colors.danger
+                            else TrackProTheme.colors.deltaBad
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
                             text = recovery,
-                            style = TrackProType.body.atSize(13.sp),
+                            style = TrackProType.body,
                             color = TrackProTheme.colors.marking
                         )
                         Spacer(Modifier.height(14.dp))
@@ -251,6 +254,7 @@ fun ESPConnectionTestScreen(
                                 label = "Retry link",
                                 onClick = { app.gpsManager.retryActiveProvider() },
                                 compact = true,
+                                primary = true,
                                 modifier = Modifier.weight(1f)
                             )
                             DashAction(
@@ -270,7 +274,6 @@ fun ESPConnectionTestScreen(
                             )
                         }
                     }
-                    Bezel()
                 }
 
                 DashGroup("Data stream") {
@@ -307,8 +310,8 @@ fun ESPConnectionTestScreen(
                         text = gpsData?.toString() ?: "Awaiting data stream\u2026",
                         color = if (gpsData != null) TrackProTheme.colors.deltaGood
                         else TrackProTheme.colors.markingDim,
-                        style = TrackProType.body.atSize(10.sp),
-                        lineHeight = 15.sp
+                        style = TrackProType.label.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                        lineHeight = 16.sp
                     )
                 }
 
@@ -328,10 +331,10 @@ private fun TelemetryRow(label: String, value: String, textPrimary: Color, textM
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, style = TrackProType.label, color = textMuted)
+        Text(label, style = TrackProType.body, color = textMuted)
         Text(
             value,
-            style = TrackProType.body.atSize(13.sp).copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+            style = TrackProType.titleMedium,
             color = textPrimary
         )
     }

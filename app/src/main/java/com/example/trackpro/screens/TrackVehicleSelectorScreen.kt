@@ -15,6 +15,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.theme.TrackProShapes
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,7 +45,6 @@ import com.example.trackpro.extrasForUI.TrackProTheme
 import com.example.trackpro.components.AppTopBar
 import com.example.trackpro.components.DashAction
 import com.example.trackpro.components.DashGroup
-import com.example.trackpro.components.SegmentBar
 import com.example.trackpro.theme.marking
 import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.panel
@@ -68,9 +76,8 @@ fun TrackVehicleSelectorScreen(
         vehicleViewModel.fetchVehicles()
     }
 
-    // Two conditions arm the session. The strip below reads them the way a dash reads
-    // any other pre-condition: how many of the required inputs are satisfied, drawn
-    // rather than described, so the gap is visible before you reach for the control.
+    // Two conditions arm the session. The checklist above the start button names them, so
+    // the gap is visible before you reach for the control.
     val trackSet = selectedTrackId != -1L
     val vehicleSet = selectedVehicleId != -1L
     val readyCount = listOf(trackSet, vehicleSet).count { it }
@@ -87,16 +94,16 @@ fun TrackVehicleSelectorScreen(
             onBack = { navController.popBackStack() }
         )
 
-        DashGroup("Circuit") {
+        DashGroup("Track") {
             Text(
                 text = selectedTrackName.ifEmpty { "Not selected" },
-                style = TrackProType.statValue.atSize(22.sp),
+                style = TrackProType.titleLarge,
                 color = if (trackSet) TrackProTheme.colors.marking
                 else TrackProTheme.colors.markingDim
             )
             Spacer(Modifier.height(Spacing.sm))
             TrackDropdownMenu(
-                label = "Choose location",
+                label = "Choose track",
                 tracks = tracks,
                 selectedTrackName = selectedTrackName,
                 onTrackSelected = { id ->
@@ -107,17 +114,17 @@ fun TrackVehicleSelectorScreen(
             )
         }
 
-        DashGroup("Vehicle") {
+        DashGroup("Car") {
             Text(
                 text = selectedVehicleName.ifEmpty { "Not selected" },
-                style = TrackProType.statValue.atSize(22.sp),
+                style = TrackProType.titleLarge,
                 color = if (vehicleSet) TrackProTheme.colors.marking
                 else TrackProTheme.colors.markingDim
             )
             Spacer(Modifier.height(Spacing.sm))
             if (vehicles.isNotEmpty()) {
                 DropdownMenuFieldMulti(
-                    "Choose machine",
+                    "Choose car",
                     vehicles,
                     selectedVehicleName
                 ) { id ->
@@ -127,8 +134,8 @@ fun TrackVehicleSelectorScreen(
                 }
             } else {
                 Text(
-                    "No vehicles in the garage yet",
-                    style = TrackProType.body.atSize(12.sp),
+                    "No cars in the garage yet",
+                    style = TrackProType.label,
                     color = TrackProTheme.colors.deltaBad
                 )
             }
@@ -136,40 +143,52 @@ fun TrackVehicleSelectorScreen(
 
         Spacer(Modifier.weight(1f))
 
-        // -- Arming strip ---------------------------------
+        // -- Ready check + start ----------------------------
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(TrackProTheme.colors.panel)
-                .padding(horizontal = 12.dp, vertical = 12.dp)
+                .padding(Spacing.gutter)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SegmentBar(
-                    signedFraction = readyCount / 2f,
-                    activeColor = if (canStart) TrackProTheme.colors.deltaGood
-                    else TrackProTheme.colors.deltaBad,
-                    bidirectional = false,
-                    segments = 2,
-                    height = 10.dp,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    text = "$readyCount / 2 SET",
-                    style = TrackProType.label,
-                    color = if (canStart) TrackProTheme.colors.deltaGood
-                    else TrackProTheme.colors.markingDim
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                ReadyChip("Track", trackSet)
+                ReadyChip("Car", vehicleSet)
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Spacing.md))
             DashAction(
                 label = "Start session",
                 detail = if (canStart) "Arm timing and go green"
-                else if (!trackSet) "Select a circuit first" else "Select a vehicle first",
+                else if (!trackSet) "Pick a track first" else "Pick a car first",
                 enabled = canStart,
-                labelSize = 28.sp,
+                primary = true,
+                icon = Icons.Filled.Flag,
                 onClick = { navController.navigate("timeattack/$selectedVehicleId/$selectedTrackId") }
             )
         }
+    }
+}
+
+/** One precondition for the start button: ticked when met, quiet when not. */
+@Composable
+private fun ReadyChip(label: String, ready: Boolean) {
+    val tint = if (ready) TrackProTheme.colors.deltaGood else TrackProTheme.colors.markingDim
+    Row(
+        modifier = Modifier
+            .clip(TrackProShapes.pill)
+            .background(if (ready) tint.copy(alpha = 0.14f) else TrackProTheme.colors.bgElevated)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            if (ready) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(Spacing.sm))
+        Text(
+            if (ready) "$label set" else "$label needed",
+            style = TrackProType.label,
+            color = if (ready) tint else TrackProTheme.colors.textMuted
+        )
     }
 }

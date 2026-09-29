@@ -19,6 +19,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.components.paddockCard
+import com.example.trackpro.components.SectionTitle
+import com.example.trackpro.components.PaddockCard
+import com.example.trackpro.components.IconCircle
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,12 +43,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.TrackProApp
-import com.example.trackpro.components.Bezel
 import com.example.trackpro.components.Haptic
 import com.example.trackpro.components.PhotoFrame
 import com.example.trackpro.components.PrimaryButton
 import com.example.trackpro.components.ScreenScaffold
-import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.ToggleChip
 import com.example.trackpro.components.initialsOf
 import com.example.trackpro.components.pressable
@@ -77,25 +85,41 @@ fun AccountScreen(navController: NavController) {
                 .background(TrackProTheme.colors.panel)
                 .verticalScroll(rememberScrollState())
                 .padding(top = padding.calculateTopPadding())
+                .padding(horizontal = Spacing.gutter),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text("TrackBoard", style = TrackProType.titleLarge.atSize(20.sp), color = TrackProTheme.colors.marking)
-                Benefit("Your garage and car photos, backed up and restored on a new phone")
-                Benefit("Your place on every track's leaderboard, next to your personal best")
-                Benefit("Optional. Recording never needs an account or a network")
+            PaddockCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconCircle(Icons.Filled.CloudDone, size = 48.dp)
+                    Spacer(Modifier.width(Spacing.md))
+                    Column {
+                        Text("TrackBoard", style = TrackProType.titleLarge, color = TrackProTheme.colors.marking)
+                        Text("Optional account", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                    }
+                }
+                Spacer(Modifier.height(Spacing.lg))
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                    Benefit("Your garage and car photos, backed up and restored on a new phone")
+                    Benefit("Your place on every track's leaderboard, next to your personal best")
+                    Benefit("Optional. Recording never needs an account or a network")
+                }
             }
-            Bezel()
+
+            PaddockCard {
+                AccountSignInForm(
+                    notice = (account as? AccountState.SignedOut)?.notice,
+                    serverSet = serverUrl.isNotBlank(),
+                    onSignedIn = { navController.popBackStack() }
+                )
+            }
 
             // Most drivers never need to see the address; it is one tap away for those who do.
             Row(
-                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.panel).padding(horizontal = 14.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "SERVER · ${serverUrl.removePrefix("https://").removePrefix("http://").ifBlank { "not set" }}",
+                    text = "Server · ${serverUrl.removePrefix("https://").removePrefix("http://").ifBlank { "not set" }}",
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim,
                     modifier = Modifier.weight(1f)
@@ -103,20 +127,11 @@ fun AccountScreen(navController: NavController) {
                 ToggleChip(text = if (editingServer) "Done" else "Change", selected = false, onClick = { editingServer = !editingServer })
             }
             if (editingServer) {
-                Box(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                PaddockCard {
                     ServerRow(url = serverUrl, onChange = online.settings::setServerUrl)
                 }
             }
-            Bezel()
-
-            Box(Modifier.background(TrackProTheme.colors.field).padding(14.dp)) {
-                AccountSignInForm(
-                    notice = (account as? AccountState.SignedOut)?.notice,
-                    serverSet = serverUrl.isNotBlank(),
-                    onSignedIn = { navController.popBackStack() }
-                )
-            }
-            Bezel()
+            Spacer(Modifier.height(Spacing.xl))
         }
     }
 }
@@ -124,9 +139,14 @@ fun AccountScreen(navController: NavController) {
 @Composable
 private fun Benefit(text: String) {
     Row(verticalAlignment = Alignment.Top) {
-        Box(Modifier.padding(top = 6.dp).size(width = 10.dp, height = 2.dp).background(TrackProTheme.colors.accent))
-        Spacer(Modifier.width(10.dp))
-        Text(text, style = TrackProType.body, color = TrackProTheme.colors.markingDim)
+        Icon(
+            Icons.Filled.CheckCircle,
+            contentDescription = null,
+            tint = TrackProTheme.colors.accent,
+            modifier = Modifier.padding(top = 2.dp).size(18.dp)
+        )
+        Spacer(Modifier.width(Spacing.md))
+        Text(text, style = TrackProType.body, color = TrackProTheme.colors.textMuted)
     }
 }
 
@@ -172,25 +192,28 @@ fun EditProfileScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState())
                 .padding(top = padding.calculateTopPadding())
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                PhotoFrame(
-                    file = online.photos.file(snapshot?.avatarFile),
-                    contentDescription = "Profile photo",
-                    initials = initialsOf(name.ifBlank { "Driver" }),
-                    modifier = Modifier.size(112.dp)
-                )
-                Spacer(Modifier.width(14.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+            PaddockCard(modifier = Modifier.padding(horizontal = Spacing.gutter)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                ) {
+                    PhotoFrame(
+                        file = online.photos.file(snapshot?.avatarFile),
+                        contentDescription = "Profile photo",
+                        initials = initialsOf(name.ifBlank { "Driver" }),
+                        shape = CircleShape,
+                        modifier = Modifier.size(112.dp)
+                    )
                     Text(
-                        if (photoBusy) "UPLOADING…" else "Profile photo",
+                        if (photoBusy) "Uploading…" else "Profile photo",
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )
-                    ToggleChip(text = "Take photo", selected = false, onClick = { if (!photoBusy) picker.fromCamera() }, modifier = Modifier.fillMaxWidth())
-                    ToggleChip(text = "Choose photo", selected = false, onClick = { if (!photoBusy) picker.fromGallery() }, modifier = Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.fillMaxWidth()) {
+                        ToggleChip(text = "Take photo", selected = false, onClick = { if (!photoBusy) picker.fromCamera() }, modifier = Modifier.weight(1f))
+                        ToggleChip(text = "Choose photo", selected = false, onClick = { if (!photoBusy) picker.fromGallery() }, modifier = Modifier.weight(1f))
+                    }
                     if (snapshot?.avatarFile != null) {
                         Text(
                             "Remove photo",
@@ -220,13 +243,15 @@ fun EditProfileScreen(navController: NavController) {
                     }
                 }
             }
-            Bezel()
 
-            SectionLabel("Details", modifier = Modifier.padding(start = 14.dp, top = 18.dp, bottom = 8.dp))
-            Bezel()
+            SectionTitle("Details")
             Column(
-                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.gutter)
+                    .paddockCard()
+                    .padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 OutlinedTextField(
                     value = name,
@@ -277,8 +302,7 @@ fun EditProfileScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            Bezel()
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Spacing.xl))
         }
     }
 }

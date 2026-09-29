@@ -78,7 +78,7 @@ fun CarCreationScreen(
     val scrolled by scrollState.isScrolledUnderChrome()
 
     ScreenScaffold(
-        title = "Vehicle Setup",
+        title = "Add car",
         onBack = onBack,
         accent = TrackProTheme.colors.accent,
         contentScrolled = scrolled
@@ -97,7 +97,7 @@ fun CarCreationScreen(
     ) {
             AppCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
 
-                SectionLabel("Basic Info (Required)", modifier = Modifier.padding(vertical = Spacing.sm))
+                SectionLabel("Basics (required)", modifier = Modifier.padding(vertical = Spacing.sm))
                 CustomTextField("Manufacturer", manufacturer, leadingIcon = Icons.Default.Business) { manufacturer = it }
                 CustomTextField("Model", model, leadingIcon = Icons.Default.DirectionsCar) { model = it }
                 CustomTextField("Year", year, leadingIcon = Icons.Default.Event) { year = it }
@@ -106,28 +106,28 @@ fun CarCreationScreen(
                 CustomTextField("Horsepower", horsepower, true, Icons.Default.FlashOn) { horsepower = it }
                 CustomTextField("Torque (Nm)", torque, true, Icons.Default.Settings) { torque = it }
                 CustomTextField("Weight (kg)", weight, true, Icons.Default.FitnessCenter) { weight = it }
-                CustomTextField("Top Speed (${UnitFormatter.speedUnitLabel(useMetric)})", topSpeed, true, Icons.Default.Speed) { topSpeed = it }
+                CustomTextField("Top speed (${UnitFormatter.speedUnitLabel(useMetric)})", topSpeed, true, Icons.Default.Speed) { topSpeed = it }
                 CustomTextField(
-                    if (useMetric) "0-100 KM/H (s)" else "0-60 MPH (s)",
+                    if (useMetric) "0-100 km/h (s)" else "0-60 mph (s)",
                     acceleration, true, Icons.Default.Timer
                 ) { acceleration = it }
-                CustomTextField("Fuel Capacity (L)", fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
+                CustomTextField("Fuel capacity (l)", fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
 
                 SectionLabel("Configuration", modifier = Modifier.padding(vertical = Spacing.sm))
-                AppDropdownField("Engine Type", jsonOptions.engineTypes, selectedEngineType, { it }, { selectedEngineType = it })
+                AppDropdownField("Engine type", jsonOptions.engineTypes, selectedEngineType, { it }, { selectedEngineType = it })
                 AppDropdownField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain, { it }, { selectedDrivetrain = it })
-                AppDropdownField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType, { it }, { selectedFuelType = it })
-                AppDropdownField("Tire Type", jsonOptions.tireTypes, selectedTireType, { it }, { selectedTireType = it })
+                AppDropdownField("Fuel type", jsonOptions.fuelTypes, selectedFuelType, { it }, { selectedFuelType = it })
+                AppDropdownField("Tyres", jsonOptions.tireTypes, selectedTireType, { it }, { selectedTireType = it })
                 AppDropdownField("Transmission", jsonOptions.transmissions, selectedTransmission, { it }, { selectedTransmission = it })
                 AppDropdownField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType, { it }, { selectedSuspensionType = it })
 
                 Spacer(modifier = Modifier.height(Spacing.md))
 
                 PrimaryButton(
-                    text = "Save Vehicle",
+                    text = "Save car",
                     onClick = {
                         if (manufacturer.isBlank() || model.isBlank() || year.isBlank()) {
-                            Toast.makeText(context, "Fill in required fields.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Add the make, model and year first.", Toast.LENGTH_SHORT).show()
                             return@PrimaryButton
                         }
 
@@ -155,9 +155,8 @@ fun CarCreationScreen(
                             database.vehicleInformationDAO().insertVehicle(vehicle)
                         }
 
-                        Toast.makeText(context, "Vehicle saved successfully.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Car saved to your garage.", Toast.LENGTH_SHORT).show()
                     },
-                    accent = TrackProTheme.colors.deltaGood,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
