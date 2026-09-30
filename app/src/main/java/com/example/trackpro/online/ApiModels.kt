@@ -364,3 +364,83 @@ data class ProblemDetails(
     val code: String? = null,
     val errors: Map<String, List<String>>? = null,
 )
+
+// ── Events (track days) ──
+
+@Serializable
+enum class ApiEventStatus {
+    @SerialName("Upcoming") Upcoming,
+    @SerialName("Live") Live,
+    @SerialName("Finished") Finished,
+}
+
+@Serializable
+data class EventGroup(val id: String, val name: String)
+
+@Serializable
+data class EventSummary(
+    val id: String,
+    val name: String,
+    val trackId: String,
+    val trackName: String,
+    val trackCountry: String = "",
+    val startsAt: String,
+    val endsAt: String,
+    val status: ApiEventStatus,
+    val hostDisplayName: String = "",
+    val entryCount: Int = 0,
+    val isHost: Boolean = false,
+    val isJoined: Boolean = false,
+    val myGroupId: String? = null,
+    /** Only sent to the host. */
+    val joinCode: String? = null,
+)
+
+@Serializable
+data class EventEntry(val userId: String, val displayName: String, val groupId: String? = null)
+
+@Serializable
+data class EventDetail(
+    val event: EventSummary,
+    val groups: List<EventGroup> = emptyList(),
+    val entries: List<EventEntry> = emptyList(),
+)
+
+@Serializable
+data class JoinEventRequest(val code: String, val groupId: String? = null)
+
+@Serializable
+data class SetEntryGroupRequest(val groupId: String?)
+
+@Serializable
+data class EventBoardEntry(
+    val rank: Int? = null,
+    val groupRank: Int? = null,
+    val userId: String,
+    val displayName: String,
+    val groupId: String? = null,
+    val bestLapMs: Int? = null,
+    val gapToLeaderMs: Int? = null,
+    val gapToGroupLeaderMs: Int? = null,
+    val lapCount: Int = 0,
+    val lastLapMs: Int? = null,
+    val lastLapIsBest: Boolean = false,
+    val onTrack: Boolean = false,
+    val lastActivityAt: String? = null,
+    val vehicle: LeaderboardVehicle? = null,
+    val gpsSource: ApiGpsSource? = null,
+)
+
+@Serializable
+data class EventBoard(
+    val eventId: String,
+    val name: String,
+    val trackId: String,
+    val trackName: String,
+    val status: ApiEventStatus,
+    val startsAt: String,
+    val endsAt: String,
+    val groups: List<EventGroup> = emptyList(),
+    val entries: List<EventBoardEntry> = emptyList(),
+    val generatedAt: String,
+)

@@ -44,7 +44,7 @@ data class DashTab(val route: String, val label: String, val icon: ImageVector)
 val DashTabBarHeight = 68.dp
 
 /**
- * The four tabs, as a floating rounded bar in the thumb zone.
+ * The tabs, as a floating rounded bar in the thumb zone.
  *
  * The selected tab lights up in orange with a soft orange pill behind its icon; the rest stay
  * quiet. Hidden on the two HUDs: nothing on a driving surface may be one mis-tap from

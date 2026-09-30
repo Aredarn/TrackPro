@@ -2,7 +2,14 @@ package com.example.trackpro.online
 
 import android.content.Context
 import androidx.room.withTransaction
+import android.util.Log
+import com.example.trackpro.dataClasses.RemoteLink
 import com.example.trackpro.managerClasses.ESPDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import com.example.trackpro.managerClasses.utilities.PhotoStore
 
 /**
@@ -32,6 +39,38 @@ class OnlineServices(private val context: Context, private val database: ESPData
         ProfileRepository(context, accountApi, auth, database, photos)
     }
 
+    /** Same client again: the track-day endpoints. */
+    val eventsApi: TrackBoardEventsApi = api as TrackBoardEventsApi
+
+    val events: EventRepository by lazy {
+        EventRepository(
+            context = context,
+            api = eventsApi,
+            auth = auth,
+            dao = database.syncDao(),
+            remoteTrackIdFor = ::remoteTrackIdFor,
+            transaction = { block -> database.withTransaction { block() } },
+        )
+    }
+
+    /**
+     * One upload at a time: the background sync and the per-lap live push share links, and two
+     * writers at once could each post the same session under a different id.
+     */
+    val syncLock = Mutex()
+
+    /**
+     * Called after every completed lap. Sends the running session at once when it belongs to a
+     * joined event, so the event board moves within seconds of the lap.
+     */
+    fun onLapCompleted(sessionId: Long, scope: CoroutineScope) {
+        if (!auth.isSignedIn || events.joined.value.isEmpty()) return
+        scope.launch(Dispatchers.IO) {
+            runCatching { syncLock.withLock { syncEngine().pushLive(sessionId) } }
+                .onFailure { Log.w("TrackBoard", "Live event upload failed; the end-of-session sync retries", it) }
+        }
+    }
+
     fun syncEngine(): SyncEngine = SyncEngine(
         api = api,
         auth = auth,
@@ -41,6 +80,7 @@ class OnlineServices(private val context: Context, private val database: ESPData
         appVersion = appVersion,
         garage = GarageSync(accountApi, api, auth, database.syncDao(), photos),
         transaction = { block -> database.withTransaction { block() } },
+        events = { events.joined.value },
     )
 
     /** The server id a local track's leaderboard lives under, or null if it has none yet. */
@@ -48,7 +88,8 @@ class OnlineServices(private val context: Context, private val database: ESPData
         val dao = database.syncDao()
         val track = dao.getTrack(localTrackId) ?: return null
         premadeTracks.remoteIdFor(track, dao.getTrackPoints(localTrackId))?.let { return it }
-        return dao.getLink(com.example.trackpro.dataClasses.RemoteLink.KIND_TRACK, localTrackId)
+        dao.getLink(RemoteLink.KIND_SHARED_TRACK, localTrackId)?.let { return it.remoteId }
+        return dao.getLink(RemoteLink.KIND_TRACK, localTrackId)
             ?.takeIf { it.lastError == null }
             ?.remoteId
     }

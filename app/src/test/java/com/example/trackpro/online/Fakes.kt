@@ -157,6 +157,7 @@ class FakeSyncDao : SyncDao {
     override suspend fun getFinishedTrackSessions() =
         sessions.filter { it.trackId != null && it.trackId != -1L && it.endTime != null }
     override suspend fun getSession(id: Long) = sessions.find { it.id == id }
+    override suspend fun getRunningSessionIds() = sessions.filter { it.endTime == null }.map { it.id }
     override suspend fun getLaps(sessionId: Long) = laps.filter { it.sessionid == sessionId }.sortedBy { it.lapnumber }
     override suspend fun getSectors(lapIds: List<Long>) = sectors.filter { it.lapid in lapIds }
     override suspend fun getTrack(trackId: Long) = tracks.find { it.trackId == trackId }

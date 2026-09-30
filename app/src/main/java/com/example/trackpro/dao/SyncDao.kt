@@ -73,6 +73,10 @@ interface SyncDao {
     @Query("SELECT * FROM session_data WHERE id = :id")
     suspend fun getSession(id: Long): SessionData?
 
+    /** Sessions still recording. Sync never withdraws one of these: a live event upload may be in flight. */
+    @Query("SELECT id FROM session_data WHERE endTime IS NULL")
+    suspend fun getRunningSessionIds(): List<Long>
+
     @Query("SELECT * FROM lap_time_data WHERE sessionid = :sessionId ORDER BY lapnumber ASC")
     suspend fun getLaps(sessionId: Long): List<LapTimeData>
 

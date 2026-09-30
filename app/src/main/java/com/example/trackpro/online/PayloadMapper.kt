@@ -126,6 +126,8 @@ object PayloadMapper {
         remoteTrackId: String,
         remoteVehicleId: String?,
         appVersion: String?,
+        /** Ranked for the public leaderboard; Private when it goes up only for an event board. */
+        visibility: ApiSessionVisibility = ApiSessionVisibility.Ranked,
     ): SessionWrite? {
         val source = gpsSource(session.gpsSource) ?: return null
         val sectorsByLap = sectors.groupBy { it.lapid }
@@ -159,7 +161,7 @@ object PayloadMapper {
             vehicleId = remoteVehicleId,
             trackId = remoteTrackId,
             gpsSource = source,
-            visibility = ApiSessionVisibility.Ranked,
+            visibility = visibility,
             voided = session.voided,
             weather = weather(session),
             appVersion = appVersion?.take(40),

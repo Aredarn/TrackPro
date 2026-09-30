@@ -3,6 +3,7 @@ package com.example.trackpro.online
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -98,11 +99,35 @@ interface TrackBoardAccountApi {
     suspend fun download(url: String): ByteArray?
 }
 
+/**
+ * Track days: joining with a code and reading an event's live board. Its own interface, like
+ * [TrackBoardAccountApi], so the sync fakes in tests do not have to grow with it.
+ */
+interface TrackBoardEventsApi {
+    /** Events the caller hosts or joined, newest first. */
+    suspend fun myEvents(accessToken: String): List<EventSummary>
+
+    /** Throws a 404 [ApiException] when no event has the code. */
+    suspend fun eventByCode(accessToken: String, code: String): EventDetail
+
+    /** Joins, or changes group when already joined. Throws a 409 when the event has finished. */
+    suspend fun joinEvent(accessToken: String, code: String, groupId: String?): EventDetail
+
+    /** Succeeds when already gone. */
+    suspend fun leaveEvent(accessToken: String, eventId: String, userId: String)
+
+    /** Public: the token only matters for a stale one, which the server answers with 401. */
+    suspend fun eventBoard(accessToken: String?, eventId: String): EventBoard?
+
+    /** A published track with its geometry, for driving an event on it. Public. */
+    suspend fun publishedTrack(id: String): TrackDetail?
+}
+
 class OkHttpTrackBoardApi(
     /** Read on every call, so a changed server address in Settings applies immediately. */
     private val baseUrl: () -> String?,
     private val client: OkHttpClient = defaultClient(),
-) : TrackBoardApi, TrackBoardAccountApi {
+) : TrackBoardApi, TrackBoardAccountApi, TrackBoardEventsApi {
 
     override suspend fun register(request: RegisterRequest): AuthResponse =
         send("POST", "auth/register", null, request, RegisterRequest.serializer(), AuthResponse.serializer())
@@ -255,6 +280,37 @@ class OkHttpTrackBoardApi(
             }
         }
     }
+
+    // ── Events ──
+
+    override suspend fun myEvents(accessToken: String): List<EventSummary> =
+        get("events", accessToken, ListSerializer(EventSummary.serializer()))
+
+    override suspend fun eventByCode(accessToken: String, code: String): EventDetail =
+        get("events/code/${code.filter(Char::isLetterOrDigit)}", accessToken, EventDetail.serializer())
+
+    override suspend fun joinEvent(accessToken: String, code: String, groupId: String?): EventDetail =
+        send("POST", "events/join", accessToken, JoinEventRequest(code, groupId), JoinEventRequest.serializer(), EventDetail.serializer())
+
+    override suspend fun leaveEvent(accessToken: String, eventId: String, userId: String) {
+        call("DELETE", "events/$eventId/entries/$userId", accessToken, null).use { response ->
+            if (response.code != 404) response.requireSuccess()
+        }
+    }
+
+    override suspend fun eventBoard(accessToken: String?, eventId: String): EventBoard? =
+        call("GET", "events/$eventId/board", accessToken, null).use { response ->
+            if (response.code == 404) return@use null
+            response.requireSuccess()
+            json.decodeFromString(EventBoard.serializer(), response.bodyText())
+        }
+
+    override suspend fun publishedTrack(id: String): TrackDetail? =
+        call("GET", "tracks/$id", null, null).use { response ->
+            if (response.code == 404) return@use null
+            response.requireSuccess()
+            json.decodeFromString(TrackDetail.serializer(), response.bodyText())
+        }
 
     // ── Plumbing ──
 

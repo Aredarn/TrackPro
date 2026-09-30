@@ -104,6 +104,9 @@ import com.example.trackpro.managerClasses.SessionManager
 import com.example.trackpro.online.OnlineServices
 import com.example.trackpro.online.SyncScheduler
 import com.example.trackpro.online.ui.LeaderboardScreen
+import com.example.trackpro.online.ui.EventsScreen
+import com.example.trackpro.online.ui.EventBoardScreen
+import androidx.compose.material.icons.filled.Flag
 import com.example.trackpro.managerClasses.gpsDataManagers.GpsManager
 import com.example.trackpro.managerClasses.gpsDataManagers.PhoneGpsProvider
 import com.example.trackpro.models.GpsProviderType
@@ -399,7 +402,7 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val backStack by navController.currentBackStackEntryAsState()
                 val currentRoute = backStack?.destination?.route
-                // The bar belongs to the four tab roots only. Every screen reached from a tab
+                // The bar belongs to the tab roots only. Every screen reached from a tab
                 // is a step down with its own back, and the HUDs must never carry it.
                 val selectedTab = MainTabs.firstOrNull { tab -> currentRoute?.substringBefore('?') == tab.route }
 
@@ -445,6 +448,21 @@ class MainActivity : ComponentActivity() {
                             navController = navController,
                             vehicleViewModel = vehicleFULLViewModel,
                             trackViewModel = trackViewModel
+                        )
+                    }
+                    composable("events") {
+                        EventsScreen(
+                            onOpenEvent = { id -> navController.navigate("event/$id") },
+                            onSignIn = { navController.navigate("account") }
+                        )
+                    }
+                    composable(
+                        "event/{eventId}",
+                        arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+                    ) { entry ->
+                        EventBoardScreen(
+                            eventId = entry.arguments?.getString("eventId").orEmpty(),
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable("profile") {
@@ -557,10 +575,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** The four places the app has. Everything else is reached from one of them. */
+/** The places the app has. Everything else is reached from one of them. */
 private val MainTabs = listOf(
     DashTab("main", "Drive", Icons.Default.Speed),
     DashTab("history", "History", Icons.Default.History),
+    DashTab("events", "Events", Icons.Default.Flag),
     DashTab("garage", "Garage", Icons.Default.DirectionsCar),
     DashTab("profile", "Profile", Icons.Default.Person),
 )

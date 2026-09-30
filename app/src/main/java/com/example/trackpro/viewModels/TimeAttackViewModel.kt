@@ -283,6 +283,8 @@ class TimeAttackViewModel(
                 database.lapTimeDataDAO().completeLap(_lapId, lapTimeStr, lap.signalGap)
                 Log.d("TimeAttack", "Lap $_lapId COMPLETED with time $lapTimeStr" +
                         if (lap.signalGap) " (GPS gap during lap)" else "")
+                // A joined event's board takes the lap now, not when the session ends.
+                app.online.onLapCompleted(_sessionId, app.applicationScope)
 
                 // 2. For circuits, immediately start the next lap
                 if (_timingMode.value is TimingMode.Circuit) {
@@ -329,6 +331,7 @@ class TimeAttackViewModel(
                 // Mark the current sprint as COMPLETED, with whether GPS dropped out during it
                 database.lapTimeDataDAO().completeLap(_lapId, sprintTimeStr, run.signalGap)
                 Log.d("TimeAttack", "Sprint $_lapId COMPLETED with time $sprintTimeStr")
+                app.online.onLapCompleted(_sessionId, app.applicationScope)
 
                 // Don't create a new lap for sprints - user manually starts each run
             } catch (e: Exception) {

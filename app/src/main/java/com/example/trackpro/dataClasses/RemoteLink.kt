@@ -39,6 +39,11 @@ data class RemoteLink(
          * deleting the local copy can never delete the shared track other drivers' laps are on.
          */
         const val KIND_PREMADE_TRACK = "premade_track"
+        /**
+         * Someone else's published track, downloaded to drive an event on it. Like
+         * [KIND_PREMADE_TRACK], it is never uploaded or deleted on the server from here.
+         */
+        const val KIND_SHARED_TRACK = "shared_track"
         const val KIND_SESSION = "session"
         /**
          * A car's photo. [remoteId] holds the photo's public URL on the account, so a change

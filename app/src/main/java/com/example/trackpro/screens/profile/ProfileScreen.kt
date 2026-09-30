@@ -576,6 +576,7 @@ private fun AccountGroup(onEdit: () -> Unit, onSignedOut: () -> Unit) {
         LinkRow(Icons.AutoMirrored.Filled.Logout, "Sign out", "Your records stay on this phone") {
             scope.launch {
                 SyncScheduler.cancelAll(context)
+                online.events.clear()
                 online.auth.signOut()
                 onSignedOut()
             }
@@ -639,6 +640,7 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
                     scope.launch {
                         try {
                             online.profile.deleteAccount()
+                            online.events.clear()
                             onDeleted()
                         } catch (e: ApiException) {
                             error = e.message
