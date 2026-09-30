@@ -159,6 +159,28 @@ data class TrackSummary(
     val geometryLocked: Boolean = false,
 )
 
+/** One page of the caller's own tracks (`GET /tracks?mine=true`), without their geometry. */
+@Serializable
+data class TrackPage(
+    val items: List<TrackSummary>,
+    val page: Int,
+    val pageSize: Int,
+    val totalCount: Long,
+)
+
+/** A whole track as the server returns it. Points arrive in `seq` order. */
+@Serializable
+data class TrackDetail(
+    val id: String,
+    val name: String,
+    val country: String = "",
+    val type: ApiTrackType = ApiTrackType.Circuit,
+    val visibility: ApiTrackVisibility,
+    val lengthMeters: Double? = null,
+    /** Same shape up and down, so the write type serves for reading too. */
+    val points: List<TrackPointWrite> = emptyList(),
+)
+
 // ── Sessions ──
 
 @Serializable
@@ -196,6 +218,39 @@ data class SessionWrite(
     val weather: WeatherWrite? = null,
     val appVersion: String? = null,
     val laps: List<LapWrite>,
+)
+
+/** A session in the caller's list (`GET /sessions`): enough to decide whether to fetch it. */
+@Serializable
+data class SessionSummary(
+    val id: String,
+    val startedAt: String,
+    val trackId: String? = null,
+    val vehicleId: String? = null,
+    val lapCount: Int = 0,
+)
+
+@Serializable
+data class SessionPage(
+    val items: List<SessionSummary>,
+    val page: Int,
+    val pageSize: Int,
+    val totalCount: Long,
+)
+
+/** A whole session as the server returns it. Laps keep the upload's shape; extra fields are ignored. */
+@Serializable
+data class SessionDetail(
+    val id: String,
+    val name: String,
+    val startedAt: String,
+    val endedAt: String? = null,
+    val trackId: String? = null,
+    val vehicleId: String? = null,
+    val gpsSource: ApiGpsSource,
+    val voided: Boolean = false,
+    val weather: WeatherWrite? = null,
+    val laps: List<LapWrite> = emptyList(),
 )
 
 // ── Leaderboards ──

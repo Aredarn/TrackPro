@@ -100,6 +100,45 @@ interface SyncDao {
     @Update
     suspend fun updateVehicle(vehicle: VehicleInformationData)
 
+    // ── Restore writes ──
+    // Plain inserts: the restore wraps each record's rows in one transaction itself, so a
+    // session is never left on the phone without its laps.
+
+    @Query("SELECT * FROM track_main_data ORDER BY trackId")
+    suspend fun getTracks(): List<TrackMainData>
+
+    @Insert
+    suspend fun insertTrack(track: TrackMainData): Long
+
+    /** In list order, which becomes row id order - the order the timing code reads. */
+    @Insert
+    suspend fun insertTrackPoints(points: List<TrackCoordinatesData>)
+
+    @Insert
+    suspend fun insertSession(session: SessionData): Long
+
+    @Insert
+    suspend fun insertLap(lap: LapTimeData): Long
+
+    @Insert
+    suspend fun insertSectors(sectors: List<SectorTimeData>)
+
+    /** Whether any lap of the session has recorded GPS points. A restored session never does. */
+    @Query(
+        """
+        SELECT EXISTS(SELECT 1 FROM lap_info_data
+        WHERE lapid IN (SELECT id FROM lap_time_data WHERE sessionid = :sessionId))
+        """
+    )
+    suspend fun hasGpsTrace(sessionId: Long): Boolean
+
+    @Query("UPDATE session_data SET vehicleId = :vehicleId WHERE id = :sessionId")
+    suspend fun setSessionVehicle(sessionId: Long, vehicleId: Long)
+
+    /** Laps and sectors go with it, by foreign-key cascade. */
+    @Query("DELETE FROM session_data WHERE id = :sessionId")
+    suspend fun deleteSession(sessionId: Long)
+
     /** Forgets every server link. Used when the account they point into is deleted. */
     @Query("DELETE FROM remote_link")
     suspend fun deleteAllLinks()

@@ -124,6 +124,56 @@ class TrackBoardApiTest {
     }
 
     @Test
+    fun `a session reads back with its laps, ignoring the leaderboard fields`() = runBlocking {
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"id":"s-1","name":"Time Attack","startedAt":"2026-09-28T10:00:00.25+00:00",
+                   "endedAt":"2026-09-28T10:20:00+00:00","trackId":"t-1","trackName":"Kakucs","vehicleId":null,
+                   "gpsSource":"Wifi","visibility":"Ranked","voided":false,"lapCount":1,"bestLapMs":41910,
+                   "weather":{"tempC":18.5,"humidityPct":60,"precipitationMm":null,"weatherCode":2,
+                     "windKph":null,"windDirDeg":null,"pressureHpa":null},"appVersion":"1.1",
+                   "laps":[{"lapNumber":1,"timeMs":41910,"signalGap":false,
+                     "sectors":[{"sectorIndex":0,"splitMs":20000}],"countsForLeaderboard":true,"leaderboardRank":3}],
+                   "createdAt":"2026-09-28T10:21:00+00:00","updatedAt":"2026-09-28T10:21:00+00:00"}"""
+            )
+        )
+
+        val session = api.getSession("t", "s-1")!!
+
+        assertEquals("/api/v1/sessions/s-1", server.takeRequest().path)
+        assertEquals(ApiGpsSource.Wifi, session.gpsSource)
+        assertEquals(18.5, session.weather!!.tempC!!, 0.0)
+        assertEquals(20_000, session.laps.single().sectors.single().splitMs)
+        // .NET's offset form, which Instant.parse alone rejects before API 34.
+        assertEquals(1_790_589_600_250L, AccountRestore.parseInstant(session.startedAt))
+    }
+
+    @Test
+    fun `a session that is gone reads as none`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"status":404}"""))
+        assertNull(api.getSession("t", "s-1"))
+    }
+
+    @Test
+    fun `listings ask for the driver's own records, a page at a time`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"items":[],"page":2,"pageSize":100,"totalCount":0}"""))
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"items":[{"id":"s-1","name":"x","startedAt":"2026-09-28T10:00:00+00:00","trackId":"t-1",
+                   "vehicleId":null,"gpsSource":"Wifi","visibility":"Ranked","voided":false,"lapCount":4,"bestLapMs":1}],
+                   "page":1,"pageSize":100,"totalCount":1,"totalPages":1,"hasNext":false,"hasPrevious":false}"""
+            )
+        )
+
+        api.listMyTracks("t", 2, 100)
+        val sessions = api.listSessions("t", 1, 100)
+
+        assertEquals("/api/v1/tracks?mine=true&page=2&pageSize=100", server.takeRequest().path)
+        assertEquals("/api/v1/sessions?page=1&pageSize=100", server.takeRequest().path)
+        assertEquals(4, sessions.items.single().lapCount)
+    }
+
+    @Test
     fun `deleting something already gone succeeds`() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(404))
         api.deleteSession("t", "gone")

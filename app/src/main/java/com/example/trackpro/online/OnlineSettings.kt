@@ -13,7 +13,7 @@ data class SyncReport(
     val uploaded: Int = 0,
     val unchanged: Int = 0,
     val withdrawn: Int = 0,
-    /** Cars and photos restored from the account onto this phone. */
+    /** Cars, photos, tracks and sessions restored from the account onto this phone. */
     val downloaded: Int = 0,
     val failed: Int = 0,
     /** The first problem, phrased for the driver. */
