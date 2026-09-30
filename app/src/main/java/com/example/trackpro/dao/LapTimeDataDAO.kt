@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.example.trackpro.dataClasses.LapTimeData
+import com.example.trackpro.models.SessionBestLap
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -69,6 +70,17 @@ interface LapTimeDataDAO {
     LIMIT 1
     """)
     suspend fun getBestLapForTrack(trackId: Long): LapTimeData?
+
+    // Every session's fastest completed lap, for listing and ordering sessions by pace. MIN
+    // over the stored "MM:SS.hh" text is MIN over time because the format is fixed-width;
+    // the unfinished and invalid markers are excluded, as they are wherever laps are ranked.
+    @Query("""
+    SELECT sessionid AS sessionId, MIN(laptime) AS bestLap FROM lap_time_data
+    WHERE laptime != 'IN PROGRESS'
+    AND laptime != 'INVALID'
+    GROUP BY sessionid
+    """)
+    fun getBestLapPerSession(): Flow<List<SessionBestLap>>
 
     // The fastest laps on a track that are fit to be a live-delta reference, fastest first:
     // completed, and with no GPS gap - a gap is a straight chord through the lap's trace,

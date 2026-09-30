@@ -291,26 +291,26 @@ class GarageSync(
             manufacturer.trim().equals(local.manufacturer.trim(), ignoreCase = true) &&
                 model.trim().equals(local.model.trim(), ignoreCase = true) &&
                 year == local.year
-
-        /** The account's copy as a local row, keeping the local id and photo when there is one. */
-        private fun VehicleResponse.applyTo(local: VehicleInformationData?) = VehicleInformationData(
-            vehicleId = local?.vehicleId ?: 0,
-            manufacturer = manufacturer,
-            model = model,
-            year = year,
-            engineType = engineType,
-            horsepower = horsepower,
-            torque = torque,
-            weight = weight,
-            topSpeed = topSpeed,
-            acceleration = acceleration,
-            drivetrain = drivetrain,
-            fuelType = fuelType,
-            tireType = tireType,
-            fuelCapacity = fuelCapacity,
-            transmission = transmission,
-            suspensionType = suspensionType,
-            photoFile = local?.photoFile,
-        )
     }
 }
+
+/** The account's copy as a local row, keeping the local id and photo when there is one. */
+internal fun VehicleResponse.applyTo(local: VehicleInformationData?) = VehicleInformationData(
+    vehicleId = local?.vehicleId ?: 0,
+    manufacturer = manufacturer,
+    model = model,
+    year = year,
+    engineType = engineType,
+    horsepower = horsepower,
+    torque = torque,
+    weight = weight,
+    topSpeed = topSpeed,
+    acceleration = acceleration,
+    drivetrain = drivetrain,
+    fuelType = fuelType,
+    tireType = tireType,
+    fuelCapacity = fuelCapacity,
+    transmission = transmission,
+    suspensionType = suspensionType,
+    photoFile = local?.photoFile,
+)

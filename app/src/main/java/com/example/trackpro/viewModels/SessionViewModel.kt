@@ -8,8 +8,10 @@ import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.models.DragSessionWithVehicle
 import com.example.trackpro.models.LoadState
+import com.example.trackpro.managerClasses.utilities.toLapTimeMillisOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
@@ -20,6 +22,10 @@ class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
     // 'not looked yet', not 'nothing here'.
     private val _loadState = MutableStateFlow<LoadState>(LoadState.Loading)
     val loadState = _loadState.asStateFlow()
+
+    /** Each session's best completed lap in ms, by session id. Sessions without one are absent. */
+    private val _bestLapMs = MutableStateFlow<Map<Long, Long>>(emptyMap())
+    val bestLapMs = _bestLapMs.asStateFlow()
 
     private val _sessionsWithVehicles = MutableStateFlow<List<DragSessionWithVehicle>>(emptyList())
     val sessionsWithVehicle = _sessionsWithVehicles.asStateFlow()
@@ -38,6 +44,17 @@ class SessionViewModel(private val database: ESPDatabase) : ViewModel() {
             } catch (e: Exception) {
                 _loadState.value = LoadState.Failed("Could not read sessions")
             }
+        }
+        viewModelScope.launch {
+            // Only for ordering and display, so a failure here leaves the list without lap
+            // times rather than failing it.
+            database.lapTimeDataDAO().getBestLapPerSession()
+                .catch { /* keep whatever was last read */ }
+                .collect { rows ->
+                    _bestLapMs.value = rows.mapNotNull { row ->
+                        row.bestLap.toLapTimeMillisOrNull()?.let { row.sessionId to it }
+                    }.toMap()
+                }
         }
         viewModelScope.launch {
             database.sessionDataDao().getAllTrackSessionsWithVehicles().collect {

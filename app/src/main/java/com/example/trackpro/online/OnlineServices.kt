@@ -1,6 +1,7 @@
 package com.example.trackpro.online
 
 import android.content.Context
+import androidx.room.withTransaction
 import com.example.trackpro.managerClasses.ESPDatabase
 import com.example.trackpro.managerClasses.utilities.PhotoStore
 
@@ -39,6 +40,7 @@ class OnlineServices(private val context: Context, private val database: ESPData
         sharingEnabled = { settings.sharingEnabled.value },
         appVersion = appVersion,
         garage = GarageSync(accountApi, api, auth, database.syncDao(), photos),
+        transaction = { block -> database.withTransaction { block() } },
     )
 
     /** The server id a local track's leaderboard lives under, or null if it has none yet. */

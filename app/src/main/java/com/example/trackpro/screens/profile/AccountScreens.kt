@@ -99,7 +99,7 @@ fun AccountScreen(navController: NavController) {
                 }
                 Spacer(Modifier.height(Spacing.lg))
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                    Benefit("Your garage and car photos, backed up and restored on a new phone")
+                    Benefit("Your garage, tracks and shared sessions, backed up and restored on a new phone")
                     Benefit("Your place on every track's leaderboard, next to your personal best")
                     Benefit("Optional. Recording never needs an account or a network")
                 }

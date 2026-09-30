@@ -52,6 +52,21 @@ interface TrackBoardApi {
     /** Null when the track does not exist or is not visible to this caller. */
     suspend fun getTrack(accessToken: String?, id: String): TrackSummary?
 
+    /** Like [getTrack], with the geometry. */
+    suspend fun getTrackDetail(accessToken: String, id: String): TrackDetail?
+
+    /** One page of the caller's own tracks, published and private, 1-based. */
+    suspend fun listMyTracks(accessToken: String, page: Int, pageSize: Int = 100): TrackPage
+
+    /** One page of the caller's sessions, newest first, 1-based. */
+    suspend fun listSessions(accessToken: String, page: Int, pageSize: Int = 100): SessionPage
+
+    /** Null when the session no longer exists. */
+    suspend fun getSession(accessToken: String, id: String): SessionDetail?
+
+    /** Null when the car no longer exists or is not the caller's. */
+    suspend fun getVehicle(accessToken: String, id: String): VehicleResponse?
+
     /** Null when the track does not exist or is not published. Public: the token is optional. */
     suspend fun getLeaderboard(accessToken: String?, trackId: String, limit: Int): Leaderboard?
 }
@@ -129,6 +144,33 @@ class OkHttpTrackBoardApi(
             if (response.code == 404) return@use null
             response.requireSuccess()
             json.decodeFromString(TrackSummary.serializer(), response.bodyText())
+        }
+
+    override suspend fun getTrackDetail(accessToken: String, id: String): TrackDetail? =
+        call("GET", "tracks/$id", accessToken, null).use { response ->
+            if (response.code == 404) return@use null
+            response.requireSuccess()
+            json.decodeFromString(TrackDetail.serializer(), response.bodyText())
+        }
+
+    override suspend fun listMyTracks(accessToken: String, page: Int, pageSize: Int): TrackPage =
+        get("tracks?mine=true&page=$page&pageSize=$pageSize", accessToken, TrackPage.serializer())
+
+    override suspend fun listSessions(accessToken: String, page: Int, pageSize: Int): SessionPage =
+        get("sessions?page=$page&pageSize=$pageSize", accessToken, SessionPage.serializer())
+
+    override suspend fun getSession(accessToken: String, id: String): SessionDetail? =
+        call("GET", "sessions/$id", accessToken, null).use { response ->
+            if (response.code == 404) return@use null
+            response.requireSuccess()
+            json.decodeFromString(SessionDetail.serializer(), response.bodyText())
+        }
+
+    override suspend fun getVehicle(accessToken: String, id: String): VehicleResponse? =
+        call("GET", "vehicles/$id", accessToken, null).use { response ->
+            if (response.code == 404 || response.code == 403) return@use null
+            response.requireSuccess()
+            json.decodeFromString(VehicleResponse.serializer(), response.bodyText())
         }
 
     override suspend fun getLeaderboard(accessToken: String?, trackId: String, limit: Int): Leaderboard? =

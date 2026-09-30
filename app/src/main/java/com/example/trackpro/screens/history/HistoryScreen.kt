@@ -30,6 +30,10 @@ fun HistoryScreen(
     initial: HistorySection = HistorySection.Track,
 ) {
     var section by rememberSaveable(initial) { mutableStateOf(initial) }
+    // One filter per section, held here rather than in each list so switching between Track
+    // and Drag keeps both, and saved so opening a session and coming back keeps them too.
+    var trackFilter by rememberSaveable(stateSaver = SessionFilterSaver) { mutableStateOf(SessionFilter()) }
+    var dragFilter by rememberSaveable(stateSaver = SessionFilterSaver) { mutableStateOf(SessionFilter()) }
     val header: @Composable () -> Unit = {
         SectionSwitch(
             options = listOf(HistorySection.Track to "Track", HistorySection.Drag to "Drag"),
@@ -46,6 +50,8 @@ fun HistoryScreen(
             onBack = null,
             header = header,
             title = "History",
+            filter = trackFilter,
+            onFilterChange = { trackFilter = it },
         )
         HistorySection.Drag -> DragTimesListView(
             viewModel = dragSessionViewModel,
@@ -53,6 +59,8 @@ fun HistoryScreen(
             onBack = null,
             header = header,
             title = "History",
+            filter = dragFilter,
+            onFilterChange = { dragFilter = it },
         )
     }
 }
