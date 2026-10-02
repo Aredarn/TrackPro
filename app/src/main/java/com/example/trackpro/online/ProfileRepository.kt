@@ -144,9 +144,11 @@ class ProfileRepository(
     /**
      * Deletes the account on the server, then everything on this phone that pointed at it.
      * The phone's own records — cars, tracks, sessions — stay: they were never the account's.
+     * The server wants the account [password] as well as the token. A wrong one throws an
+     * [ApiException] and changes nothing, here or there.
      */
-    suspend fun deleteAccount() {
-        auth.authorized { api.deleteAccount(it) }
+    suspend fun deleteAccount(password: String) {
+        auth.authorized { api.deleteAccount(it, password) }
         database.syncDao().deleteAllLinks()
         _account.value?.avatarFile?.let(photos::delete)
         clear()

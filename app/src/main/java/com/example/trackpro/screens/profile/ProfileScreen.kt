@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -52,6 +53,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -591,7 +594,8 @@ private fun AccountGroup(onEdit: () -> Unit, onSignedOut: () -> Unit) {
 
 /**
  * Account deletion is irreversible, so it takes a typed word, not a second tap: a tap can be
- * a slip on a bumpy paddock, typing DELETE cannot.
+ * a slip on a bumpy paddock, typing DELETE cannot. It also takes the password, which the
+ * server checks, so a phone left unlocked or a stolen sign-in cannot delete the account.
  */
 @Composable
 private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
@@ -600,6 +604,7 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
     var typed by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -627,19 +632,32 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
                         unfocusedBorderColor = TrackProTheme.colors.sectorLine
                     )
                 )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Your password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    shape = TrackProShapes.control,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = TrackProTheme.colors.danger,
+                        unfocusedBorderColor = TrackProTheme.colors.sectorLine
+                    )
+                )
                 error?.let { Text(it, color = TrackProTheme.colors.danger) }
             }
         },
         confirmButton = {
             TextButton(
-                enabled = typed.trim() == "DELETE" && !busy,
+                enabled = typed.trim() == "DELETE" && password.isNotEmpty() && !busy,
                 onClick = {
                     busy = true
                     error = null
                     haptics.perform(Haptic.Reject)
                     scope.launch {
                         try {
-                            online.profile.deleteAccount()
+                            online.profile.deleteAccount(password)
                             online.events.clear()
                             onDeleted()
                         } catch (e: ApiException) {

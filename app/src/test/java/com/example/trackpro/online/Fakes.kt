@@ -42,6 +42,7 @@ open class FakeApi : TrackBoardApi {
     val foreignTracks = mutableSetOf<String>()
     var onPutSession: (SessionWrite) -> Unit = {}
     var onPutVehicle: (VehicleWrite) -> Unit = {}
+    var onPutTrack: (String) -> Unit = {}
     var onDeleteTrack: (String) -> Unit = {}
     var refresh: suspend (String) -> AuthResponse = { authResponse("access-2", "refresh-2") }
 
@@ -61,6 +62,7 @@ open class FakeApi : TrackBoardApi {
 
     override suspend fun putTrack(accessToken: String, id: String, body: TrackWrite): Boolean {
         calls += "PUT track $id ${body.visibility}"
+        onPutTrack(id)
         if (id in foreignTracks) throw ApiException(403, "That belongs to another account.")
         return tracks.put(id, body) == null
     }

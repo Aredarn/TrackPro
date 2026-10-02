@@ -47,6 +47,10 @@ data class LoginRequest(val email: String, val password: String)
 @Serializable
 data class RefreshRequest(val refreshToken: String)
 
+/** Deleting the account takes the password as well as the token, so a stolen token cannot do it. */
+@Serializable
+data class DeleteAccountRequest(val password: String)
+
 @Serializable
 data class ApiUser(val id: String, val email: String, val displayName: String, val role: String)
 

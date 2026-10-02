@@ -311,6 +311,9 @@ class SyncEngine(
                 auth.authorized { token -> api.putTrack(token, remoteId, body) }
             } catch (e: ApiException) {
                 if (e.status == 401) throw e
+                // The account is full. The server's own message says so and what to do about
+                // it, which "isn't available right now" below would hide.
+                if (e.code == "QuotaExceeded") throw SyncProblem(e.message ?: "This account has reached its limit.")
                 // 403: another driver created it between our check and our write. Theirs is
                 // identical by construction, so linking to it is exactly right — if we can see it.
                 val createdByAnother = e.status == 403 &&

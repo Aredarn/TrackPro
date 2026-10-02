@@ -26,7 +26,7 @@ class FakeAccountApi : TrackBoardAccountApi {
     override suspend fun updateProfile(accessToken: String, body: UpdateProfileRequest) = error("unused")
     override suspend fun getStats(accessToken: String) = error("unused")
     override suspend fun exportAccount(accessToken: String) = error("unused")
-    override suspend fun deleteAccount(accessToken: String) = error("unused")
+    override suspend fun deleteAccount(accessToken: String, password: String) = error("unused")
     override suspend fun setAvatar(accessToken: String, path: String?) = error("unused")
 
     override suspend fun listVehicles(accessToken: String, page: Int, pageSize: Int): VehiclePage {

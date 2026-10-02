@@ -190,6 +190,18 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `a full account says so instead of calling the premade track unavailable`() {
+        premadeTrack(); session(trackId = 4)
+        val message = "You have reached the limit of 100 tracks. Delete one before adding another."
+        api.onPutTrack = { throw ApiException(409, message, "QuotaExceeded") }
+
+        val report = run()
+
+        assertEquals(1, report.failed)
+        assertEquals(message, report.problem)
+    }
+
+    @Test
     fun `a premade track is never re-uploaded, even after a local sector change`() {
         premadeTrack(); session(trackId = 4)
         run()

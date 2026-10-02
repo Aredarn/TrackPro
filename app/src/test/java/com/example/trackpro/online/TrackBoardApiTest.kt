@@ -174,6 +174,52 @@ class TrackBoardApiTest {
     }
 
     @Test
+    fun `deleting the account sends the password in the body`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(204))
+
+        api.deleteAccount("access-token", "correct horse battery")
+
+        val request = server.takeRequest()
+        assertEquals("DELETE", request.method)
+        assertEquals("/api/v1/me", request.path)
+        assertEquals("Bearer access-token", request.getHeader("Authorization"))
+        assertEquals("""{"password":"correct horse battery"}""", request.body.readUtf8())
+    }
+
+    @Test
+    fun `a wrong password on delete is the server's own 403 message, not an expired session`() = runBlocking {
+        server.enqueue(
+            MockResponse().setResponseCode(403).setHeader("Content-Type", "application/problem+json").setBody(
+                """{"title":"Access denied","status":403,"detail":"The password is incorrect."}"""
+            )
+        )
+        try {
+            api.deleteAccount("t", "nope")
+            fail("expected ApiException")
+        } catch (e: ApiException) {
+            assertEquals(403, e.status)
+            assertEquals("The password is incorrect.", e.message)
+        }
+    }
+
+    @Test
+    fun `a locked account says how long to wait`() = runBlocking {
+        server.enqueue(
+            MockResponse().setResponseCode(429).setHeader("Content-Type", "application/problem+json").setBody(
+                """{"title":"Too many requests","status":429,"detail":"Too many failed attempts. Try again in 15 minutes.","code":"AccountLocked"}"""
+            )
+        )
+        try {
+            api.deleteAccount("t", "nope")
+            fail("expected ApiException")
+        } catch (e: ApiException) {
+            assertEquals(429, e.status)
+            assertEquals("AccountLocked", e.code)
+            assertEquals("Too many failed attempts. Try again in 15 minutes.", e.message)
+        }
+    }
+
+    @Test
     fun `deleting something already gone succeeds`() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(404))
         api.deleteSession("t", "gone")

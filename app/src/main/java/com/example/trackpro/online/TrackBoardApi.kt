@@ -83,7 +83,8 @@ interface TrackBoardAccountApi {
     suspend fun getStats(accessToken: String): ProfileStats
     /** The raw export document, exactly as the server wrote it. */
     suspend fun exportAccount(accessToken: String): String
-    suspend fun deleteAccount(accessToken: String)
+    /** Needs the account [password] as well as the token. A wrong one is a 403, not a 401. */
+    suspend fun deleteAccount(accessToken: String, password: String)
 
     /** One page of the caller's vehicles, 1-based. */
     suspend fun listVehicles(accessToken: String, page: Int, pageSize: Int = 100): VehiclePage
@@ -222,8 +223,9 @@ class OkHttpTrackBoardApi(
             response.bodyText()
         }
 
-    override suspend fun deleteAccount(accessToken: String) {
-        call("DELETE", "me", accessToken, null).use { it.requireSuccess() }
+    override suspend fun deleteAccount(accessToken: String, password: String) {
+        call("DELETE", "me", accessToken, encode(DeleteAccountRequest.serializer(), DeleteAccountRequest(password)))
+            .use { it.requireSuccess() }
     }
 
     override suspend fun listVehicles(accessToken: String, page: Int, pageSize: Int): VehiclePage =
