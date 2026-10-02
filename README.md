@@ -6,7 +6,20 @@ TrackPro is an open-source mobile app that grants automotive enthusiasts, race
 TrackPro, combined with any ESP32 or ESP8266 MCU and a GPS module, allows users to accurately measure and analyze their driving behavior.
 The communication works with Wi-Fi using TCP for getting the best and most reliable results.
 
-<img width="30%" height="30%" alt="Screenshot_20250905_153214" src="https://github.com/user-attachments/assets/26fe5a6e-8c41-43e2-94f7-56387f9f5f55" />
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/drive.png" width="200" alt="Drive"><br><sub>Drive</sub></td>
+    <td align="center"><img src="docs/screenshots/session.png" width="200" alt="Session summary"><br><sub>Session summary</sub></td>
+    <td align="center"><img src="docs/screenshots/lap-heatmap.png" width="200" alt="Lap speed map"><br><sub>Lap speed map</sub></td>
+    <td align="center"><img src="docs/screenshots/history.png" width="200" alt="History"><br><sub>History</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/garage.png" width="200" alt="Garage"><br><sub>Garage</sub></td>
+    <td align="center"><img src="docs/screenshots/car.png" width="200" alt="Car"><br><sub>Car</sub></td>
+    <td align="center"><img src="docs/screenshots/track.png" width="200" alt="Track"><br><sub>Track</sub></td>
+    <td align="center"><img src="docs/screenshots/profile.png" width="200" alt="Profile"><br><sub>Profile</sub></td>
+  </tr>
+</table>
 
 Key Features:
 - Lap Timing: Measures lap times for circuit racing, karting, or track days.
@@ -41,12 +54,20 @@ GPS Connection testing:
     - Speed (in kilometer/hour)
     - Timestamp
 
-<img width="30%" height="30%" alt="Screenshot_20250905_153340" src="https://github.com/user-attachments/assets/860f2e4b-7771-43c5-9677-31df3f5fdffc" />
+<img width="30%" alt="GPS connection test" src="docs/screenshots/gps-connection.png" />
 
 Add your own car:
 
+<img width="30%" alt="Add car" src="docs/screenshots/add-car.png" />
+
 Drag-time screen:
+
+<img width="30%" alt="Drag timer" src="docs/screenshots/drag-timer.png" />
 
 Lap timer screen:
 
+<img width="30%" alt="Lap timer" src="docs/screenshots/lap-timer.png" />
+
 Lap builder screen:
+
+<img width="30%" alt="Track builder" src="docs/screenshots/track-builder.png" />
