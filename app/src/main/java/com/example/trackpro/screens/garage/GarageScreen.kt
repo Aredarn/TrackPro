@@ -1,5 +1,8 @@
 package com.example.trackpro.screens.garage
 
+import com.example.trackpro.components.pluralResource
+import androidx.compose.ui.res.stringResource
+import com.example.trackpro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -95,7 +98,7 @@ fun GarageScreen(
     var section by rememberSaveable { mutableStateOf(initial) }
     val header: @Composable () -> Unit = {
         SectionSwitch(
-            options = listOf(GarageSection.Cars to "Cars", GarageSection.Tracks to "Tracks"),
+            options = listOf(GarageSection.Cars to stringResource(R.string.garage_cars), GarageSection.Tracks to stringResource(R.string.garage_tracks)),
             selected = section,
             onSelect = { section = it }
         )
@@ -108,7 +111,7 @@ fun GarageScreen(
             onBack = null,
             header = header,
             onBuildTrack = { navController.navigate("trackbuilder") },
-            title = "Garage",
+            title = stringResource(R.string.garage_title),
         )
     }
 }
@@ -151,16 +154,12 @@ private fun GarageCars(
     pendingDelete?.let { vehicle ->
         val sessions = usageById[vehicle.vehicleId]?.sessions ?: 0
         ConfirmDeleteDialog(
-            title = "Delete ${vehicle.manufacturer} ${vehicle.model}?",
-            message = buildString {
-                // Deleting a car cascades to its sessions in the database. Say so, with the count.
-                append(
-                    if (sessions > 0) "Its $sessions recorded session${if (sessions == 1) "" else "s"} and their laps are deleted with it. "
-                    else "It has no recorded sessions. "
-                )
-                if (signedIn) append("It is also removed from your account.")
-                append(" This cannot be undone.")
-            },
+            title = stringResource(R.string.garage_delete_car_title, "${vehicle.manufacturer} ${vehicle.model}"),
+            // Deleting a car cascades to its sessions in the database. Say so, with the count.
+            message = (if (sessions > 0) pluralResource(R.plurals.garage_delete_sessions, sessions)
+                else stringResource(R.string.garage_delete_no_sessions)) +
+                (if (signedIn) stringResource(R.string.garage_delete_account) else "") +
+                stringResource(R.string.common_cannot_undo),
             onConfirm = {
                 pendingDelete = null
                 app.applicationScope.launch(Dispatchers.IO) {
@@ -174,10 +173,10 @@ private fun GarageCars(
     }
 
     ScreenScaffold(
-        title = "Garage",
+        title = stringResource(R.string.garage_title),
         header = header,
         trailing = {
-            Text(countLabel(vehicles.size, "car"), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+            Text(countLabel(vehicles.size, R.plurals.count_cars), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
         },
         contentScrolled = scrolled
     ) { contentPadding ->
@@ -205,9 +204,9 @@ private fun GarageCars(
                     DataGate(
                         state = loadState,
                         items = ordered,
-                        emptyMessage = "Add your first car",
-                        emptyHint = "Every lap is filed against the car that set it, so this is where it starts.",
-                        loadingLabel = "Reading garage",
+                        emptyMessage = stringResource(R.string.garage_add_first),
+                        emptyHint = stringResource(R.string.garage_add_first_hint),
+                        loadingLabel = stringResource(R.string.garage_reading),
                         modifier = Modifier.fillMaxWidth().height(260.dp)
                     ) { }
                 }
@@ -227,7 +226,7 @@ private fun GarageCars(
 
             item {
                 DashAction(
-                    label = "Add car",
+                    label = stringResource(R.string.garage_add_car),
                     onClick = { navController.navigate("createvehicle") },
                     compact = true,
                     icon = Icons.Default.Add
@@ -250,10 +249,10 @@ private fun BackupStrip(
     val backedUp = statuses.count { it == VehicleSyncStatus.Synced }
     val failed = statuses.count { it == VehicleSyncStatus.Failed }
     val (tone, icon, text) = when {
-        !signedIn -> Triple(TrackProTheme.colors.accent, Icons.Default.CloudOff, "Not backed up. Sign in to keep your garage safe.")
-        failed > 0 -> Triple(TrackProTheme.colors.danger, Icons.Default.ErrorOutline, "$failed car${if (failed == 1) "" else "s"} could not be backed up")
-        backedUp == statuses.size -> Triple(TrackProTheme.colors.deltaGood, Icons.Default.CloudDone, "Garage backed up to your account")
-        else -> Triple(TrackProTheme.colors.deltaBad, Icons.Default.CloudSync, "$backedUp of ${statuses.size} backed up, the rest go on the next sync")
+        !signedIn -> Triple(TrackProTheme.colors.accent, Icons.Default.CloudOff, stringResource(R.string.garage_not_backed_up))
+        failed > 0 -> Triple(TrackProTheme.colors.danger, Icons.Default.ErrorOutline, pluralResource(R.plurals.garage_backup_failed_count, failed))
+        backedUp == statuses.size -> Triple(TrackProTheme.colors.deltaGood, Icons.Default.CloudDone, stringResource(R.string.garage_backed_up))
+        else -> Triple(TrackProTheme.colors.deltaBad, Icons.Default.CloudSync, stringResource(R.string.garage_backed_partial, backedUp, statuses.size))
     }
     Row(
         modifier = Modifier
@@ -269,7 +268,7 @@ private fun BackupStrip(
         Text(text = text, style = TrackProType.label, color = TrackProTheme.colors.marking, modifier = Modifier.weight(1f))
         if (!signedIn) {
             Spacer(Modifier.width(Spacing.sm))
-            Text("Sign in", style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold), color = TrackProTheme.colors.accent)
+            Text(stringResource(R.string.common_sign_in), style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold), color = TrackProTheme.colors.accent)
         }
     }
 }
@@ -305,7 +304,7 @@ private fun CarCard(
                     if (isMain) {
                         Spacer(Modifier.width(Spacing.sm))
                         Text(
-                            "Main",
+                            stringResource(R.string.garage_main),
                             style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold),
                             color = TrackProTheme.colors.accent,
                             modifier = Modifier
@@ -332,7 +331,7 @@ private fun CarCard(
                         Spacer(Modifier.width(6.dp))
                     }
                     Text(
-                        text = "${status.label} · $sessions session${if (sessions == 1) "" else "s"}",
+                        text = "${stringResource(status.label)} · ${pluralResource(R.plurals.count_sessions, sessions)}",
                         style = TrackProType.label,
                         // A failed backup is a fault; never drawn dimmer than a healthy one.
                         color = if (status == VehicleSyncStatus.Failed) TrackProTheme.colors.danger

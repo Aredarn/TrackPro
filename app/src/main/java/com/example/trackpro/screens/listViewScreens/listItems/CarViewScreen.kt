@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.listViewScreens.listItems
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +20,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.specLabel
 import com.example.trackpro.theme.marking
 import com.example.trackpro.components.SectionTitle
 import com.example.trackpro.components.PaddockCard
@@ -85,7 +88,7 @@ fun CarViewScreen(
     // The bar now wraps both states - previously it only existed in the loaded branch,
     // so the screen had no header (and no back affordance) while loading.
     ScreenScaffold(
-        title = "Car",
+        title = stringResource(R.string.car_title),
         onBack = onBack,
         accent = TrackProTheme.colors.accent,
         contentScrolled = scrolled
@@ -99,7 +102,7 @@ fun CarViewScreen(
                         strokeWidth = 2.dp
                     )
                     Spacer(Modifier.height(12.dp))
-                    Text("Loading vehicle", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                    Text(stringResource(R.string.car_loading), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                 }
             }
         } else {
@@ -121,7 +124,7 @@ fun CarViewScreen(
                         Text(
                             text = listOfNotNull(
                                 vehicle.year.takeIf { it > 0 }?.toString(),
-                                vehicle.engineType.takeIf { it.isNotBlank() },
+                                vehicle.engineType.takeIf { it.isNotBlank() }?.let { specLabel(it) },
                                 vehicle.drivetrain.takeIf { it.isNotBlank() }
                             ).joinToString(" · "),
                             style = TrackProType.label,
@@ -135,40 +138,40 @@ fun CarViewScreen(
                 item(key = "bests") { CarBests(vehicle.vehicleId, onOpenTrack = onOpenTrack) }
 
                 item(key = "performance") {
-                    SectionTitle("Performance")
+                    SectionTitle(stringResource(R.string.car_performance))
                     Column(Modifier.padding(horizontal = Spacing.gutter)) {
                         PaddockCard {
                             Row(Modifier.fillMaxWidth()) {
-                                StatCell(label = "Power", value = "${vehicle.horsepower}", unit = "hp", modifier = Modifier.weight(1f))
-                                StatCell(label = "Torque", value = vehicle.torque?.toString() ?: "—", unit = "Nm", modifier = Modifier.weight(1f))
-                                StatCell(label = "Weight", value = "${vehicle.weight.toInt()}", unit = "kg", modifier = Modifier.weight(1f))
+                                StatCell(label = stringResource(R.string.car_power), value = "${vehicle.horsepower}", unit = "hp", modifier = Modifier.weight(1f))
+                                StatCell(label = stringResource(R.string.car_torque), value = vehicle.torque?.toString() ?: "—", unit = "Nm", modifier = Modifier.weight(1f))
+                                StatCell(label = stringResource(R.string.car_weight), value = "${vehicle.weight.toInt()}", unit = "kg", modifier = Modifier.weight(1f))
                             }
                             Spacer(Modifier.height(Spacing.lg))
                             Row(Modifier.fillMaxWidth()) {
                                 StatCell(
-                                    label = "Top speed",
+                                    label = stringResource(R.string.car_top_speed),
                                     value = vehicle.topSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "—",
                                     unit = UnitFormatter.speedUnitLabel(useMetric).lowercase(),
                                     modifier = Modifier.weight(1f)
                                 )
                                 StatCell(label = "0–100", value = vehicle.acceleration?.toString() ?: "—", unit = "s", modifier = Modifier.weight(1f))
-                                StatCell(label = "Drivetrain", value = vehicle.drivetrain.ifBlank { "—" }, modifier = Modifier.weight(1f))
+                                StatCell(label = stringResource(R.string.car_drivetrain), value = vehicle.drivetrain.ifBlank { "—" }, modifier = Modifier.weight(1f))
                             }
                         }
                     }
                 }
 
                 item(key = "specs") {
-                    SectionTitle("Specs")
+                    SectionTitle(stringResource(R.string.car_specs))
                     Column(Modifier.padding(horizontal = Spacing.gutter)) {
                         PaddockCard(padding = 0.dp) {
                             val specs = listOfNotNull(
-                                "Engine" to vehicle.engineType,
-                                "Transmission" to vehicle.transmission,
-                                "Fuel" to vehicle.fuelType,
-                                vehicle.fuelCapacity?.let { "Fuel capacity" to "$it L" },
-                                vehicle.suspensionType?.let { "Suspension" to it },
-                                "Tyres" to vehicle.tireType,
+                                stringResource(R.string.car_engine) to specLabel(vehicle.engineType),
+                                stringResource(R.string.car_transmission) to specLabel(vehicle.transmission),
+                                stringResource(R.string.car_fuel) to specLabel(vehicle.fuelType),
+                                vehicle.fuelCapacity?.let { stringResource(R.string.car_fuel_capacity) to "$it L" },
+                                vehicle.suspensionType?.let { stringResource(R.string.car_suspension) to specLabel(it) },
+                                stringResource(R.string.car_tyres) to specLabel(vehicle.tireType),
                             )
                             specs.forEachIndexed { i, (label, value) ->
                                 if (i > 0) Bezel(Modifier.padding(horizontal = Spacing.lg))

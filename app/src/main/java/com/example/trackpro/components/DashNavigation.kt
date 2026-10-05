@@ -1,5 +1,7 @@
 package com.example.trackpro.components
 
+import androidx.compose.ui.res.stringResource
+import com.example.trackpro.components.pluralResource
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -38,7 +40,7 @@ import com.example.trackpro.theme.markingDim
 import com.example.trackpro.theme.panel
 
 /** One destination on the [DashTabBar]. */
-data class DashTab(val route: String, val label: String, val icon: ImageVector)
+data class DashTab(val route: String, @androidx.annotation.StringRes val label: Int, val icon: ImageVector)
 
 /** Height of the floating bar itself, excluding its margin and the system inset. */
 val DashTabBarHeight = 68.dp
@@ -120,7 +122,7 @@ private fun DashTabCell(
         }
         Spacer(Modifier.height(2.dp))
         Text(
-            tab.label,
+            stringResource(tab.label),
             style = TrackProType.label.copy(fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal),
             color = if (isSelected) TrackProTheme.colors.marking else TrackProTheme.colors.markingDim,
             maxLines = 1
@@ -188,6 +190,7 @@ fun <T> SectionSwitch(
     }
 }
 
-/** "1 car", "7 tracks": a count, singular when there is one. */
-fun countLabel(count: Int, noun: String): String =
-    "$count ${if (count == 1) noun else noun + "s"}"
+/** "1 car", "7 tracks": a count with its noun, by the language's own plural rule. */
+@Composable
+fun countLabel(count: Int, @androidx.annotation.PluralsRes noun: Int): String =
+    pluralResource(noun, count)

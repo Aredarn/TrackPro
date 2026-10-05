@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.listViewScreens.lapDetail
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -74,9 +76,9 @@ import androidx.compose.ui.semantics.selected
 
 // ── Heatmap mode ───────────────────────────────────────────
 
-enum class HeatmapMode(val label: String, val icon: String) {
-    SPEED("Speed",    "⚡"),
-    UNIFORM("Line",   "—")
+enum class HeatmapMode(@androidx.annotation.StringRes val label: Int, val icon: String) {
+    SPEED(R.string.lap_mode_speed, "⚡"),
+    UNIFORM(R.string.lap_mode_line, "—")
 }
 
 // ── Activity ───────────────────────────────────────────────
@@ -172,7 +174,7 @@ fun LapDetailScreen(
             LoadingView()
         } else if (primaryLap == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Lap not found", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                Text(stringResource(R.string.lap_not_found), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
             }
         } else {
             val lap = primaryLap!!
@@ -192,7 +194,7 @@ fun LapDetailScreen(
                     .align(Alignment.TopCenter)
             ) {
                 AppTopBar(
-                    title = "Lap ${lap.lapnumber} · ${lap.laptime}",
+                    title = stringResource(R.string.lap_title, lap.lapnumber, lap.laptime),
                     accent = TrackProTheme.colors.accent,
                     onBack = { navController.popBackStack() },
                     trailing = {
@@ -237,7 +239,7 @@ fun LapDetailScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                mode.label,
+                                stringResource(mode.label),
                                 style = TrackProType.titleMedium,
                                 color = if (isSelected) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
                             )
@@ -266,7 +268,7 @@ fun LapDetailScreen(
                                 .background(COMPARE_COLOR, CircleShape)
                         )
                         Column {
-                            Text("Compare · Lap ${cl.lapnumber}", style = TrackProType.label, color = COMPARE_COLOR)
+                            Text(stringResource(R.string.lap_compare_with_n, cl.lapnumber), style = TrackProType.label, color = COMPARE_COLOR)
                             Text(cl.laptime, style = TrackProType.titleMedium, color = TrackProTheme.colors.textPrimary)
                             if (compareMs > 0) {
                                 Text(
@@ -278,7 +280,7 @@ fun LapDetailScreen(
                         }
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Remove compare",
+                            contentDescription = stringResource(R.string.lap_remove_compare),
                             tint = TrackProTheme.colors.textMuted,
                             modifier = Modifier
                                 .minimumInteractiveComponentSize()
@@ -339,7 +341,7 @@ fun LapDetailScreen(
                 ) {
                     // Stats toggle
                     ActionButton(
-                        label = if (showStatsPanel) "Hide stats" else "Lap stats",
+                        label = if (showStatsPanel) stringResource(R.string.lap_hide_stats) else stringResource(R.string.lap_stats),
                         color = TrackProTheme.colors.accent,
                         filled = true,
                         modifier = Modifier.weight(1f)
@@ -347,7 +349,7 @@ fun LapDetailScreen(
 
                     // Compare toggle
                     ActionButton(
-                        label    = if (compareLap != null) "Comparing" else "Compare",
+                        label    = if (compareLap != null) stringResource(R.string.lap_comparing) else stringResource(R.string.lap_compare),
                         color    = if (compareLap != null) COMPARE_COLOR else TrackProTheme.colors.accent,
                         modifier = Modifier.weight(1f)
                     ) { showLapPicker = true }
@@ -614,9 +616,9 @@ private fun StatsPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Lap stats", style = TrackProType.titleLarge, color = TrackProTheme.colors.textPrimary)
+            Text(stringResource(R.string.lap_stats), style = TrackProType.titleLarge, color = TrackProTheme.colors.textPrimary)
             Icon(
-                Icons.Default.Close, "Close",
+                Icons.Default.Close, stringResource(R.string.common_close),
                 tint = TrackProTheme.colors.textMuted,
                 modifier = Modifier
                     .minimumInteractiveComponentSize()
@@ -640,7 +642,7 @@ private fun StatsPanel(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Box(Modifier.size(8.dp).background(PRIMARY_COLOR, CircleShape))
-                Text("Lap ${primaryLap.lapnumber}", style = TrackProType.label, color = PRIMARY_COLOR)
+                Text(stringResource(R.string.lap_number, primaryLap.lapnumber), style = TrackProType.label, color = PRIMARY_COLOR)
             }
             if (compareLap != null) {
                 Row(
@@ -649,7 +651,7 @@ private fun StatsPanel(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Box(Modifier.size(8.dp).background(COMPARE_COLOR, CircleShape))
-                    Text("Lap ${compareLap.lapnumber}", style = TrackProType.label, color = COMPARE_COLOR)
+                    Text(stringResource(R.string.lap_number, compareLap.lapnumber), style = TrackProType.label, color = COMPARE_COLOR)
                 }
             }
         }
@@ -663,18 +665,19 @@ private fun StatsPanel(
         // Resolved here rather than inside buildList: that lambda is inline with builder
         // inference, which is a poor place to read a CompositionLocal from.
         val deltaRowColor = deltaColor(deltaMs)
+        val res = LocalContext.current.resources
         val rows = buildList {
-            add(StatRow("Lap time",    primaryLap.laptime, compareLap?.laptime ?: "—"))
-            add(StatRow("Top speed",   "${UnitFormatter.formatSpeed(primaryTopSpeed, useMetric)} $speedUnit",
+            add(StatRow(res.getString(R.string.lap_time),    primaryLap.laptime, compareLap?.laptime ?: "—"))
+            add(StatRow(res.getString(R.string.car_top_speed),   "${UnitFormatter.formatSpeed(primaryTopSpeed, useMetric)} $speedUnit",
                 if (compareLap != null) "${UnitFormatter.formatSpeed(compareTopSpeed, useMetric)} $speedUnit" else "—"))
-            add(StatRow("Avg speed",   "${UnitFormatter.formatSpeedPrecise(primaryAvgSpd.toDouble(), useMetric)} $speedUnit",
+            add(StatRow(res.getString(R.string.lap_avg_speed),   "${UnitFormatter.formatSpeedPrecise(primaryAvgSpd.toDouble(), useMetric)} $speedUnit",
                 if (compareLap != null) "${UnitFormatter.formatSpeedPrecise(compareAvgSpd.toDouble(), useMetric)} $speedUnit" else "—"))
-            add(StatRow("GPS points",  "${primaryGps.size}",
+            add(StatRow(res.getString(R.string.lap_gps_points),  "${primaryGps.size}",
                 if (compareLap != null) "${compareGps.size}" else "—"))
             primarySectors.sortedBy { it.sectorIndex }.forEach { sector ->
                 val compareSplit = compareSectors.find { it.sectorIndex == sector.sectorIndex }
                 add(StatRow(
-                    "Sector ${sector.sectorIndex + 1}",
+                    res.getString(R.string.lap_sector_n, sector.sectorIndex + 1),
                     String.format(Locale.US, "%.2f s", sector.splitTimeMs / 1000.0),
                     if (compareLap != null) compareSplit?.let { String.format(Locale.US, "%.2f s", it.splitTimeMs / 1000.0) } ?: "—" else "—"
                 ))
@@ -683,7 +686,7 @@ private fun StatsPanel(
                 // deltaMs describes the compare lap, so it belongs in the compare column -
                 // in the primary column it read as the delta of the lap being viewed, which
                 // inverted its meaning and coloured a slower lap green.
-                add(StatRow("Delta", "—", deltaMs.toLapDeltaString(), compareColor = deltaRowColor))
+                add(StatRow(res.getString(R.string.lap_delta), "—", deltaMs.toLapDeltaString(), compareColor = deltaRowColor))
             }
         }
 
@@ -767,8 +770,8 @@ private fun LapPickerSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Compare with", style = TrackProType.titleLarge, color = TrackProTheme.colors.textPrimary)
-            Icon(Icons.Default.Close, "Close", tint = TrackProTheme.colors.textMuted,
+            Text(stringResource(R.string.lap_compare_with), style = TrackProType.titleLarge, color = TrackProTheme.colors.textPrimary)
+            Icon(Icons.Default.Close, stringResource(R.string.common_close), tint = TrackProTheme.colors.textMuted,
                 modifier = Modifier
                     .minimumInteractiveComponentSize()
                     .pressable(onClick = onDismiss, scale = 0.90f)
@@ -811,7 +814,7 @@ private fun LapPickerSheet(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                     ) {
                         Text(
-                            "Lap ${lap.lapnumber}",
+                            stringResource(R.string.lap_number, lap.lapnumber),
                             style = TrackProType.titleMedium,
                             color = TrackProTheme.colors.textPrimary
                         )
@@ -821,7 +824,7 @@ private fun LapPickerSheet(
                                     .background(TrackProTheme.colors.deltaGood.copy(alpha = 0.14f), TrackProShapes.badge)
                                     .padding(horizontal = Spacing.sm, vertical = 2.dp)
                             ) {
-                                Text("Best", style = TrackProType.label, color = TrackProTheme.colors.deltaGood)
+                                Text(stringResource(R.string.lap_badge_best), style = TrackProType.label, color = TrackProTheme.colors.deltaGood)
                             }
                         }
                     }
@@ -859,7 +862,7 @@ private fun LoadingView() {
                 strokeWidth = 2.dp
             )
             Spacer(Modifier.height(Spacing.md))
-            Text("Loading lap", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+            Text(stringResource(R.string.lap_loading), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
         }
     }
 }

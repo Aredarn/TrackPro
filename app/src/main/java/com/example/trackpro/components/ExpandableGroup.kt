@@ -1,5 +1,7 @@
 package com.example.trackpro.components
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Column
@@ -59,7 +61,7 @@ fun ExpandableGroup(
             Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) { header() }
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = if (expanded) "Collapse" else "Expand",
+                contentDescription = if (expanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
                 tint = if (expanded) accent else TrackProTheme.colors.markingDim,
                 modifier = Modifier.size(22.dp).rotate(chevronRotation)
             )

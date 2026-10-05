@@ -17,10 +17,18 @@ object DateFormatterUtil {
     private const val DATE_TIME_PATTERN = "dd MMM yyyy, HH:mm"
     private const val LOG_TIMESTAMP_PATTERN = "HH:mm:ss.SSS"
 
+    // Hungarian writes dates year first and ends the day with a full stop: 2026. szept. 28.
+    private val hungarian get() = Locale.getDefault().language == "hu"
+
     // Shown to the driver.
-    fun getDateFormat() = SimpleDateFormat(DATE_PATTERN, Locale.getDefault())
+    fun getDateFormat() = SimpleDateFormat(if (hungarian) "yyyy. MMM d." else DATE_PATTERN, Locale.getDefault())
     fun getTimeFormat() = SimpleDateFormat(TIME_PATTERN, Locale.getDefault())
-    fun getDateTimeFormat() = SimpleDateFormat(DATE_TIME_PATTERN, Locale.getDefault())
+    fun getDateTimeFormat() = SimpleDateFormat(if (hungarian) "yyyy. MMM d., HH:mm" else DATE_TIME_PATTERN, Locale.getDefault())
+
+    /** Day and month, for java.time: "28 Sep" / "szept. 28.". */
+    fun dayMonthPattern() = if (hungarian) "MMM d." else "dd MMM"
+    /** Weekday and time, for java.time: "Monday, 11:24" / "hétfő 11:24". */
+    fun weekdayTimePattern() = if (hungarian) "EEEE HH:mm" else "EEEE, HH:mm"
 
     /** Read from and written to the rig. Never localised. */
     fun getLogTimestampFormat() = SimpleDateFormat(LOG_TIMESTAMP_PATTERN, Locale.ROOT)

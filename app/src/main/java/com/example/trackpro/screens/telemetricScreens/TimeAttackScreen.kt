@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.telemetricScreens
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.content.Context
 import android.content.res.Configuration
 import android.os.SystemClock
@@ -154,10 +156,11 @@ fun TimeAttackScreenView(
     val effectiveDelta = liveDelta ?: delta
     val isLiveDelta = liveDelta != null
     val isCircuit = timingMode is TimingMode.Circuit
+    val loadFailedText = stringResource(R.string.hud_load_failed)
     val deltaCaption = if (isCircuit) {
         captionForDelta(isLiveDelta, activeReference, preferredReference)
     } else {
-        if (isLiveDelta) "Delta to best - live" else "Delta to best"
+        if (isLiveDelta) stringResource(R.string.hud_delta_best_live) else stringResource(R.string.hud_delta_best)
     }
 
     val linesToShow by remember(timingMode, startLine, finishLine) {
@@ -199,7 +202,7 @@ fun TimeAttackScreenView(
             vm.ensureSession(trackId, vehicleId)
         } catch (e: Exception) {
             Log.e("TimeAttackScreen", "Initialization error: ${e.message}", e)
-            initError = e.message ?: "Could not load the track or start the session"
+            initError = e.message ?: loadFailedText
         }
     }
 
@@ -236,11 +239,11 @@ fun TimeAttackScreenView(
             personalBest = sessionBest?.takeIf { priorBest == null || it < priorBest!! }
                 ?.let { PersonalBestMoment(newMs = it, previousMs = priorBest) },
             headline = bestTime,
-            headlineCaption = "Best lap",
+            headlineCaption = stringResource(R.string.session_best_lap),
             rows = listOf(
-                (if (timingMode is TimingMode.Circuit) "Laps" else "Runs") to "$eventCount",
-                "Last" to lastTime,
-                "Sectors logged" to "${lapSplits.size}"
+                (if (timingMode is TimingMode.Circuit) stringResource(R.string.session_laps) else stringResource(R.string.hud_runs)) to "$eventCount",
+                stringResource(R.string.hud_last) to lastTime,
+                stringResource(R.string.hud_sectors_logged) to "${lapSplits.size}"
             ),
             onKeep = { vm.keepAndEnd(); onBack() },
             onVoid = { vm.voidAndEnd(); onBack() }
@@ -250,11 +253,10 @@ fun TimeAttackScreenView(
 
     if (confirmEnd) {
         ConfirmDeleteDialog(
-            title = "End session?",
-            message = "Timing stops and the session is written to the archive. You can " +
-                "void it on the next screen if it should not count.",
-            confirmLabel = "End session",
-            dismissLabel = "Keep driving",
+            title = stringResource(R.string.hud_end_title),
+            message = stringResource(R.string.hud_end_msg),
+            confirmLabel = stringResource(R.string.hud_end_confirm),
+            dismissLabel = stringResource(R.string.hud_keep_driving),
             onConfirm = { confirmEnd = false; showSummary = true },
             onDismiss = { confirmEnd = false }
         )
@@ -268,14 +270,14 @@ fun TimeAttackScreenView(
                 .fillMaxSize()
                 .background(TrackProTheme.colors.panel)
         ) {
-            AppTopBar(title = "Session failed", onBack = onBack, accent = TrackProTheme.colors.danger)
+            AppTopBar(title = stringResource(R.string.hud_session_failed), onBack = onBack, accent = TrackProTheme.colors.danger)
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 ) {
                     Text(
-                        "Could not start timing",
+                        stringResource(R.string.hud_could_not_start),
                         style = TrackProType.titleMedium,
                         color = TrackProTheme.colors.danger
                     )
@@ -288,7 +290,7 @@ fun TimeAttackScreenView(
                     )
                     Spacer(Modifier.height(20.dp))
                     DashAction(
-                        label = "Back to panel",
+                        label = stringResource(R.string.hud_back_to_panel),
                         onClick = onBack,
                         compact = true,
                         modifier = Modifier.width(200.dp)
@@ -372,7 +374,7 @@ fun TimeAttackPortraitLayout(
     isConnected: Boolean,
     linesToShow : List<TrackCoordinatesData>,
     lapSplits: List<SectorSplit> = emptyList(),
-    deltaCaption: String = "Delta to best",
+    deltaCaption: String = stringResource(R.string.hud_delta_best),
     showReferenceSwitch: Boolean = false,
     preferredReference: DeltaReference = DeltaReference.SESSION_BEST,
     onReferenceChange: (DeltaReference) -> Unit = {},
@@ -382,8 +384,8 @@ fun TimeAttackPortraitLayout(
     onBack: () -> Unit
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
-    val eventName  = if (timingMode is TimingMode.Circuit) "Lap" else "Run"
-    val modeLabel  = if (timingMode is TimingMode.Circuit) "Circuit" else "Sprint"
+    val eventName  = if (timingMode is TimingMode.Circuit) stringResource(R.string.hud_lap) else stringResource(R.string.hud_run)
+    val modeLabel  = if (timingMode is TimingMode.Circuit) stringResource(R.string.track_type_circuit) else stringResource(R.string.track_type_sprint)
     val modeColor  = TrackProTheme.colors.accent
     // Gaining pushes the bar forward, so a lower-is-better delta is negated before
     // it reaches the bar. Two seconds fills it; past that the exact figure has
@@ -453,14 +455,14 @@ fun TimeAttackPortraitLayout(
         // -- Clocks ---------------------------------------
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.gutter).paddockCard()) {
             Instrument(
-                label = "Current ${eventName.lowercase()}",
+                label = if (timingMode is TimingMode.Circuit) stringResource(R.string.hud_current_lap) else stringResource(R.string.hud_current_run),
                 value = currentTime,
                 valueSize = 24.sp,
                 modifier = Modifier.weight(1f)
             )
             Bezel(vertical = true, modifier = Modifier.height(62.dp))
             Instrument(
-                label = "Best",
+                label = stringResource(R.string.lap_badge_best),
                 value = bestTime,
                 valueColor = TrackProTheme.colors.accent,
                 valueSize = 24.sp,
@@ -468,7 +470,7 @@ fun TimeAttackPortraitLayout(
             )
             Bezel(vertical = true, modifier = Modifier.height(62.dp))
             Instrument(
-                label = "Last",
+                label = stringResource(R.string.hud_last),
                 value = lastTime,
                 valueSize = 24.sp,
                 modifier = Modifier.weight(1f)
@@ -505,7 +507,7 @@ fun TimeAttackPortraitLayout(
                             // geometry* is empty, which has nothing to do with the receiver.
                             // A track saved without coordinates used to claim the GPS was
                             // missing while it was locked and reporting fine.
-                            "No track geometry",
+                            stringResource(R.string.hud_no_geometry),
                             style = TrackProType.label,
                             color = TrackProTheme.colors.markingDim
                         )
@@ -516,6 +518,7 @@ fun TimeAttackPortraitLayout(
             RecentLapsPanel(
                 laps = completedLaps,
                 eventName = eventName,
+                isCircuit = timingMode is TimingMode.Circuit,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -548,7 +551,7 @@ fun TimeAttackLandscapeLayout(
     isConnected: Boolean,
     linesToShow: List<TrackCoordinatesData>,
     lapSplits: List<SectorSplit> = emptyList(),
-    deltaCaption: String = "Delta to best",
+    deltaCaption: String = stringResource(R.string.hud_delta_best),
     showReferenceSwitch: Boolean = false,
     preferredReference: DeltaReference = DeltaReference.SESSION_BEST,
     onReferenceChange: (DeltaReference) -> Unit = {},
@@ -558,8 +561,8 @@ fun TimeAttackLandscapeLayout(
     onBack: () -> Unit
 ) {
     val deltaColor = if (delta <= 0) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
-    val eventName  = if (timingMode is TimingMode.Circuit) "Lap" else "Run"
-    val modeLabel  = if (timingMode is TimingMode.Circuit) "Circuit" else "Sprint"
+    val eventName  = if (timingMode is TimingMode.Circuit) stringResource(R.string.hud_lap) else stringResource(R.string.hud_run)
+    val modeLabel  = if (timingMode is TimingMode.Circuit) stringResource(R.string.track_type_circuit) else stringResource(R.string.track_type_sprint)
     val modeColor  = TrackProTheme.colors.accent
     // Gaining pushes the bar forward, so a lower-is-better delta is negated before
     // it reaches the bar. Two seconds fills it; past that the exact figure has
@@ -635,14 +638,14 @@ fun TimeAttackLandscapeLayout(
             Column(Modifier.padding(horizontal = Spacing.gutter).paddockCard()) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 Instrument(
-                    label = "Current ${eventName.lowercase()}",
+                    label = if (timingMode is TimingMode.Circuit) stringResource(R.string.hud_current_lap) else stringResource(R.string.hud_current_run),
                     value = currentTime,
                     valueSize = 22.sp,
                     modifier = Modifier.weight(1f)
                 )
                 Bezel(vertical = true, modifier = Modifier.height(58.dp))
                 Instrument(
-                    label = "Best",
+                    label = stringResource(R.string.lap_badge_best),
                     value = bestTime,
                     valueColor = TrackProTheme.colors.accent,
                     valueSize = 22.sp,
@@ -652,7 +655,7 @@ fun TimeAttackLandscapeLayout(
             Bezel(Modifier.padding(horizontal = Spacing.lg))
             Row(modifier = Modifier.fillMaxWidth()) {
                 Instrument(
-                    label = "Last",
+                    label = stringResource(R.string.hud_last),
                     value = lastTime,
                     valueSize = 22.sp,
                     modifier = Modifier.weight(1f)
@@ -680,6 +683,7 @@ fun TimeAttackLandscapeLayout(
                 !mapVisible -> RecentLapsPanel(
                     laps = completedLaps,
                     eventName = eventName,
+                    isCircuit = timingMode is TimingMode.Circuit,
                     modifier = Modifier.fillMaxSize()
                 )
                 gpsPoints.isNotEmpty() -> MapLibreTrackView(
@@ -690,7 +694,7 @@ fun TimeAttackLandscapeLayout(
                 )
                 else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        "No track geometry",
+                        stringResource(R.string.hud_no_geometry),
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )
@@ -721,7 +725,7 @@ private fun HudTrailing(
     Row(verticalAlignment = Alignment.CenterVertically) {
         val tone = if (isConnected) TrackProTheme.colors.deltaGood else TrackProTheme.colors.danger
         Text(
-            text = if (isConnected) "Live" else "No signal",
+            text = if (isConnected) stringResource(R.string.hud_live) else stringResource(R.string.drive_no_signal),
             style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold),
             modifier = Modifier
                 .clip(TrackProShapes.pill)
@@ -735,7 +739,7 @@ private fun HudTrailing(
         )
         Spacer(Modifier.width(Spacing.md))
         Text(
-            text = "Map",
+            text = stringResource(R.string.drag_map),
             style = TrackProType.label,
             color = if (mapVisible) TrackProTheme.colors.marking
             else TrackProTheme.colors.markingDim
@@ -768,21 +772,22 @@ private fun HudTrailing(
  * session best stands in. A driver reading "-0.4" needs to know which of the two it is
  * against, or the number means nothing.
  */
+@Composable
 private fun captionForDelta(
     isLive: Boolean,
     active: DeltaReference?,
     preferred: DeltaReference
 ): String = when {
     active == DeltaReference.TRACK_BEST ->
-        if (isLive) "Delta to track best - live" else "Delta to track best"
+        if (isLive) stringResource(R.string.hud_delta_track_live) else stringResource(R.string.hud_delta_track)
     active == DeltaReference.SESSION_BEST && preferred == DeltaReference.TRACK_BEST ->
-        "Delta to session best - no track best yet"
+        stringResource(R.string.hud_delta_session_no_track)
     active == DeltaReference.SESSION_BEST ->
-        if (isLive) "Delta to session best - live" else "Delta to session best"
+        if (isLive) stringResource(R.string.hud_delta_session_live) else stringResource(R.string.hud_delta_session)
     // Nothing to measure against yet: before the first crossing, or lap 1 of a session
     // measured against the session best.
-    preferred == DeltaReference.TRACK_BEST -> "Delta to track best"
-    else -> "Delta to session best"
+    preferred == DeltaReference.TRACK_BEST -> stringResource(R.string.hud_delta_track)
+    else -> stringResource(R.string.hud_delta_session)
 }
 
 /**
@@ -811,14 +816,14 @@ private fun DeltaReferenceSwitch(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = "Compare to",
+            text = stringResource(R.string.hud_compare_to),
             style = TrackProType.label,
             color = TrackProTheme.colors.markingDim
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             listOf(
-                DeltaReference.SESSION_BEST to "Session best",
-                DeltaReference.TRACK_BEST to "Track best"
+                DeltaReference.SESSION_BEST to stringResource(R.string.hud_session_best),
+                DeltaReference.TRACK_BEST to stringResource(R.string.hud_track_best)
             ).forEach { (reference, label) ->
                 val isSelected = reference == preferred
                 // Selection is a lit aperture, not a hue swap. Colour alone failed twice
@@ -857,7 +862,7 @@ private fun StintTimerCell(stintStart: Long, modifier: Modifier = Modifier) {
             stintTime = String.format(Locale.US, "%02d:%02d:%02d", h, m, s)
         }
     }
-    Instrument(label = "Stint", value = stintTime, valueSize = 22.sp, modifier = modifier)
+    Instrument(label = stringResource(R.string.hud_stint), value = stintTime, valueSize = 22.sp, modifier = modifier)
 }
 
 @Composable
@@ -921,6 +926,7 @@ private fun SectorSplitsRow(splits: List<SectorSplit>) {
 private fun RecentLapsPanel(
     laps: List<CompletedLap>,
     eventName: String,
+    isCircuit: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.paddockCard()) {
@@ -931,12 +937,12 @@ private fun RecentLapsPanel(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Last ${eventName.lowercase()}s",
+                text = if (isCircuit) stringResource(R.string.hud_last_laps) else stringResource(R.string.hud_last_runs),
                 style = TrackProType.label,
                 color = TrackProTheme.colors.markingDim
             )
             Text(
-                text = "Gap to best",
+                text = stringResource(R.string.hud_gap_to_best),
                 style = TrackProType.label,
                 color = TrackProTheme.colors.markingDim
             )
@@ -951,7 +957,7 @@ private fun RecentLapsPanel(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No ${eventName.lowercase()}s yet",
+                    text = if (isCircuit) stringResource(R.string.hud_no_laps) else stringResource(R.string.hud_no_runs),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim
                 )
@@ -1062,7 +1068,7 @@ private fun LapRow(lap: CompletedLap, isBest: Boolean, gapToBestMs: Long) {
                     if (lap.signalGap) {
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "GPS gap",
+                            text = stringResource(R.string.lap_gps_gap),
                             style = TrackProType.label,
                             color = TrackProTheme.colors.danger
                         )
@@ -1070,7 +1076,7 @@ private fun LapRow(lap: CompletedLap, isBest: Boolean, gapToBestMs: Long) {
                 }
                 if (isBest) {
                     Text(
-                        text = "Best",
+                        text = stringResource(R.string.lap_badge_best),
                         style = TrackProType.label.atSize(11.sp),
                         color = TrackProTheme.colors.accent,
                         modifier = Modifier.layoutId(SLOT_GAP)

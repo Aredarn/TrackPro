@@ -1,5 +1,7 @@
 package com.example.trackpro.online.ui
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,7 +39,7 @@ import kotlinx.coroutines.withContext
  * The track screen's line into TrackBoard: whether this track has a leaderboard, a way to
  * publish one the driver built, and the way in.
  *
- * Premade tracks are shared by every install automatically, so they only ever offer "Open".
+ * Premade tracks are shared by every install automatically, so they only ever offer stringResource(R.string.strip_open).
  */
 @Composable
 fun TrackOnlineStrip(trackId: Long, onOpenLeaderboard: () -> Unit) {
@@ -58,10 +60,10 @@ fun TrackOnlineStrip(trackId: Long, onOpenLeaderboard: () -> Unit) {
     val signedIn = account is AccountState.SignedIn
     val status = when {
         premade == null -> ""
-        premade == true -> "Shared track · every TrackPro driver"
-        published -> "Published by you"
-        signedIn -> "Private · publish it to open a leaderboard"
-        else -> "Private · sign in under Settings to publish"
+        premade == true -> stringResource(R.string.strip_shared)
+        published -> stringResource(R.string.strip_published)
+        signedIn -> stringResource(R.string.strip_private_publish)
+        else -> stringResource(R.string.strip_private_sign_in)
     }
 
     Row(
@@ -73,14 +75,14 @@ fun TrackOnlineStrip(trackId: Long, onOpenLeaderboard: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("Leaderboard", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+            Text(stringResource(R.string.leaderboard_title), style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
             Spacer(Modifier.height(2.dp))
             Text(status, style = TrackProType.body, color = TrackProTheme.colors.textMuted)
         }
 
         if (premade == false && signedIn) {
             ToggleChip(
-                text = if (published) "Unpublish" else "Publish",
+                text = if (published) stringResource(R.string.strip_unpublish) else stringResource(R.string.strip_publish),
                 selected = published,
                 onClick = {
                     scope.launch(Dispatchers.IO) {
@@ -96,7 +98,7 @@ fun TrackOnlineStrip(trackId: Long, onOpenLeaderboard: () -> Unit) {
         // Drawn disabled rather than hidden, so the control's place is learned before it works.
         val canOpen = premade == true || published
         ToggleChip(
-            text = "Open",
+            text = stringResource(R.string.strip_open),
             selected = canOpen,
             onClick = { if (canOpen) onOpenLeaderboard() }
         )

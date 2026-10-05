@@ -1,5 +1,7 @@
 package com.example.trackpro.online.ui
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.online.MessageText
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -76,9 +79,9 @@ fun LeaderboardScreen(trackId: Long, onBack: () -> Unit) {
             board = remoteId?.let { online.api.getLeaderboard(online.auth.currentAccessTokenOrNull(), it, LIMIT) }
             LoadState.Ready
         } catch (e: NetworkException) {
-            LoadState.Failed(e.message ?: "TrackBoard could not be reached.")
+            LoadState.Failed(MessageText.localize(e.message) ?: app.getString(R.string.online_unreachable))
         } catch (e: ApiException) {
-            LoadState.Failed(e.message ?: "TrackBoard refused the request.")
+            LoadState.Failed(MessageText.localize(e.message) ?: app.getString(R.string.online_refused))
         }
     }
 
@@ -88,16 +91,16 @@ fun LeaderboardScreen(trackId: Long, onBack: () -> Unit) {
     val myPinned = board?.me?.takeIf { me -> entries.none { it.userId == me.userId } }
 
     ScreenScaffold(
-        title = "Leaderboard",
+        title = stringResource(R.string.leaderboard_title),
         subtitle = trackName,
         onBack = onBack
     ) { padding ->
         DataGate(
             state = state,
             items = entries,
-            emptyMessage = "No laps posted yet",
-            emptyHint = "Laps appear here once drivers who share their laps have driven this track.",
-            loadingLabel = "Fetching",
+            emptyMessage = stringResource(R.string.leaderboard_empty),
+            emptyHint = stringResource(R.string.leaderboard_empty_hint),
+            loadingLabel = stringResource(R.string.leaderboard_fetching),
             onRetry = { reload++ },
         ) { rows ->
             LazyColumn(
@@ -109,7 +112,7 @@ fun LeaderboardScreen(trackId: Long, onBack: () -> Unit) {
                 if (myPinned != null) {
                     item {
                         Text(
-                            "Your best",
+                            stringResource(R.string.leaderboard_your_best),
                             style = TrackProType.label,
                             color = TrackProTheme.colors.textMuted,
                             modifier = Modifier.padding(start = Spacing.lg, top = Spacing.lg, bottom = Spacing.xs)
@@ -121,7 +124,7 @@ fun LeaderboardScreen(trackId: Long, onBack: () -> Unit) {
                     Text(
                         // Honest about provenance: these are self-reported, and the two GPS
                         // sources differ in precision.
-                        "Lap times are posted by drivers and not verified. Phone GPS is less precise than an ESP32 module.",
+                        stringResource(R.string.leaderboard_disclaimer),
                         style = TrackProType.body,
                         color = TrackProTheme.colors.textMuted,
                         modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.lg)
@@ -165,7 +168,7 @@ private fun EntryRow(entry: LeaderboardEntry, isMe: Boolean) {
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isMe) "${entry.displayName} · YOU" else entry.displayName,
+                    text = if (isMe) stringResource(R.string.leaderboard_you, entry.displayName) else entry.displayName,
                     style = TrackProType.titleMedium,
                     color = TrackProTheme.colors.textPrimary,
                     maxLines = 1,
@@ -201,9 +204,10 @@ private fun EntryRow(entry: LeaderboardEntry, isMe: Boolean) {
     HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
 }
 
+@Composable
 private fun sourceLabel(source: ApiGpsSource): String = when (source) {
     ApiGpsSource.Wifi, ApiGpsSource.Bluetooth -> "ESP32"
-    ApiGpsSource.PhoneGps -> "Phone GPS"
+    ApiGpsSource.PhoneGps -> stringResource(R.string.rig_phone_gps)
 }
 
 private const val LIMIT = 50

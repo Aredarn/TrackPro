@@ -1,5 +1,7 @@
 package com.example.trackpro.screens
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.annotation.SuppressLint
 import android.graphics.Typeface
 import androidx.compose.animation.core.animateFloatAsState
@@ -20,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.online.MessageText
 import com.example.trackpro.components.paddockCard
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -93,11 +96,12 @@ fun ESPConnectionTestScreen(
     val config = remember { JsonReader.loadConfig(context) }
     val ip = if (useTestServer && testServerAddress.isNotBlank()) testServerAddress else config.first
     val port = config.second
-    val pairedDeviceLabel = remember(selectedBtDeviceMac) {
+    val noneSelected = stringResource(R.string.rig_none_selected)
+    val pairedDeviceLabel = remember(selectedBtDeviceMac, noneSelected) {
         app.bluetoothClassicClient.getBondedDevices()
             .find { it.address == selectedBtDeviceMac }
             ?.let { it.name ?: it.address }
-            ?: "None selected"
+            ?: noneSelected
     }
 
     // 3. Derived UI values
@@ -117,9 +121,9 @@ fun ESPConnectionTestScreen(
 
             AppTopBar(
                 title = when (gpsSource) {
-                    GpsProviderType.WIFI -> "ESP32 (WiFi) Mode"
-                    GpsProviderType.BLUETOOTH -> "ESP32 (Bluetooth) Mode"
-                    GpsProviderType.PHONE_GPS -> "Phone GPS Mode"
+                    GpsProviderType.WIFI -> stringResource(R.string.rig_mode_wifi)
+                    GpsProviderType.BLUETOOTH -> stringResource(R.string.rig_mode_bt)
+                    GpsProviderType.PHONE_GPS -> stringResource(R.string.rig_mode_phone)
                 },
                 // The bar's dot is the first thing read on this screen, and when the rig
                 // is down it is reporting a fault - so it takes danger, not the dimmest
@@ -129,7 +133,7 @@ fun ESPConnectionTestScreen(
                 onBack = onBack,
                 trailing = {
                     Text(
-                        text = "Change",
+                        text = stringResource(R.string.rig_change),
                         style = TrackProType.label,
                         color = TrackProTheme.colors.accent,
                         // Bare text was the smallest tap target on the screen; give it
@@ -170,7 +174,7 @@ fun ESPConnectionTestScreen(
                             threshold = 2f
                         ),
                         value = UnitFormatter.formatSpeed(speed, useMetric),
-                        caption = "Ground speed \u00b7 ${UnitFormatter.speedUnitLabel(useMetric)}",
+                        caption = stringResource(R.string.rig_ground_speed, UnitFormatter.speedUnitLabel(useMetric)),
                         valueColor = if (isConnected) TrackProTheme.colors.marking
                         else TrackProTheme.colors.markingDim,
                         valueSize = 64.sp
@@ -192,19 +196,19 @@ fun ESPConnectionTestScreen(
                 // -- Link state ----------------------------
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.gutter).paddockCard()) {
                     Instrument(
-                        label = "Source",
+                        label = stringResource(R.string.rig_source),
                         value = when (gpsSource) {
                             GpsProviderType.WIFI -> "ESP32 Wi-Fi"
                             GpsProviderType.BLUETOOTH -> "ESP32 BT"
-                            GpsProviderType.PHONE_GPS -> "Phone GPS"
+                            GpsProviderType.PHONE_GPS -> stringResource(R.string.rig_phone_gps)
                         },
                         valueSize = 15.sp,
                         modifier = Modifier.weight(1f)
                     )
                     Bezel(vertical = true, modifier = Modifier.height(58.dp))
                     Instrument(
-                        label = "Link",
-                        value = if (isConnected) "Live" else "Offline",
+                        label = stringResource(R.string.rig_link),
+                        value = if (isConnected) stringResource(R.string.hud_live) else stringResource(R.string.rig_offline),
                         valueColor = if (isConnected) TrackProTheme.colors.deltaGood
                         else TrackProTheme.colors.danger,
                         valueSize = 15.sp,
@@ -212,8 +216,8 @@ fun ESPConnectionTestScreen(
                     )
                     Bezel(vertical = true, modifier = Modifier.height(58.dp))
                     Instrument(
-                        label = "Fix",
-                        value = if (fix) "Locked" else "Searching",
+                        label = stringResource(R.string.rig_fix),
+                        value = if (fix) stringResource(R.string.rig_locked) else stringResource(R.string.rig_searching),
                         valueColor = if (fix) TrackProTheme.colors.deltaGood
                         else TrackProTheme.colors.deltaBad,
                         valueSize = 15.sp,
@@ -251,14 +255,14 @@ fun ESPConnectionTestScreen(
                         Spacer(Modifier.height(14.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             DashAction(
-                                label = "Retry link",
+                                label = stringResource(R.string.rig_retry_link),
                                 onClick = { app.gpsManager.retryActiveProvider() },
                                 compact = true,
                                 primary = true,
                                 modifier = Modifier.weight(1f)
                             )
                             DashAction(
-                                label = "Change source",
+                                label = stringResource(R.string.rig_change_source),
                                 onClick = onNavigateToSettings,
                                 compact = true,
                                 accent = TrackProTheme.colors.markingDim,
@@ -268,7 +272,7 @@ fun ESPConnectionTestScreen(
                         if (lastFailure != null) {
                             Spacer(Modifier.height(10.dp))
                             Text(
-                                text = "Reported: $lastFailure",
+                                text = stringResource(R.string.rig_reported, MessageText.localize(lastFailure) ?: ""),
                                 style = TrackProType.label,
                                 color = TrackProTheme.colors.markingDim
                             )
@@ -276,38 +280,38 @@ fun ESPConnectionTestScreen(
                     }
                 }
 
-                DashGroup("Data stream") {
+                DashGroup(stringResource(R.string.rig_data_stream)) {
                     when (gpsSource) {
                         GpsProviderType.WIFI -> TelemetryRow(
-                            if (useTestServer) "Remote IP (test)" else "Remote IP",
+                            if (useTestServer) stringResource(R.string.rig_remote_ip_test) else stringResource(R.string.rig_remote_ip),
                             "$ip:$port",
                             if (useTestServer) TrackProTheme.colors.accent else TrackProTheme.colors.marking,
                             TrackProTheme.colors.markingDim
                         )
                         GpsProviderType.BLUETOOTH -> TelemetryRow(
-                            "Paired device", pairedDeviceLabel,
+                            stringResource(R.string.rig_paired_device), pairedDeviceLabel,
                             TrackProTheme.colors.marking, TrackProTheme.colors.markingDim
                         )
                         GpsProviderType.PHONE_GPS -> {}
                     }
-                    TelemetryRow("Latitude", gpsData?.latitude?.let { String.format(Locale.US, "%.6f\u00b0", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
-                    TelemetryRow("Longitude", gpsData?.longitude?.let { String.format(Locale.US, "%.6f\u00b0", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
-                    TelemetryRow("Altitude", gpsData?.altitude?.let { String.format(Locale.US, "%.1f m", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
+                    TelemetryRow(stringResource(R.string.rig_latitude), gpsData?.latitude?.let { String.format(Locale.US, "%.6f\u00b0", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
+                    TelemetryRow(stringResource(R.string.rig_longitude), gpsData?.longitude?.let { String.format(Locale.US, "%.6f\u00b0", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
+                    TelemetryRow(stringResource(R.string.rig_altitude), gpsData?.altitude?.let { String.format(Locale.US, "%.1f m", it) } ?: "\u2014", TrackProTheme.colors.marking, TrackProTheme.colors.markingDim)
                     TelemetryRow(
-                        "Refresh",
+                        stringResource(R.string.rig_refresh),
                         when {
                             gpsSource == GpsProviderType.PHONE_GPS -> "1-5 Hz"
                             confirmedRateHz != null -> "$confirmedRateHz Hz"
-                            else -> "$selectedRateHz Hz (pending)"
+                            else -> stringResource(R.string.rig_rate_pending, selectedRateHz)
                         },
                         TrackProTheme.colors.marking,
                         TrackProTheme.colors.markingDim
                     )
                 }
 
-                DashGroup("Raw packet") {
+                DashGroup(stringResource(R.string.rig_raw_packet)) {
                     Text(
-                        text = gpsData?.toString() ?: "Awaiting data stream\u2026",
+                        text = gpsData?.toString() ?: stringResource(R.string.rig_awaiting),
                         color = if (gpsData != null) TrackProTheme.colors.deltaGood
                         else TrackProTheme.colors.markingDim,
                         style = TrackProType.label.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
@@ -347,6 +351,7 @@ private fun TelemetryRow(label: String, value: String, textPrimary: Color, textM
  * opened, whether the provider reported a failure and what it said, and whether a fix has
  * been acquired. It does not guess at causes it cannot see.
  */
+@Composable
 private fun rigDiagnosis(
     source: GpsProviderType,
     isConnected: Boolean,
@@ -356,9 +361,7 @@ private fun rigDiagnosis(
     port: Int
 ): Pair<String, String> {
     if (isConnected && !fix) {
-        return "Linked, no satellite fix" to
-            "The module is connected and talking. It has not locked onto satellites yet - " +
-            "that needs an open view of the sky and can take a minute from cold."
+        return stringResource(R.string.rig_no_fix) to stringResource(R.string.rig_no_fix_hint)
     }
     return when (source) {
         GpsProviderType.WIFI -> {
@@ -367,23 +370,12 @@ private fun rigDiagnosis(
             val timedOut = lastFailure?.contains("timeout", true) == true ||
                 lastFailure?.contains("timed out", true) == true
             when {
-                refused -> "Nothing listening at $ip:$port" to
-                    "The phone reached that address but nothing answered on port $port. The " +
-                    "ESP32 is powered but its firmware may not be running - reflash from the " +
-                    "TrackPro_ESP repo."
-                timedOut -> "No route to $ip" to
-                    "The phone could not reach the module at all. Join the ESP32's Wi-Fi " +
-                    "network in Android settings - it does not route over mobile data."
-                else -> "Not connected to $ip:$port" to
-                    "Check the ESP32 is powered, then that this phone is joined to its Wi-Fi " +
-                    "network rather than your home or phone network."
+                refused -> stringResource(R.string.rig_refused, ip, port) to stringResource(R.string.rig_refused_hint, port)
+                timedOut -> stringResource(R.string.rig_no_route, ip) to stringResource(R.string.rig_no_route_hint)
+                else -> stringResource(R.string.rig_not_connected, ip, port) to stringResource(R.string.rig_not_connected_hint)
             }
         }
-        GpsProviderType.BLUETOOTH -> "Serial link not open" to
-            "Check the ESP32 is powered and still paired in Android Bluetooth settings. A " +
-            "module that was unpaired or reset has to be paired again before it appears here."
-        GpsProviderType.PHONE_GPS -> "Phone GPS not reporting" to
-            "Allow location access for TrackPro and go outdoors with a clear view of the sky. " +
-            "Phone GPS also samples far slower than the ESP rig, so times will be coarser."
+        GpsProviderType.BLUETOOTH -> stringResource(R.string.rig_serial_closed) to stringResource(R.string.rig_serial_closed_hint)
+        GpsProviderType.PHONE_GPS -> stringResource(R.string.rig_phone_silent) to stringResource(R.string.rig_phone_silent_hint)
     }
 }

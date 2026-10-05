@@ -1,5 +1,8 @@
 package com.example.trackpro.screens.listViewScreens
 
+import com.example.trackpro.managerClasses.utilities.DateFormatterUtil
+import androidx.compose.ui.res.stringResource
+import com.example.trackpro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.localizedCountry
+import com.example.trackpro.components.trackTypeLabel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +66,7 @@ fun TimeAttackListViewScreen(
     /** Null when shown as a tab root, where there is nothing to go back to. */
     onBack: (() -> Unit)? = { navController.popBackStack() },
     header: (@Composable () -> Unit)? = null,
-    title: String = "Track Records",
+    title: String = stringResource(R.string.history_track_records),
     filter: SessionFilter = SessionFilter(),
     /** Null hides the filter bar. */
     onFilterChange: ((SessionFilter) -> Unit)? = null,
@@ -84,14 +89,16 @@ fun TimeAttackListViewScreen(
     }
 
     // Only the cars and tracks these sessions actually use, so every choice shows something.
-    val carOptions = remember(trackSessions, vehicles) {
+    val removedCar = stringResource(R.string.filter_removed_car)
+    val removedTrack = stringResource(R.string.filter_removed_track)
+    val carOptions = remember(trackSessions, vehicles, removedCar) {
         trackSessions.mapNotNull { it.vehicleId }.distinct().map { id ->
-            FilterOption(id, vehicles.find { it.vehicleId == id }?.displayName() ?: "Removed car")
+            FilterOption(id, vehicles.find { it.vehicleId == id }?.displayName() ?: removedCar)
         }.sortedBy { it.label }
     }
-    val trackOptions = remember(trackSessions, tracks) {
+    val trackOptions = remember(trackSessions, tracks, removedTrack) {
         trackSessions.mapNotNull { it.trackId }.distinct().map { id ->
-            FilterOption(id, tracks.find { it.trackId == id }?.trackName ?: "Removed track")
+            FilterOption(id, tracks.find { it.trackId == id }?.trackName ?: removedTrack)
         }.sortedBy { it.label }
     }
 
@@ -128,9 +135,9 @@ fun TimeAttackListViewScreen(
         trailing = {
             Text(
                 text = if (filter.narrows) {
-                    "${shown.size} of ${countLabel(trackSessions.size, "session")}"
+                    stringResource(R.string.history_shown_of, shown.size, countLabel(trackSessions.size, R.plurals.count_sessions))
                 } else {
-                    countLabel(trackSessions.size, "session")
+                    countLabel(trackSessions.size, R.plurals.count_sessions)
                 },
                 style = TrackProType.label,
                 color = TrackProTheme.colors.textMuted
@@ -143,17 +150,17 @@ fun TimeAttackListViewScreen(
         DataGate(
             state = loadState,
             items = trackSessions,
-            emptyMessage = "No track sessions yet",
-            emptyHint = "Pick a track and a car, and every lap lands here",
-            loadingLabel = "Reading sessions",
-            emptyActionLabel = "Start a track session",
+            emptyMessage = stringResource(R.string.history_no_track_sessions),
+            emptyHint = stringResource(R.string.history_no_track_sessions_hint),
+            loadingLabel = stringResource(R.string.history_reading_sessions),
+            emptyActionLabel = stringResource(R.string.history_start_track),
             onEmptyAction = { navController.navigate("trackandvehicle") }
         ) { _ ->
             if (shown.isEmpty()) {
                 EmptyState(
-                    message = "No sessions match",
-                    hint = "Nothing recorded fits these filters",
-                    actionLabel = "Clear filters",
+                    message = stringResource(R.string.history_no_sessions_match),
+                    hint = stringResource(R.string.history_no_match_hint),
+                    actionLabel = stringResource(R.string.history_clear_filters),
                     onAction = { onFilterChange?.invoke(filter.cleared()) },
                     modifier = Modifier.padding(top = contentPadding.calculateTopPadding())
                 )
@@ -177,7 +184,7 @@ fun TimeAttackListViewScreen(
                         item(key = "$trackId|$alone") {
                             val track = tracks.find { it.trackId == trackId }
                             ExpandableTrackGroup(
-                                trackName = track?.trackName ?: "Unknown Track",
+                                trackName = track?.trackName ?: stringResource(R.string.history_unknown_track),
                                 trackMeta = track?.meta() ?: "",
                                 sessions = sessions,
                                 vehicles = vehicles,
@@ -196,7 +203,8 @@ fun TimeAttackListViewScreen(
 
 private fun VehicleInformationData.displayName() = "$manufacturer $model"
 
-private fun TrackMainData.meta() = "$country · $type"
+@Composable
+private fun TrackMainData.meta() = "${localizedCountry(country)} · ${trackTypeLabel(type)}"
 
 /**
  * One track's sessions. [sessions] arrive already in the chosen order and are shown as given -
@@ -219,11 +227,10 @@ fun ExpandableTrackGroup(
 
     pendingDelete?.let { session ->
         val date = Instant.ofEpochMilli(session.startTime)
-            .atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd MMM"))
+            .atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(DateFormatterUtil.dayMonthPattern()))
         ConfirmDeleteDialog(
-            title = "Delete session?",
-            message = "The $trackName session from $date, including every lap and " +
-                "sector time, will be permanently removed.",
+            title = stringResource(R.string.history_delete_session),
+            message = stringResource(R.string.history_delete_track_session_msg, trackName, date),
             onConfirm = { onDelete(session); pendingDelete = null },
             onDismiss = { pendingDelete = null }
         )
@@ -236,7 +243,7 @@ fun ExpandableTrackGroup(
             Column(modifier = Modifier.weight(1f)) {
                 Text(trackName, style = TrackProType.titleMedium, color = TrackProTheme.colors.textPrimary)
                 Text(
-                    listOf(trackMeta, countLabel(sessions.size, "session"))
+                    listOf(trackMeta, countLabel(sessions.size, R.plurals.count_sessions))
                         .filter { it.isNotBlank() }
                         .joinToString(" · "),
                     style = TrackProType.label,
@@ -249,13 +256,13 @@ fun ExpandableTrackGroup(
             sessions.forEach { session ->
                 val vehicle = vehicles.find { it.vehicleId == session.vehicleId }
                 val startedAt = Instant.ofEpochMilli(session.startTime).atZone(ZoneId.systemDefault())
-                    .format(DateTimeFormatter.ofPattern("EEEE, HH:mm"))
+                    .format(DateTimeFormatter.ofPattern(DateFormatterUtil.weekdayTimePattern()))
                 SessionRow(
                     startTime = session.startTime,
-                    title = vehicle?.displayName() ?: "Unknown car",
+                    title = vehicle?.displayName() ?: stringResource(R.string.history_unknown_car),
                     // The best lap is on the row so ordering by pace can be seen, not trusted.
                     subtitle = bestLaps[session.id]
-                        ?.let { "$startedAt · best ${it.toLapTimeString()}" }
+                        ?.let { stringResource(R.string.history_session_best, startedAt, it.toLapTimeString()) }
                         ?: startedAt,
                     voided = session.voided,
                     onClick = { navController.navigate("timeattacklistitem/${session.id}") },

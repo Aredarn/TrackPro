@@ -1,5 +1,9 @@
 package com.example.trackpro.online.ui
 
+import com.example.trackpro.online.MessageText
+import com.example.trackpro.components.pluralResource
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -94,7 +98,7 @@ fun EventBoardScreen(eventId: String, onBack: () -> Unit) {
             try {
                 val next = online.events.board(eventId)
                 if (next == null) {
-                    state = LoadState.Failed("This event no longer exists.")
+                    state = LoadState.Failed(app.getString(R.string.board_gone))
                     return@LaunchedEffect
                 }
                 board = next
@@ -102,9 +106,9 @@ fun EventBoardScreen(eventId: String, onBack: () -> Unit) {
                 if (localTrack == null) localTrack = online.events.localTrackFor(next.trackId)
             } catch (e: NetworkException) {
                 // Keep the last board up through a signal drop in the paddock.
-                if (board == null) state = LoadState.Failed(e.message ?: "TrackBoard could not be reached.")
+                if (board == null) state = LoadState.Failed(MessageText.localize(e.message) ?: app.getString(R.string.online_unreachable))
             } catch (e: ApiException) {
-                if (board == null) state = LoadState.Failed(e.message ?: "TrackBoard refused the request.")
+                if (board == null) state = LoadState.Failed(MessageText.localize(e.message) ?: app.getString(R.string.online_refused))
             }
             delay(if (board?.status == ApiEventStatus.Live) LIVE_REFRESH_MS else IDLE_REFRESH_MS)
         }
@@ -119,7 +123,7 @@ fun EventBoardScreen(eventId: String, onBack: () -> Unit) {
     val groups = b?.groups.orEmpty()
 
     ScreenScaffold(
-        title = b?.name ?: "Event",
+        title = b?.name ?: stringResource(R.string.board_event),
         subtitle = b?.let { "${it.trackName} · ${window(it.startsAt, it.endsAt)}" },
         onBack = onBack,
         trailing = { b?.let { StatusPill(it.status) } },
@@ -127,7 +131,7 @@ fun EventBoardScreen(eventId: String, onBack: () -> Unit) {
         header = if (groups.isNotEmpty()) {
             {
                 SectionSwitch(
-                    options = listOf<Pair<String?, String>>(null to "Overall") + groups.map { it.id to it.name },
+                    options = listOf<Pair<String?, String>>(null to stringResource(R.string.board_overall)) + groups.map { it.id to it.name },
                     selected = group,
                     onSelect = { group = it }
                 )
@@ -137,9 +141,9 @@ fun EventBoardScreen(eventId: String, onBack: () -> Unit) {
         DataGate(
             state = state,
             items = entries,
-            emptyMessage = if (group == null) "Nobody has joined yet" else "Nobody in this group yet",
-            emptyHint = "Drivers join with the host's code in the Events tab. Their laps appear here as they drive.",
-            loadingLabel = "Fetching the board",
+            emptyMessage = if (group == null) stringResource(R.string.board_nobody) else stringResource(R.string.board_nobody_group),
+            emptyHint = stringResource(R.string.board_empty_hint),
+            loadingLabel = stringResource(R.string.board_fetching),
             onRetry = { reload++ },
         ) { rows ->
             LazyColumn(
@@ -157,13 +161,13 @@ fun EventBoardScreen(eventId: String, onBack: () -> Unit) {
                                 scope.launch {
                                     notice = try {
                                         localTrack = online.events.downloadTrack(b.trackId)
-                                        "${b.trackName} is on this phone. Pick it when you start a session."
+                                        app.getString(R.string.board_track_ready, b.trackName)
                                     } catch (e: SyncProblem) {
-                                        e.message
+                                        MessageText.localize(e.message)
                                     } catch (e: NetworkException) {
-                                        "Getting the track needs a connection."
+                                        app.getString(R.string.board_track_needs_connection)
                                     } catch (e: ApiException) {
-                                        e.message
+                                        MessageText.localize(e.message)
                                     }
                                     trackBusy = false
                                 }
@@ -189,8 +193,7 @@ fun EventBoardScreen(eventId: String, onBack: () -> Unit) {
 
                 item(key = "foot") {
                     Text(
-                        "Every lap a joined driver drives on this track during the event counts, private sessions included. " +
-                            "Times are posted by drivers and not verified.",
+                        stringResource(R.string.board_footer),
                         style = TrackProType.body,
                         color = TrackProTheme.colors.markingDim,
                         modifier = Modifier.padding(horizontal = Spacing.gutter, vertical = Spacing.lg)
@@ -202,7 +205,7 @@ fun EventBoardScreen(eventId: String, onBack: () -> Unit) {
                         Box(modifier = Modifier.padding(horizontal = Spacing.gutter)) {
                             if (confirmLeave) {
                                 PrimaryButton(
-                                    text = "Leave and remove my laps from this board",
+                                    text = stringResource(R.string.board_leave_confirm),
                                     accent = TrackProTheme.colors.danger,
                                     contentColor = TrackProTheme.colors.onAccent,
                                     haptic = Haptic.Reject,
@@ -213,7 +216,7 @@ fun EventBoardScreen(eventId: String, onBack: () -> Unit) {
                                                 online.events.leave(eventId)
                                                 onBack()
                                             } catch (e: Exception) {
-                                                notice = e.message ?: "Could not leave the event."
+                                                notice = MessageText.localize(e.message) ?: app.getString(R.string.board_leave_failed)
                                                 confirmLeave = false
                                             }
                                         }
@@ -221,7 +224,7 @@ fun EventBoardScreen(eventId: String, onBack: () -> Unit) {
                                 )
                             } else {
                                 Text(
-                                    "Leave event",
+                                    stringResource(R.string.board_leave),
                                     style = TrackProType.titleMedium,
                                     color = TrackProTheme.colors.danger,
                                     modifier = Modifier
@@ -254,15 +257,15 @@ private fun MyPlaceCard(me: EventBoardEntry, fieldSize: Int, inGroup: Boolean) {
                 Spacer(Modifier.width(Spacing.lg))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        if (rank == 1) "You're fastest" else "You, of $fieldSize",
+                        if (rank == 1) stringResource(R.string.board_fastest) else stringResource(R.string.board_you_of, fieldSize),
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )
                     Text(me.bestLapMs?.toLong()?.toLapTimeString() ?: "", style = TrackProType.statValue, color = TrackProTheme.colors.marking)
                     Text(
                         listOfNotNull(
-                            gap?.takeIf { it > 0 }?.let { "${it.toLong().toLapDeltaString()} to P1" },
-                            "${me.lapCount} laps",
+                            gap?.takeIf { it > 0 }?.let { stringResource(R.string.board_to_p1, it.toLong().toLapDeltaString()) },
+                            pluralResource(R.plurals.count_laps, me.lapCount),
                         ).joinToString(" · "),
                         style = TrackProType.body,
                         color = TrackProTheme.colors.markingDim
@@ -272,7 +275,7 @@ private fun MyPlaceCard(me: EventBoardEntry, fieldSize: Int, inGroup: Boolean) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         LiveDot()
                         Spacer(Modifier.width(6.dp))
-                        Text("On track", style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold), color = TrackProTheme.colors.deltaGood)
+                        Text(stringResource(R.string.board_on_track), style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold), color = TrackProTheme.colors.deltaGood)
                     }
                 }
             }
@@ -324,7 +327,7 @@ private fun BoardRow(entry: EventBoardEntry, isMe: Boolean, inGroup: Boolean, gr
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (isMe) "${entry.displayName} · you" else entry.displayName,
+                        if (isMe) stringResource(R.string.board_you_suffix, entry.displayName) else entry.displayName,
                         style = TrackProType.titleMedium,
                         color = TrackProTheme.colors.marking,
                         maxLines = 1,
@@ -340,7 +343,7 @@ private fun BoardRow(entry: EventBoardEntry, isMe: Boolean, inGroup: Boolean, gr
                     listOfNotNull(
                         if (!inGroup) groupName else null,
                         entry.vehicle?.let { "${it.manufacturer} ${it.model}" },
-                        "${entry.lapCount} laps",
+                        pluralResource(R.plurals.count_laps, entry.lapCount),
                     ).joinToString(" · "),
                     style = TrackProType.body,
                     color = TrackProTheme.colors.markingDim,
@@ -350,12 +353,12 @@ private fun BoardRow(entry: EventBoardEntry, isMe: Boolean, inGroup: Boolean, gr
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    entry.bestLapMs?.toLong()?.toLapTimeString() ?: "No lap",
+                    entry.bestLapMs?.toLong()?.toLapTimeString() ?: stringResource(R.string.board_no_lap),
                     style = TrackProType.titleLarge,
                     color = if (rank == 1) TrackProTheme.colors.accent else if (entry.bestLapMs == null) TrackProTheme.colors.textFaint else TrackProTheme.colors.marking
                 )
                 val sub = when {
-                    entry.lastLapIsBest && entry.lastLapMs != null -> "Last lap PB"
+                    entry.lastLapIsBest && entry.lastLapMs != null -> stringResource(R.string.board_last_lap_pb)
                     gap != null && gap > 0 -> gap.toLong().toLapDeltaString()
                     else -> null
                 }
@@ -382,15 +385,15 @@ private fun GetTrackCard(trackName: String, busy: Boolean, onGet: () -> Unit) {
                 .paddockCard(color = TrackProTheme.colors.deltaBad.copy(alpha = 0.10f))
                 .padding(Spacing.lg)
         ) {
-            Text("Get the event's track", style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+            Text(stringResource(R.string.board_get_track_title), style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
             Spacer(Modifier.height(Spacing.xs))
             Text(
-                "$trackName isn't on this phone yet. Download it so your laps are timed on the same gates as everyone else's.",
+                stringResource(R.string.board_get_track_hint, trackName),
                 style = TrackProType.body,
                 color = TrackProTheme.colors.markingDim
             )
             Spacer(Modifier.height(Spacing.md))
-            PrimaryButton(text = if (busy) "Downloading…" else "Get $trackName", enabled = !busy, onClick = onGet, modifier = Modifier.fillMaxWidth())
+            PrimaryButton(text = if (busy) stringResource(R.string.board_downloading) else stringResource(R.string.board_get_track, trackName), enabled = !busy, onClick = onGet, modifier = Modifier.fillMaxWidth())
         }
     }
 }

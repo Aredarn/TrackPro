@@ -1,5 +1,7 @@
 package com.example.trackpro.screens
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -89,21 +91,21 @@ fun TrackVehicleSelectorScreen(
             .background(TrackProTheme.colors.panel)
     ) {
         AppTopBar(
-            title = "Session setup",
+            title = stringResource(R.string.setup_title),
             accent = TrackProTheme.colors.accent,
             onBack = { navController.popBackStack() }
         )
 
-        DashGroup("Track") {
+        DashGroup(stringResource(R.string.mode_track)) {
             Text(
-                text = selectedTrackName.ifEmpty { "Not selected" },
+                text = selectedTrackName.ifEmpty { stringResource(R.string.setup_not_selected) },
                 style = TrackProType.titleLarge,
                 color = if (trackSet) TrackProTheme.colors.marking
                 else TrackProTheme.colors.markingDim
             )
             Spacer(Modifier.height(Spacing.sm))
             TrackDropdownMenu(
-                label = "Choose track",
+                label = stringResource(R.string.setup_choose_track),
                 tracks = tracks,
                 selectedTrackName = selectedTrackName,
                 onTrackSelected = { id ->
@@ -114,9 +116,9 @@ fun TrackVehicleSelectorScreen(
             )
         }
 
-        DashGroup("Car") {
+        DashGroup(stringResource(R.string.car_title)) {
             Text(
-                text = selectedVehicleName.ifEmpty { "Not selected" },
+                text = selectedVehicleName.ifEmpty { stringResource(R.string.setup_not_selected) },
                 style = TrackProType.titleLarge,
                 color = if (vehicleSet) TrackProTheme.colors.marking
                 else TrackProTheme.colors.markingDim
@@ -124,7 +126,7 @@ fun TrackVehicleSelectorScreen(
             Spacer(Modifier.height(Spacing.sm))
             if (vehicles.isNotEmpty()) {
                 DropdownMenuFieldMulti(
-                    "Choose car",
+                    stringResource(R.string.setup_choose_car),
                     vehicles,
                     selectedVehicleName
                 ) { id ->
@@ -134,7 +136,7 @@ fun TrackVehicleSelectorScreen(
                 }
             } else {
                 Text(
-                    "No cars in the garage yet",
+                    stringResource(R.string.setup_no_cars),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.deltaBad
                 )
@@ -150,14 +152,14 @@ fun TrackVehicleSelectorScreen(
                 .padding(Spacing.gutter)
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                ReadyChip("Track", trackSet)
-                ReadyChip("Car", vehicleSet)
+                ReadyChip(stringResource(R.string.setup_track_set), stringResource(R.string.setup_track_needed), trackSet)
+                ReadyChip(stringResource(R.string.setup_car_set), stringResource(R.string.setup_car_needed), vehicleSet)
             }
             Spacer(Modifier.height(Spacing.md))
             DashAction(
-                label = "Start session",
-                detail = if (canStart) "Arm timing and go green"
-                else if (!trackSet) "Pick a track first" else "Pick a car first",
+                label = stringResource(R.string.setup_start),
+                detail = if (canStart) stringResource(R.string.setup_start_ready)
+                else if (!trackSet) stringResource(R.string.setup_pick_track) else stringResource(R.string.setup_pick_car),
                 enabled = canStart,
                 primary = true,
                 icon = Icons.Filled.Flag,
@@ -169,7 +171,7 @@ fun TrackVehicleSelectorScreen(
 
 /** One precondition for the start button: ticked when met, quiet when not. */
 @Composable
-private fun ReadyChip(label: String, ready: Boolean) {
+private fun ReadyChip(setLabel: String, neededLabel: String, ready: Boolean) {
     val tint = if (ready) TrackProTheme.colors.deltaGood else TrackProTheme.colors.markingDim
     Row(
         modifier = Modifier
@@ -186,7 +188,7 @@ private fun ReadyChip(label: String, ready: Boolean) {
         )
         Spacer(Modifier.width(Spacing.sm))
         Text(
-            if (ready) "$label set" else "$label needed",
+            if (ready) setLabel else neededLabel,
             style = TrackProType.label,
             color = if (ready) tint else TrackProTheme.colors.textMuted
         )

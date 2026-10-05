@@ -15,6 +15,7 @@ import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.managerClasses.utilities.timed
+import com.example.trackpro.managerClasses.utilities.AppLanguage
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
@@ -280,6 +281,22 @@ class TrackProApp : Application() {
         deltaReference.value = reference
     }
 
+    /** System, English or Hungarian; see [AppLanguage]. */
+    val appLanguage by lazy { MutableStateFlow(AppLanguage.stored(this)) }
+
+    fun setAppLanguage(tag: String) {
+        AppLanguage.store(this, tag)
+        appLanguage.value = tag
+        AppLanguage.applyTo(this)
+    }
+
+    // A system language change resets the application's resources to the phone's
+    // language; a forced choice has to be laid back over it.
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        AppLanguage.applyTo(this)
+    }
+
     private val unitPrefs by lazy { getSharedPreferences("unit_prefs", MODE_PRIVATE) }
     val useMetricUnits by lazy { MutableStateFlow(unitPrefs.getBoolean("metric_units", true)) }
 
@@ -300,6 +317,7 @@ class TrackProApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AppLanguage.applyTo(this)
         MapLibre.getInstance(this)
         // Apply a persisted test-server redirect (if any) before the first
         // connection attempt, so a restart doesn't briefly dial the real ESP32
@@ -331,6 +349,10 @@ class TrackProApp : Application() {
 }
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
 
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -577,9 +599,9 @@ class MainActivity : ComponentActivity() {
 
 /** The places the app has. Everything else is reached from one of them. */
 private val MainTabs = listOf(
-    DashTab("main", "Drive", Icons.Default.Speed),
-    DashTab("history", "History", Icons.Default.History),
-    DashTab("events", "Events", Icons.Default.Flag),
-    DashTab("garage", "Garage", Icons.Default.DirectionsCar),
-    DashTab("profile", "Profile", Icons.Default.Person),
+    DashTab("main", R.string.tab_drive, Icons.Default.Speed),
+    DashTab("history", R.string.tab_history, Icons.Default.History),
+    DashTab("events", R.string.tab_events, Icons.Default.Flag),
+    DashTab("garage", R.string.tab_garage, Icons.Default.DirectionsCar),
+    DashTab("profile", R.string.tab_profile, Icons.Default.Person),
 )

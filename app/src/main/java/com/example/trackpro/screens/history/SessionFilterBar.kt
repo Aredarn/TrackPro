@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.history
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -87,37 +89,37 @@ fun SessionFilterBar(
             ClearFiltersChip(onClick = { onChange(filter.cleared()) })
         }
         FilterMenuChip(
-            label = labelFor(filter.vehicleId, cars, all = "All cars", missing = "Removed car"),
+            label = labelFor(filter.vehicleId, cars, all = stringResource(R.string.filter_all_cars), missing = stringResource(R.string.filter_removed_car)),
             active = filter.vehicleId != null,
-            description = "Filter by car",
-            options = listOf<Pair<Long?, String>>(null to "All cars") + cars.map { it.id to it.label },
+            description = stringResource(R.string.filter_by_car),
+            options = listOf<Pair<Long?, String>>(null to stringResource(R.string.filter_all_cars)) + cars.map { it.id to it.label },
             selected = filter.vehicleId,
             onSelect = { onChange(filter.copy(vehicleId = it)) }
         )
         if (tracks != null) {
             FilterMenuChip(
-                label = labelFor(filter.trackId, tracks, all = "All tracks", missing = "Removed track"),
+                label = labelFor(filter.trackId, tracks, all = stringResource(R.string.filter_all_tracks), missing = stringResource(R.string.filter_removed_track)),
                 active = filter.trackId != null,
-                description = "Filter by track",
-                options = listOf<Pair<Long?, String>>(null to "All tracks") + tracks.map { it.id to it.label },
+                description = stringResource(R.string.filter_by_track),
+                options = listOf<Pair<Long?, String>>(null to stringResource(R.string.filter_all_tracks)) + tracks.map { it.id to it.label },
                 selected = filter.trackId,
                 onSelect = { onChange(filter.copy(trackId = it)) }
             )
         }
         FilterMenuChip(
-            label = filter.period.label,
+            label = stringResource(filter.period.label),
             active = filter.period != SessionPeriod.ALL,
-            description = "Filter by date",
-            options = SessionPeriod.entries.map { it to it.label },
+            description = stringResource(R.string.filter_by_date),
+            options = SessionPeriod.entries.map { it to stringResource(it.label) },
             selected = filter.period,
             onSelect = { onChange(filter.copy(period = it)) }
         )
         // Order hides nothing, so it is never lit - only the filters are.
         FilterMenuChip(
-            label = filter.sort.label,
+            label = stringResource(filter.sort.label),
             active = false,
-            description = "Sort",
-            options = sorts.map { it to it.label },
+            description = stringResource(R.string.filter_sort),
+            options = sorts.map { it to stringResource(it.label) },
             selected = filter.sort,
             onSelect = { onChange(filter.copy(sort = it)) }
         )
@@ -188,7 +190,7 @@ private fun <T> FilterMenuChip(
                         {
                             Icon(
                                 Icons.Default.Check,
-                                contentDescription = "Selected",
+                                contentDescription = stringResource(R.string.common_selected),
                                 tint = TrackProTheme.colors.accent,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -224,6 +226,6 @@ private fun ClearFiltersChip(onClick: () -> Unit) {
             modifier = Modifier.size(16.dp)
         )
         Spacer(Modifier.width(Spacing.xs))
-        Text("Clear", style = TrackProType.titleMedium, color = TrackProTheme.colors.markingDim)
+        Text(stringResource(R.string.filter_clear), style = TrackProType.titleMedium, color = TrackProTheme.colors.markingDim)
     }
 }

@@ -1,19 +1,20 @@
 package com.example.trackpro.online
 
+import com.example.trackpro.R
 import com.example.trackpro.dataClasses.RemoteLink
 import com.example.trackpro.dataClasses.VehicleInformationData
 
 /** Where a car stands against the driver's account, as the garage shows it. */
-enum class VehicleSyncStatus(val label: String) {
+enum class VehicleSyncStatus(@androidx.annotation.StringRes val label: Int) {
     /** Signed out: the car exists on this phone, and that is all there is to say. */
-    OnThisPhone("On this phone"),
+    OnThisPhone(R.string.sync_on_phone),
     /** New or edited here, waiting for the next sync. */
-    Pending("Waiting to back up"),
-    Synced("Backed up"),
+    Pending(R.string.sync_pending),
+    Synced(R.string.sync_synced),
     /** The account refused it; [RemoteLink.lastError] says why. */
-    Failed("Backup failed"),
+    Failed(R.string.sync_failed),
     /** Removed from the account on another phone and kept here. */
-    LocalOnly("Only on this phone"),
+    LocalOnly(R.string.sync_local_only),
 }
 
 fun vehicleSyncStatus(

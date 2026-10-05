@@ -1,5 +1,8 @@
 package com.example.trackpro.screens.profile
 
+import com.example.trackpro.components.pluralResource
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -39,6 +42,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.localizedCountry
+import com.example.trackpro.online.MessageText
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -134,7 +139,7 @@ fun ProfileScreen(navController: NavController) {
     val scroll = rememberScrollState()
     val scrolled by scroll.isScrolledUnderChrome()
 
-    ScreenScaffold(title = "Profile", contentScrolled = scrolled) { padding ->
+    ScreenScaffold(title = stringResource(R.string.tab_profile), contentScrolled = scrolled) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -154,11 +159,11 @@ fun ProfileScreen(navController: NavController) {
                     onEdit = { navController.navigate("profile/edit") },
                     onSignIn = { navController.navigate("account") },
                 )
-                if (signedIn != null && problem != null) Notice(problem!!)
+                if (signedIn != null && problem != null) Notice(MessageText.localize(problem!!)!!)
                 CareerCard(career = career, server = snapshot?.stats?.takeIf { career.isEmpty })
             }
 
-            SectionTitle("Main car")
+            SectionTitle(stringResource(R.string.profile_main_car))
             MainCarCard(
                 vehicle = vehicles.firstOrNull { it.vehicleId == career.mainVehicleId } ?: vehicles.singleOrNull(),
                 photo = { online.photos.file(it) },
@@ -166,7 +171,7 @@ fun ProfileScreen(navController: NavController) {
                 onAdd = { navController.navigate("createvehicle") },
             )
 
-            SectionTitle("Personal bests")
+            SectionTitle(stringResource(R.string.profile_personal_bests))
             PersonalBests(
                 career = career,
                 serverBests = snapshot?.stats?.personalBests.orEmpty(),
@@ -177,18 +182,18 @@ fun ProfileScreen(navController: NavController) {
             )
 
             if (signedIn != null) {
-                SectionTitle("Account")
+                SectionTitle(stringResource(R.string.profile_account))
                 AccountGroup(
                     onEdit = { navController.navigate("profile/edit") },
                     onSignedOut = { scope.launch { online.profile.clear() } },
                 )
             }
 
-            SectionTitle("App")
+            SectionTitle(stringResource(R.string.profile_app))
             ListCard {
-                LinkRow(Icons.Default.Settings, "Settings", "Units, contrast, GPS source, server") { navController.navigate("settings") }
+                LinkRow(Icons.Default.Settings, stringResource(R.string.settings_title), stringResource(R.string.profile_settings_hint)) { navController.navigate("settings") }
                 RowDivider()
-                LinkRow(Icons.Default.Router, "Rig connection", "ESP32 link and diagnostics") { navController.navigate("esptest") }
+                LinkRow(Icons.Default.Router, stringResource(R.string.profile_rig), stringResource(R.string.profile_rig_hint)) { navController.navigate("esptest") }
             }
             Spacer(Modifier.height(Spacing.xl))
         }
@@ -212,15 +217,15 @@ private fun DriverCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             PhotoFrame(
                 file = avatar,
-                contentDescription = if (avatar != null) "Profile photo" else null,
-                initials = initialsOf(name ?: "Driver"),
+                contentDescription = if (avatar != null) stringResource(R.string.profile_photo) else null,
+                initials = initialsOf(name ?: stringResource(R.string.drive_driver)),
                 shape = CircleShape,
                 modifier = Modifier.size(72.dp)
             )
             Spacer(Modifier.width(Spacing.lg))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = name ?: "Driver",
+                    text = name ?: stringResource(R.string.drive_driver),
                     style = TrackProType.titleLarge,
                     color = TrackProTheme.colors.marking,
                     maxLines = 2,
@@ -229,8 +234,8 @@ private fun DriverCard(
                 val since = memberSince?.let { runCatching { OffsetDateTime.parse(it).year }.getOrNull() }
                 Text(
                     text = when {
-                        !signedIn -> "Racing on this phone"
-                        else -> listOfNotNull(country, since?.let { "Driver since $it" }).joinToString(" · ").ifEmpty { "TrackBoard driver" }
+                        !signedIn -> stringResource(R.string.profile_racing_on_phone)
+                        else -> listOfNotNull(country?.let { localizedCountry(it) }, since?.let { stringResource(R.string.profile_driver_since, it) }).joinToString(" · ").ifEmpty { stringResource(R.string.profile_trackboard_driver) }
                     },
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim
@@ -247,12 +252,12 @@ private fun DriverCard(
         if (!signedIn) {
             Spacer(Modifier.height(Spacing.lg))
             Text(
-                "Sign in to back up your garage and see where you place on every track.",
+                stringResource(R.string.profile_sign_in_hint),
                 style = TrackProType.label,
                 color = TrackProTheme.colors.markingDim
             )
             Spacer(Modifier.height(Spacing.md))
-            PrimaryButton(text = "Sign in", onClick = onSignIn, modifier = Modifier.fillMaxWidth())
+            PrimaryButton(text = stringResource(R.string.common_sign_in), onClick = onSignIn, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -286,7 +291,7 @@ private fun CareerCard(career: LocalCareer, server: ProfileStats?) {
 
     PaddockCard {
         Text(
-            if (first != null) "Laps timed since ${DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(first))}" else "Laps timed",
+            if (first != null) stringResource(R.string.profile_laps_since, DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(first))) else stringResource(R.string.profile_laps_timed),
             style = TrackProType.label,
             color = TrackProTheme.colors.markingDim
         )
@@ -302,10 +307,10 @@ private fun CareerCard(career: LocalCareer, server: ProfileStats?) {
                 .clip(TrackProShapes.control)
                 .background(TrackProTheme.colors.bgElevated)
         ) {
-            Instrument("Sessions", if (sessions == 0) dash else "$sessions", Modifier.weight(1f), valueSize = TrackProType.titleMedium.fontSize)
-            Instrument("Tracks", if (tracks == 0) dash else "$tracks", Modifier.weight(1f), valueSize = TrackProType.titleMedium.fontSize)
+            Instrument(stringResource(R.string.profile_sessions), if (sessions == 0) dash else "$sessions", Modifier.weight(1f), valueSize = TrackProType.titleMedium.fontSize)
+            Instrument(stringResource(R.string.garage_tracks), if (tracks == 0) dash else "$tracks", Modifier.weight(1f), valueSize = TrackProType.titleMedium.fontSize)
             Instrument(
-                "Km lapped",
+                stringResource(R.string.profile_km_lapped),
                 km?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: dash,
                 Modifier.weight(1f),
                 valueSize = TrackProType.titleMedium.fontSize
@@ -330,8 +335,8 @@ private fun MainCarCard(
                     IconCircle(Icons.Default.EmojiEvents, size = 44.dp)
                     Spacer(Modifier.width(Spacing.lg))
                     Column(Modifier.weight(1f)) {
-                        Text("Add your car", style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
-                        Text("Every lap is filed against the car that set it", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                        Text(stringResource(R.string.drive_add_car), style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+                        Text(stringResource(R.string.profile_add_car_hint), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                     }
                 }
             }
@@ -393,13 +398,15 @@ private fun PersonalBests(
     onOpenTrack: (Long) -> Unit,
 ) {
     val serverById = serverBests.associateBy { it.trackId }
+    val res = LocalContext.current.resources
+    val fromAccount = stringResource(R.string.profile_from_account)
     val rows = buildList {
         career.bests.forEach { best ->
             val server = remoteIds[best.trackId]?.let(serverById::get)
             add(
                 BestRow(
                     trackName = best.trackName,
-                    detail = listOfNotNull("${best.lapCount} lap${if (best.lapCount == 1) "" else "s"}", vehicleName(best.vehicleId)).joinToString(" · "),
+                    detail = listOfNotNull(res.getQuantityString(R.plurals.count_laps, best.lapCount, best.lapCount), vehicleName(best.vehicleId)).joinToString(" · "),
                     bestMs = best.bestLapMs,
                     rank = server?.rank,
                     fieldSize = server?.fieldSize,
@@ -414,9 +421,9 @@ private fun PersonalBests(
                 BestRow(
                     trackName = best.trackName,
                     detail = listOfNotNull(
-                        "${best.lapCount} lap${if (best.lapCount == 1) "" else "s"}",
+                        res.getQuantityString(R.plurals.count_laps, best.lapCount, best.lapCount),
                         best.vehicle?.let { "${it.manufacturer} ${it.model}" },
-                        "from your account",
+                        fromAccount,
                     ).joinToString(" · "),
                     bestMs = best.bestLapMs.toLong(),
                     rank = best.rank,
@@ -434,8 +441,8 @@ private fun PersonalBests(
                     IconCircle(Icons.Default.EmojiEvents, size = 44.dp)
                     Spacer(Modifier.width(Spacing.lg))
                     Column {
-                        Text("No personal bests yet", style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
-                        Text("Your best on each track lands here after a timed lap", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                        Text(stringResource(R.string.profile_no_bests), style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+                        Text(stringResource(R.string.profile_no_bests_hint), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                     }
                 }
             }
@@ -459,7 +466,7 @@ private fun PersonalBests(
                 Column(Modifier.weight(1f)) {
                     Text(row.trackName, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        listOfNotNull(row.detail, row.fieldSize?.let { "of $it driver${if (it == 1) "" else "s"}" }).joinToString(" · "),
+                        listOfNotNull(row.detail, row.fieldSize?.let { pluralResource(R.plurals.profile_of_drivers, it) }).joinToString(" · "),
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim,
                         maxLines = 1,
@@ -477,7 +484,7 @@ private fun PersonalBests(
     }
     if (!signedIn) {
         Text(
-            "Places appear when you sign in and share your laps.",
+            stringResource(R.string.profile_places_hint),
             style = TrackProType.label,
             color = TrackProTheme.colors.markingDim,
             modifier = Modifier.padding(horizontal = Spacing.gutter + Spacing.xs, vertical = Spacing.sm)
@@ -519,15 +526,16 @@ private fun AccountGroup(onEdit: () -> Unit, onSignedOut: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
 
+    val exportSaved = stringResource(R.string.profile_export_saved)
     val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
         if (uri != null) scope.launch {
             message = try {
                 online.profile.export(uri)
-                "Export saved"
+                exportSaved
             } catch (e: ApiException) {
-                e.message
+                MessageText.localize(e.message)
             } catch (e: NetworkException) {
-                e.message
+                MessageText.localize(e.message)
             }
         }
     }
@@ -537,13 +545,13 @@ private fun AccountGroup(onEdit: () -> Unit, onSignedOut: () -> Unit) {
     }
 
     ListCard {
-        LinkRow(Icons.Default.Edit, "Edit profile", "Name, photo, country, bio", onClick = onEdit)
+        LinkRow(Icons.Default.Edit, stringResource(R.string.profile_edit), stringResource(R.string.profile_edit_hint), onClick = onEdit)
         RowDivider()
         ActionRow(
             icon = Icons.Default.Leaderboard,
-            label = "Share laps on leaderboards",
-            value = if (sharing) "Your laps are on the leaderboards" else "Your laps stay private",
-            action = if (sharing) "On" else "Off",
+            label = stringResource(R.string.profile_share),
+            value = if (sharing) stringResource(R.string.profile_sharing_on) else stringResource(R.string.profile_sharing_off),
+            action = if (sharing) stringResource(R.string.common_on) else stringResource(R.string.common_off),
             selected = sharing,
         ) {
             online.settings.setSharingEnabled(!sharing)
@@ -551,8 +559,7 @@ private fun AccountGroup(onEdit: () -> Unit, onSignedOut: () -> Unit) {
         }
         Text(
             // Says exactly what leaves the phone, so the choice is an informed one.
-            "Shared: your name, lap and sector times, session date, car make, model and year, and which " +
-                "GPS timed it. Only sessions on premade or published tracks. Turning it off takes them back down.",
+            stringResource(R.string.profile_share_detail),
             style = TrackProType.label,
             color = TrackProTheme.colors.markingDim,
             modifier = Modifier.padding(start = 72.dp, end = Spacing.lg, bottom = Spacing.md)
@@ -560,10 +567,10 @@ private fun AccountGroup(onEdit: () -> Unit, onSignedOut: () -> Unit) {
         RowDivider()
         ActionRow(
             icon = Icons.Default.Sync,
-            label = "Sync",
+            label = stringResource(R.string.profile_sync),
             value = describe(lastSync),
             valueColor = if (lastSync?.problem != null && lastSync?.offline != true) TrackProTheme.colors.deltaBad else null,
-            action = if (syncing) "Syncing…" else "Sync now",
+            action = if (syncing) stringResource(R.string.profile_syncing) else stringResource(R.string.profile_sync_now),
             selected = false,
         ) {
             if (!syncing) {
@@ -572,11 +579,11 @@ private fun AccountGroup(onEdit: () -> Unit, onSignedOut: () -> Unit) {
             }
         }
         RowDivider()
-        LinkRow(Icons.Default.Download, "Export your data", "Everything the server holds, as one JSON file") {
+        LinkRow(Icons.Default.Download, stringResource(R.string.profile_export), stringResource(R.string.profile_export_hint)) {
             exporter.launch("trackboard-export.json")
         }
         RowDivider()
-        LinkRow(Icons.AutoMirrored.Filled.Logout, "Sign out", "Your records stay on this phone") {
+        LinkRow(Icons.AutoMirrored.Filled.Logout, stringResource(R.string.profile_sign_out), stringResource(R.string.profile_sign_out_hint)) {
             scope.launch {
                 SyncScheduler.cancelAll(context)
                 online.events.clear()
@@ -585,7 +592,7 @@ private fun AccountGroup(onEdit: () -> Unit, onSignedOut: () -> Unit) {
             }
         }
         RowDivider()
-        LinkRow(Icons.Default.DeleteForever, "Delete account", "Removes it from the server for good", danger = true) { confirmDelete = true }
+        LinkRow(Icons.Default.DeleteForever, stringResource(R.string.profile_delete_account), stringResource(R.string.profile_delete_account_hint), danger = true) { confirmDelete = true }
     }
     message?.let {
         Text(it, style = TrackProType.label, color = TrackProTheme.colors.markingDim, modifier = Modifier.padding(horizontal = Spacing.gutter + Spacing.xs, vertical = Spacing.sm))
@@ -604,6 +611,7 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
     var typed by remember { mutableStateOf("") }
+    val deleteWord = stringResource(R.string.profile_delete_word)
     var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -613,18 +621,16 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
         containerColor = TrackProTheme.colors.bgCard,
         titleContentColor = TrackProTheme.colors.textPrimary,
         textContentColor = TrackProTheme.colors.textMuted,
-        title = { Text("Delete your TrackBoard account?") },
+        title = { Text(stringResource(R.string.profile_delete_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 Text(
-                    "Your profile, backed-up cars, photos and every lap you shared are removed from the " +
-                        "server, and you leave every leaderboard. The cars, tracks and sessions on this " +
-                        "phone are not touched."
+                    stringResource(R.string.profile_delete_msg)
                 )
                 OutlinedTextField(
                     value = typed,
                     onValueChange = { typed = it },
-                    label = { Text("Type DELETE to confirm") },
+                    label = { Text(stringResource(R.string.profile_type_to_confirm, deleteWord)) },
                     singleLine = true,
                     shape = TrackProShapes.control,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -635,7 +641,7 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Your password") },
+                    label = { Text(stringResource(R.string.profile_password)) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -650,7 +656,7 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
         },
         confirmButton = {
             TextButton(
-                enabled = typed.trim() == "DELETE" && password.isNotEmpty() && !busy,
+                enabled = typed.trim().equals(deleteWord, ignoreCase = true) && password.isNotEmpty() && !busy,
                 onClick = {
                     busy = true
                     error = null
@@ -661,20 +667,20 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onDeleted: () -> Unit) {
                             online.events.clear()
                             onDeleted()
                         } catch (e: ApiException) {
-                            error = e.message
+                            error = MessageText.localize(e.message)
                         } catch (e: NetworkException) {
-                            error = e.message
+                            error = MessageText.localize(e.message)
                         } finally {
                             busy = false
                         }
                     }
                 }
             ) {
-                Text(if (busy) "Deleting…" else "Delete account", color = TrackProTheme.colors.danger, style = TrackProType.titleMedium)
+                Text(if (busy) stringResource(R.string.profile_deleting) else stringResource(R.string.profile_delete_account), color = TrackProTheme.colors.danger, style = TrackProType.titleMedium)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel", color = TrackProTheme.colors.textMuted) }
+            TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.common_cancel), color = TrackProTheme.colors.textMuted) }
         }
     )
 }

@@ -1,5 +1,7 @@
 package com.example.trackpro.extrasForUI
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,7 +43,7 @@ fun <T> AppDropdownField(
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
     accent: Color = TrackProTheme.colors.accent,
-    emptyMessage: String = "No options available"
+    emptyMessage: String = stringResource(R.string.dropdown_no_options)
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -195,7 +197,7 @@ fun TrackDropdownMenu(
         ) {
             if (tracks.isEmpty()) {
                 DropdownMenuItem(
-                    text = { Text("No tracks found", color = TrackProTheme.colors.textMuted) },
+                    text = { Text(stringResource(R.string.dropdown_no_tracks), color = TrackProTheme.colors.textMuted) },
                     onClick = { expanded = false },
                     enabled = false
                 )

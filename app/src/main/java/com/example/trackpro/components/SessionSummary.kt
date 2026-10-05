@@ -1,5 +1,7 @@
 package com.example.trackpro.components
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -98,9 +100,9 @@ fun SessionSummary(
             Spacer(Modifier.height(Spacing.xl))
 
             when {
-                saveFailed != null -> StatusHeader(Icons.Default.ErrorOutline, "Session not saved", TrackProTheme.colors.danger)
+                saveFailed != null -> StatusHeader(Icons.Default.ErrorOutline, stringResource(R.string.summary_not_saved), TrackProTheme.colors.danger)
                 personalBest != null -> PersonalBestCelebration(personalBest)
-                else -> StatusHeader(Icons.Default.CheckCircle, "Session complete", TrackProTheme.colors.deltaGood)
+                else -> StatusHeader(Icons.Default.CheckCircle, stringResource(R.string.summary_complete), TrackProTheme.colors.deltaGood)
             }
 
             PaddockCard {
@@ -146,13 +148,13 @@ fun SessionSummary(
             verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             PrimaryButton(
-                text = "Keep session",
+                text = stringResource(R.string.summary_keep),
                 onClick = onKeep,
                 haptic = Haptic.Confirm,
                 modifier = Modifier.fillMaxWidth()
             )
             DashAction(
-                label = "Void this run",
+                label = stringResource(R.string.summary_void),
                 onClick = onVoid,
                 compact = true,
                 accent = TrackProTheme.colors.danger,
@@ -160,7 +162,7 @@ fun SessionSummary(
                 haptic = Haptic.Reject
             )
             Text(
-                text = "A voided run is kept but marked, and stops counting toward your bests.",
+                text = stringResource(R.string.summary_void_hint),
                 style = TrackProType.label,
                 color = TrackProTheme.colors.markingDim,
                 textAlign = TextAlign.Center,
@@ -186,7 +188,7 @@ private fun StatusHeader(icon: ImageVector, text: String, tone: Color) {
 }
 
 /**
- * The peak: a trophy springing in on a soft glow, the words "New personal best", and the
+ * The peak: a trophy springing in on a soft glow, the words stringResource(R.string.summary_new_pb), and the
  * margin. Proportional - a spring and a glow, no confetti - because it is a timing app.
  */
 @Composable
@@ -223,7 +225,7 @@ private fun PersonalBestCelebration(moment: PersonalBestMoment) {
             }
             Spacer(Modifier.height(Spacing.lg))
             Text(
-                if (moment.previousMs == null) "First time on the board" else "New personal best",
+                if (moment.previousMs == null) stringResource(R.string.summary_first_on_board) else stringResource(R.string.summary_new_pb),
                 style = TrackProType.titleLarge,
                 color = TrackProTheme.colors.marking,
                 modifier = Modifier.graphicsLayer { alpha = fade }
@@ -232,8 +234,8 @@ private fun PersonalBestCelebration(moment: PersonalBestMoment) {
             Text(
                 text = moment.previousMs?.let { prev ->
                     val gain = (prev - moment.newMs) / 1000.0
-                    "${String.format(Locale.US, "%.2f", gain)} s faster than your previous best on this track"
-                } ?: "Your first timed lap on this track. That's the one to beat now.",
+                    stringResource(R.string.summary_faster_than_prev, String.format(Locale.US, "%.2f", gain))
+                } ?: stringResource(R.string.summary_first_lap),
                 style = TrackProType.body,
                 color = TrackProTheme.colors.markingDim,
                 textAlign = TextAlign.Center,

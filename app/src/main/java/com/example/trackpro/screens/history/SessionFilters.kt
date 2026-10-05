@@ -1,15 +1,17 @@
 package com.example.trackpro.screens.history
 
+import com.example.trackpro.R
+import androidx.annotation.StringRes
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import java.time.ZonedDateTime
 
 /** How far back the History list reaches. Calendar days, counting today. */
-enum class SessionPeriod(val label: String) {
-    ALL("All time"),
-    LAST_7_DAYS("Last 7 days"),
-    LAST_30_DAYS("Last 30 days"),
-    THIS_YEAR("This year");
+enum class SessionPeriod(@StringRes val label: Int) {
+    ALL(R.string.period_all),
+    LAST_7_DAYS(R.string.period_7d),
+    LAST_30_DAYS(R.string.period_30d),
+    THIS_YEAR(R.string.period_year);
 
     /**
      * The earliest start time this period includes, or null for no limit.
@@ -31,15 +33,15 @@ enum class SessionPeriod(val label: String) {
 }
 
 /** The order sessions are listed in. */
-enum class SessionSort(val label: String) {
-    NEWEST("Newest first"),
-    OLDEST("Oldest first"),
+enum class SessionSort(@StringRes val label: Int) {
+    NEWEST(R.string.sort_newest),
+    OLDEST(R.string.sort_oldest),
     /**
      * By each session's best lap. Only meaningful within one track - a lap of a short circuit
      * is not faster than one of a long circuit in any useful sense - so it orders the sessions
      * inside each track, while the tracks themselves stay in order of recent use.
      */
-    FASTEST("Fastest lap");
+    FASTEST(R.string.sort_fastest);
 }
 
 /**

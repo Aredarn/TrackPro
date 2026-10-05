@@ -1,5 +1,8 @@
 package com.example.trackpro.screens.drive
 
+import com.example.trackpro.components.pluralResource
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -128,7 +131,7 @@ fun DriveScreen(
     // The car you drive most, not whichever row happens to be first in the table.
     val mainId = usage.maxWithOrNull(compareBy<VehicleUsage>({ it.sessions }, { it.lastUsed ?: 0L }))?.vehicleId
     val vehicle = vehicles.firstOrNull { it.vehicleId == mainId } ?: vehicles.firstOrNull()
-    val name = (account as? AccountState.SignedIn)?.displayName ?: "Driver"
+    val name = (account as? AccountState.SignedIn)?.displayName ?: stringResource(R.string.drive_driver)
 
     Column(
         modifier = Modifier
@@ -147,16 +150,16 @@ fun DriveScreen(
         Spacer(Modifier.height(Spacing.md))
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             ModeTile(
-                title = "Track",
-                detail = "Lap timing, live delta",
+                title = stringResource(R.string.mode_track),
+                detail = stringResource(R.string.drive_track_detail),
                 icon = Icons.Default.Flag,
                 primary = true,
                 onClick = onStartTrack,
                 modifier = Modifier.weight(1f)
             )
             ModeTile(
-                title = "Drag",
-                detail = "0–100, quarter mile",
+                title = stringResource(R.string.mode_drag),
+                detail = stringResource(R.string.drive_drag_detail),
                 icon = Icons.Default.Bolt,
                 primary = false,
                 onClick = onStartDrag,
@@ -165,21 +168,21 @@ fun DriveScreen(
         }
 
         Spacer(Modifier.height(Spacing.xl))
-        Text("Last session", style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+        Text(stringResource(R.string.drive_last_session), style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
         Spacer(Modifier.height(Spacing.sm))
         LastSessionCard(last = last, onOpen = { onOpenHistory("track") })
 
         Spacer(Modifier.height(Spacing.md))
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             CountCard(
-                label = "Track sessions",
+                label = stringResource(R.string.drive_track_sessions),
                 value = sessions.count { it.trackId != null && it.trackId != -1L && !it.voided },
                 icon = Icons.Default.Timer,
                 onClick = { onOpenHistory("track") },
                 modifier = Modifier.weight(1f)
             )
             CountCard(
-                label = "Drag runs",
+                label = stringResource(R.string.drive_drag_runs),
                 value = sessions.count { (it.trackId == null || it.trackId == -1L) && !it.voided },
                 icon = Icons.Default.Bolt,
                 onClick = { onOpenHistory("drag") },
@@ -194,9 +197,9 @@ fun DriveScreen(
 private fun Greeting(name: String, isConnected: Boolean, onOpenRig: () -> Unit) {
     val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
     val greeting = when (hour) {
-        in 5..11 -> "Good morning"
-        in 12..17 -> "Good afternoon"
-        else -> "Good evening"
+        in 5..11 -> stringResource(R.string.drive_good_morning)
+        in 12..17 -> stringResource(R.string.drive_good_afternoon)
+        else -> stringResource(R.string.drive_good_evening)
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -232,7 +235,7 @@ private fun RigPill(isConnected: Boolean, onClick: () -> Unit) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(tone))
         Spacer(Modifier.width(Spacing.sm))
         Text(
-            if (isConnected) "Rig linked" else "No signal",
+            if (isConnected) stringResource(R.string.drive_rig_linked) else stringResource(R.string.drive_no_signal),
             style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold),
             color = tone
         )
@@ -263,7 +266,7 @@ private fun CarCard(
             Spacer(Modifier.width(Spacing.lg))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = vehicle?.let { "${it.manufacturer} ${it.model}" } ?: "Add your car",
+                    text = vehicle?.let { "${it.manufacturer} ${it.model}" } ?: stringResource(R.string.drive_add_car),
                     style = TrackProType.titleMedium,
                     color = TrackProTheme.colors.marking,
                     maxLines = 1,
@@ -276,7 +279,7 @@ private fun CarCard(
                             v.drivetrain.takeIf { it.isNotBlank() },
                             v.weight.takeIf { it > 0 }?.let { "${it.toInt()} kg" },
                         ).joinToString(" · ")
-                    } ?: "Every session is timed against a car",
+                    } ?: stringResource(R.string.drive_add_car_hint),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim,
                     maxLines = 1
@@ -342,9 +345,9 @@ private fun LastSessionCard(last: LastSession?, onOpen: () -> Unit) {
                 IconCircle(Icons.Default.EmojiEvents, size = 48.dp)
                 Spacer(Modifier.width(Spacing.lg))
                 Column {
-                    Text("No laps yet", style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+                    Text(stringResource(R.string.drive_no_laps), style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
                     Text(
-                        "Your best lap lands here after your first track session",
+                        stringResource(R.string.drive_no_laps_hint),
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )
@@ -354,7 +357,7 @@ private fun LastSessionCard(last: LastSession?, onOpen: () -> Unit) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    "Best lap · ${last.trackName ?: "last session"}",
+                    stringResource(R.string.drive_best_lap_at, last.trackName ?: stringResource(R.string.drive_last_session_fallback)),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim,
                     maxLines = 1,
@@ -364,7 +367,7 @@ private fun LastSessionCard(last: LastSession?, onOpen: () -> Unit) {
                 Text(last.bestLapMs.toLapTimeString(), style = TrackProType.displayNumeric, color = TrackProTheme.colors.marking)
             }
             Text(
-                "${last.laps} lap${if (last.laps == 1) "" else "s"}",
+                pluralResource(R.plurals.count_laps, last.laps),
                 style = TrackProType.label,
                 color = TrackProTheme.colors.markingDim,
                 modifier = Modifier
@@ -378,7 +381,7 @@ private fun LastSessionCard(last: LastSession?, onOpen: () -> Unit) {
             val better = delta < 0
             val tone: Color = if (better) TrackProTheme.colors.deltaGood else TrackProTheme.colors.deltaBad
             Text(
-                text = "${String.format(java.util.Locale.US, "%+.2f", delta / 1000.0)} s vs your previous session here",
+                text = stringResource(R.string.drive_vs_previous, String.format(java.util.Locale.US, "%+.2f", delta / 1000.0)),
                 style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold),
                 color = tone
             )

@@ -39,6 +39,11 @@ import com.example.trackpro.models.GpsProviderType
  */
 class RecordingService : Service() {
 
+    // Its notification is the one piece of text shown outside the app, in the app's language.
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.example.trackpro.managerClasses.utilities.AppLanguage.wrap(newBase))
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -69,14 +74,14 @@ class RecordingService : Service() {
 
     private fun ensureChannel() {
         val manager = getSystemService(NotificationManager::class.java) ?: return
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
+        // Created or renamed: an existing channel takes the new name, so it follows the app's language.
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "Session recording",
+                getString(R.string.notif_channel),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shown while a session is being timed, so it keeps running with the screen off."
+                description = getString(R.string.notif_channel_desc)
             }
         )
     }
@@ -94,8 +99,8 @@ class RecordingService : Service() {
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_recording)
-            .setContentTitle("Recording session")
-            .setContentText("Timing continues with the screen off.")
+            .setContentTitle(getString(R.string.notif_title))
+            .setContentText(getString(R.string.notif_text))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
             .setContentIntent(returnToApp)

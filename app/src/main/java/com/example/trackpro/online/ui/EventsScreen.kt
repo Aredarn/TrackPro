@@ -1,5 +1,8 @@
 package com.example.trackpro.online.ui
 
+import com.example.trackpro.online.MessageText
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -93,12 +96,12 @@ fun EventsScreen(onOpenEvent: (String) -> Unit, onSignIn: () -> Unit) {
     val account by online.auth.state.collectAsState()
 
     if (account !is AccountState.SignedIn) {
-        ScreenScaffold(title = "Events") { padding ->
+        ScreenScaffold(title = stringResource(R.string.tab_events)) { padding ->
             EmptyState(
-                message = "Race your friends' laps",
-                hint = "Track days on TrackBoard put every driver's laps on one live board. Sign in, then join with the code the host gives you.",
+                message = stringResource(R.string.events_signed_out),
+                hint = stringResource(R.string.events_signed_out_hint),
                 icon = Icons.AutoMirrored.Outlined.Login,
-                actionLabel = "Sign in",
+                actionLabel = stringResource(R.string.common_sign_in),
                 onAction = onSignIn,
                 modifier = Modifier.padding(top = padding.calculateTopPadding())
             )
@@ -115,10 +118,10 @@ fun EventsScreen(onOpenEvent: (String) -> Unit, onSignIn: () -> Unit) {
         try {
             events = online.events.refresh()
         } catch (e: NetworkException) {
-            loadError = "Offline. Showing the events this phone already knows."
+            loadError = app.getString(R.string.events_offline)
         } catch (e: ApiException) {
             // A server from before events existed answers the listing with 404.
-            loadError = if (e.status == 404) "This TrackBoard server doesn't have events yet." else e.message
+            loadError = if (e.status == 404) app.getString(R.string.events_server_none) else MessageText.localize(e.message)
         }
     }
 
@@ -129,7 +132,7 @@ fun EventsScreen(onOpenEvent: (String) -> Unit, onSignIn: () -> Unit) {
     val shown = events ?: joined.map { it.asSummary() }
     val live = shown.firstOrNull { it.isJoined && it.status == ApiEventStatus.Live }
 
-    ScreenScaffold(title = "Events", contentScrolled = scrolled) { padding ->
+    ScreenScaffold(title = stringResource(R.string.tab_events), contentScrolled = scrolled) { padding ->
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
@@ -140,7 +143,7 @@ fun EventsScreen(onOpenEvent: (String) -> Unit, onSignIn: () -> Unit) {
             }
 
             item(key = "join") {
-                SectionTitle("Join an event")
+                SectionTitle(stringResource(R.string.events_join_title))
                 JoinCard(onJoined = { id ->
                     reload++
                     onOpenEvent(id)
@@ -158,13 +161,13 @@ fun EventsScreen(onOpenEvent: (String) -> Unit, onSignIn: () -> Unit) {
                 }
             }
 
-            item(key = "mine-title") { SectionTitle("Your events", action = "Refresh", onAction = { reload++ }) }
+            item(key = "mine-title") { SectionTitle(stringResource(R.string.events_yours), action = stringResource(R.string.rig_refresh), onAction = { reload++ }) }
 
             if (shown.isEmpty()) {
                 item(key = "none") {
                     Text(
-                        if (events == null && loadError == null) "Fetching your events…"
-                        else "None yet. When a host gives you a code, enter it above.",
+                        if (events == null && loadError == null) stringResource(R.string.events_fetching)
+                        else stringResource(R.string.events_none),
                         style = TrackProType.body,
                         color = TrackProTheme.colors.markingDim,
                         modifier = Modifier.padding(horizontal = Spacing.gutter)
@@ -178,7 +181,7 @@ fun EventsScreen(onOpenEvent: (String) -> Unit, onSignIn: () -> Unit) {
 
             item(key = "host-note") {
                 Text(
-                    "Hosting a track day? Create the event on the TrackBoard website and hand out its code.",
+                    stringResource(R.string.events_host_note),
                     style = TrackProType.body,
                     color = TrackProTheme.colors.markingDim,
                     modifier = Modifier.padding(horizontal = Spacing.gutter, vertical = Spacing.xl)
@@ -217,7 +220,7 @@ private fun LiveNowCard(event: EventSummary, onOpen: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LiveDot()
                 Spacer(Modifier.width(Spacing.sm))
-                Text("Live now", style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold), color = TrackProTheme.colors.deltaGood)
+                Text(stringResource(R.string.events_live_now), style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold), color = TrackProTheme.colors.deltaGood)
                 Spacer(Modifier.weight(1f))
                 Text(timeLeft(event.endsAt), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
             }
@@ -237,7 +240,7 @@ private fun LiveNowCard(event: EventSummary, onOpen: () -> Unit) {
                     )
                     Spacer(Modifier.width(Spacing.md))
                     Column(modifier = Modifier.padding(bottom = Spacing.sm)) {
-                        Text("of $fieldSize", style = TrackProType.body, color = TrackProTheme.colors.markingDim)
+                        Text(stringResource(R.string.events_of_field, fieldSize), style = TrackProType.body, color = TrackProTheme.colors.markingDim)
                         Text(
                             buildString {
                                 append(mine.bestLapMs?.toLong()?.toLapTimeString() ?: "")
@@ -250,14 +253,14 @@ private fun LiveNowCard(event: EventSummary, onOpen: () -> Unit) {
                 }
             } else {
                 Text(
-                    if (hasTrack) "No lap from you yet. Drive a session on ${event.trackName}; each lap posts as you cross the line."
-                    else "Get ${event.trackName} on this phone first, so your laps are timed on the same gates as everyone else's.",
+                    if (hasTrack) stringResource(R.string.events_no_lap_yet, event.trackName)
+                    else stringResource(R.string.events_get_track_first, event.trackName),
                     style = TrackProType.body,
                     color = TrackProTheme.colors.markingDim
                 )
             }
             Spacer(Modifier.height(Spacing.lg))
-            PrimaryButton(text = "Open live board", onClick = onOpen, modifier = Modifier.fillMaxWidth())
+            PrimaryButton(text = stringResource(R.string.events_open_board), onClick = onOpen, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -282,7 +285,7 @@ private fun JoinCard(onJoined: (String) -> Unit) {
     fun lookUp() {
         val clean = code.filter(Char::isLetterOrDigit)
         if (clean.length < 4) {
-            error = "Enter the 6-character code from the host."
+            error = app.getString(R.string.events_enter_code)
             return
         }
         busy = true
@@ -292,9 +295,9 @@ private fun JoinCard(onJoined: (String) -> Unit) {
                 found = online.events.lookUp(clean)
                 groupId = found?.event?.myGroupId
             } catch (e: ApiException) {
-                error = if (e.status == 404) "No event has that code. Check it with the host." else e.message
+                error = if (e.status == 404) app.getString(R.string.events_no_such_code) else MessageText.localize(e.message)
             } catch (e: NetworkException) {
-                error = "Joining needs a connection. ${e.message}"
+                error = app.getString(R.string.events_join_needs_connection, MessageText.localize(e.message) ?: "")
             } finally {
                 busy = false
             }
@@ -310,7 +313,7 @@ private fun JoinCard(onJoined: (String) -> Unit) {
                         code = value.uppercase().filter { it.isLetterOrDigit() || it == ' ' || it == '-' }.take(9)
                         found = null
                     },
-                    label = { Text("Join code", color = TrackProTheme.colors.textMuted) },
+                    label = { Text(stringResource(R.string.events_join_code), color = TrackProTheme.colors.textMuted) },
                     placeholder = { Text("K7Q 2M9", color = TrackProTheme.colors.textFaint) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Search),
@@ -320,7 +323,7 @@ private fun JoinCard(onJoined: (String) -> Unit) {
                     colors = fieldColors()
                 )
                 Spacer(Modifier.width(Spacing.md))
-                ToggleChip(text = if (busy && found == null) "…" else "Find", selected = false, onClick = { if (!busy) lookUp() })
+                ToggleChip(text = if (busy && found == null) "…" else stringResource(R.string.events_find), selected = false, onClick = { if (!busy) lookUp() })
             }
 
             error?.let {
@@ -337,7 +340,7 @@ private fun JoinCard(onJoined: (String) -> Unit) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(ev.name, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
                         Text(
-                            "${ev.trackName} · ${window(ev.startsAt, ev.endsAt)} · host ${ev.hostDisplayName}",
+                            stringResource(R.string.events_found_line, ev.trackName, window(ev.startsAt, ev.endsAt), ev.hostDisplayName),
                             style = TrackProType.body,
                             color = TrackProTheme.colors.markingDim
                         )
@@ -346,7 +349,7 @@ private fun JoinCard(onJoined: (String) -> Unit) {
 
                 if (detail.groups.isNotEmpty()) {
                     Spacer(Modifier.height(Spacing.lg))
-                    Text("Your run group", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                    Text(stringResource(R.string.events_run_group), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                     Spacer(Modifier.height(Spacing.sm))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         detail.groups.forEach { g ->
@@ -357,16 +360,16 @@ private fun JoinCard(onJoined: (String) -> Unit) {
 
                 Spacer(Modifier.height(Spacing.lg))
                 Text(
-                    "Joining shares every lap you drive on ${ev.trackName} during the event with its board, private sessions included.",
+                    stringResource(R.string.events_join_shares, ev.trackName),
                     style = TrackProType.body,
                     color = TrackProTheme.colors.markingDim
                 )
                 Spacer(Modifier.height(Spacing.lg))
                 PrimaryButton(
                     text = when {
-                        busy -> "Joining…"
-                        ev.isJoined -> "Update my group"
-                        else -> "Join event"
+                        busy -> stringResource(R.string.events_joining)
+                        ev.isJoined -> stringResource(R.string.events_update_group)
+                        else -> stringResource(R.string.events_join)
                     },
                     enabled = !busy && ev.status != ApiEventStatus.Finished,
                     haptic = Haptic.Confirm,
@@ -384,11 +387,11 @@ private fun JoinCard(onJoined: (String) -> Unit) {
                                 found = null
                                 onJoined(ev.id)
                             } catch (e: ApiException) {
-                                error = if (e.status == 409) "This event has finished." else e.message
+                                error = if (e.status == 409) app.getString(R.string.events_finished_short) else MessageText.localize(e.message)
                             } catch (e: NetworkException) {
-                                error = "Joining needs a connection. ${e.message}"
+                                error = app.getString(R.string.events_join_needs_connection, MessageText.localize(e.message) ?: "")
                             } catch (e: SyncProblem) {
-                                error = e.message
+                                error = MessageText.localize(e.message)
                             } finally {
                                 busy = false
                             }
@@ -397,7 +400,7 @@ private fun JoinCard(onJoined: (String) -> Unit) {
                 )
                 if (ev.status == ApiEventStatus.Finished) {
                     Spacer(Modifier.height(Spacing.sm))
-                    Text("This event has finished; you can still open its board.", style = TrackProType.body, color = TrackProTheme.colors.markingDim)
+                    Text(stringResource(R.string.events_finished_open), style = TrackProType.body, color = TrackProTheme.colors.markingDim)
                 }
             }
         }
@@ -429,7 +432,7 @@ private fun EventCard(event: EventSummary, onClick: () -> Unit) {
                     StatusPill(event.status)
                     if (event.isHost) {
                         Spacer(Modifier.height(Spacing.xs))
-                        Text("Host", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                        Text(stringResource(R.string.events_host), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                     }
                 }
             }
@@ -440,9 +443,9 @@ private fun EventCard(event: EventSummary, onClick: () -> Unit) {
 @Composable
 internal fun StatusPill(status: ApiEventStatus) {
     val (label, tone) = when (status) {
-        ApiEventStatus.Live -> "Live" to TrackProTheme.colors.deltaGood
-        ApiEventStatus.Upcoming -> "Upcoming" to TrackProTheme.colors.accent
-        ApiEventStatus.Finished -> "Finished" to TrackProTheme.colors.textFaint
+        ApiEventStatus.Live -> stringResource(R.string.hud_live) to TrackProTheme.colors.deltaGood
+        ApiEventStatus.Upcoming -> stringResource(R.string.events_upcoming) to TrackProTheme.colors.accent
+        ApiEventStatus.Finished -> stringResource(R.string.events_finished) to TrackProTheme.colors.textFaint
     }
     Row(
         modifier = Modifier
@@ -498,10 +501,12 @@ internal fun window(startsAt: String, endsAt: String): String {
     }
 }
 
+@Composable
 private fun timeLeft(endsAt: String): String {
     val end = parseInstant(endsAt) ?: return ""
     val minutes = ((end - System.currentTimeMillis()) / 60_000).coerceAtLeast(0)
-    return if (minutes >= 60) "${minutes / 60} h ${minutes % 60} min left" else "$minutes min left"
+    return if (minutes >= 60) stringResource(R.string.events_left_hm, (minutes / 60).toInt(), (minutes % 60).toInt())
+        else stringResource(R.string.events_left_m, minutes.toInt())
 }
 
 internal const val LIVE_REFRESH_MS = 5_000L

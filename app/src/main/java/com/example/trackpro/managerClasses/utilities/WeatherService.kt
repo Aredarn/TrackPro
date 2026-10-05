@@ -1,5 +1,6 @@
 package com.example.trackpro.managerClasses.utilities
 
+import com.example.trackpro.R
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -104,6 +105,32 @@ object WeatherService {
         else -> "Unknown"
     }
 
+    /** The same label as [describeCode], as a string resource for the screen's language. */
+    @androidx.annotation.StringRes
+    fun describeCodeRes(code: Int?): Int = when (code) {
+        null -> R.string.weather_unknown
+        0 -> R.string.weather_clear
+        1 -> R.string.weather_mainly_clear
+        2 -> R.string.weather_partly_cloudy
+        3 -> R.string.weather_overcast
+        45, 48 -> R.string.weather_fog
+        51, 53, 55 -> R.string.weather_drizzle
+        56, 57 -> R.string.weather_freezing_drizzle
+        61 -> R.string.weather_light_rain
+        63 -> R.string.weather_rain
+        65 -> R.string.weather_heavy_rain
+        66, 67 -> R.string.weather_freezing_rain
+        71 -> R.string.weather_light_snow
+        73 -> R.string.weather_snow
+        75 -> R.string.weather_heavy_snow
+        77 -> R.string.weather_snow_grains
+        80, 81, 82 -> R.string.weather_rain_showers
+        85, 86 -> R.string.weather_snow_showers
+        95 -> R.string.weather_thunderstorm
+        96, 99 -> R.string.weather_thunderstorm_hail
+        else -> R.string.weather_unknown
+    }
+
     /**
      * Whether these conditions imply a wet surface - the single most important thing to know
      * when comparing two lap times. Based on measured precipitation or a precipitating code,
@@ -123,7 +150,11 @@ object WeatherService {
     /** Compass point for a wind bearing, e.g. 31 -> "NNE". */
     fun windCompass(degrees: Int?): String {
         if (degrees == null) return "-"
-        val points = listOf(
+        // Hungarian names the points északi, keleti, déli, nyugati.
+        val points = if (java.util.Locale.getDefault().language == "hu") listOf(
+            "É", "ÉÉK", "ÉK", "KÉK", "K", "KDK", "DK", "DDK",
+            "D", "DDNy", "DNy", "NyDNy", "Ny", "NyÉNy", "ÉNy", "ÉÉNy"
+        ) else listOf(
             "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
             "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
         )

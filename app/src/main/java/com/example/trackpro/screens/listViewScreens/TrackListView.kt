@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.listViewScreens
 
+import androidx.compose.ui.res.stringResource
+import com.example.trackpro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,6 +17,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.localizedCountry
+import com.example.trackpro.components.trackTypeLabel
 import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.Spacing
 import com.example.trackpro.components.PaddockCard
@@ -74,7 +78,7 @@ fun TrackListScreen(
     header: (@Composable () -> Unit)? = null,
     /** When set, the list opens with the way to build a new track. */
     onBuildTrack: (() -> Unit)? = null,
-    title: String = "My Tracks",
+    title: String = stringResource(R.string.tracks_my),
 ) {
     val tracks by viewModel.tracks.collectAsState()
     val loadState by viewModel.loadState.collectAsState()
@@ -94,7 +98,7 @@ fun TrackListScreen(
             accent = TrackProTheme.colors.accent,
             trailing = {
                 Text(
-                    text = countLabel(tracks.size, "track"),
+                    text = countLabel(tracks.size, R.plurals.count_tracks),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.textMuted
                 )
@@ -111,8 +115,8 @@ fun TrackListScreen(
                     .padding(horizontal = Spacing.gutter)
             ) {
                 DashAction(
-                    label = "Build a track",
-                    detail = "Walk or drive it, or draw it on the map",
+                    label = stringResource(R.string.tracks_build),
+                    detail = stringResource(R.string.tracks_build_hint),
                     onClick = onBuildTrack,
                     icon = Icons.Default.AddLocationAlt
                 )
@@ -122,9 +126,9 @@ fun TrackListScreen(
         DataGate(
             state = loadState,
             items = tracks,
-            emptyMessage = "No tracks yet",
-            emptyHint = "Build a track to see it here",
-            loadingLabel = "Reading tracks"
+            emptyMessage = stringResource(R.string.tracks_none),
+            emptyHint = stringResource(R.string.tracks_none_hint),
+            loadingLabel = stringResource(R.string.tracks_reading)
         ) { _ ->
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -195,9 +199,8 @@ fun TrackCard(
 
     if (showDeleteDialog) {
         ConfirmDeleteDialog(
-            title = "Delete track?",
-            message = "${track.trackName} and every lap recorded on it will be " +
-                "permanently removed.",
+            title = stringResource(R.string.tracks_delete_title),
+            message = stringResource(R.string.tracks_delete_msg, track.trackName),
             onConfirm = { onDelete(track); showDeleteDialog = false },
             onDismiss = { showDeleteDialog = false }
         )
@@ -220,7 +223,7 @@ fun TrackCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = listOf(track.type, track.country).filter { it.isNotBlank() }.joinToString(" · "),
+                    text = listOf(trackTypeLabel(track.type), localizedCountry(track.country)).filter { it.isNotBlank() }.joinToString(" · "),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim
                 )
@@ -234,14 +237,14 @@ fun TrackCard(
                 .background(TrackProTheme.colors.bgElevated)
         ) {
             Instrument(
-                label = "Length",
+                label = stringResource(R.string.tracks_length),
                 // totalLength is stored in km; formatDistance takes meters.
                 value = track.totalLength?.let { UnitFormatter.formatDistance(it * 1000.0, useMetric) } ?: "—",
                 valueSize = 15.sp,
                 modifier = Modifier.weight(1f)
             )
             Instrument(
-                label = "Your record",
+                label = stringResource(R.string.tracks_your_record),
                 value = bestLapTime ?: "—",
                 valueColor = if (bestLapTime != null) TrackProTheme.colors.accent else TrackProTheme.colors.markingDim,
                 valueSize = 15.sp,

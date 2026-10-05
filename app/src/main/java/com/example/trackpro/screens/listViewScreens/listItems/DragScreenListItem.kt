@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.listViewScreens.listItems
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.annotation.SuppressLint
 import android.view.ViewGroup
 import androidx.compose.foundation.background
@@ -255,7 +257,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             .fillMaxSize()
             .background(TrackProTheme.colors.bgDeep)
     ) {
-        AppTopBar(title = "Run", accent = TrackProTheme.colors.accent, onBack = onBack)
+        AppTopBar(title = stringResource(R.string.drag_run_title), accent = TrackProTheme.colors.accent, onBack = onBack)
 
         // ── Compact stats panel ───────────────────────────────
         Column(
@@ -273,10 +275,10 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             ) {
                 if (coordinates.isNotEmpty()) {
                     val totalTime = coordinates.last().timestamp - coordinates.first().timestamp
-                    StatCell(label = "Duration", value = formatTime(totalTime), size = StatCellSize.Regular)
+                    StatCell(label = stringResource(R.string.drag_duration), value = formatTime(totalTime), size = StatCellSize.Regular)
                 }
                 StatCell(
-                    label = "Distance",
+                    label = stringResource(R.string.drag_distance),
                     value = if (totalDist <= 0) "—" else UnitFormatter.formatDistance(totalDist, useMetric),
                     size = StatCellSize.Regular,
                     horizontalAlignment = Alignment.End
@@ -294,22 +296,22 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     StatCell(
-                        label = "Air temp",
+                        label = stringResource(R.string.drag_air_temp),
                         value = UnitFormatter.formatTemperature(tempC, useMetric),
                         size = StatCellSize.Small
                     )
                     StatCell(
-                        label = "Weather",
-                        value = WeatherService.describeCode(current?.weatherCode),
+                        label = stringResource(R.string.session_weather),
+                        value = stringResource(WeatherService.describeCodeRes(current?.weatherCode)),
                         size = StatCellSize.Small
                     )
                     StatCell(
-                        label = "Surface",
+                        label = stringResource(R.string.session_surface),
                         value = if (WeatherService.isWet(
                                 current?.weatherPrecipitationMm,
                                 current?.weatherCode
                             )
-                        ) "Wet" else "Dry",
+                        ) stringResource(R.string.session_wet) else stringResource(R.string.session_dry),
                         size = StatCellSize.Small
                     )
                 }
@@ -321,9 +323,9 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
-                DragMetricCard(DragMetricDisplay("Top speed",  if (maxSpeed > 0) UnitFormatter.formatSpeed(maxSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), maxSpeed > 0), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("Avg speed",  if (avgSpeed > 0) UnitFormatter.formatSpeed(avgSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), avgSpeed > 0), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("Max accel",  if (maxAcceleration > 0) String.format(Locale.US, "%.1f", UnitFormatter.convertSpeed(maxAcceleration, useMetric)) else "—", "${UnitFormatter.speedUnitLabel(useMetric)}/s", maxAcceleration > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.car_top_speed),  if (maxSpeed > 0) UnitFormatter.formatSpeed(maxSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), maxSpeed > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.lap_avg_speed),  if (avgSpeed > 0) UnitFormatter.formatSpeed(avgSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), avgSpeed > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_max_accel),  if (maxAcceleration > 0) String.format(Locale.US, "%.1f", UnitFormatter.convertSpeed(maxAcceleration, useMetric)) else "—", "${UnitFormatter.speedUnitLabel(useMetric)}/s", maxAcceleration > 0), modifier = Modifier.weight(1f))
             }
 
             Row(
@@ -335,9 +337,9 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                                 else String.format(Locale.US, "%.0f m", elevationNet)
                 val gainLabel = "+%.0f m".format(elevationGain)
                 val lossLabel = String.format(Locale.US, "%.0f m", elevationLoss)
-                DragMetricCard(DragMetricDisplay("Net elev.", if (hasElevation) netLabel  else "—", "", hasElevation), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("Climb ↑",   if (hasElevation) gainLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("Descent ↓", if (hasElevation) lossLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_net_elev), if (hasElevation) netLabel  else "—", "", hasElevation), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_climb),   if (hasElevation) gainLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_descent), if (hasElevation) lossLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
             }
 
             // Labels come from the splits themselves, so a tile can never name a milestone
@@ -358,8 +360,8 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                         modifier = Modifier.weight(1f)
                     )
                 }
-                DragMetricCard(DragMetricDisplay("\u00bc mile",   formatMetric(metrics.quarterMileTime),            "s",   metrics.quarterMileTime != null), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("Trap speed", metrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "\u2014", UnitFormatter.speedUnitLabel(useMetric), metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_quarter_mile),   formatMetric(metrics.quarterMileTime),            "s",   metrics.quarterMileTime != null), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_trap_speed), metrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "\u2014", UnitFormatter.speedUnitLabel(useMetric), metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
             }
         }
 
@@ -379,7 +381,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (showMap) "GPS trace" else "Speed",
+                text = if (showMap) stringResource(R.string.drag_gps_trace) else stringResource(R.string.drag_speed),
                 style = TrackProType.titleMedium,
                 color = TrackProTheme.colors.textPrimary
             )
@@ -393,7 +395,7 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     }
                     Spacer(Modifier.width(Spacing.xs))
                 }
-                listOf(false to "Chart", true to "Map").forEach { (isMap, label) ->
+                listOf(false to stringResource(R.string.drag_chart), true to stringResource(R.string.drag_map)).forEach { (isMap, label) ->
                     TraceToggle(label = label, active = showMap == isMap) { showMap = isMap }
                 }
             }
@@ -409,14 +411,14 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     DragSessionMapView(gpsData = mapGpsData, modifier = Modifier.fillMaxSize())
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No GPS data", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                        Text(stringResource(R.string.drag_no_gps), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                     }
                 }
             } else if (traceState != TraceState.Loaded) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = if (traceState == TraceState.Loading) "Loading trace"
-                        else "No GPS trace recorded for this run",
+                        text = if (traceState == TraceState.Loading) stringResource(R.string.drag_loading_trace)
+                        else stringResource(R.string.drag_no_trace),
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )
@@ -599,7 +601,7 @@ private fun LineChart.setupChartStyle() {
     axisRight.isEnabled = false
     description.isEnabled = false
     legend.isEnabled = false
-    setNoDataText("Calculating")
+    setNoDataText(context.getString(R.string.drag_calculating))
     setNoDataTextColor(android.graphics.Color.parseColor(DataVizColors.chartAxisText))
     setBackgroundColor(android.graphics.Color.parseColor(DataVizColors.chartBackground))
 }

@@ -1,5 +1,7 @@
 package com.example.trackpro.screens
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import com.example.trackpro.managerClasses.timeAttackManagers.DeltaReference
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
@@ -26,6 +28,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.TrackProApp
+import com.example.trackpro.managerClasses.utilities.AppLanguage
+import com.example.trackpro.managerClasses.utilities.findActivity
 import com.example.trackpro.components.DashGroup
 import com.example.trackpro.theme.markingDim
 import com.example.trackpro.components.ScreenScaffold
@@ -55,12 +59,13 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
     }
     val useMetric by app.useMetricUnits.collectAsState()
     val deltaReference by app.deltaReference.collectAsState()
+    val language by app.appLanguage.collectAsState()
 
     val scrollState = rememberScrollState()
     val scrolled by scrollState.isScrolledUnderChrome()
 
     ScreenScaffold(
-        title = "Settings",
+        title = stringResource(R.string.settings_title),
         accent = TrackProTheme.colors.textMuted,
         onBack = onBack,
         contentScrolled = scrolled
@@ -70,8 +75,23 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
                 .verticalScroll(scrollState)
                 .padding(top = contentPadding.calculateTopPadding()),
         ) {
+            // --- Section: Language ---
+            DashGroup(stringResource(R.string.settings_language)) {
+                LanguageRow(
+                    selected = language,
+                    onSelect = { tag ->
+                        if (tag != language) {
+                            app.setAppLanguage(tag)
+                            // Every string on screen was read at composition; recreating is
+                            // what re-reads them. The back stack is restored on the way.
+                            context.findActivity()?.recreate()
+                        }
+                    }
+                )
+            }
+
             // --- Section: Hardware & GPS ---
-            DashGroup("Hardware & Sensors") {
+            DashGroup(stringResource(R.string.settings_hardware)) {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     GpsSourceRow(
                         selected = gpsSource,
@@ -110,43 +130,43 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
             }
 
             // --- Section: Appearance ---
-            DashGroup("Appearance") {
+            DashGroup(stringResource(R.string.settings_appearance)) {
                 SettingsToggleRow(
-                    label = "Sunlight contrast",
-                    valueText = if (sunlight) "On: black ground, brighter text for direct sun" else "Off: standard Paddock night",
+                    label = stringResource(R.string.settings_sunlight),
+                    valueText = if (sunlight) stringResource(R.string.settings_sunlight_on) else stringResource(R.string.settings_sunlight_off),
                     valueColor = TrackProTheme.colors.textMuted,
-                    buttonText = if (sunlight) "On" else "Off",
+                    buttonText = if (sunlight) stringResource(R.string.common_on) else stringResource(R.string.common_off),
                     isActive = sunlight,
                     onClick = { app.setSunlightContrast(!sunlight) }
                 )
             }
 
             // --- Section: Units ---
-            DashGroup("Units") {
+            DashGroup(stringResource(R.string.settings_units)) {
                 SettingsToggleRow(
-                    label = "Speed & Distance",
-                    valueText = if (useMetric) "Metric (km/h, km)" else "Imperial (mph, mi)",
+                    label = stringResource(R.string.settings_speed_distance),
+                    valueText = if (useMetric) stringResource(R.string.settings_metric) else stringResource(R.string.settings_imperial),
                     valueColor = TrackProTheme.colors.textMuted,
-                    buttonText = if (useMetric) "Use mph" else "Use km/h",
+                    buttonText = if (useMetric) stringResource(R.string.settings_use_mph) else stringResource(R.string.settings_use_kmh),
                     isActive = true,
                     onClick = { app.setMetricUnits(!useMetric) }
                 )
             }
 
             // --- Section: Timing ---
-            DashGroup("Timing") {
+            DashGroup(stringResource(R.string.settings_timing)) {
                 SettingsToggleRow(
-                    label = "Live Delta",
+                    label = stringResource(R.string.settings_live_delta),
                     valueText = if (deltaReference == DeltaReference.TRACK_BEST) {
-                        "Against your best lap on the track"
+                        stringResource(R.string.settings_delta_track)
                     } else {
-                        "Against this session's best lap"
+                        stringResource(R.string.settings_delta_session)
                     },
                     valueColor = TrackProTheme.colors.textMuted,
                     buttonText = if (deltaReference == DeltaReference.TRACK_BEST) {
-                        "Use session best"
+                        stringResource(R.string.settings_use_session_best)
                     } else {
-                        "Use track best"
+                        stringResource(R.string.settings_use_track_best)
                     },
                     isActive = true,
                     onClick = {
@@ -161,10 +181,10 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
             OnlineSettingsGroup()
 
             // --- Section: System ---
-            DashGroup("Application") {
+            DashGroup(stringResource(R.string.settings_application)) {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    SettingsInfoRow(label = "App version", value = appVersion)
-                    SettingsInfoRow(label = "Map & Track Data", value = "© OpenStreetMap contributors")
+                    SettingsInfoRow(label = stringResource(R.string.settings_version), value = appVersion)
+                    SettingsInfoRow(label = stringResource(R.string.settings_map_data), value = stringResource(R.string.settings_osm))
                 }
             }
 
@@ -174,9 +194,41 @@ fun SettingsScreen(onBack: () -> Unit, onRequestBluetoothPermission: () -> Unit)
 }
 
 @Composable
+private fun LanguageRow(selected: String, onSelect: (String) -> Unit) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            // Each language names itself, so it can be found from either.
+            listOf(
+                AppLanguage.SYSTEM to stringResource(R.string.settings_language_system),
+                AppLanguage.ENGLISH to "English",
+                AppLanguage.HUNGARIAN to "Magyar",
+            ).forEach { (tag, label) ->
+                ToggleChip(
+                    text = label,
+                    selected = selected == tag,
+                    onClick = { onSelect(tag) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+        if (selected == AppLanguage.SYSTEM) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(R.string.settings_language_system_hint),
+                style = TrackProType.label,
+                color = TrackProTheme.colors.textMuted
+            )
+        }
+    }
+}
+
+@Composable
 private fun GpsSourceRow(selected: GpsProviderType, onSelect: (GpsProviderType) -> Unit) {
     Column {
-        Text("GPS source", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+        Text(stringResource(R.string.settings_gps_source), style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
         Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -194,10 +246,11 @@ private fun GpsSourceRow(selected: GpsProviderType, onSelect: (GpsProviderType) 
     }
 }
 
+@Composable
 private fun gpsSourceLabel(source: GpsProviderType): String = when (source) {
-    GpsProviderType.WIFI -> "WiFi"
-    GpsProviderType.BLUETOOTH -> "Bluetooth"
-    GpsProviderType.PHONE_GPS -> "Phone"
+    GpsProviderType.WIFI -> stringResource(R.string.gps_source_wifi)
+    GpsProviderType.BLUETOOTH -> stringResource(R.string.gps_source_bluetooth)
+    GpsProviderType.PHONE_GPS -> stringResource(R.string.gps_source_phone)
 }
 
 @SuppressLint("MissingPermission")
@@ -209,17 +262,17 @@ private fun BluetoothDeviceRow(
     onSelect: (BluetoothDevice) -> Unit
 ) {
     val selectedLabel = devices.find { it.address == selectedMac }?.let { it.name ?: it.address }
-        ?: "Select a paired device"
+        ?: stringResource(R.string.settings_select_paired)
     AppDropdownField(
-        label = "Bluetooth Device",
+        label = stringResource(R.string.settings_bt_device),
         items = devices,
         selectedLabel = selectedLabel,
         itemLabel = { it.name ?: it.address },
         onSelect = onSelect,
         emptyMessage = if (hasPermission) {
-            "No paired devices — pair the ESP32 in Android Bluetooth settings first"
+            stringResource(R.string.settings_no_paired)
         } else {
-            "Bluetooth permission needed — tap WiFi then Bluetooth again to re-prompt"
+            stringResource(R.string.settings_bt_permission)
         }
     )
 }
@@ -238,16 +291,16 @@ private fun EspTargetRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("ESP target", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+                Text(stringResource(R.string.settings_esp_target), style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = if (useTestServer) "Test Simulator" else "Real Device (192.168.4.1)",
+                    text = if (useTestServer) stringResource(R.string.settings_test_sim) else stringResource(R.string.settings_real_device),
                     style = TrackProType.body,
                     color = TrackProTheme.colors.textMuted
                 )
             }
             ToggleChip(
-                text = if (useTestServer) "Use Real Device" else "Use Test Simulator",
+                text = if (useTestServer) stringResource(R.string.settings_use_real) else stringResource(R.string.settings_use_sim),
                 selected = useTestServer,
                 onClick = { onToggle(!useTestServer) },
                 accent = TrackProTheme.colors.accent
@@ -259,8 +312,8 @@ private fun EspTargetRow(
             OutlinedTextField(
                 value = testServerAddress,
                 onValueChange = onAddressChange,
-                label = { Text("Simulator IP Address", color = TrackProTheme.colors.textMuted) },
-                placeholder = { Text("e.g. 192.168.1.50", color = TrackProTheme.colors.markingDim) },
+                label = { Text(stringResource(R.string.settings_sim_ip), color = TrackProTheme.colors.textMuted) },
+                placeholder = { Text(stringResource(R.string.settings_sim_ip_hint), color = TrackProTheme.colors.markingDim) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -278,10 +331,10 @@ private fun EspTargetRow(
 private fun GpsRateRow(selectedHz: Int, confirmedHz: Int?, onSelect: (Int) -> Unit) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("GPS rate", style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+            Text(stringResource(R.string.settings_gps_rate), style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
             if (confirmedHz != null) {
                 Text(
-                    text = if (confirmedHz == selectedHz) "· confirmed" else "· device at ${confirmedHz}Hz",
+                    text = if (confirmedHz == selectedHz) stringResource(R.string.settings_rate_confirmed) else stringResource(R.string.settings_rate_device, confirmedHz),
                     style = TrackProType.body.atSize(10.sp),
                     // A mismatch between requested and confirmed rate is a real problem
                     // worth flagging, so this is one of the few places color is earned.

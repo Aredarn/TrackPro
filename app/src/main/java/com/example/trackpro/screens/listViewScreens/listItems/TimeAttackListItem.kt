@@ -1,5 +1,8 @@
 package com.example.trackpro.screens.listViewScreens.listItems
 
+import com.example.trackpro.components.pluralResource
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,6 +27,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.specLabel
 import com.example.trackpro.components.SectionTitle
 import com.example.trackpro.components.PaddockCard
 import com.example.trackpro.components.IconCircle
@@ -153,12 +157,12 @@ fun TimeAttackListItemScreen(
                     CircularProgressIndicator(color = TrackProTheme.colors.accent,
                         modifier = Modifier.size(32.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.height(Spacing.md))
-                    Text("Loading session", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                    Text(stringResource(R.string.session_loading), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                 }
             }
         } else if (sessionData == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Session not found", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                Text(stringResource(R.string.session_not_found), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
             }
         } else {
             val session = sessionData!!
@@ -234,15 +238,15 @@ fun TimeAttackListItemScreen(
                 val secondHalfAvg = lapMillis.drop(half).average()
                 val diff = secondHalfAvg - firstHalfAvg
                 when {
-                    diff < -500 -> "Improving ↑"
-                    diff > 500  -> "Fading ↓"
-                    else        -> "Consistent →"
+                    diff < -500 -> -1
+                    diff > 500  -> 1
+                    else        -> 0
                 }
-            } else "—"
-            val trendColor = when {
-                trend.contains("Improving") -> TrackProTheme.colors.deltaGood
-                trend.contains("Fading")    -> TrackProTheme.colors.deltaBad
-                else                        -> TrackProTheme.colors.textMuted
+            } else null
+            val trendColor = when (trend) {
+                -1   -> TrackProTheme.colors.deltaGood
+                1    -> TrackProTheme.colors.deltaBad
+                else -> TrackProTheme.colors.textMuted
             }
 
             LazyColumn(
@@ -252,11 +256,11 @@ fun TimeAttackListItemScreen(
                 // ── Top bar
                 item {
                     AppTopBar(
-                        title = "Session",
+                        title = stringResource(R.string.session_title),
                         onBack = { navController.popBackStack() },
                         accent = TrackProTheme.colors.accent,
                         trailing = {
-                            Text("${timedLaps.size} laps", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+                            Text(pluralResource(R.plurals.count_laps, timedLaps.size), style = TrackProType.label, color = TrackProTheme.colors.textMuted)
                         }
                     )
                 }
@@ -297,7 +301,7 @@ fun TimeAttackListItemScreen(
                                         color = TrackProTheme.colors.textPrimary
                                     )
                                     Text(
-                                        text = "${vehicle.engineType} · ${vehicle.horsepower} hp · ${vehicle.drivetrain}",
+                                        text = "${specLabel(vehicle.engineType)} · ${vehicle.horsepower} hp · ${vehicle.drivetrain}",
                                         style = TrackProType.label,
                                         color = TrackProTheme.colors.textMuted
                                     )
@@ -309,15 +313,15 @@ fun TimeAttackListItemScreen(
 
                 // ── Key performance metrics
                 item {
-                    DashGroup("Key metrics") {
+                    DashGroup(stringResource(R.string.session_key_metrics)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            StatCell(label = "Best lap", value = bestLap?.laptime ?: "—", valueColor = TrackProTheme.colors.deltaGood, size = StatCellSize.Large)
-                            StatCell(label = "Average", value = avgMs.toLapTimeString(), size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
+                            StatCell(label = stringResource(R.string.session_best_lap), value = bestLap?.laptime ?: "—", valueColor = TrackProTheme.colors.deltaGood, size = StatCellSize.Large)
+                            StatCell(label = stringResource(R.string.session_average), value = avgMs.toLapTimeString(), size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
                             StatCell(
-                                label = "Slowest",
+                                label = stringResource(R.string.session_slowest),
                                 value = worstMs.toLapTimeString(),
                                 valueColor = if (worstMs > bestMs) TrackProTheme.colors.deltaBad else TrackProTheme.colors.textPrimary,
                                 size = StatCellSize.Large,
@@ -330,20 +334,20 @@ fun TimeAttackListItemScreen(
                 // ── Predicted best (theoretical lap)
                 if (predictedBestMs != null) {
                     item {
-                        DashGroup("Predicted best") {
+                        DashGroup(stringResource(R.string.session_predicted_best)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 StatCell(
-                                    label = "Theoretical lap",
+                                    label = stringResource(R.string.session_theoretical_lap),
                                     value = predictedBestMs.toLapTimeString(),
                                     valueColor = TrackProTheme.colors.accent,
                                     size = StatCellSize.Large
                                 )
                                 StatCell(
-                                    label = "Time on the table",
+                                    label = stringResource(R.string.session_time_on_table),
                                     value = timeOnTableMs
                                         ?.let { String.format(Locale.US, "-%.2f s", it / 1000.0) } ?: "—",
                                     valueColor = if (timeOnTableMs != null)
@@ -355,9 +359,7 @@ fun TimeAttackListItemScreen(
                             }
                             Spacer(Modifier.height(Spacing.md))
                             Text(
-                                text = "Your best sector from every lap, combined. Based on " +
-                                    "${completeLapSectors.size} of ${timedLaps.size} laps " +
-                                    "with a full set of splits.",
+                                text = stringResource(R.string.session_predicted_hint, completeLapSectors.size, timedLaps.size),
                                 style = TrackProType.label,
                                 color = TrackProTheme.colors.markingDim
                             )
@@ -367,28 +369,28 @@ fun TimeAttackListItemScreen(
 
                 // ── Session stats
                 item {
-                    DashGroup("Session stats") {
+                    DashGroup(stringResource(R.string.session_stats)) {
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                             StatRowItem(
-                                label = "Total time",
+                                label = stringResource(R.string.session_total_time),
                                 value = sessionDuration.toLapTimeString(),
                                 textPrimary = TrackProTheme.colors.textPrimary,
                                 textMuted = TrackProTheme.colors.textMuted
                             )
                             StatRowItem(
-                                label = "Top speed",
+                                label = stringResource(R.string.car_top_speed),
                                 value = "${UnitFormatter.formatSpeedPrecise(topSpeedOverall.toDouble(), useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)}",
                                 textPrimary = TrackProTheme.colors.textPrimary,
                                 textMuted = TrackProTheme.colors.textMuted
                             )
                             StatRowItem(
-                                label = "Laps",
+                                label = stringResource(R.string.session_laps),
                                 value = "${timedLaps.size}",
                                 textPrimary = TrackProTheme.colors.textPrimary,
                                 textMuted = TrackProTheme.colors.textMuted
                             )
                             StatRowItem(
-                                label = "Consistency (σ)",
+                                label = stringResource(R.string.session_consistency),
                                 value = consistency,
                                 textPrimary = if (consistency != "—" &&
                                     consistency.replace("%","").toDoubleOrNull()?.let { it < 1.0 } == true)
@@ -396,15 +398,20 @@ fun TimeAttackListItemScreen(
                                 textMuted = TrackProTheme.colors.textMuted
                             )
                             StatRowItem(
-                                label = "Best to slowest",
+                                label = stringResource(R.string.session_best_to_slowest),
                                 value = if (lapMillis.size > 1)
                                     "+${(worstMs - bestMs).toLapTimeString()}" else "—",
                                 textPrimary = TrackProTheme.colors.textPrimary,
                                 textMuted = TrackProTheme.colors.textMuted
                             )
                             StatRowItem(
-                                label = "Trend",
-                                value = trend,
+                                label = stringResource(R.string.session_trend),
+                                value = when (trend) {
+                                    -1 -> stringResource(R.string.trend_improving)
+                                    1 -> stringResource(R.string.trend_fading)
+                                    0 -> stringResource(R.string.trend_consistent)
+                                    else -> "—"
+                                },
                                 textPrimary = trendColor,
                                 textMuted = TrackProTheme.colors.textMuted
                             )
@@ -417,31 +424,31 @@ fun TimeAttackListItemScreen(
                 if (capturedTempC != null) {
                     item {
                         val wet = WeatherService.isWet(session.weatherPrecipitationMm, session.weatherCode)
-                        DashGroup("Conditions") {
+                        DashGroup(stringResource(R.string.session_conditions)) {
                             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                                 StatRowItem(
-                                    label = "Weather",
-                                    value = WeatherService.describeCode(session.weatherCode),
+                                    label = stringResource(R.string.session_weather),
+                                    value = stringResource(WeatherService.describeCodeRes(session.weatherCode)),
                                     textPrimary = TrackProTheme.colors.textPrimary,
                                     textMuted = TrackProTheme.colors.textMuted
                                 )
                                 StatRowItem(
-                                    label = "Surface",
-                                    value = if (wet) "Wet" else "Dry",
+                                    label = stringResource(R.string.session_surface),
+                                    value = if (wet) stringResource(R.string.session_wet) else stringResource(R.string.session_dry),
                                     // Wet vs dry is the single biggest caveat on any lap-time
                                     // comparison, so it gets colour rather than blending in.
                                     textPrimary = if (wet) TrackProTheme.colors.accent else TrackProTheme.colors.deltaGood,
                                     textMuted = TrackProTheme.colors.textMuted
                                 )
                                 StatRowItem(
-                                    label = "Air temperature",
+                                    label = stringResource(R.string.session_air_temp),
                                     value = UnitFormatter.formatTemperature(capturedTempC, useMetric),
                                     textPrimary = TrackProTheme.colors.textPrimary,
                                     textMuted = TrackProTheme.colors.textMuted
                                 )
                                 session.weatherHumidityPct?.let {
                                     StatRowItem(
-                                        label = "Humidity",
+                                        label = stringResource(R.string.session_humidity),
                                         value = "$it%",
                                         textPrimary = TrackProTheme.colors.textPrimary,
                                         textMuted = TrackProTheme.colors.textMuted
@@ -449,7 +456,7 @@ fun TimeAttackListItemScreen(
                                 }
                                 session.weatherWindKph?.let { wind ->
                                     StatRowItem(
-                                        label = "Wind",
+                                        label = stringResource(R.string.session_wind),
                                         value = "${UnitFormatter.formatSpeedPrecise(wind, useMetric)} " +
                                                 "${UnitFormatter.speedUnitLabel(useMetric)} " +
                                                 WeatherService.windCompass(session.weatherWindDirDeg),
@@ -459,7 +466,7 @@ fun TimeAttackListItemScreen(
                                 }
                                 session.weatherPressureHpa?.let {
                                     StatRowItem(
-                                        label = "Pressure",
+                                        label = stringResource(R.string.session_pressure),
                                         value = String.format(Locale.US, "%.0f hPa", it),
                                         textPrimary = TrackProTheme.colors.textPrimary,
                                         textMuted = TrackProTheme.colors.textMuted
@@ -472,7 +479,7 @@ fun TimeAttackListItemScreen(
 
                 // ── Lap-by-lap breakdown
                 item {
-                    SectionTitle("Laps")
+                    SectionTitle(stringResource(R.string.session_laps))
                 }
 
                 if (timedLaps.isEmpty()) {
@@ -483,7 +490,7 @@ fun TimeAttackListItemScreen(
                                 .padding(Spacing.xl),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("No timed laps in this session", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                            Text(stringResource(R.string.session_no_timed_laps), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                         }
                     }
                 } else {
@@ -530,10 +537,10 @@ fun TimeAttackListItemScreen(
                             .padding(horizontal = Spacing.gutter, vertical = Spacing.xl)
                     ) {
                         DashAction(
-                            label = if (session.voided) "Restore this session" else "Void this session",
+                            label = if (session.voided) stringResource(R.string.session_restore) else stringResource(R.string.session_void),
                             detail = if (session.voided)
-                                "Counts toward your bests again"
-                            else "Kept and stamped, but stops counting toward your bests",
+                                stringResource(R.string.session_restore_hint)
+                            else stringResource(R.string.session_void_hint),
                             compact = true,
                             accent = if (session.voided) TrackProTheme.colors.accent
                             else TrackProTheme.colors.danger,
@@ -577,8 +584,8 @@ private fun LapRow(
         else    -> textMuted
     }
     val badge = when {
-        isBest  -> "Best"
-        isWorst -> "Slowest"
+        isBest  -> stringResource(R.string.lap_badge_best)
+        isWorst -> stringResource(R.string.session_slowest)
         else    -> null
     }
 
@@ -598,7 +605,7 @@ private fun LapRow(
         // Left: lap number + what makes it notable
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Lap ${lap.lapnumber}",
+                text = stringResource(R.string.lap_number, lap.lapnumber),
                 style = TrackProType.titleMedium,
                 color = textPrimary
             )
@@ -609,11 +616,11 @@ private fun LapRow(
                 // GPS dropped out during this lap, so its time may be two laps merged into
                 // one. Flagged rather than hidden - the driver knows whether it was.
                 if (lap.signalGap) {
-                    LapTag("GPS gap", TrackProTheme.colors.danger)
+                    LapTag(stringResource(R.string.lap_gps_gap), TrackProTheme.colors.danger)
                 }
                 if (badge == null && !lap.signalGap) {
                     Text(
-                        text = if (topSpeed > 0) "Top ${UnitFormatter.formatSpeed(topSpeed, useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)}" else "No speed data",
+                        text = if (topSpeed > 0) stringResource(R.string.lap_top_speed, UnitFormatter.formatSpeed(topSpeed, useMetric), UnitFormatter.speedUnitLabel(useMetric)) else stringResource(R.string.lap_no_speed),
                         style = TrackProType.label,
                         color = textMuted
                     )
@@ -630,7 +637,7 @@ private fun LapRow(
             )
             Text(
                 text = when {
-                    isBest -> "Reference"
+                    isBest -> stringResource(R.string.lap_reference)
                     deltaMs > 0 -> deltaMs.toLapDeltaString()
                     else -> "—"
                 },

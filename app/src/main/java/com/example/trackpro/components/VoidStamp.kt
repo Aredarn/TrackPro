@@ -1,5 +1,7 @@
 package com.example.trackpro.components
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -23,7 +25,7 @@ fun VoidStamp(modifier: Modifier = Modifier) {
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Text(
-            text = "Voided",
+            text = stringResource(R.string.void_stamp),
             style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold),
             color = TrackProTheme.colors.danger
         )

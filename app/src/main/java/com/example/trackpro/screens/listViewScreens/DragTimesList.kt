@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.listViewScreens
 
+import androidx.compose.ui.res.stringResource
+import com.example.trackpro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,7 +61,7 @@ fun DragTimesListView(
     /** Null when shown as a tab root, where there is nothing to go back to. */
     onBack: (() -> Unit)? = { navController.popBackStack() },
     header: (@Composable () -> Unit)? = null,
-    title: String = "Drag Records",
+    title: String = stringResource(R.string.history_drag_records),
     filter: SessionFilter = SessionFilter(),
     /** Null hides the filter bar. */
     onFilterChange: ((SessionFilter) -> Unit)? = null,
@@ -120,9 +122,9 @@ fun DragTimesListView(
         trailing = {
             Text(
                 text = if (effective.narrows) {
-                    "${shown.size} of ${countLabel(dragSessions.size, "run")}"
+                    stringResource(R.string.history_shown_of, shown.size, countLabel(dragSessions.size, R.plurals.count_runs))
                 } else {
-                    countLabel(dragSessions.size, "run")
+                    countLabel(dragSessions.size, R.plurals.count_runs)
                 },
                 style = TrackProType.label,
                 color = TrackProTheme.colors.textMuted
@@ -135,17 +137,17 @@ fun DragTimesListView(
         DataGate(
             state = loadState,
             items = dragSessions,
-            emptyMessage = "No drag runs yet",
-            emptyHint = "Time your 0-100 and quarter mile, then find every run here",
-            loadingLabel = "Reading runs",
-            emptyActionLabel = "Start a drag run",
+            emptyMessage = stringResource(R.string.history_no_drag_runs),
+            emptyHint = stringResource(R.string.history_no_drag_runs_hint),
+            loadingLabel = stringResource(R.string.history_reading_runs),
+            emptyActionLabel = stringResource(R.string.history_start_drag),
             onEmptyAction = { navController.navigate("drag") }
         ) { _ ->
             if (shown.isEmpty()) {
                 EmptyState(
-                    message = "No runs match",
-                    hint = "Nothing recorded fits these filters",
-                    actionLabel = "Clear filters",
+                    message = stringResource(R.string.history_no_runs_match),
+                    hint = stringResource(R.string.history_no_match_hint),
+                    actionLabel = stringResource(R.string.history_clear_filters),
                     onAction = { onFilterChange?.invoke(effective.cleared()) },
                     modifier = Modifier.padding(top = contentPadding.calculateTopPadding())
                 )
@@ -199,9 +201,8 @@ fun ExpandableSessionGroup(
     pendingDelete?.let { session ->
         val time = DateFormatterUtil.getTimeFormat().format(Date(session.startTime))
         ConfirmDeleteDialog(
-            title = "Delete session?",
-            message = "The run at $time and all of its recorded data will be " +
-                "permanently removed.",
+            title = stringResource(R.string.history_delete_session),
+            message = stringResource(R.string.history_delete_run_msg, time),
             onConfirm = { onDelete(session); pendingDelete = null },
             onDismiss = { pendingDelete = null }
         )
@@ -214,7 +215,7 @@ fun ExpandableSessionGroup(
             Column(modifier = Modifier.weight(1f)) {
                 Text(groupTitle, style = TrackProType.titleMedium, color = TrackProTheme.colors.textPrimary)
                 Text(
-                    countLabel(sessions.size, "run"),
+                    countLabel(sessions.size, R.plurals.count_runs),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.textMuted
                 )
@@ -225,7 +226,7 @@ fun ExpandableSessionGroup(
             sessions.forEach { session ->
                 SessionRow(
                     startTime = session.startTime,
-                    title = "Run at ${DateFormatterUtil.getTimeFormat().format(Date(session.startTime))}",
+                    title = stringResource(R.string.history_run_at, DateFormatterUtil.getTimeFormat().format(Date(session.startTime))),
                     subtitle = "${session.manufacturer} ${session.model}",
                     voided = session.voided,
                     onClick = { navController.navigate("graph/${session.sessionId}") },
