@@ -1,5 +1,7 @@
 package com.example.trackpro.online
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +15,7 @@ data class SyncReport(
     val uploaded: Int = 0,
     val unchanged: Int = 0,
     val withdrawn: Int = 0,
-    /** Cars and photos restored from the account onto this phone. */
+    /** Cars, photos, tracks and sessions restored from the account onto this phone. */
     val downloaded: Int = 0,
     val failed: Int = 0,
     /** The first problem, phrased for the driver. */
@@ -23,21 +25,21 @@ data class SyncReport(
 )
 
 /** One line for the driver about the last sync, e.g. "3 sent · 1 restored · 14:02". */
+@androidx.compose.runtime.Composable
 fun describe(report: SyncReport?): String {
-    if (report == null) return "Not synced yet"
+    if (report == null) return stringResource(R.string.sync_not_yet)
     val at = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
         .format(java.util.Date(report.finishedAt))
-    if (report.offline) return "Offline at $at · will retry"
+    if (report.offline) return stringResource(R.string.sync_offline_at, at)
 
-    val parts = buildList {
-        if (report.uploaded > 0) add("${report.uploaded} sent")
-        if (report.downloaded > 0) add("${report.downloaded} restored")
-        if (report.withdrawn > 0) add("${report.withdrawn} withdrawn")
-        if (report.unchanged > 0) add("${report.unchanged} up to date")
-        if (report.failed > 0) add("${report.failed} failed")
-    }
-    val summary = parts.ifEmpty { listOf("Everything up to date") }.joinToString(" · ")
-    return listOfNotNull("$summary · $at", report.problem).joinToString("\n")
+    val parts = mutableListOf<String>()
+    if (report.uploaded > 0) parts += stringResource(R.string.sync_sent, report.uploaded)
+    if (report.downloaded > 0) parts += stringResource(R.string.sync_restored, report.downloaded)
+    if (report.withdrawn > 0) parts += stringResource(R.string.sync_withdrawn, report.withdrawn)
+    if (report.unchanged > 0) parts += stringResource(R.string.sync_up_to_date_n, report.unchanged)
+    if (report.failed > 0) parts += stringResource(R.string.sync_failed_n, report.failed)
+    val summary = parts.ifEmpty { listOf(stringResource(R.string.sync_all_up_to_date)) }.joinToString(" · ")
+    return listOfNotNull("$summary · $at", MessageText.localize(report.problem)).joinToString("\n")
 }
 
 /**

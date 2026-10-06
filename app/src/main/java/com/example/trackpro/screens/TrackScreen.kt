@@ -1,5 +1,7 @@
 package com.example.trackpro.screens
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +18,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.localizedCountry
+import com.example.trackpro.components.trackTypeLabel
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.components.paddockCard
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -126,7 +133,7 @@ fun TrackView(
         Column(modifier = Modifier.fillMaxSize()) {
 
             AppTopBar(
-                title = "Track Overview",
+                title = stringResource(R.string.track_title),
                 accent = TrackProTheme.colors.accent,
                 onBack = onBack
             )
@@ -135,8 +142,9 @@ fun TrackView(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(TrackProTheme.colors.bgCard)
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                    .padding(horizontal = Spacing.gutter)
+                    .paddockCard()
+                    .padding(Spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs)
             ) {
                 Text(
@@ -145,36 +153,42 @@ fun TrackView(
                     color = TrackProTheme.colors.textPrimary
                 )
                 Text(
-                    text = "${trackInfo.value.country} · ${trackInfo.value.type}",
-                    style = TrackProType.body,
+                    text = "${localizedCountry(trackInfo.value.country)} · ${trackTypeLabel(trackInfo.value.type)}",
+                    style = TrackProType.label,
                     color = TrackProTheme.colors.textMuted
                 )
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = Spacing.md)
+                        .clip(TrackProShapes.control)
+                        .background(TrackProTheme.colors.bgElevated)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     StatCell(
-                        label = "Length",
+                        label = stringResource(R.string.tracks_length),
                         // totalLength is stored in km; formatDistance takes meters, so convert
                         // first. This also makes the unit dynamic instead of a hardcoded "km".
                         value = trackInfo.value.totalLength?.let { UnitFormatter.formatDistance(it * 1000.0, useMetric) } ?: "?",
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
                     StatCell(
-                        label = "Type",
-                        value = trackInfo.value.type.uppercase(),
+                        label = stringResource(R.string.track_type),
+                        value = trackTypeLabel(trackInfo.value.type),
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
+                    // The number of stored GPS points - it was labelled "Corners", which it
+                    // never was.
                     StatCell(
-                        label = "Corners",
+                        label = stringResource(R.string.track_points),
                         value = "${trackParts.size}",
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
                 }
             }
 
-            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+            Spacer(Modifier.height(Spacing.md))
 
             // ── Sectors card ────────────────────────────────────
             if (trackParts.isNotEmpty()) {
@@ -193,17 +207,20 @@ fun TrackView(
                         }
                     }
                 )
-                HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+                Spacer(Modifier.height(Spacing.md))
             }
 
-            TrackOnlineStrip(trackId = trackId, onOpenLeaderboard = onOpenLeaderboard)
-            HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
+            Box(Modifier.padding(horizontal = Spacing.gutter).paddockCard()) {
+                TrackOnlineStrip(trackId = trackId, onOpenLeaderboard = onOpenLeaderboard)
+            }
 
             // ── Map ───────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .padding(Spacing.gutter)
+                    .clip(TrackProShapes.card)
                     .background(TrackProTheme.colors.bgCard)
             ) {
                 if (trackParts.isNotEmpty()) {
@@ -217,7 +234,7 @@ fun TrackView(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                "READING TRACK",
+                                stringResource(R.string.track_reading),
                                 style = TrackProType.label,
                                 color = TrackProTheme.colors.markingDim
                             )
@@ -234,8 +251,8 @@ fun TrackView(
                     }
                 } else {
                     EmptyState(
-                        message = "No geometry for this track",
-                        hint = "It was saved without coordinates. Rebuild it in the track builder to see the map and record sectors."
+                        message = stringResource(R.string.track_no_geometry),
+                        hint = stringResource(R.string.track_no_geometry_hint)
                     )
                 }
             }
@@ -260,19 +277,20 @@ private fun SectorSlicerCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProTheme.colors.bgCard)
-            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            .padding(horizontal = Spacing.gutter)
+            .paddockCard()
+            .padding(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SectionLabel("Sectors")
+            SectionLabel(stringResource(R.string.track_sectors))
             Text(
-                text = if (sectorCount > 0) "$sectorCount marked" else "None marked",
-                style = TrackProType.body.atSize(11.sp),
+                text = if (sectorCount > 0) stringResource(R.string.track_sectors_marked, sectorCount) else stringResource(R.string.track_sectors_none),
+                style = TrackProType.label,
                 color = if (sectorCount > 0) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted
             )
         }
@@ -294,7 +312,7 @@ private fun SectorSlicerCard(
 
         if (sectorCount > 0) {
             Text(
-                text = "Clear sectors",
+                text = stringResource(R.string.track_clear_sectors),
                 style = TrackProType.label,
                 color = TrackProTheme.colors.danger,
                 modifier = Modifier

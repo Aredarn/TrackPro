@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.profile
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +21,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.online.MessageText
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.components.paddockCard
+import com.example.trackpro.components.SectionTitle
+import com.example.trackpro.components.PaddockCard
+import com.example.trackpro.components.IconCircle
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,12 +46,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.trackpro.TrackProApp
-import com.example.trackpro.components.Bezel
 import com.example.trackpro.components.Haptic
 import com.example.trackpro.components.PhotoFrame
 import com.example.trackpro.components.PrimaryButton
 import com.example.trackpro.components.ScreenScaffold
-import com.example.trackpro.components.SectionLabel
 import com.example.trackpro.components.ToggleChip
 import com.example.trackpro.components.initialsOf
 import com.example.trackpro.components.pressable
@@ -70,53 +81,60 @@ fun AccountScreen(navController: NavController) {
     val serverUrl by online.settings.serverUrl.collectAsState()
     var editingServer by rememberSaveable { mutableStateOf(false) }
 
-    ScreenScaffold(title = "Account", onBack = { navController.popBackStack() }) { padding ->
+    ScreenScaffold(title = stringResource(R.string.profile_account), onBack = { navController.popBackStack() }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(TrackProTheme.colors.panel)
                 .verticalScroll(rememberScrollState())
                 .padding(top = padding.calculateTopPadding())
+                .padding(horizontal = Spacing.gutter),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text("TRACKBOARD", style = TrackProType.titleLarge.atSize(20.sp), color = TrackProTheme.colors.marking)
-                Benefit("Your garage and car photos, backed up and restored on a new phone")
-                Benefit("Your place on every track's leaderboard, next to your personal best")
-                Benefit("Optional. Recording never needs an account or a network")
-            }
-            Bezel()
-
-            // Most drivers never need to see the address; it is one tap away for those who do.
-            Row(
-                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.panel).padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "SERVER · ${serverUrl.removePrefix("https://").removePrefix("http://").ifBlank { "not set" }}",
-                    style = TrackProType.label,
-                    color = TrackProTheme.colors.markingDim,
-                    modifier = Modifier.weight(1f)
-                )
-                ToggleChip(text = if (editingServer) "Done" else "Change", selected = false, onClick = { editingServer = !editingServer })
-            }
-            if (editingServer) {
-                Box(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
-                    ServerRow(url = serverUrl, onChange = online.settings::setServerUrl)
+            PaddockCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconCircle(Icons.Filled.CloudDone, size = 48.dp)
+                    Spacer(Modifier.width(Spacing.md))
+                    Column {
+                        Text("TrackBoard", style = TrackProType.titleLarge, color = TrackProTheme.colors.marking)
+                        Text(stringResource(R.string.account_optional), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                    }
+                }
+                Spacer(Modifier.height(Spacing.lg))
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                    Benefit(stringResource(R.string.account_benefit_backup))
+                    Benefit(stringResource(R.string.account_benefit_rank))
+                    Benefit(stringResource(R.string.account_benefit_optional))
                 }
             }
-            Bezel()
 
-            Box(Modifier.background(TrackProTheme.colors.field).padding(14.dp)) {
+            PaddockCard {
                 AccountSignInForm(
                     notice = (account as? AccountState.SignedOut)?.notice,
                     serverSet = serverUrl.isNotBlank(),
                     onSignedIn = { navController.popBackStack() }
                 )
             }
-            Bezel()
+
+            // Most drivers never need to see the address; it is one tap away for those who do.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.account_server, serverUrl.removePrefix("https://").removePrefix("http://").ifBlank { stringResource(R.string.account_not_set) }),
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.markingDim,
+                    modifier = Modifier.weight(1f)
+                )
+                ToggleChip(text = if (editingServer) stringResource(R.string.common_done) else stringResource(R.string.rig_change), selected = false, onClick = { editingServer = !editingServer })
+            }
+            if (editingServer) {
+                PaddockCard {
+                    ServerRow(url = serverUrl, onChange = online.settings::setServerUrl)
+                }
+            }
+            Spacer(Modifier.height(Spacing.xl))
         }
     }
 }
@@ -124,9 +142,14 @@ fun AccountScreen(navController: NavController) {
 @Composable
 private fun Benefit(text: String) {
     Row(verticalAlignment = Alignment.Top) {
-        Box(Modifier.padding(top = 6.dp).size(width = 10.dp, height = 2.dp).background(TrackProTheme.colors.accent))
-        Spacer(Modifier.width(10.dp))
-        Text(text, style = TrackProType.body, color = TrackProTheme.colors.markingDim)
+        Icon(
+            Icons.Filled.CheckCircle,
+            contentDescription = null,
+            tint = TrackProTheme.colors.accent,
+            modifier = Modifier.padding(top = 2.dp).size(18.dp)
+        )
+        Spacer(Modifier.width(Spacing.md))
+        Text(text, style = TrackProType.body, color = TrackProTheme.colors.textMuted)
     }
 }
 
@@ -155,16 +178,16 @@ fun EditProfileScreen(navController: NavController) {
             try {
                 online.profile.setAvatar(uri)
             } catch (e: ApiException) {
-                error = e.message
+                error = MessageText.localize(e.message)
             } catch (e: NetworkException) {
-                error = "Changing your photo needs a connection. ${e.message}"
+                error = context.getString(R.string.account_photo_needs_connection, MessageText.localize(e.message) ?: "")
             } finally {
                 photoBusy = false
             }
         }
     }
 
-    ScreenScaffold(title = "Edit profile", onBack = { navController.popBackStack() }) { padding ->
+    ScreenScaffold(title = stringResource(R.string.profile_edit), onBack = { navController.popBackStack() }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -172,28 +195,31 @@ fun EditProfileScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState())
                 .padding(top = padding.calculateTopPadding())
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                PhotoFrame(
-                    file = online.photos.file(snapshot?.avatarFile),
-                    contentDescription = "Profile photo",
-                    initials = initialsOf(name.ifBlank { "Driver" }),
-                    modifier = Modifier.size(112.dp)
-                )
-                Spacer(Modifier.width(14.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+            PaddockCard(modifier = Modifier.padding(horizontal = Spacing.gutter)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                ) {
+                    PhotoFrame(
+                        file = online.photos.file(snapshot?.avatarFile),
+                        contentDescription = stringResource(R.string.profile_photo),
+                        initials = initialsOf(name.ifBlank { stringResource(R.string.drive_driver) }),
+                        shape = CircleShape,
+                        modifier = Modifier.size(112.dp)
+                    )
                     Text(
-                        if (photoBusy) "UPLOADING…" else "PROFILE PHOTO",
+                        if (photoBusy) stringResource(R.string.account_uploading) else stringResource(R.string.profile_photo),
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )
-                    ToggleChip(text = "Take photo", selected = false, onClick = { if (!photoBusy) picker.fromCamera() }, modifier = Modifier.fillMaxWidth())
-                    ToggleChip(text = "Choose photo", selected = false, onClick = { if (!photoBusy) picker.fromGallery() }, modifier = Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.fillMaxWidth()) {
+                        ToggleChip(text = stringResource(R.string.photo_take), selected = false, onClick = { if (!photoBusy) picker.fromCamera() }, modifier = Modifier.weight(1f))
+                        ToggleChip(text = stringResource(R.string.account_choose_photo), selected = false, onClick = { if (!photoBusy) picker.fromGallery() }, modifier = Modifier.weight(1f))
+                    }
                     if (snapshot?.avatarFile != null) {
                         Text(
-                            "REMOVE PHOTO",
+                            stringResource(R.string.account_remove_photo),
                             style = TrackProType.label,
                             color = TrackProTheme.colors.danger,
                             modifier = Modifier
@@ -204,9 +230,9 @@ fun EditProfileScreen(navController: NavController) {
                                             try {
                                                 online.profile.removeAvatar()
                                             } catch (e: ApiException) {
-                                                error = e.message
+                                                error = MessageText.localize(e.message)
                                             } catch (e: NetworkException) {
-                                                error = "Removing your photo needs a connection. ${e.message}"
+                                                error = context.getString(R.string.account_remove_photo_needs_connection, MessageText.localize(e.message) ?: "")
                                             } finally {
                                                 photoBusy = false
                                             }
@@ -220,18 +246,20 @@ fun EditProfileScreen(navController: NavController) {
                     }
                 }
             }
-            Bezel()
 
-            SectionLabel("Details", modifier = Modifier.padding(start = 14.dp, top = 18.dp, bottom = 8.dp))
-            Bezel()
+            SectionTitle(stringResource(R.string.account_details))
             Column(
-                modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.gutter)
+                    .paddockCard()
+                    .padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it.take(100) },
-                    label = { Text("Name on leaderboards", color = TrackProTheme.colors.textMuted) },
+                    label = { Text(stringResource(R.string.account_name_on_boards), color = TrackProTheme.colors.textMuted) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = fieldColors()
@@ -239,7 +267,7 @@ fun EditProfileScreen(navController: NavController) {
                 OutlinedTextField(
                     value = country,
                     onValueChange = { country = it.take(60) },
-                    label = { Text("Country", color = TrackProTheme.colors.textMuted) },
+                    label = { Text(stringResource(R.string.builder_country), color = TrackProTheme.colors.textMuted) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = fieldColors()
@@ -247,7 +275,7 @@ fun EditProfileScreen(navController: NavController) {
                 OutlinedTextField(
                     value = bio,
                     onValueChange = { bio = it.take(500) },
-                    label = { Text("About you", color = TrackProTheme.colors.textMuted) },
+                    label = { Text(stringResource(R.string.account_about_you), color = TrackProTheme.colors.textMuted) },
                     supportingText = { Text("${bio.length} / 500", color = TrackProTheme.colors.textMuted) },
                     minLines = 3,
                     modifier = Modifier.fillMaxWidth(),
@@ -255,7 +283,7 @@ fun EditProfileScreen(navController: NavController) {
                 )
                 error?.let { Text(it, style = TrackProType.body, color = TrackProTheme.colors.deltaBad) }
                 PrimaryButton(
-                    text = if (busy) "Saving…" else "Save",
+                    text = if (busy) stringResource(R.string.account_saving) else stringResource(R.string.account_save),
                     enabled = !busy && name.trim().length >= 2,
                     haptic = Haptic.Confirm,
                     onClick = {
@@ -266,9 +294,9 @@ fun EditProfileScreen(navController: NavController) {
                                 online.profile.update(displayName = name.trim(), bio = bio.trim(), country = country.trim())
                                 navController.popBackStack()
                             } catch (e: ApiException) {
-                                error = e.message
+                                error = MessageText.localize(e.message)
                             } catch (e: NetworkException) {
-                                error = "Saving needs a connection. ${e.message}"
+                                error = context.getString(R.string.account_save_needs_connection, MessageText.localize(e.message) ?: "")
                             } finally {
                                 busy = false
                             }
@@ -277,8 +305,7 @@ fun EditProfileScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            Bezel()
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Spacing.xl))
         }
     }
 }

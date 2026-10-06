@@ -1,33 +1,32 @@
 package com.example.trackpro.components
 
-import androidx.compose.foundation.border
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.trackpro.extrasForUI.TrackProTheme
+import com.example.trackpro.theme.TrackProShapes
 import com.example.trackpro.theme.TrackProType
 
-/**
- * The mark on a discarded run.
- *
- * A stamp, not a deletion and not a strikethrough: the session is still there, still
- * openable, still carrying its trace. It simply stops counting. Outlined rather than
- * filled so it reads as something applied on top of the row rather than as the row's own
- * state colour, which is how a stamp behaves on paper and on a scrutineering sticker.
- */
+/** Marks a voided session: kept, but out of every best. A soft red pill. */
 @Composable
 fun VoidStamp(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .border(1.dp, TrackProTheme.colors.danger)
-            .padding(horizontal = 5.dp, vertical = 1.dp)
+            .clip(TrackProShapes.pill)
+            .background(TrackProTheme.colors.danger.copy(alpha = 0.16f))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Text(
-            text = "VOID",
-            style = TrackProType.label,
+            text = stringResource(R.string.void_stamp),
+            style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold),
             color = TrackProTheme.colors.danger
         )
     }

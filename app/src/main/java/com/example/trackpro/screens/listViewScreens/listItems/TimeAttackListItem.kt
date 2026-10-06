@@ -1,5 +1,8 @@
 package com.example.trackpro.screens.listViewScreens.listItems
 
+import com.example.trackpro.components.pluralResource
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,6 +27,16 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.specLabel
+import com.example.trackpro.components.SectionTitle
+import com.example.trackpro.components.PaddockCard
+import com.example.trackpro.components.IconCircle
+import com.example.trackpro.components.DashGroup
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.Icons
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -142,14 +155,14 @@ fun TimeAttackListItemScreen(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = TrackProTheme.colors.accent,
-                        modifier = Modifier.size(36.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.height(12.dp))
-                    Text("Loading session", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                        modifier = Modifier.size(32.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.height(Spacing.md))
+                    Text(stringResource(R.string.session_loading), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                 }
             }
         } else if (sessionData == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Session not found", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                Text(stringResource(R.string.session_not_found), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
             }
         } else {
             val session = sessionData!!
@@ -225,15 +238,15 @@ fun TimeAttackListItemScreen(
                 val secondHalfAvg = lapMillis.drop(half).average()
                 val diff = secondHalfAvg - firstHalfAvg
                 when {
-                    diff < -500 -> "IMPROVING ↑"
-                    diff > 500  -> "FADING ↓"
-                    else        -> "CONSISTENT →"
+                    diff < -500 -> -1
+                    diff > 500  -> 1
+                    else        -> 0
                 }
-            } else "—"
-            val trendColor = when {
-                trend.contains("IMPROVING") -> TrackProTheme.colors.deltaGood
-                trend.contains("FADING")    -> TrackProTheme.colors.deltaBad
-                else                        -> TrackProTheme.colors.textMuted
+            } else null
+            val trendColor = when (trend) {
+                -1   -> TrackProTheme.colors.deltaGood
+                1    -> TrackProTheme.colors.deltaBad
+                else -> TrackProTheme.colors.textMuted
             }
 
             LazyColumn(
@@ -243,110 +256,100 @@ fun TimeAttackListItemScreen(
                 // ── Top bar
                 item {
                     AppTopBar(
-                        title = "Session Detail",
+                        title = stringResource(R.string.session_title),
                         onBack = { navController.popBackStack() },
                         accent = TrackProTheme.colors.accent,
                         trailing = {
-                            Text("${timedLaps.size} laps", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+                            Text(pluralResource(R.plurals.count_laps, timedLaps.size), style = TrackProType.label, color = TrackProTheme.colors.textMuted)
                         }
                     )
                 }
 
                 // ── Session + vehicle header
                 item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(TrackProTheme.colors.bgCard)
-                            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
+                    PaddockCard(modifier = Modifier.padding(horizontal = Spacing.gutter)) {
                         if (session.voided) {
                             VoidStamp()
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(Spacing.sm))
                         }
                         Text(
                             text = session.eventType,
-                            // The session leads its own readouts.
-                            style = TrackProType.titleLarge.atSize(26.sp),
+                            style = TrackProType.titleLarge,
                             color = TrackProTheme.colors.textPrimary
                         )
-                        Spacer(Modifier.height(6.dp))
-                        if (vehicle != null) {
-                            Text(
-                                text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})".uppercase(),
-                                style = TrackProType.label,
-                                color = TrackProTheme.colors.textMuted
-                            )
-                            Text(
-                                text = "${vehicle.engineType} · ${vehicle.horsepower}hp · ${vehicle.drivetrain}",
-                                style = TrackProType.body.atSize(11.sp),
-                                color = TrackProTheme.colors.textMuted.copy(alpha = 0.7f)
-                            )
-                        }
-                        Spacer(Modifier.height(4.dp))
                         Text(
                             text = DateFormatterUtil.getDateTimeFormat().format(Date(session.startTime)),
-                            style = TrackProType.body.atSize(11.sp),
+                            style = TrackProType.label,
                             color = TrackProTheme.colors.textMuted
                         )
+                        if (vehicle != null) {
+                            Spacer(Modifier.height(Spacing.md))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(TrackProShapes.control)
+                                    .background(TrackProTheme.colors.bgElevated)
+                                    .padding(horizontal = Spacing.md, vertical = Spacing.md),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconCircle(Icons.Filled.DirectionsCar, size = 32.dp)
+                                Spacer(Modifier.width(Spacing.md))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        text = "${vehicle.manufacturer} ${vehicle.model} (${vehicle.year})",
+                                        style = TrackProType.titleMedium,
+                                        color = TrackProTheme.colors.textPrimary
+                                    )
+                                    Text(
+                                        text = "${specLabel(vehicle.engineType)} · ${vehicle.horsepower} hp · ${vehicle.drivetrain}",
+                                        style = TrackProType.label,
+                                        color = TrackProTheme.colors.textMuted
+                                    )
+                                }
+                            }
+                        }
                     }
-                    HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                 }
 
                 // ── Key performance metrics
                 item {
-                    SectionLabel("Key Metrics", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(TrackProTheme.colors.bgCard)
-                            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        StatCell(label = "Best Lap", value = bestLap?.laptime ?: "—", valueColor = TrackProTheme.colors.deltaGood, size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
-                        StatCell(label = "Average", value = avgMs.toLapTimeString(), size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
-                        StatCell(
-                            label = "Worst",
-                            value = worstMs.toLapTimeString(),
-                            valueColor = if (lapMillis.size > 1) TrackProTheme.colors.deltaBad else TrackProTheme.colors.textPrimary,
-                            size = StatCellSize.Large,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        )
+                    DashGroup(stringResource(R.string.session_key_metrics)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            StatCell(label = stringResource(R.string.session_best_lap), value = bestLap?.laptime ?: "—", valueColor = TrackProTheme.colors.deltaGood, size = StatCellSize.Large)
+                            StatCell(label = stringResource(R.string.session_average), value = avgMs.toLapTimeString(), size = StatCellSize.Large, horizontalAlignment = Alignment.CenterHorizontally)
+                            StatCell(
+                                label = stringResource(R.string.session_slowest),
+                                value = worstMs.toLapTimeString(),
+                                valueColor = if (worstMs > bestMs) TrackProTheme.colors.deltaBad else TrackProTheme.colors.textPrimary,
+                                size = StatCellSize.Large,
+                                horizontalAlignment = Alignment.End
+                            )
+                        }
                     }
-                    HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                 }
 
                 // ── Predicted best (theoretical lap)
                 if (predictedBestMs != null) {
                     item {
-                        SectionLabel(
-                            "Predicted Best",
-                            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-                        )
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(TrackProTheme.colors.bgCard)
-                                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-                        ) {
+                        DashGroup(stringResource(R.string.session_predicted_best)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 StatCell(
-                                    label = "Theoretical Lap",
+                                    label = stringResource(R.string.session_theoretical_lap),
                                     value = predictedBestMs.toLapTimeString(),
                                     valueColor = TrackProTheme.colors.accent,
                                     size = StatCellSize.Large
                                 )
-                                StatCellDivider()
                                 StatCell(
-                                    label = "Time On Table",
+                                    label = stringResource(R.string.session_time_on_table),
                                     value = timeOnTableMs
-                                        ?.let { String.format(Locale.US, "-%.2fs", it / 1000.0) } ?: "—",
+                                        ?.let { String.format(Locale.US, "-%.2f s", it / 1000.0) } ?: "—",
                                     valueColor = if (timeOnTableMs != null)
                                         TrackProTheme.colors.deltaGood
                                     else TrackProTheme.colors.textMuted,
@@ -354,69 +357,66 @@ fun TimeAttackListItemScreen(
                                     horizontalAlignment = Alignment.End
                                 )
                             }
+                            Spacer(Modifier.height(Spacing.md))
                             Text(
-                                text = "Best sector from every lap, combined. Based on " +
-                                    "${completeLapSectors.size} of ${timedLaps.size} laps " +
-                                    "with a full set of splits.",
-                                style = TrackProType.body.atSize(11.sp),
+                                text = stringResource(R.string.session_predicted_hint, completeLapSectors.size, timedLaps.size),
+                                style = TrackProType.label,
                                 color = TrackProTheme.colors.markingDim
                             )
                         }
-                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                     }
                 }
 
-                // ── Session stats row
+                // ── Session stats
                 item {
-                    SectionLabel("Session Stats", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(TrackProTheme.colors.bgCard)
-                            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-                    ) {
-                        StatRowItem(
-                            label = "Total Session Time",
-                            value = sessionDuration.toLapTimeString(),
-                            textPrimary = TrackProTheme.colors.textPrimary,
-                            textMuted = TrackProTheme.colors.textMuted
-                        )
-                        StatRowItem(
-                            label = "Top Speed (Session)",
-                            value = "${UnitFormatter.formatSpeedPrecise(topSpeedOverall.toDouble(), useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)}",
-                            textPrimary = TrackProTheme.colors.textPrimary,
-                            textMuted = TrackProTheme.colors.textMuted
-                        )
-                        StatRowItem(
-                            label = "Lap Count",
-                            value = "${timedLaps.size}",
-                            textPrimary = TrackProTheme.colors.textPrimary,
-                            textMuted = TrackProTheme.colors.textMuted
-                        )
-                        StatRowItem(
-                            label = "Consistency (σ)",
-                            value = consistency,
-                            textPrimary = if (consistency != "—" &&
-                                consistency.replace("%","").toDoubleOrNull()?.let { it < 1.0 } == true)
-                                TrackProTheme.colors.deltaGood else TrackProTheme.colors.textPrimary,
-                            textMuted = TrackProTheme.colors.textMuted
-                        )
-                        StatRowItem(
-                            label = "Gap: Best → Worst",
-                            value = if (lapMillis.size > 1)
-                                "+${(worstMs - bestMs).toLapTimeString()}" else "—",
-                            textPrimary = TrackProTheme.colors.textPrimary,
-                            textMuted = TrackProTheme.colors.textMuted
-                        )
-                        StatRowItem(
-                            label = "Performance Trend",
-                            value = trend,
-                            textPrimary = trendColor,
-                            textMuted = TrackProTheme.colors.textMuted
-                        )
+                    DashGroup(stringResource(R.string.session_stats)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                            StatRowItem(
+                                label = stringResource(R.string.session_total_time),
+                                value = sessionDuration.toLapTimeString(),
+                                textPrimary = TrackProTheme.colors.textPrimary,
+                                textMuted = TrackProTheme.colors.textMuted
+                            )
+                            StatRowItem(
+                                label = stringResource(R.string.car_top_speed),
+                                value = "${UnitFormatter.formatSpeedPrecise(topSpeedOverall.toDouble(), useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)}",
+                                textPrimary = TrackProTheme.colors.textPrimary,
+                                textMuted = TrackProTheme.colors.textMuted
+                            )
+                            StatRowItem(
+                                label = stringResource(R.string.session_laps),
+                                value = "${timedLaps.size}",
+                                textPrimary = TrackProTheme.colors.textPrimary,
+                                textMuted = TrackProTheme.colors.textMuted
+                            )
+                            StatRowItem(
+                                label = stringResource(R.string.session_consistency),
+                                value = consistency,
+                                textPrimary = if (consistency != "—" &&
+                                    consistency.replace("%","").toDoubleOrNull()?.let { it < 1.0 } == true)
+                                    TrackProTheme.colors.deltaGood else TrackProTheme.colors.textPrimary,
+                                textMuted = TrackProTheme.colors.textMuted
+                            )
+                            StatRowItem(
+                                label = stringResource(R.string.session_best_to_slowest),
+                                value = if (lapMillis.size > 1)
+                                    "+${(worstMs - bestMs).toLapTimeString()}" else "—",
+                                textPrimary = TrackProTheme.colors.textPrimary,
+                                textMuted = TrackProTheme.colors.textMuted
+                            )
+                            StatRowItem(
+                                label = stringResource(R.string.session_trend),
+                                value = when (trend) {
+                                    -1 -> stringResource(R.string.trend_improving)
+                                    1 -> stringResource(R.string.trend_fading)
+                                    0 -> stringResource(R.string.trend_consistent)
+                                    else -> "—"
+                                },
+                                textPrimary = trendColor,
+                                textMuted = TrackProTheme.colors.textMuted
+                            )
+                        }
                     }
-                    HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
                 }
 
                 // ── Conditions (only for sessions where weather was captured)
@@ -424,98 +424,62 @@ fun TimeAttackListItemScreen(
                 if (capturedTempC != null) {
                     item {
                         val wet = WeatherService.isWet(session.weatherPrecipitationMm, session.weatherCode)
-                        SectionLabel("Conditions", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(TrackProTheme.colors.bgCard)
-                                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-                        ) {
-                            StatRowItem(
-                                label = "Weather",
-                                value = WeatherService.describeCode(session.weatherCode),
-                                textPrimary = TrackProTheme.colors.textPrimary,
-                                textMuted = TrackProTheme.colors.textMuted
-                            )
-                            StatRowItem(
-                                label = "Surface",
-                                value = if (wet) "WET" else "DRY",
-                                // Wet vs dry is the single biggest caveat on any lap-time
-                                // comparison, so it gets colour rather than blending in.
-                                textPrimary = if (wet) TrackProTheme.colors.accent else TrackProTheme.colors.deltaGood,
-                                textMuted = TrackProTheme.colors.textMuted
-                            )
-                            StatRowItem(
-                                label = "Air Temp",
-                                value = UnitFormatter.formatTemperature(capturedTempC, useMetric),
-                                textPrimary = TrackProTheme.colors.textPrimary,
-                                textMuted = TrackProTheme.colors.textMuted
-                            )
-                            session.weatherHumidityPct?.let {
+                        DashGroup(stringResource(R.string.session_conditions)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                                 StatRowItem(
-                                    label = "Humidity",
-                                    value = "$it%",
+                                    label = stringResource(R.string.session_weather),
+                                    value = stringResource(WeatherService.describeCodeRes(session.weatherCode)),
                                     textPrimary = TrackProTheme.colors.textPrimary,
                                     textMuted = TrackProTheme.colors.textMuted
                                 )
-                            }
-                            session.weatherWindKph?.let { wind ->
                                 StatRowItem(
-                                    label = "Wind",
-                                    value = "${UnitFormatter.formatSpeedPrecise(wind, useMetric)} " +
-                                            "${UnitFormatter.speedUnitLabel(useMetric)} " +
-                                            WeatherService.windCompass(session.weatherWindDirDeg),
+                                    label = stringResource(R.string.session_surface),
+                                    value = if (wet) stringResource(R.string.session_wet) else stringResource(R.string.session_dry),
+                                    // Wet vs dry is the single biggest caveat on any lap-time
+                                    // comparison, so it gets colour rather than blending in.
+                                    textPrimary = if (wet) TrackProTheme.colors.accent else TrackProTheme.colors.deltaGood,
+                                    textMuted = TrackProTheme.colors.textMuted
+                                )
+                                StatRowItem(
+                                    label = stringResource(R.string.session_air_temp),
+                                    value = UnitFormatter.formatTemperature(capturedTempC, useMetric),
                                     textPrimary = TrackProTheme.colors.textPrimary,
                                     textMuted = TrackProTheme.colors.textMuted
                                 )
-                            }
-                            session.weatherPressureHpa?.let {
-                                StatRowItem(
-                                    label = "Pressure",
-                                    value = String.format(Locale.US, "%.0f hPa", it),
-                                    textPrimary = TrackProTheme.colors.textPrimary,
-                                    textMuted = TrackProTheme.colors.textMuted
-                                )
-                            }
-                        }
-                        HorizontalDivider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-                    }
-                }
-
-                // ── Void / restore
-                // Voiding is reversible by design: the run is kept, so putting it back has
-                // to be as easy as taking it out. A destructive-feeling action that cannot
-                // be undone would push people toward deleting instead, which is worse.
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = Spacing.lg, vertical = Spacing.md)
-                    ) {
-                        DashAction(
-                            label = if (session.voided) "Restore this session" else "Void this session",
-                            detail = if (session.voided)
-                                "Counts toward your bests again"
-                            else "Kept and stamped, but stops counting toward your bests",
-                            compact = true,
-                            accent = if (session.voided) TrackProTheme.colors.accent
-                            else TrackProTheme.colors.danger,
-                            onClick = {
-                                val target = !session.voided
-                                scope.launch(Dispatchers.IO) {
-                                    database.sessionDataDao().setVoided(session.id, target)
-                                    val reloaded = database.sessionDataDao().getSessionById(sessionId)
-                                    withContext(Dispatchers.Main) { sessionData = reloaded }
+                                session.weatherHumidityPct?.let {
+                                    StatRowItem(
+                                        label = stringResource(R.string.session_humidity),
+                                        value = "$it%",
+                                        textPrimary = TrackProTheme.colors.textPrimary,
+                                        textMuted = TrackProTheme.colors.textMuted
+                                    )
+                                }
+                                session.weatherWindKph?.let { wind ->
+                                    StatRowItem(
+                                        label = stringResource(R.string.session_wind),
+                                        value = "${UnitFormatter.formatSpeedPrecise(wind, useMetric)} " +
+                                                "${UnitFormatter.speedUnitLabel(useMetric)} " +
+                                                WeatherService.windCompass(session.weatherWindDirDeg),
+                                        textPrimary = TrackProTheme.colors.textPrimary,
+                                        textMuted = TrackProTheme.colors.textMuted
+                                    )
+                                }
+                                session.weatherPressureHpa?.let {
+                                    StatRowItem(
+                                        label = stringResource(R.string.session_pressure),
+                                        value = String.format(Locale.US, "%.0f hPa", it),
+                                        textPrimary = TrackProTheme.colors.textPrimary,
+                                        textMuted = TrackProTheme.colors.textMuted
+                                    )
                                 }
                             }
-                        )
+                        }
                     }
                 }
 
                 // ── Lap-by-lap breakdown
                 item {
-                    SectionLabel("Lap Breakdown", modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
+                    SectionTitle(stringResource(R.string.session_laps))
                 }
 
                 if (timedLaps.isEmpty()) {
@@ -526,7 +490,7 @@ fun TimeAttackListItemScreen(
                                 .padding(Spacing.xl),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("No laps recorded", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                            Text(stringResource(R.string.session_no_timed_laps), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                         }
                     }
                 } else {
@@ -535,9 +499,14 @@ fun TimeAttackListItemScreen(
                         val isWorst = lap.id == worstLap?.id && timedLaps.size > 1
                         val deltaMs = lapMs - bestMs
                         val topSpeed = topSpeedPerLap[lap.lapnumber] ?: 0f
-                        Box(modifier = Modifier.pressable(onClick = {
-                            navController.navigate("lap_detail/$sessionId/${lap.id}")
-                        })) {
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = Spacing.gutter, vertical = Spacing.xs)
+                                .clip(TrackProShapes.control)
+                                .pressable(onClick = {
+                                    navController.navigate("lap_detail/$sessionId/${lap.id}")
+                                }, scale = 0.98f)
+                        ) {
                             LapRow(
                                 lap = lap,
                                 isBest = isBest,
@@ -554,6 +523,36 @@ fun TimeAttackListItemScreen(
                                 sectorLine = TrackProTheme.colors.sectorLine
                             )
                         }
+                    }
+                }
+
+                // ── Void / restore
+                // Voiding is reversible by design: the run is kept, so putting it back has
+                // to be as easy as taking it out. A destructive-feeling action that cannot
+                // be undone would push people toward deleting instead, which is worse.
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.gutter, vertical = Spacing.xl)
+                    ) {
+                        DashAction(
+                            label = if (session.voided) stringResource(R.string.session_restore) else stringResource(R.string.session_void),
+                            detail = if (session.voided)
+                                stringResource(R.string.session_restore_hint)
+                            else stringResource(R.string.session_void_hint),
+                            compact = true,
+                            accent = if (session.voided) TrackProTheme.colors.accent
+                            else TrackProTheme.colors.danger,
+                            onClick = {
+                                val target = !session.voided
+                                scope.launch(Dispatchers.IO) {
+                                    database.sessionDataDao().setVoided(session.id, target)
+                                    val reloaded = database.sessionDataDao().getSessionById(sessionId)
+                                    withContext(Dispatchers.Main) { sessionData = reloaded }
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -585,104 +584,91 @@ private fun LapRow(
         else    -> textMuted
     }
     val badge = when {
-        isBest  -> "Best"
-        isWorst -> "Slow"
-        else    -> "Lap"
+        isBest  -> stringResource(R.string.lap_badge_best)
+        isWorst -> stringResource(R.string.session_slowest)
+        else    -> null
     }
 
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.md, vertical = 4.dp)
-            .background(
-                if (isBest) goodColor.copy(alpha = 0.05f) else bgCard,
-                TrackProShapes.card
-            )
+            .background(if (isBest) goodColor.copy(alpha = 0.08f) else bgCard, TrackProShapes.control)
             .border(
-                width = if (isBest) 1.dp else 0.dp,
-                color = if (isBest) goodColor.copy(alpha = 0.3f) else Color.Transparent,
-                shape = TrackProShapes.card
+                width = 1.dp,
+                color = if (isBest) goodColor.copy(alpha = 0.35f) else sectorLine,
+                shape = TrackProShapes.control
             )
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left: lap number + badge
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                Text(
-                    text = String.format(Locale.US, "%02d", lap.lapnumber),
-                    style = TrackProType.statValue.atSize(18.sp),
-                    color = accentColor
-                )
-                Box(
-                    modifier = Modifier
-                        .background(accentColor.copy(alpha = 0.15f), TrackProShapes.badge)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(badge.uppercase(), style = TrackProType.label.atSize(8.sp), color = accentColor)
+        // Left: lap number + what makes it notable
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.lap_number, lap.lapnumber),
+                style = TrackProType.titleMedium,
+                color = textPrimary
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                if (badge != null) {
+                    LapTag(badge, accentColor)
                 }
                 // GPS dropped out during this lap, so its time may be two laps merged into
                 // one. Flagged rather than hidden - the driver knows whether it was.
                 if (lap.signalGap) {
-                    val fault = TrackProTheme.colors.danger
-                    Box(
-                        modifier = Modifier
-                            .background(fault.copy(alpha = 0.15f), TrackProShapes.badge)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text("GPS GAP", style = TrackProType.label.atSize(8.sp), color = fault)
-                    }
+                    LapTag(stringResource(R.string.lap_gps_gap), TrackProTheme.colors.danger)
                 }
-            }
-
-            // Center: top speed
-            StatCell(
-                label = "Top Speed",
-                value = if (topSpeed > 0) UnitFormatter.formatSpeed(topSpeed, useMetric) else "—",
-                unit = if (topSpeed > 0) UnitFormatter.speedUnitLabel(useMetric).lowercase() else null,
-                size = StatCellSize.Small,
-                horizontalAlignment = Alignment.CenterHorizontally
-            )
-
-            // Right: lap time + delta
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = lap.laptime,
-                    style = TrackProType.statValue.atSize(17.sp),
-                    color = accentColor
-                )
-                if (!isBest && deltaMs > 0) {
+                if (badge == null && !lap.signalGap) {
                     Text(
-                        text = deltaMs.toLapDeltaString(),
-                        style = TrackProType.body.atSize(11.sp),
-                        color = badColor.copy(alpha = 0.8f)
-                    )
-                } else if (isBest) {
-                    Text(
-                        text = "Reference",
-                        style = TrackProType.label.atSize(9.sp),
-                        color = goodColor.copy(alpha = 0.7f)
+                        text = if (topSpeed > 0) stringResource(R.string.lap_top_speed, UnitFormatter.formatSpeed(topSpeed, useMetric), UnitFormatter.speedUnitLabel(useMetric)) else stringResource(R.string.lap_no_speed),
+                        style = TrackProType.label,
+                        color = textMuted
                     )
                 }
             }
         }
 
-        // Left accent bar
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .width(2.dp)
-                .height(36.dp)
-                .background(accentColor, RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp))
+        // Right: lap time + delta
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = lap.laptime,
+                style = TrackProType.statValue,
+                color = if (isBest) goodColor else textPrimary
+            )
+            Text(
+                text = when {
+                    isBest -> stringResource(R.string.lap_reference)
+                    deltaMs > 0 -> deltaMs.toLapDeltaString()
+                    else -> "—"
+                },
+                style = TrackProType.label,
+                color = when {
+                    isBest -> goodColor
+                    deltaMs > 0 -> badColor
+                    else -> textMuted
+                }
+            )
+        }
+        Spacer(Modifier.width(Spacing.sm))
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = TrackProTheme.colors.markingDim
         )
     }
+}
+
+@Composable
+private fun LapTag(text: String, color: Color) {
+    Text(
+        text = text,
+        style = TrackProType.label,
+        color = color,
+        modifier = Modifier
+            .padding(top = 2.dp)
+            .background(color.copy(alpha = 0.14f), TrackProShapes.badge)
+            .padding(horizontal = Spacing.sm, vertical = 2.dp)
+    )
 }
 
 @Composable
@@ -692,8 +678,8 @@ private fun StatRowItem(label: String, value: String, textPrimary: Color, textMu
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label.uppercase(), style = TrackProType.label, color = textMuted)
-        Text(value, style = TrackProType.body, color = textPrimary)
+        Text(label, style = TrackProType.body, color = textMuted)
+        Text(value, style = TrackProType.titleMedium, color = textPrimary)
     }
 }
 

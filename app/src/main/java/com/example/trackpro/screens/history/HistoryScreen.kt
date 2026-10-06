@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.history
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,9 +32,13 @@ fun HistoryScreen(
     initial: HistorySection = HistorySection.Track,
 ) {
     var section by rememberSaveable(initial) { mutableStateOf(initial) }
+    // One filter per section, held here rather than in each list so switching between Track
+    // and Drag keeps both, and saved so opening a session and coming back keeps them too.
+    var trackFilter by rememberSaveable(stateSaver = SessionFilterSaver) { mutableStateOf(SessionFilter()) }
+    var dragFilter by rememberSaveable(stateSaver = SessionFilterSaver) { mutableStateOf(SessionFilter()) }
     val header: @Composable () -> Unit = {
         SectionSwitch(
-            options = listOf(HistorySection.Track to "Track", HistorySection.Drag to "Drag"),
+            options = listOf(HistorySection.Track to stringResource(R.string.mode_track), HistorySection.Drag to stringResource(R.string.mode_drag)),
             selected = section,
             onSelect = { section = it }
         )
@@ -45,14 +51,18 @@ fun HistoryScreen(
             vehicleViewModel = vehicleViewModel,
             onBack = null,
             header = header,
-            title = "History",
+            title = stringResource(R.string.history_title),
+            filter = trackFilter,
+            onFilterChange = { trackFilter = it },
         )
         HistorySection.Drag -> DragTimesListView(
             viewModel = dragSessionViewModel,
             navController = navController,
             onBack = null,
             header = header,
-            title = "History",
+            title = stringResource(R.string.history_title),
+            filter = dragFilter,
+            onFilterChange = { dragFilter = it },
         )
     }
 }

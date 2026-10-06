@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.vehicleScreens
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.specLabelMap
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,7 +81,7 @@ fun CarCreationScreen(
     val scrolled by scrollState.isScrolledUnderChrome()
 
     ScreenScaffold(
-        title = "Vehicle Setup",
+        title = stringResource(R.string.garage_add_car),
         onBack = onBack,
         accent = TrackProTheme.colors.accent,
         contentScrolled = scrolled
@@ -97,37 +100,39 @@ fun CarCreationScreen(
     ) {
             AppCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
 
-                SectionLabel("Basic Info (Required)", modifier = Modifier.padding(vertical = Spacing.sm))
-                CustomTextField("Manufacturer", manufacturer, leadingIcon = Icons.Default.Business) { manufacturer = it }
-                CustomTextField("Model", model, leadingIcon = Icons.Default.DirectionsCar) { model = it }
-                CustomTextField("Year", year, leadingIcon = Icons.Default.Event) { year = it }
+                SectionLabel(stringResource(R.string.creator_basics), modifier = Modifier.padding(vertical = Spacing.sm))
+                CustomTextField(stringResource(R.string.creator_manufacturer), manufacturer, leadingIcon = Icons.Default.Business) { manufacturer = it }
+                CustomTextField(stringResource(R.string.creator_model), model, leadingIcon = Icons.Default.DirectionsCar) { model = it }
+                CustomTextField(stringResource(R.string.creator_year), year, leadingIcon = Icons.Default.Event) { year = it }
 
-                SectionLabel("Performance", modifier = Modifier.padding(vertical = Spacing.sm))
-                CustomTextField("Horsepower", horsepower, true, Icons.Default.FlashOn) { horsepower = it }
-                CustomTextField("Torque (Nm)", torque, true, Icons.Default.Settings) { torque = it }
-                CustomTextField("Weight (kg)", weight, true, Icons.Default.FitnessCenter) { weight = it }
-                CustomTextField("Top Speed (${UnitFormatter.speedUnitLabel(useMetric)})", topSpeed, true, Icons.Default.Speed) { topSpeed = it }
+                SectionLabel(stringResource(R.string.car_performance), modifier = Modifier.padding(vertical = Spacing.sm))
+                CustomTextField(stringResource(R.string.creator_horsepower), horsepower, true, Icons.Default.FlashOn) { horsepower = it }
+                CustomTextField(stringResource(R.string.creator_torque), torque, true, Icons.Default.Settings) { torque = it }
+                CustomTextField(stringResource(R.string.creator_weight), weight, true, Icons.Default.FitnessCenter) { weight = it }
+                CustomTextField(stringResource(R.string.creator_top_speed, UnitFormatter.speedUnitLabel(useMetric)), topSpeed, true, Icons.Default.Speed) { topSpeed = it }
                 CustomTextField(
-                    if (useMetric) "0-100 KM/H (s)" else "0-60 MPH (s)",
+                    if (useMetric) "0-100 km/h (s)" else "0-60 mph (s)",
                     acceleration, true, Icons.Default.Timer
                 ) { acceleration = it }
-                CustomTextField("Fuel Capacity (L)", fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
+                CustomTextField(stringResource(R.string.creator_fuel_capacity), fuelCapacity, true, Icons.Default.LocalGasStation) { fuelCapacity = it }
 
-                SectionLabel("Configuration", modifier = Modifier.padding(vertical = Spacing.sm))
-                AppDropdownField("Engine Type", jsonOptions.engineTypes, selectedEngineType, { it }, { selectedEngineType = it })
-                AppDropdownField("Drivetrain", jsonOptions.drivetrains, selectedDrivetrain, { it }, { selectedDrivetrain = it })
-                AppDropdownField("Fuel Type", jsonOptions.fuelTypes, selectedFuelType, { it }, { selectedFuelType = it })
-                AppDropdownField("Tire Type", jsonOptions.tireTypes, selectedTireType, { it }, { selectedTireType = it })
-                AppDropdownField("Transmission", jsonOptions.transmissions, selectedTransmission, { it }, { selectedTransmission = it })
-                AppDropdownField("Suspension", jsonOptions.suspensionTypes, selectedSuspensionType, { it }, { selectedSuspensionType = it })
+                SectionLabel(stringResource(R.string.creator_configuration), modifier = Modifier.padding(vertical = Spacing.sm))
+                val spec = specLabelMap()
+                val shown: (String) -> String = { spec[it] ?: it }
+                AppDropdownField(stringResource(R.string.creator_engine_type), jsonOptions.engineTypes, shown(selectedEngineType), shown, { selectedEngineType = it })
+                AppDropdownField(stringResource(R.string.car_drivetrain), jsonOptions.drivetrains, shown(selectedDrivetrain), shown, { selectedDrivetrain = it })
+                AppDropdownField(stringResource(R.string.creator_fuel_type), jsonOptions.fuelTypes, shown(selectedFuelType), shown, { selectedFuelType = it })
+                AppDropdownField(stringResource(R.string.car_tyres), jsonOptions.tireTypes, shown(selectedTireType), shown, { selectedTireType = it })
+                AppDropdownField(stringResource(R.string.car_transmission), jsonOptions.transmissions, shown(selectedTransmission), shown, { selectedTransmission = it })
+                AppDropdownField(stringResource(R.string.car_suspension), jsonOptions.suspensionTypes, shown(selectedSuspensionType), shown, { selectedSuspensionType = it })
 
                 Spacer(modifier = Modifier.height(Spacing.md))
 
                 PrimaryButton(
-                    text = "Save Vehicle",
+                    text = stringResource(R.string.creator_save),
                     onClick = {
                         if (manufacturer.isBlank() || model.isBlank() || year.isBlank()) {
-                            Toast.makeText(context, "Fill in required fields.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.creator_missing), Toast.LENGTH_SHORT).show()
                             return@PrimaryButton
                         }
 
@@ -155,9 +160,8 @@ fun CarCreationScreen(
                             database.vehicleInformationDAO().insertVehicle(vehicle)
                         }
 
-                        Toast.makeText(context, "Vehicle saved successfully.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.creator_saved), Toast.LENGTH_SHORT).show()
                     },
-                    accent = TrackProTheme.colors.deltaGood,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

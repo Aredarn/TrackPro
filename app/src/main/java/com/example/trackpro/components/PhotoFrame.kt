@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -48,11 +49,12 @@ fun PhotoFrame(
     modifier: Modifier = Modifier,
     /** Shown instead of the car mark when there is no photo, e.g. a driver's initials. */
     initials: String? = null,
+    shape: androidx.compose.ui.graphics.Shape = com.example.trackpro.theme.TrackProShapes.control,
 ) {
     BoxWithConstraints(
         modifier = modifier
-            .background(TrackProTheme.colors.field)
-            .border(1.dp, TrackProTheme.colors.bezel),
+            .clip(shape)
+            .background(TrackProTheme.colors.bgElevated),
         contentAlignment = Alignment.Center
     ) {
         val targetPx = with(LocalDensity.current) { maxOf(maxWidth, maxHeight).toPx().toInt() }.coerceAtLeast(1)
@@ -71,8 +73,8 @@ fun PhotoFrame(
         } else if (initials != null) {
             Text(
                 text = initials,
-                style = TrackProType.displayNumeric.atSize((maxHeight.value * 0.38f).coerceIn(14f, 40f).sp),
-                color = TrackProTheme.colors.markingDim
+                style = TrackProType.titleLarge.atSize((maxHeight.value * 0.36f).coerceIn(15f, 40f).sp),
+                color = TrackProTheme.colors.accent
             )
         } else {
             Icon(

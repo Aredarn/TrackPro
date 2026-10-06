@@ -1,5 +1,7 @@
 package com.example.trackpro.extrasForUI
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,9 +10,13 @@ import androidx.compose.material.ExposedDropdownMenuBox
 import androidx.compose.material.ExposedDropdownMenuDefaults
 import androidx.compose.material.Text
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.rotate
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,7 +43,7 @@ fun <T> AppDropdownField(
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
     accent: Color = TrackProTheme.colors.accent,
-    emptyMessage: String = "No options available"
+    emptyMessage: String = stringResource(R.string.dropdown_no_options)
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -51,12 +57,21 @@ fun <T> AppDropdownField(
             onValueChange = {},
             readOnly = true,
             label = { Text(label, color = TrackProTheme.colors.textMuted) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            trailingIcon = {
+                Icon(
+                    Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = if (expanded) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted,
+                    modifier = Modifier.rotate(if (expanded) 180f else 0f)
+                )
+            },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = TrackProTheme.colors.textPrimary,
                 unfocusedTextColor = TrackProTheme.colors.textPrimary,
                 focusedBorderColor = accent,
-                unfocusedBorderColor = TrackProTheme.colors.sectorLine
+                unfocusedBorderColor = TrackProTheme.colors.sectorLine,
+                focusedTrailingIconColor = TrackProTheme.colors.accent,
+                unfocusedTrailingIconColor = TrackProTheme.colors.textMuted
             ),
             modifier = Modifier.fillMaxWidth()
         )
@@ -99,12 +114,21 @@ fun DropdownMenuFieldMulti(label: String, options: List<VehiclePair>, selectedOp
             onValueChange = {},
             readOnly = true,
             label = { Text(label, color = TrackProTheme.colors.textMuted) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            trailingIcon = {
+                Icon(
+                    Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = if (expanded) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted,
+                    modifier = Modifier.rotate(if (expanded) 180f else 0f)
+                )
+            },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = TrackProTheme.colors.textPrimary,
                 unfocusedTextColor = TrackProTheme.colors.textPrimary,
                 focusedBorderColor = TrackProTheme.colors.accent,
-                unfocusedBorderColor = TrackProTheme.colors.sectorLine
+                unfocusedBorderColor = TrackProTheme.colors.sectorLine,
+                focusedTrailingIconColor = TrackProTheme.colors.accent,
+                unfocusedTrailingIconColor = TrackProTheme.colors.textMuted
             ),
             modifier = Modifier
                 .fillMaxWidth()
@@ -147,12 +171,21 @@ fun TrackDropdownMenu(
             onValueChange = {},
             readOnly = true,
             label = { Text(label, color = TrackProTheme.colors.textMuted) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            trailingIcon = {
+                Icon(
+                    Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = if (expanded) TrackProTheme.colors.accent else TrackProTheme.colors.textMuted,
+                    modifier = Modifier.rotate(if (expanded) 180f else 0f)
+                )
+            },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = TrackProTheme.colors.textPrimary,
                 unfocusedTextColor = TrackProTheme.colors.textPrimary,
                 focusedBorderColor = TrackProTheme.colors.accent,
-                unfocusedBorderColor = TrackProTheme.colors.sectorLine
+                unfocusedBorderColor = TrackProTheme.colors.sectorLine,
+                focusedTrailingIconColor = TrackProTheme.colors.accent,
+                unfocusedTrailingIconColor = TrackProTheme.colors.textMuted
             ),
             modifier = Modifier.fillMaxWidth()
         )
@@ -164,7 +197,7 @@ fun TrackDropdownMenu(
         ) {
             if (tracks.isEmpty()) {
                 DropdownMenuItem(
-                    text = { Text("No tracks found", color = TrackProTheme.colors.textMuted) },
+                    text = { Text(stringResource(R.string.dropdown_no_tracks), color = TrackProTheme.colors.textMuted) },
                     onClick = { expanded = false },
                     enabled = false
                 )

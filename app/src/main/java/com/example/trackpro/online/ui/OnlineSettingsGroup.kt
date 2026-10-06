@@ -1,5 +1,8 @@
 package com.example.trackpro.online.ui
 
+import com.example.trackpro.online.MessageText
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,13 +58,13 @@ fun OnlineSettingsGroup() {
     val account by online.auth.state.collectAsState()
     val serverUrl by online.settings.serverUrl.collectAsState()
 
-    DashGroup("Online · TrackBoard") {
+    DashGroup(stringResource(R.string.online_group)) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             ServerRow(url = serverUrl, onChange = online.settings::setServerUrl)
             Text(
                 when (val state = account) {
-                    is AccountState.SignedIn -> "Signed in as ${state.displayName}. Your account, lap sharing and sync are on the Profile tab."
-                    is AccountState.SignedOut -> "Optional. Sign in from the Profile tab to back up your garage and post laps to leaderboards. Recording never needs an account or a network."
+                    is AccountState.SignedIn -> stringResource(R.string.online_signed_in_as, state.displayName)
+                    is AccountState.SignedOut -> stringResource(R.string.online_signed_out)
                 },
                 style = TrackProType.body,
                 color = TrackProTheme.colors.textMuted
@@ -73,12 +76,12 @@ fun OnlineSettingsGroup() {
 @Composable
 internal fun ServerRow(url: String, onChange: (String) -> Unit) {
     Column {
-        Placard("Server")
+        Placard(stringResource(R.string.online_server))
         Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = url,
             onValueChange = onChange,
-            placeholder = { Text("e.g. http://10.0.2.2:5000", color = TrackProTheme.colors.textMuted) },
+            placeholder = { Text(stringResource(R.string.online_server_hint), color = TrackProTheme.colors.textMuted) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             modifier = Modifier.fillMaxWidth(),
@@ -103,20 +106,20 @@ internal fun AccountSignInForm(notice: String?, serverSet: Boolean, onSignedIn: 
     var error by remember { mutableStateOf<String?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        Placard("Account")
+        Placard(stringResource(R.string.profile_account))
 
         // An involuntary sign-out (expired session) is a fault the driver needs to see.
-        notice?.let { Text(it, style = TrackProType.body, color = TrackProTheme.colors.deltaBad) }
+        notice?.let { Text(MessageText.localize(it) ?: it, style = TrackProType.body, color = TrackProTheme.colors.deltaBad) }
 
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             ToggleChip(
-                text = "Sign in",
+                text = stringResource(R.string.common_sign_in),
                 selected = !creating,
                 onClick = { creating = false; error = null },
                 modifier = Modifier.weight(1f)
             )
             ToggleChip(
-                text = "Create account",
+                text = stringResource(R.string.online_create_account),
                 selected = creating,
                 onClick = { creating = true; error = null },
                 modifier = Modifier.weight(1f)
@@ -126,7 +129,7 @@ internal fun AccountSignInForm(notice: String?, serverSet: Boolean, onSignedIn: 
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email", color = TrackProTheme.colors.textMuted) },
+            label = { Text(stringResource(R.string.online_email), color = TrackProTheme.colors.textMuted) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth(),
@@ -137,7 +140,7 @@ internal fun AccountSignInForm(notice: String?, serverSet: Boolean, onSignedIn: 
             OutlinedTextField(
                 value = displayName,
                 onValueChange = { displayName = it },
-                label = { Text("Name on leaderboards", color = TrackProTheme.colors.textMuted) },
+                label = { Text(stringResource(R.string.account_name_on_boards), color = TrackProTheme.colors.textMuted) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors()
@@ -147,7 +150,7 @@ internal fun AccountSignInForm(notice: String?, serverSet: Boolean, onSignedIn: 
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text(if (creating) "Password (12+ characters)" else "Password", color = TrackProTheme.colors.textMuted) },
+            label = { Text(if (creating) stringResource(R.string.online_password_new) else stringResource(R.string.online_password), color = TrackProTheme.colors.textMuted) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -158,16 +161,16 @@ internal fun AccountSignInForm(notice: String?, serverSet: Boolean, onSignedIn: 
         error?.let { Text(it, style = TrackProType.body, color = TrackProTheme.colors.deltaBad) }
 
         if (!serverSet) {
-            Text("Set a server first.", style = TrackProType.body, color = TrackProTheme.colors.textMuted)
+            Text(stringResource(R.string.online_set_server_first), style = TrackProType.body, color = TrackProTheme.colors.textMuted)
         }
 
         val formComplete = email.isNotBlank() && password.isNotEmpty() && (!creating || displayName.isNotBlank())
 
         PrimaryButton(
             text = when {
-                busy -> "Working…"
-                creating -> "Create account"
-                else -> "Sign in"
+                busy -> stringResource(R.string.online_working)
+                creating -> stringResource(R.string.online_create_account)
+                else -> stringResource(R.string.common_sign_in)
             },
             enabled = serverSet && formComplete && !busy,
             onClick = {
@@ -182,9 +185,9 @@ internal fun AccountSignInForm(notice: String?, serverSet: Boolean, onSignedIn: 
                         SyncScheduler.syncSoon(context)
                         onSignedIn()
                     } catch (e: ApiException) {
-                        error = e.message
+                        error = MessageText.localize(e.message)
                     } catch (e: NetworkException) {
-                        error = e.message
+                        error = MessageText.localize(e.message)
                     } finally {
                         busy = false
                     }
@@ -197,7 +200,7 @@ internal fun AccountSignInForm(notice: String?, serverSet: Boolean, onSignedIn: 
 
 @Composable
 private fun Placard(text: String) {
-    Text(text.uppercase(), style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
+    Text(text, style = TrackProType.label, color = TrackProTheme.colors.textPrimary)
 }
 
 @Composable

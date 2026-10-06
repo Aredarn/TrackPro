@@ -42,6 +42,7 @@ open class FakeApi : TrackBoardApi {
     val foreignTracks = mutableSetOf<String>()
     var onPutSession: (SessionWrite) -> Unit = {}
     var onPutVehicle: (VehicleWrite) -> Unit = {}
+    var onPutTrack: (String) -> Unit = {}
     var onDeleteTrack: (String) -> Unit = {}
     var refresh: suspend (String) -> AuthResponse = { authResponse("access-2", "refresh-2") }
 
@@ -61,6 +62,7 @@ open class FakeApi : TrackBoardApi {
 
     override suspend fun putTrack(accessToken: String, id: String, body: TrackWrite): Boolean {
         calls += "PUT track $id ${body.visibility}"
+        onPutTrack(id)
         if (id in foreignTracks) throw ApiException(403, "That belongs to another account.")
         return tracks.put(id, body) == null
     }
@@ -93,6 +95,43 @@ open class FakeApi : TrackBoardApi {
 
     override suspend fun getLeaderboard(accessToken: String?, trackId: String, limit: Int): Leaderboard? = null
 
+    override suspend fun getTrackDetail(accessToken: String, id: String): TrackDetail? {
+        calls += "GET track detail $id"
+        val t = tracks[id] ?: return null
+        return TrackDetail(id, t.name, t.country, t.type, t.visibility, t.lengthMeters, t.points)
+    }
+
+    /** Everything in [tracks] but the foreign ones is this driver's, all on one page. */
+    override suspend fun listMyTracks(accessToken: String, page: Int, pageSize: Int): TrackPage {
+        calls += "LIST tracks"
+        val mine = tracks.filterKeys { it !in foreignTracks }.map { (id, t) -> TrackSummary(id, t.name, t.visibility) }
+        return TrackPage(if (page == 1) mine else emptyList(), page, pageSize, mine.size.toLong())
+    }
+
+    override suspend fun listSessions(accessToken: String, page: Int, pageSize: Int): SessionPage {
+        calls += "LIST sessions"
+        val all = sessions.map { (id, s) -> SessionSummary(id, s.startedAt, s.trackId, s.vehicleId, s.laps.size) }
+        return SessionPage(if (page == 1) all else emptyList(), page, pageSize, all.size.toLong())
+    }
+
+    /** Makes every car lookup answer "not found", as a server without the car would. */
+    var hideVehicles = false
+
+    override suspend fun getVehicle(accessToken: String, id: String): VehicleResponse? {
+        calls += "GET vehicle $id"
+        val v = vehicles[id]?.takeUnless { hideVehicles } ?: return null
+        return VehicleResponse(
+            id, v.manufacturer, v.model, v.year, v.engineType, v.horsepower, v.torque, v.weight, v.topSpeed,
+            v.acceleration, v.drivetrain, v.fuelType, v.tireType, v.fuelCapacity, v.transmission, v.suspensionType,
+        )
+    }
+
+    override suspend fun getSession(accessToken: String, id: String): SessionDetail? {
+        calls += "GET session $id"
+        val s = sessions[id] ?: return null
+        return SessionDetail(id, s.name, s.startedAt, s.endedAt, s.trackId, s.vehicleId, s.gpsSource, s.voided, s.weather, s.laps)
+    }
+
     fun puts(kind: String) = calls.filter { it.startsWith("PUT $kind") }
 }
 
@@ -120,6 +159,7 @@ class FakeSyncDao : SyncDao {
     override suspend fun getFinishedTrackSessions() =
         sessions.filter { it.trackId != null && it.trackId != -1L && it.endTime != null }
     override suspend fun getSession(id: Long) = sessions.find { it.id == id }
+    override suspend fun getRunningSessionIds() = sessions.filter { it.endTime == null }.map { it.id }
     override suspend fun getLaps(sessionId: Long) = laps.filter { it.sessionid == sessionId }.sortedBy { it.lapnumber }
     override suspend fun getSectors(lapIds: List<Long>) = sectors.filter { it.lapid in lapIds }
     override suspend fun getTrack(trackId: Long) = tracks.find { it.trackId == trackId }
@@ -137,4 +177,42 @@ class FakeSyncDao : SyncDao {
         vehicles.replaceAll { if (it.vehicleId == vehicle.vehicleId) vehicle else it }
     }
     override suspend fun deleteAllLinks() { links.clear() }
+
+    override suspend fun getTracks() = tracks.sortedBy { it.trackId }
+    override suspend fun insertTrack(track: TrackMainData): Long {
+        val id = (tracks.maxOfOrNull { it.trackId } ?: 0L) + 1
+        tracks += track.copy(trackId = id)
+        return id
+    }
+    override suspend fun insertTrackPoints(points: List<TrackCoordinatesData>) {
+        var next = (this.points.maxOfOrNull { it.id } ?: 0L) + 1
+        points.forEach { this.points += it.copy(id = next++) }
+    }
+    override suspend fun insertSession(session: SessionData): Long {
+        val id = (sessions.maxOfOrNull { it.id } ?: 0L) + 1
+        sessions += session.copy(id = id)
+        return id
+    }
+    override suspend fun insertLap(lap: LapTimeData): Long {
+        val id = (laps.maxOfOrNull { it.id } ?: 0L) + 1
+        laps += lap.copy(id = id)
+        return id
+    }
+    override suspend fun insertSectors(sectors: List<SectorTimeData>) {
+        var next = (this.sectors.maxOfOrNull { it.id } ?: 0L) + 1
+        sectors.forEach { this.sectors += it.copy(id = next++) }
+    }
+
+    /** Sessions whose laps have GPS points; the fake keeps no points, only this flag. */
+    val withGpsTrace = mutableSetOf<Long>()
+    override suspend fun hasGpsTrace(sessionId: Long) = sessionId in withGpsTrace
+    override suspend fun setSessionVehicle(sessionId: Long, vehicleId: Long) {
+        sessions.replaceAll { if (it.id == sessionId) it.copy(vehicleId = vehicleId) else it }
+    }
+    override suspend fun deleteSession(sessionId: Long) {
+        val lapIds = laps.filter { it.sessionid == sessionId }.map { it.id }.toSet()
+        sectors.removeAll { it.lapid in lapIds }
+        laps.removeAll { it.sessionid == sessionId }
+        sessions.removeAll { it.id == sessionId }
+    }
 }

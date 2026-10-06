@@ -1,5 +1,7 @@
 package com.example.trackpro.components
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,8 +27,8 @@ fun ConfirmDeleteDialog(
     message: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    confirmLabel: String = "Delete",
-    dismissLabel: String = "Cancel"
+    confirmLabel: String = stringResource(R.string.common_delete),
+    dismissLabel: String = stringResource(R.string.common_cancel)
 ) {
     val haptics = rememberHaptics()
 

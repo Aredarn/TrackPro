@@ -1,5 +1,7 @@
 package com.example.trackpro.screens.listViewScreens.listItems
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import android.annotation.SuppressLint
 import android.view.ViewGroup
 import androidx.compose.foundation.background
@@ -14,6 +16,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.Spacer
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.components.paddockCard
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -247,15 +257,16 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             .fillMaxSize()
             .background(TrackProTheme.colors.bgDeep)
     ) {
-        AppTopBar(title = "Session Overview", accent = TrackProTheme.colors.accent, onBack = onBack)
+        AppTopBar(title = stringResource(R.string.drag_run_title), accent = TrackProTheme.colors.accent, onBack = onBack)
 
         // ── Compact stats panel ───────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(TrackProTheme.colors.bgCard)
-                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(horizontal = Spacing.gutter)
+                .paddockCard()
+                .padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -264,12 +275,13 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
             ) {
                 if (coordinates.isNotEmpty()) {
                     val totalTime = coordinates.last().timestamp - coordinates.first().timestamp
-                    StatCell(label = "Duration", value = formatTime(totalTime), size = StatCellSize.Small)
+                    StatCell(label = stringResource(R.string.drag_duration), value = formatTime(totalTime), size = StatCellSize.Regular)
                 }
                 StatCell(
-                    label = "Distance",
+                    label = stringResource(R.string.drag_distance),
                     value = if (totalDist <= 0) "—" else UnitFormatter.formatDistance(totalDist, useMetric),
-                    size = StatCellSize.Small
+                    size = StatCellSize.Regular,
+                    horizontalAlignment = Alignment.End
                 )
             }
 
@@ -284,22 +296,22 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     StatCell(
-                        label = "Air Temp",
+                        label = stringResource(R.string.drag_air_temp),
                         value = UnitFormatter.formatTemperature(tempC, useMetric),
                         size = StatCellSize.Small
                     )
                     StatCell(
-                        label = "Weather",
-                        value = WeatherService.describeCode(current?.weatherCode),
+                        label = stringResource(R.string.session_weather),
+                        value = stringResource(WeatherService.describeCodeRes(current?.weatherCode)),
                         size = StatCellSize.Small
                     )
                     StatCell(
-                        label = "Surface",
+                        label = stringResource(R.string.session_surface),
                         value = if (WeatherService.isWet(
                                 current?.weatherPrecipitationMm,
                                 current?.weatherCode
                             )
-                        ) "WET" else "DRY",
+                        ) stringResource(R.string.session_wet) else stringResource(R.string.session_dry),
                         size = StatCellSize.Small
                     )
                 }
@@ -309,139 +321,104 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
-                DragMetricCard(DragMetricDisplay("TOP SPEED",  if (maxSpeed > 0) UnitFormatter.formatSpeed(maxSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), maxSpeed > 0), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("AVG SPEED",  if (avgSpeed > 0) UnitFormatter.formatSpeed(avgSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), avgSpeed > 0), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("MAX ACCEL",  if (maxAcceleration > 0) String.format(Locale.US, "%.1f", UnitFormatter.convertSpeed(maxAcceleration, useMetric)) else "—", "${UnitFormatter.speedUnitLabel(useMetric)}/S", maxAcceleration > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.car_top_speed),  if (maxSpeed > 0) UnitFormatter.formatSpeed(maxSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), maxSpeed > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.lap_avg_speed),  if (avgSpeed > 0) UnitFormatter.formatSpeed(avgSpeed, useMetric) else "—", UnitFormatter.speedUnitLabel(useMetric), avgSpeed > 0), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_max_accel),  if (maxAcceleration > 0) String.format(Locale.US, "%.1f", UnitFormatter.convertSpeed(maxAcceleration, useMetric)) else "—", "${UnitFormatter.speedUnitLabel(useMetric)}/s", maxAcceleration > 0), modifier = Modifier.weight(1f))
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 val hasElevation = elevationGain != 0.0 || elevationLoss != 0.0
                 val netLabel  = if (elevationNet >= 0) String.format(Locale.US, "+%.0f m", elevationNet)
                                 else String.format(Locale.US, "%.0f m", elevationNet)
                 val gainLabel = "+%.0f m".format(elevationGain)
                 val lossLabel = String.format(Locale.US, "%.0f m", elevationLoss)
-                DragMetricCard(DragMetricDisplay("ELEV NET",  if (hasElevation) netLabel  else "—", "", hasElevation), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("ELEV ↑",    if (hasElevation) gainLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("ELEV ↓",    if (hasElevation) lossLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_net_elev), if (hasElevation) netLabel  else "—", "", hasElevation), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_climb),   if (hasElevation) gainLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_descent), if (hasElevation) lossLabel else "—", "", hasElevation), modifier = Modifier.weight(1f))
             }
 
             // Labels come from the splits themselves, so a tile can never name a milestone
             // the timer was not measuring. Three standing splits fill the first row; the
             // longest rolling split shares the second with the two mile figures.
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 metrics.standing.take(3).forEach { split ->
                     DragMetricCard(
-                        DragMetricDisplay(split.label, formatMetric(split.seconds), "SEC", split.seconds != null),
+                        DragMetricDisplay(split.label, formatMetric(split.seconds), "s", split.seconds != null),
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 metrics.rolling.lastOrNull()?.let { split ->
                     DragMetricCard(
-                        DragMetricDisplay(split.label, formatMetric(split.seconds), "SEC", split.seconds != null),
+                        DragMetricDisplay(split.label, formatMetric(split.seconds), "s", split.seconds != null),
                         modifier = Modifier.weight(1f)
                     )
                 }
-                DragMetricCard(DragMetricDisplay("\u00bc MILE",   formatMetric(metrics.quarterMileTime),            "SEC",   metrics.quarterMileTime != null), modifier = Modifier.weight(1f))
-                DragMetricCard(DragMetricDisplay("TRAP SPD", metrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "\u2014", UnitFormatter.speedUnitLabel(useMetric), metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_quarter_mile),   formatMetric(metrics.quarterMileTime),            "s",   metrics.quarterMileTime != null), modifier = Modifier.weight(1f))
+                DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_trap_speed), metrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "\u2014", UnitFormatter.speedUnitLabel(useMetric), metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
             }
         }
 
-        Divider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-
-        // ── Chart header ─────────────────────────────────────
+        // ── Chart card ─────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(start = Spacing.gutter, end = Spacing.gutter, top = Spacing.md, bottom = Spacing.gutter)
+                .paddockCard()
+        ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(TrackProTheme.colors.bgCard)
-                .padding(horizontal = Spacing.md, vertical = 6.dp),
+                .padding(start = Spacing.lg, end = Spacing.sm, top = Spacing.sm, bottom = Spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (showMap) "GPS Trace" else "Speed Trace",
-                style = TrackProType.label,
-                color = TrackProTheme.colors.textMuted
+                text = if (showMap) stringResource(R.string.drag_gps_trace) else stringResource(R.string.drag_speed),
+                style = TrackProType.titleMedium,
+                color = TrackProTheme.colors.textPrimary
             )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (!showMap) {
-                    listOf(true to "Meter", false to "Sec").forEach { (isMeters, label) ->
-                        val active = xAxisInMeters == isMeters
-                        Box(
-                            modifier = Modifier
-                                .pressable(
-                                    onClick = { xAxisInMeters = isMeters },
-                                    scale = 0.96f,
-                                    haptic = Haptic.Selection
-                                )
-                                .background(
-                                    if (active) TrackProTheme.colors.accent else TrackProTheme.colors.sectorLine,
-                                    RoundedCornerShape(0.dp)
-                                )
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = label,
-                                style = TrackProType.body.atSize(9.sp),
-                                color = if (active) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
-                            )
-                        }
+                    listOf(true to "m", false to "s").forEach { (isMeters, label) ->
+                        TraceToggle(label = label, active = xAxisInMeters == isMeters) { xAxisInMeters = isMeters }
                     }
+                    Spacer(Modifier.width(Spacing.xs))
                 }
-                listOf(false to "Chart", true to "Map").forEach { (isMap, label) ->
-                    val active = showMap == isMap
-                    Box(
-                        modifier = Modifier
-                            .pressable(
-                                onClick = { showMap = isMap },
-                                scale = 0.96f,
-                                haptic = Haptic.Selection
-                            )
-                            .background(
-                                if (active) TrackProTheme.colors.accent else TrackProTheme.colors.sectorLine,
-                                RoundedCornerShape(0.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            style = TrackProType.body.atSize(9.sp),
-                            color = if (active) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
-                        )
-                    }
+                listOf(false to stringResource(R.string.drag_chart), true to stringResource(R.string.drag_map)).forEach { (isMap, label) ->
+                    TraceToggle(label = label, active = showMap == isMap) { showMap = isMap }
                 }
             }
         }
 
-        Divider(color = TrackProTheme.colors.sectorLine, thickness = 1.dp)
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(TrackProTheme.colors.bgCard)
+                .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
         ) {
             if (showMap) {
                 if (mapGpsData.isNotEmpty()) {
                     DragSessionMapView(gpsData = mapGpsData, modifier = Modifier.fillMaxSize())
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No GPS data", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                        Text(stringResource(R.string.drag_no_gps), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
                     }
                 }
             } else if (traceState != TraceState.Loaded) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = if (traceState == TraceState.Loading) "LOADING TRACE"
-                        else "NO GPS TRACE RECORDED FOR THIS RUN",
+                        text = if (traceState == TraceState.Loading) stringResource(R.string.drag_loading_trace)
+                        else stringResource(R.string.drag_no_trace),
                         style = TrackProType.label,
                         color = TrackProTheme.colors.markingDim
                     )
@@ -479,10 +456,32 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                     },
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp)
+                        .padding(Spacing.sm)
                 )
             }
         }
+        }
+    }
+}
+
+/** A small pill toggle in the chart card's header. */
+@Composable
+private fun TraceToggle(label: String, active: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .heightIn(min = 44.dp)
+            .clip(TrackProShapes.pill)
+            .pressable(onClick = onClick, scale = 0.96f, haptic = Haptic.Selection)
+            .background(if (active) TrackProTheme.colors.accent else TrackProTheme.colors.bgElevated)
+            .semantics { selected = active }
+            .padding(horizontal = Spacing.md),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = TrackProType.label,
+            color = if (active) TrackProTheme.colors.onAccent else TrackProTheme.colors.textMuted
+        )
     }
 }
 
@@ -602,8 +601,8 @@ private fun LineChart.setupChartStyle() {
     axisRight.isEnabled = false
     description.isEnabled = false
     legend.isEnabled = false
-    setNoDataText("Calculating data...")
-    setNoDataTextColor(android.graphics.Color.WHITE)
+    setNoDataText(context.getString(R.string.drag_calculating))
+    setNoDataTextColor(android.graphics.Color.parseColor(DataVizColors.chartAxisText))
     setBackgroundColor(android.graphics.Color.parseColor(DataVizColors.chartBackground))
 }
 

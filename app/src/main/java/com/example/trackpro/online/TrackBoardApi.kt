@@ -3,6 +3,7 @@ package com.example.trackpro.online
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -52,6 +53,21 @@ interface TrackBoardApi {
     /** Null when the track does not exist or is not visible to this caller. */
     suspend fun getTrack(accessToken: String?, id: String): TrackSummary?
 
+    /** Like [getTrack], with the geometry. */
+    suspend fun getTrackDetail(accessToken: String, id: String): TrackDetail?
+
+    /** One page of the caller's own tracks, published and private, 1-based. */
+    suspend fun listMyTracks(accessToken: String, page: Int, pageSize: Int = 100): TrackPage
+
+    /** One page of the caller's sessions, newest first, 1-based. */
+    suspend fun listSessions(accessToken: String, page: Int, pageSize: Int = 100): SessionPage
+
+    /** Null when the session no longer exists. */
+    suspend fun getSession(accessToken: String, id: String): SessionDetail?
+
+    /** Null when the car no longer exists or is not the caller's. */
+    suspend fun getVehicle(accessToken: String, id: String): VehicleResponse?
+
     /** Null when the track does not exist or is not published. Public: the token is optional. */
     suspend fun getLeaderboard(accessToken: String?, trackId: String, limit: Int): Leaderboard?
 }
@@ -67,7 +83,8 @@ interface TrackBoardAccountApi {
     suspend fun getStats(accessToken: String): ProfileStats
     /** The raw export document, exactly as the server wrote it. */
     suspend fun exportAccount(accessToken: String): String
-    suspend fun deleteAccount(accessToken: String)
+    /** Needs the account [password] as well as the token. A wrong one is a 403, not a 401. */
+    suspend fun deleteAccount(accessToken: String, password: String)
 
     /** One page of the caller's vehicles, 1-based. */
     suspend fun listVehicles(accessToken: String, page: Int, pageSize: Int = 100): VehiclePage
@@ -83,11 +100,35 @@ interface TrackBoardAccountApi {
     suspend fun download(url: String): ByteArray?
 }
 
+/**
+ * Track days: joining with a code and reading an event's live board. Its own interface, like
+ * [TrackBoardAccountApi], so the sync fakes in tests do not have to grow with it.
+ */
+interface TrackBoardEventsApi {
+    /** Events the caller hosts or joined, newest first. */
+    suspend fun myEvents(accessToken: String): List<EventSummary>
+
+    /** Throws a 404 [ApiException] when no event has the code. */
+    suspend fun eventByCode(accessToken: String, code: String): EventDetail
+
+    /** Joins, or changes group when already joined. Throws a 409 when the event has finished. */
+    suspend fun joinEvent(accessToken: String, code: String, groupId: String?): EventDetail
+
+    /** Succeeds when already gone. */
+    suspend fun leaveEvent(accessToken: String, eventId: String, userId: String)
+
+    /** Public: the token only matters for a stale one, which the server answers with 401. */
+    suspend fun eventBoard(accessToken: String?, eventId: String): EventBoard?
+
+    /** A published track with its geometry, for driving an event on it. Public. */
+    suspend fun publishedTrack(id: String): TrackDetail?
+}
+
 class OkHttpTrackBoardApi(
     /** Read on every call, so a changed server address in Settings applies immediately. */
     private val baseUrl: () -> String?,
     private val client: OkHttpClient = defaultClient(),
-) : TrackBoardApi, TrackBoardAccountApi {
+) : TrackBoardApi, TrackBoardAccountApi, TrackBoardEventsApi {
 
     override suspend fun register(request: RegisterRequest): AuthResponse =
         send("POST", "auth/register", null, request, RegisterRequest.serializer(), AuthResponse.serializer())
@@ -131,6 +172,33 @@ class OkHttpTrackBoardApi(
             json.decodeFromString(TrackSummary.serializer(), response.bodyText())
         }
 
+    override suspend fun getTrackDetail(accessToken: String, id: String): TrackDetail? =
+        call("GET", "tracks/$id", accessToken, null).use { response ->
+            if (response.code == 404) return@use null
+            response.requireSuccess()
+            json.decodeFromString(TrackDetail.serializer(), response.bodyText())
+        }
+
+    override suspend fun listMyTracks(accessToken: String, page: Int, pageSize: Int): TrackPage =
+        get("tracks?mine=true&page=$page&pageSize=$pageSize", accessToken, TrackPage.serializer())
+
+    override suspend fun listSessions(accessToken: String, page: Int, pageSize: Int): SessionPage =
+        get("sessions?page=$page&pageSize=$pageSize", accessToken, SessionPage.serializer())
+
+    override suspend fun getSession(accessToken: String, id: String): SessionDetail? =
+        call("GET", "sessions/$id", accessToken, null).use { response ->
+            if (response.code == 404) return@use null
+            response.requireSuccess()
+            json.decodeFromString(SessionDetail.serializer(), response.bodyText())
+        }
+
+    override suspend fun getVehicle(accessToken: String, id: String): VehicleResponse? =
+        call("GET", "vehicles/$id", accessToken, null).use { response ->
+            if (response.code == 404 || response.code == 403) return@use null
+            response.requireSuccess()
+            json.decodeFromString(VehicleResponse.serializer(), response.bodyText())
+        }
+
     override suspend fun getLeaderboard(accessToken: String?, trackId: String, limit: Int): Leaderboard? =
         call("GET", "tracks/$trackId/leaderboard?limit=$limit", accessToken, null).use { response ->
             if (response.code == 404) return@use null
@@ -155,8 +223,9 @@ class OkHttpTrackBoardApi(
             response.bodyText()
         }
 
-    override suspend fun deleteAccount(accessToken: String) {
-        call("DELETE", "me", accessToken, null).use { it.requireSuccess() }
+    override suspend fun deleteAccount(accessToken: String, password: String) {
+        call("DELETE", "me", accessToken, encode(DeleteAccountRequest.serializer(), DeleteAccountRequest(password)))
+            .use { it.requireSuccess() }
     }
 
     override suspend fun listVehicles(accessToken: String, page: Int, pageSize: Int): VehiclePage =
@@ -213,6 +282,37 @@ class OkHttpTrackBoardApi(
             }
         }
     }
+
+    // ── Events ──
+
+    override suspend fun myEvents(accessToken: String): List<EventSummary> =
+        get("events", accessToken, ListSerializer(EventSummary.serializer()))
+
+    override suspend fun eventByCode(accessToken: String, code: String): EventDetail =
+        get("events/code/${code.filter(Char::isLetterOrDigit)}", accessToken, EventDetail.serializer())
+
+    override suspend fun joinEvent(accessToken: String, code: String, groupId: String?): EventDetail =
+        send("POST", "events/join", accessToken, JoinEventRequest(code, groupId), JoinEventRequest.serializer(), EventDetail.serializer())
+
+    override suspend fun leaveEvent(accessToken: String, eventId: String, userId: String) {
+        call("DELETE", "events/$eventId/entries/$userId", accessToken, null).use { response ->
+            if (response.code != 404) response.requireSuccess()
+        }
+    }
+
+    override suspend fun eventBoard(accessToken: String?, eventId: String): EventBoard? =
+        call("GET", "events/$eventId/board", accessToken, null).use { response ->
+            if (response.code == 404) return@use null
+            response.requireSuccess()
+            json.decodeFromString(EventBoard.serializer(), response.bodyText())
+        }
+
+    override suspend fun publishedTrack(id: String): TrackDetail? =
+        call("GET", "tracks/$id", null, null).use { response ->
+            if (response.code == 404) return@use null
+            response.requireSuccess()
+            json.decodeFromString(TrackDetail.serializer(), response.bodyText())
+        }
 
     // ── Plumbing ──
 

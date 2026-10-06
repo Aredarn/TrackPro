@@ -15,6 +15,7 @@ import androidx.work.WorkerParameters
 import com.example.trackpro.TrackProApp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
 
 /**
@@ -27,12 +28,16 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     override suspend fun doWork(): Result {
         val online = (applicationContext as TrackProApp).online
 
+        // Keeps the phone's list of joined events current, so their sessions are planned
+        // below. Best effort: offline, the list the phone already has stands.
+        runCatching { online.events.refresh() }
+
         if (online.settings.serverUrl.value.isBlank()) {
             online.settings.recordSync(SyncReport(System.currentTimeMillis(), problem = "No TrackBoard server is set."))
             return Result.success()
         }
 
-        val report = online.syncEngine().run()
+        val report = online.syncLock.withLock { online.syncEngine().run() }
         online.settings.recordSync(report)
 
         // Offline is the one outcome worth retrying: every other problem needs a change on

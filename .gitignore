@@ -24,3 +24,8 @@ local.properties
 # Impeccable machine-local settings
 .impeccable/config.local.json
 .impeccable/questions/
+
+# Release signing secrets
+keystore.properties
+*.jks
+*.keystore

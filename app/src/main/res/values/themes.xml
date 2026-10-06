@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.TrackPro" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Paddock night reaches the system bars too: the page ground behind the status bar,
+         the navigation bar, and the window itself while Compose draws its first frame. -->
+    <style name="Theme.TrackPro" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/paddock_ground</item>
+        <item name="android:statusBarColor">@color/paddock_ground</item>
+        <item name="android:navigationBarColor">@color/paddock_ground</item>
+        <item name="android:colorAccent">@color/paddock_accent</item>
+    </style>
 </resources>

@@ -1,4 +1,6 @@
 package com.example.trackpro.screens
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import com.example.trackpro.components.KeepScreenOn
 import android.content.Context
 import android.util.Log
@@ -184,7 +186,7 @@ fun TrackBuilderScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(TrackProTheme.colors.bgDeep)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            AppTopBar(title = "Track Builder", accent = TrackProTheme.colors.accent, onBack = onBack)
+            AppTopBar(title = stringResource(R.string.builder_title), accent = TrackProTheme.colors.accent, onBack = onBack)
 
             Column(modifier = Modifier.padding(Spacing.md)) {
                 TrackInfoCard(trackName, countryName, trackMode) { showInfoDialog = true }
@@ -345,6 +347,9 @@ fun MapLibreBuilderView(
     onMapTap: (LatLng) -> Unit
 ) {
     var mapLibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
+    val startTitle = stringResource(R.string.builder_marker_start)
+    val finishTitle = stringResource(if (trackMode == "Circuit") R.string.builder_marker_start_finish else R.string.builder_marker_finish)
+    val waypointTitle = stringResource(R.string.builder_marker_waypoint)
     val sectorMarkCount = points.count { it.isSectorPoint }
 
     LaunchedEffect(points.size, sectorMarkCount, waypoints.size) {
@@ -368,7 +373,7 @@ fun MapLibreBuilderView(
                 // Start Marker is always there
                 map.addMarker(MarkerOptions()
                     .position(LatLng(points.first().latitude, points.first().longitude))
-                    .title("START")
+                    .title(startTitle)
                 )
 
                 if (points.size > 1) {
@@ -376,7 +381,7 @@ fun MapLibreBuilderView(
                     map.addMarker(MarkerOptions()
                         .position(LatLng(lastPoint.latitude, lastPoint.longitude))
                         // Change title based on intent
-                        .title(if (trackMode == "Circuit") "LAP COMPLETE" else "FINISH LINE")
+                        .title(finishTitle)
                     )
                 }
 
@@ -397,7 +402,7 @@ fun MapLibreBuilderView(
                     map.addMarker(
                         MarkerOptions()
                             .position(LatLng(wp.lat, wp.lon))
-                            .title("WAYPOINT ${index + 1}")
+                            .title(String.format(waypointTitle, index + 1))
                     )
                 }
 
@@ -434,24 +439,24 @@ fun MapLibreBuilderView(
 
 @Composable
 private fun TrackInfoCard(name: String, country: String, mode: String, onClick: () -> Unit) {
-    DashGroup("Track configuration") {
+    DashGroup(stringResource(R.string.builder_config)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    if (name.isEmpty()) "Unnamed track" else name,
+                    if (name.isEmpty()) stringResource(R.string.builder_unnamed) else name,
                     style = TrackProType.titleLarge.atSize(18.sp),
                     color = TrackProTheme.colors.marking
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    listOf(country, mode.uppercase()).filter { it.isNotBlank() }.joinToString("  \u00b7  "),
+                    listOf(country, mode).filter { it.isNotBlank() }.joinToString("  \u00b7  "),
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim
                 )
             }
             Spacer(Modifier.width(12.dp))
             DashAction(
-                label = "Edit",
+                label = stringResource(R.string.builder_edit),
                 onClick = onClick,
                 compact = true,
                 modifier = Modifier.width(96.dp)
@@ -464,7 +469,7 @@ private fun TrackInfoCard(name: String, country: String, mode: String, onClick: 
 @Composable
 private fun MarkSectorButton(count: Int, enabled: Boolean, onClick: () -> Unit) {
     DashAction(
-        label = "Mark sector ${count + 1}",
+        label = stringResource(R.string.builder_mark_sector, count + 1),
         onClick = onClick,
         enabled = enabled,
         compact = true,
@@ -492,7 +497,7 @@ private fun RoutingStatusRow(isRouting: Boolean) {
                 color = TrackProTheme.colors.accent
             )
             Text(
-                text = "Snapping to roads...",
+                text = stringResource(R.string.builder_snapping),
                 color = TrackProTheme.colors.textMuted,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -500,7 +505,7 @@ private fun RoutingStatusRow(isRouting: Boolean) {
             )
         } else {
             Text(
-                text = "! Last leg couldn't be routed - straight line used",
+                text = stringResource(R.string.builder_route_failed),
                 color = TrackProTheme.colors.deltaBad,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -516,7 +521,7 @@ private fun ModeToggle(selected: Int, onSelect: (Int) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
-        val modes = listOf("Live GPS", "Manual Map")
+        val modes = listOf(stringResource(R.string.builder_live_gps), stringResource(R.string.builder_manual_map))
         modes.forEachIndexed { index, label ->
             ToggleChip(
                 text = label,
@@ -580,8 +585,8 @@ private fun LiveControls(isRecording: Boolean, onToggle: () -> Unit) {
     // Recording is the one state on this screen that must be unmistakable while you are
     // walking a circuit, so it takes the danger accent rather than a label change alone.
     DashAction(
-        label = if (isRecording) "Stop recording" else "Start GPS recording",
-        detail = if (isRecording) "Recording \u00b7 walk the circuit" else null,
+        label = if (isRecording) stringResource(R.string.builder_stop_recording) else stringResource(R.string.builder_start_recording),
+        detail = if (isRecording) stringResource(R.string.builder_recording_walk) else null,
         onClick = onToggle,
         compact = true,
         haptic = Haptic.Confirm,
@@ -597,14 +602,14 @@ private fun ManualControls(onUndo: () -> Unit, onSave: () -> Unit, canSave: Bool
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         DashAction(
-            label = "Undo last",
+            label = stringResource(R.string.builder_undo),
             onClick = onUndo,
             compact = true,
             accent = TrackProTheme.colors.markingDim,
             modifier = Modifier.weight(1f)
         )
         DashAction(
-            label = "Save track",
+            label = stringResource(R.string.builder_save),
             onClick = onSave,
             enabled = canSave,
             compact = true,
@@ -627,40 +632,40 @@ fun TrackInfoAlert(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = TrackProTheme.colors.bgCard,
-        title = { Text("Track Details", color = TrackProTheme.colors.textPrimary) },
+        title = { Text(stringResource(R.string.builder_details), color = TrackProTheme.colors.textPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 TextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Track Name") },
+                    label = { Text(stringResource(R.string.builder_track_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 TextField(
                     value = country,
                     onValueChange = { country = it },
-                    label = { Text("Country") },
+                    label = { Text(stringResource(R.string.builder_country)) },
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Text("Timing Mode", color = TrackProTheme.colors.textMuted, fontSize = 12.sp)
+                Text(stringResource(R.string.builder_timing_mode), color = TrackProTheme.colors.textMuted, fontSize = 12.sp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = mode == "Circuit", onClick = { mode = "Circuit" })
-                    Text("Circuit", color = TrackProTheme.colors.textPrimary)
+                    Text(stringResource(R.string.track_type_circuit), color = TrackProTheme.colors.textPrimary)
                     Spacer(Modifier.width(16.dp))
                     RadioButton(selected = mode == "Sprint", onClick = { mode = "Sprint" })
-                    Text("Sprint", color = TrackProTheme.colors.textPrimary)
+                    Text(stringResource(R.string.track_type_sprint), color = TrackProTheme.colors.textPrimary)
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name, country, mode) }) {
-                Text("DONE", color = TrackProTheme.colors.accent, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.common_done), color = TrackProTheme.colors.accent, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = TrackProTheme.colors.textMuted)
+                Text(stringResource(R.string.common_cancel), color = TrackProTheme.colors.textMuted)
             }
         }
     )

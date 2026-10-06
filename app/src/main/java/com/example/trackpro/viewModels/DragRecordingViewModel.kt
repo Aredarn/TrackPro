@@ -1,5 +1,6 @@
 package com.example.trackpro.viewModels
 
+import com.example.trackpro.R
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -218,7 +219,7 @@ class DragRecordingViewModel(context: Context) : ViewModel() {
                 if (points.isNotEmpty()) database.rawGPSDataDao().insertAll(points)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to save drag run", e)
-                _saveError.value = e.message ?: "The run could not be written to the database"
+                _saveError.value = e.message ?: app.getString(R.string.drag_save_failed)
             }
         }
     }

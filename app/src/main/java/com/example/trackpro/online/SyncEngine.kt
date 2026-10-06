@@ -16,7 +16,8 @@ import java.util.UUID
 class SyncProblem(message: String) : Exception(message)
 
 /**
- * Mirrors the driver's leaderboard-eligible sessions onto TrackBoard, and nothing else.
+ * Mirrors the driver's leaderboard-eligible sessions onto TrackBoard, and brings the account's
+ * tracks and sessions back down onto this phone (see [AccountRestore]).
  *
  * What goes up is decided fresh on every run from local data, so every path — first sync,
  * a voided session, an unpublished track, sharing switched off, a deleted session — is the
@@ -24,6 +25,9 @@ class SyncProblem(message: String) : Exception(message)
  *
  * - A session is posted when sharing is on, it recorded its GPS source, it has a timed lap,
  *   and its track is either premade or published by the driver.
+ * - A session driven during a joined event, on the event's track, is posted too - joining is
+ *   the consent - as Private when sharing is off, so it reaches the event board but not the
+ *   public leaderboard. While it is still running, [pushLive] sends it after every lap.
  * - Premade tracks are linked to the one shared server track every install derives the same
  *   id for; the first driver to post on one creates it.
  * - Anything online that no longer qualifies is withdrawn.
@@ -42,15 +46,29 @@ class SyncEngine(
     private val clock: () -> Long = System::currentTimeMillis,
     /** The garage backup. Null in tests that only exercise leaderboard sync. */
     private val garage: GarageSync? = null,
+    /** Runs a block atomically: Room's withTransaction in the app, a plain call in tests. */
+    transaction: suspend (suspend () -> Unit) -> Unit = { it() },
+    /** Events the driver joined. Their sessions go up even with sharing off. */
+    private val events: () -> List<JoinedEvent> = { emptyList() },
 ) {
+    private val restore = AccountRestore(api, auth, dao, premade, appVersion, transaction, clock)
+
     private class TrackInfo(
         val track: TrackMainData,
         val points: List<TrackCoordinatesData>,
-        /** Non-null when this is an unmodified premade track. */
+        /**
+         * Non-null when the track already exists on the server and is not this driver's to
+         * upload: an unmodified premade track, or a published one downloaded for an event.
+         */
         val premadeId: String?,
     )
 
-    private class Plan(val session: SessionData, val track: TrackInfo, val laps: List<LapTimeData>)
+    private class Plan(
+        val session: SessionData,
+        val track: TrackInfo,
+        val laps: List<LapTimeData>,
+        val visibility: ApiSessionVisibility,
+    )
 
     private class Tally {
         var uploaded = 0
@@ -70,33 +88,50 @@ class SyncEngine(
 
         val tally = Tally()
         val garageTally = GarageTally()
+        val restoreTally = RestoreTally()
         try {
-            val published = dao.getPublishedTrackIds().toSet()
+            restore.dropRestoredDuplicates()
+
+            var published = dao.getPublishedTrackIds().toSet()
             val tracks = mutableMapOf<Long, TrackInfo?>()
             suspend fun track(id: Long) = tracks.getOrPut(id) { loadTrack(id) }
 
-            val plans = if (sharingEnabled()) planSessions(published, ::track) else emptyList()
-            val wanted = plans.mapTo(mutableSetOf()) { it.session.id }
+            val sharing = sharingEnabled()
+            val wanted = planSessions(published, ::track, sharing).mapTo(mutableSetOf()) { it.session.id }
+            // A session still recording may have gone up live for an event. It is not finished,
+            // so it is not planned, but it must not be withdrawn from under the event board.
+            val running = dao.getRunningSessionIds().toSet()
 
             // Withdrawals first: a session leaving the leaderboard should not queue behind uploads.
             for (link in dao.getLinks(KIND_SESSION)) {
-                if (link.localId !in wanted) attempt(tally) { withdrawSession(link, tally) }
+                if (link.localId !in wanted && link.localId !in running) attempt(tally) { withdrawSession(link, tally) }
             }
 
             // After withdrawals, so a car deleted together with its sessions is no longer
             // held on the account by them; before uploads, so sessions find their car linked.
             garage?.run(garageTally)
 
+            // After the garage, so restored sessions find their cars. Anything restored is
+            // linked as already online, so the upload steps below leave it alone.
+            restore.restoreTracks(restoreTally)
+            if (sharing) restore.restoreSessions(restoreTally)
+            // Restored tracks may be published; read again, or the step below would make them private.
+            published = dao.getPublishedTrackIds().toSet()
+
             syncUserTracks(published, ::track, tally)
 
+            // Planned again rather than reusing the plans above: the restore changes sessions
+            // too - it gives a session brought down without its car the car back - and an
+            // upload from the earlier snapshot would post the session without it.
+            val plans = planSessions(published, ::track, sharing)
             for (plan in plans) attempt(tally) { uploadSession(plan, tally) }
         } catch (e: NetworkException) {
-            return tally.report(garageTally, offline = true, problem = e.message)
+            return tally.report(garageTally, restoreTally, offline = true, problem = e.message)
         } catch (e: ApiException) {
             // Only a 401 escapes attempt(): the refresh failed and the driver is now signed out.
-            return tally.report(garageTally, problem = e.message)
+            return tally.report(garageTally, restoreTally, problem = e.message)
         }
-        return tally.report(garageTally)
+        return tally.report(garageTally, restoreTally)
     }
 
     // ── Planning ──
@@ -104,21 +139,66 @@ class SyncEngine(
     private suspend fun planSessions(
         published: Set<Long>,
         track: suspend (Long) -> TrackInfo?,
+        sharing: Boolean,
     ): List<Plan> = dao.getFinishedTrackSessions().mapNotNull { session ->
-        if (PayloadMapper.gpsSource(session.gpsSource) == null) return@mapNotNull null
-        val info = session.trackId?.let { track(it) } ?: return@mapNotNull null
-        if (info.premadeId == null && info.track.trackId !in published) return@mapNotNull null
+        plan(session, published, track, sharing)
+    }
+
+    /** Whether [session] goes up at all, and how: Ranked for the leaderboard, Private for an event only. */
+    private suspend fun plan(
+        session: SessionData,
+        published: Set<Long>,
+        track: suspend (Long) -> TrackInfo?,
+        sharing: Boolean,
+    ): Plan? {
+        if (PayloadMapper.gpsSource(session.gpsSource) == null) return null
+        val info = session.trackId?.let { track(it) } ?: return null
+
+        val ranked = sharing && (info.premadeId != null || info.track.trackId in published)
+        val inEvent = remoteTrackId(info, published)?.let { remote ->
+            events().any { it.trackId == remote && it.covers(session.startTime) }
+        } == true
+        if (!ranked && !inEvent) return null
 
         val laps = dao.getLaps(session.id)
         // Same rules as the real upload, so "wanted" and "sendable" can never disagree.
         val sendable = PayloadMapper.session(session, laps, emptyList(), "planning", null, null) != null
-        if (sendable) Plan(session, info, laps) else null
+        if (!sendable) return null
+        val visibility = if (ranked) ApiSessionVisibility.Ranked else ApiSessionVisibility.Private
+        return Plan(session, info, laps, visibility)
+    }
+
+    /** The track's server id when it has one: shared or premade, or the driver's own once published and sent. */
+    private suspend fun remoteTrackId(info: TrackInfo, published: Set<Long>): String? =
+        info.premadeId
+            ?: if (info.track.trackId in published) dao.getLink(KIND_TRACK, info.track.trackId)?.remoteId else null
+
+    /**
+     * Sends a session that is still recording, straight after a lap, when it falls in a joined
+     * event. Uses the same links as [run], so the full sync afterwards sees it as already up.
+     * Returns false when it is not an event session; a network problem throws, and the full
+     * sync at the end of the session catches up.
+     */
+    suspend fun pushLive(sessionId: Long): Boolean {
+        if (!auth.isSignedIn) return false
+        val session = dao.getSession(sessionId) ?: return false
+        val published = dao.getPublishedTrackIds().toSet()
+        val info = session.trackId?.let { loadTrack(it) } ?: return false
+        val remote = remoteTrackId(info, published) ?: return false
+        if (events().none { it.trackId == remote && it.covers(session.startTime) }) return false
+
+        val plan = plan(session, published, { id -> if (id == info.track.trackId) info else loadTrack(id) }, sharingEnabled())
+            ?: return false
+        uploadSession(plan, Tally())
+        return true
     }
 
     private suspend fun loadTrack(trackId: Long): TrackInfo? {
         val track = dao.getTrack(trackId) ?: return null
         val points = dao.getTrackPoints(trackId)
-        return TrackInfo(track, points, premade.remoteIdFor(track, points))
+        val shared = premade.remoteIdFor(track, points)
+            ?: dao.getLink(RemoteLink.KIND_SHARED_TRACK, trackId)?.remoteId
+        return TrackInfo(track, points, shared)
     }
 
     // ── Sessions ──
@@ -134,8 +214,9 @@ class SyncEngine(
         val vehicleRemoteId = plan.session.vehicleId?.let { ensureVehicle(it) }
 
         val sectors = dao.getSectors(plan.laps.map { it.id })
-        val body = PayloadMapper.session(plan.session, plan.laps, sectors, trackRemoteId, vehicleRemoteId, appVersion)
-            ?: return
+        val body = PayloadMapper.session(
+            plan.session, plan.laps, sectors, trackRemoteId, vehicleRemoteId, appVersion, plan.visibility
+        ) ?: return
         val hash = PayloadMapper.hash(body)
         val link = dao.getLink(KIND_SESSION, plan.session.id)
 
@@ -171,16 +252,19 @@ class SyncEngine(
         }
 
         for (link in dao.getLinks(KIND_TRACK)) {
-            if (link.localId in published) continue
+            if (link.localId in published || link.uploadedHash == GarageSync.DELETED_HERE) continue
             val info = track(link.localId)
             attempt(tally) {
                 if (info == null) {
                     // Deleted on the phone. If other drivers have laps on it the server keeps
-                    // it for them, which is correct; either way it is no longer ours to track.
+                    // it for them, which is correct - but then the link stays, marked, or the
+                    // next sync would restore the track the driver just deleted.
                     try {
                         auth.authorized { token -> api.deleteTrack(token, link.remoteId) }
                     } catch (e: ApiException) {
                         if (e.status == 401 || e.code != "TrackInUse") throw e
+                        dao.putLink(link.copy(uploadedHash = GarageSync.DELETED_HERE, lastError = null))
+                        return@attempt
                     }
                     dao.deleteLink(KIND_TRACK, link.localId)
                 } else {
@@ -227,6 +311,9 @@ class SyncEngine(
                 auth.authorized { token -> api.putTrack(token, remoteId, body) }
             } catch (e: ApiException) {
                 if (e.status == 401) throw e
+                // The account is full. The server's own message says so and what to do about
+                // it, which "isn't available right now" below would hide.
+                if (e.code == "QuotaExceeded") throw SyncProblem(e.message ?: "This account has reached its limit.")
                 // 403: another driver created it between our check and our write. Theirs is
                 // identical by construction, so linking to it is exactly right — if we can see it.
                 val createdByAnother = e.status == 403 &&
@@ -300,15 +387,16 @@ class SyncEngine(
 
     private fun Tally.report(
         garage: GarageTally,
+        restored: RestoreTally,
         offline: Boolean = false,
-        problem: String? = this.problem ?: garage.problem,
+        problem: String? = this.problem ?: garage.problem ?: restored.problem,
     ) = SyncReport(
         finishedAt = clock(),
         uploaded = uploaded + garage.uploaded,
         unchanged = unchanged,
         withdrawn = withdrawn,
-        downloaded = garage.downloaded,
-        failed = failed + garage.failed,
+        downloaded = garage.downloaded + restored.downloaded,
+        failed = failed + garage.failed + restored.failed,
         problem = problem,
         offline = offline,
     )

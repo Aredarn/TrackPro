@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.example.trackpro.dataClasses.LapTimeData
+import com.example.trackpro.models.SessionBestLap
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -70,6 +71,17 @@ interface LapTimeDataDAO {
     """)
     suspend fun getBestLapForTrack(trackId: Long): LapTimeData?
 
+    // Every session's fastest completed lap, for listing and ordering sessions by pace. MIN
+    // over the stored "MM:SS.hh" text is MIN over time because the format is fixed-width;
+    // the unfinished and invalid markers are excluded, as they are wherever laps are ranked.
+    @Query("""
+    SELECT sessionid AS sessionId, MIN(laptime) AS bestLap FROM lap_time_data
+    WHERE laptime != 'IN PROGRESS'
+    AND laptime != 'INVALID'
+    GROUP BY sessionid
+    """)
+    fun getBestLapPerSession(): Flow<List<SessionBestLap>>
+
     // The fastest laps on a track that are fit to be a live-delta reference, fastest first:
     // completed, and with no GPS gap - a gap is a straight chord through the lap's trace,
     // which would skew every delta measured against it. Several rather than one, because
@@ -85,6 +97,22 @@ interface LapTimeDataDAO {
     LIMIT :limit
     """)
     suspend fun getFastestCleanLapsForTrack(trackId: Long, limit: Int): List<LapTimeData>
+
+    /**
+     * Every clean lap time on a track from sessions that count: not voided, no GPS gap, and
+     * actually finished. Parsed by the caller, which is why it returns the raw strings.
+     * Read once when a session starts, it is the personal best the session has to beat.
+     */
+    @Query("""
+    SELECT lap_time_data.laptime FROM lap_time_data
+    INNER JOIN session_data ON lap_time_data.sessionid = session_data.id
+    WHERE session_data.trackId = :trackId
+    AND session_data.voided = 0
+    AND lap_time_data.signalGap = 0
+    AND lap_time_data.laptime != 'IN PROGRESS'
+    AND lap_time_data.laptime != 'INVALID'
+    """)
+    suspend fun getCountedLapTimesForTrack(trackId: Long): List<String>
 
     // Get total number of laps in a session
     @Query("SELECT COUNT(*) FROM lap_time_data WHERE sessionid = :sessionId")

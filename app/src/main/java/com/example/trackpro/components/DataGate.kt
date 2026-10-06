@@ -1,5 +1,7 @@
 package com.example.trackpro.components
 
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -38,8 +40,10 @@ fun <T> DataGate(
     emptyMessage: String,
     emptyHint: String,
     modifier: Modifier = Modifier,
-    loadingLabel: String = "Reading",
+    loadingLabel: String = stringResource(R.string.common_reading),
     onRetry: (() -> Unit)? = null,
+    emptyActionLabel: String? = null,
+    onEmptyAction: (() -> Unit)? = null,
     content: @Composable (List<T>) -> Unit
 ) {
     when {
@@ -52,7 +56,7 @@ fun <T> DataGate(
                 modifier = Modifier.padding(horizontal = 24.dp)
             ) {
                 Text(
-                    text = "READ FAILED",
+                    text = stringResource(R.string.common_read_failed),
                     style = TrackProType.titleMedium,
                     color = TrackProTheme.colors.deltaBad
                 )
@@ -66,7 +70,7 @@ fun <T> DataGate(
                 if (onRetry != null) {
                     Spacer(Modifier.height(16.dp))
                     DashAction(
-                        label = "Retry",
+                        label = stringResource(R.string.common_retry),
                         onClick = onRetry,
                         compact = true,
                         modifier = Modifier.width(160.dp)
@@ -81,7 +85,7 @@ fun <T> DataGate(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = loadingLabel.uppercase(),
+                    text = loadingLabel,
                     style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim
                 )
@@ -101,6 +105,8 @@ fun <T> DataGate(
         items.isEmpty() -> EmptyState(
             message = emptyMessage,
             hint = emptyHint,
+            actionLabel = emptyActionLabel,
+            onAction = onEmptyAction,
             modifier = modifier.fillMaxWidth()
         )
 

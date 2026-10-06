@@ -1,5 +1,8 @@
 package com.example.trackpro.screens.garage
 
+import com.example.trackpro.components.pluralResource
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +19,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.online.MessageText
+import com.example.trackpro.theme.TrackProShapes
+import com.example.trackpro.theme.Spacing
+import com.example.trackpro.components.pressable
+import com.example.trackpro.components.SectionTitle
+import com.example.trackpro.components.PaddockCard
+import com.example.trackpro.components.DashAction
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.Icons
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,12 +89,13 @@ fun CarPhotoSection(vehicle: VehicleInformationData) {
         }
     }
 
+    val unreadable = stringResource(R.string.photo_unreadable)
     val picker = rememberPhotoPicker { uri ->
         busy = true
         error = null
         scope.launch {
             val name = app.online.photos.import(uri, "vehicle-${vehicle.vehicleId}")
-            if (name == null) error = "That file could not be read as a picture." else replacePhoto(name)
+            if (name == null) error = unreadable else replacePhoto(name)
             busy = false
         }
     }
@@ -89,23 +103,23 @@ fun CarPhotoSection(vehicle: VehicleInformationData) {
     PhotoFrame(
         file = app.online.photos.file(vehicle.photoFile),
         contentDescription = "${vehicle.manufacturer} ${vehicle.model}",
-        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+        shape = TrackProShapes.card,
+        modifier = Modifier.padding(horizontal = Spacing.gutter).fillMaxWidth().aspectRatio(16f / 10f)
     )
     Row(
-        modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.panel).padding(horizontal = 12.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.gutter, vertical = Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ToggleChip(text = "Take photo", selected = false, onClick = { if (!busy) picker.fromCamera() }, modifier = Modifier.weight(1f))
-        ToggleChip(text = "Choose", selected = false, onClick = { if (!busy) picker.fromGallery() }, modifier = Modifier.weight(1f))
+        ToggleChip(text = stringResource(R.string.photo_take), selected = false, onClick = { if (!busy) picker.fromCamera() }, modifier = Modifier.weight(1f))
+        ToggleChip(text = stringResource(R.string.photo_choose), selected = false, onClick = { if (!busy) picker.fromGallery() }, modifier = Modifier.weight(1f))
         if (vehicle.photoFile != null) {
-            ToggleChip(text = "Remove", selected = false, onClick = { if (!busy) replacePhoto(null) }, modifier = Modifier.weight(1f))
+            ToggleChip(text = stringResource(R.string.photo_remove), selected = false, onClick = { if (!busy) replacePhoto(null) }, modifier = Modifier.weight(1f))
         }
     }
     error?.let {
-        Text(it.uppercase(), style = TrackProType.label, color = TrackProTheme.colors.deltaBad, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+        Text(it, style = TrackProType.label, color = TrackProTheme.colors.deltaBad, modifier = Modifier.padding(horizontal = Spacing.gutter))
     }
-    Bezel()
 }
 
 /**
@@ -124,28 +138,28 @@ fun CarBackupStrip(vehicle: VehicleInformationData, onSignIn: () -> Unit) {
     val own = link.firstOrNull { it.localId == vehicle.vehicleId }
     val status = vehicleSyncStatus(vehicle, own, signedIn)
 
+    val tone = statusLamp(status) ?: TrackProTheme.colors.accent
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(TrackProTheme.colors.field)
-            .then(if (!signedIn) Modifier.pressableRow(onClick = onSignIn) else Modifier)
+            .then(if (!signedIn) Modifier.pressable(onClick = onSignIn, scale = 0.98f) else Modifier)
+            .clip(TrackProShapes.control)
+            .background(tone.copy(alpha = 0.10f))
             .heightIn(min = 48.dp)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        statusLamp(status)?.let { lamp ->
-            Box(Modifier.size(6.dp).background(lamp, CircleShape))
-            Spacer(Modifier.width(8.dp))
-        }
+        Box(Modifier.size(8.dp).clip(CircleShape).background(tone))
+        Spacer(Modifier.width(Spacing.md))
         Column(Modifier.weight(1f)) {
             Text(
-                status.label.uppercase(),
+                stringResource(status.label),
                 style = TrackProType.label,
                 color = if (status == VehicleSyncStatus.Failed) TrackProTheme.colors.danger else TrackProTheme.colors.marking
             )
             val detail = when (status) {
-                VehicleSyncStatus.OnThisPhone -> "Sign in to back it up"
-                VehicleSyncStatus.Failed, VehicleSyncStatus.LocalOnly -> own?.lastError
+                VehicleSyncStatus.OnThisPhone -> stringResource(R.string.car_sign_in_to_backup)
+                VehicleSyncStatus.Failed, VehicleSyncStatus.LocalOnly -> MessageText.localize(own?.lastError)
                 else -> null
             }
             detail?.let {
@@ -154,9 +168,9 @@ fun CarBackupStrip(vehicle: VehicleInformationData, onSignIn: () -> Unit) {
             }
         }
         when (status) {
-            VehicleSyncStatus.OnThisPhone -> Text("SIGN IN ›", style = TrackProType.label, color = TrackProTheme.colors.accent)
+            VehicleSyncStatus.OnThisPhone -> Text(stringResource(R.string.common_sign_in), style = TrackProType.label, color = TrackProTheme.colors.accent)
             VehicleSyncStatus.LocalOnly, VehicleSyncStatus.Failed -> ToggleChip(
-                text = if (status == VehicleSyncStatus.LocalOnly) "Back up again" else "Retry",
+                text = if (status == VehicleSyncStatus.LocalOnly) stringResource(R.string.car_back_up_again) else stringResource(R.string.common_retry),
                 selected = false,
                 onClick = {
                     app.applicationScope.launch(Dispatchers.IO) {
@@ -171,7 +185,6 @@ fun CarBackupStrip(vehicle: VehicleInformationData, onSignIn: () -> Unit) {
             else -> Unit
         }
     }
-    Bezel()
 }
 
 /** This car's best lap on each track it has been driven on, from the phone's own records. */
@@ -186,36 +199,35 @@ fun CarBests(vehicleId: Long, onOpenTrack: (Long) -> Unit) {
         }
     }.collectAsState(initial = LocalCareer.EMPTY)
 
-    SectionLabel("Bests in this car", modifier = Modifier.padding(start = 16.dp, top = 18.dp, bottom = 8.dp))
-    Bezel()
-    if (career.bests.isEmpty()) {
-        Text(
-            if (career.sessionCount == 0) "NOT DRIVEN ON A TRACK YET" else "NO TIMED LAPS YET",
-            style = TrackProType.label,
-            color = TrackProTheme.colors.markingDim,
-            modifier = Modifier.fillMaxWidth().background(TrackProTheme.colors.field).padding(14.dp)
-        )
-        Bezel()
-        return
-    }
-    career.bests.forEach { best ->
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .pressableRow(onClick = { onOpenTrack(best.trackId) })
-                .background(TrackProTheme.colors.field)
-                .heightIn(min = 56.dp)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(best.trackName.uppercase(), style = TrackProType.titleMedium, color = TrackProTheme.colors.marking, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(2.dp))
-                Text("${best.lapCount} LAP${if (best.lapCount == 1) "" else "S"}", style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+    SectionTitle(stringResource(R.string.car_bests))
+    Column(Modifier.padding(horizontal = Spacing.gutter)) {
+        PaddockCard(padding = 0.dp) {
+            if (career.bests.isEmpty()) {
+                Text(
+                    if (career.sessionCount == 0) stringResource(R.string.car_not_driven) else stringResource(R.string.car_no_timed_laps),
+                    style = TrackProType.body,
+                    color = TrackProTheme.colors.markingDim,
+                    modifier = Modifier.fillMaxWidth().padding(Spacing.lg)
+                )
             }
-            Text(best.bestLapMs.toLapTimeString(), style = TrackProType.statValue.atSize(18.sp), color = TrackProTheme.colors.marking)
+            career.bests.forEachIndexed { i, best ->
+                if (i > 0) Bezel(Modifier.padding(horizontal = Spacing.lg))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pressableRow(onClick = { onOpenTrack(best.trackId) })
+                        .heightIn(min = 56.dp)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(best.trackName, style = TrackProType.titleMedium, color = TrackProTheme.colors.marking, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(pluralResource(R.plurals.count_laps, best.lapCount), style = TrackProType.label, color = TrackProTheme.colors.markingDim)
+                    }
+                    Text(best.bestLapMs.toLapTimeString(), style = TrackProType.titleMedium, color = TrackProTheme.colors.marking)
+                }
+            }
         }
-        Bezel()
     }
 }
 
@@ -230,10 +242,10 @@ fun CarDeleteRow(vehicle: VehicleInformationData, onDeleted: () -> Unit) {
 
     if (confirm) {
         ConfirmDeleteDialog(
-            title = "Delete ${vehicle.manufacturer} ${vehicle.model}?",
-            message = (if (sessions > 0) "Its $sessions recorded session${if (sessions == 1) "" else "s"} and their laps are deleted with it. " else "") +
-                (if (app.online.auth.isSignedIn) "It is also removed from your account. " else "") +
-                "This cannot be undone.",
+            title = stringResource(R.string.garage_delete_car_title, "${vehicle.manufacturer} ${vehicle.model}"),
+            message = (if (sessions > 0) pluralResource(R.plurals.garage_delete_sessions, sessions) else "") +
+                (if (app.online.auth.isSignedIn) stringResource(R.string.garage_delete_account) else "") +
+                stringResource(R.string.common_cannot_undo),
             onConfirm = {
                 confirm = false
                 app.applicationScope.launch(Dispatchers.IO) {
@@ -247,19 +259,13 @@ fun CarDeleteRow(vehicle: VehicleInformationData, onDeleted: () -> Unit) {
         )
     }
 
-    Spacer(Modifier.height(18.dp))
-    Bezel()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressableRow(onClick = { confirm = true })
-            .background(TrackProTheme.colors.field)
-            .heightIn(min = 56.dp)
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text("DELETE CAR", style = TrackProType.titleMedium, color = TrackProTheme.colors.danger, modifier = Modifier.weight(1f))
-        Text("›", style = TrackProType.titleLarge, color = TrackProTheme.colors.danger)
+    Column(Modifier.padding(horizontal = Spacing.gutter, vertical = Spacing.xl)) {
+        DashAction(
+            label = stringResource(R.string.car_delete),
+            onClick = { confirm = true },
+            compact = true,
+            accent = TrackProTheme.colors.danger,
+            icon = Icons.Default.DeleteOutline
+        )
     }
-    Bezel()
 }

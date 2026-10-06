@@ -52,6 +52,14 @@ class TimeAttackViewModel(
 
     // Timing state
     private var timingManager: TimingManager? = null
+    /**
+     * The driver's best on this track before this session started, or null if they have never
+     * timed a lap here. Read once at load, before this session has written a lap, so the
+     * summary can tell a new personal best apart from a good day.
+     */
+    private val _priorTrackBestMs = MutableStateFlow<Long?>(null)
+    val priorTrackBestMs = _priorTrackBestMs.asStateFlow()
+
     private val _timingMode = MutableStateFlow<TimingMode>(TimingMode.Circuit)
     val timingMode: StateFlow<TimingMode> = _timingMode.asStateFlow()
 
@@ -159,6 +167,11 @@ class TimeAttackViewModel(
         if (trackLoaded) return
         trackLoaded = true
         _timingMode.value = mode
+        viewModelScope.launch(Dispatchers.IO) {
+            _priorTrackBestMs.value = database.lapTimeDataDAO().getCountedLapTimesForTrack(trackId)
+                .mapNotNull { it.toLapTimeMillisOrNull() }
+                .minOrNull()
+        }
         viewModelScope.launch {
             database.trackCoordinatesDao().getCoordinatesOfTrack(trackId)
                 .collect { coords ->
@@ -270,6 +283,8 @@ class TimeAttackViewModel(
                 database.lapTimeDataDAO().completeLap(_lapId, lapTimeStr, lap.signalGap)
                 Log.d("TimeAttack", "Lap $_lapId COMPLETED with time $lapTimeStr" +
                         if (lap.signalGap) " (GPS gap during lap)" else "")
+                // A joined event's board takes the lap now, not when the session ends.
+                app.online.onLapCompleted(_sessionId, app.applicationScope)
 
                 // 2. For circuits, immediately start the next lap
                 if (_timingMode.value is TimingMode.Circuit) {
@@ -316,6 +331,7 @@ class TimeAttackViewModel(
                 // Mark the current sprint as COMPLETED, with whether GPS dropped out during it
                 database.lapTimeDataDAO().completeLap(_lapId, sprintTimeStr, run.signalGap)
                 Log.d("TimeAttack", "Sprint $_lapId COMPLETED with time $sprintTimeStr")
+                app.online.onLapCompleted(_sessionId, app.applicationScope)
 
                 // Don't create a new lap for sprints - user manually starts each run
             } catch (e: Exception) {

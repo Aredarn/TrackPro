@@ -1,5 +1,8 @@
 package com.example.trackpro.screens.telemetricScreens
 
+import com.example.trackpro.components.pluralResource
+import com.example.trackpro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +27,11 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.trackpro.components.paddockCard
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -149,12 +157,12 @@ fun DragRaceScreen(
             headline = currentMetrics.quarterMileTime?.let { formatTime(it) }
                 ?: currentMetrics.standing.lastOrNull { it.seconds != null }?.seconds
                     ?.let { formatTime(it) } ?: "\u2014",
-            headlineCaption = if (currentMetrics.quarterMileTime != null) "Quarter mile"
-            else "Best split",
+            headlineCaption = if (currentMetrics.quarterMileTime != null) stringResource(R.string.drag_quarter_mile_caption)
+            else stringResource(R.string.drag_best_split),
             rows = listOf(
-                "Runs" to "${currentMetrics.runCount}",
-                "Top speed" to "${UnitFormatter.formatSpeed(currentMetrics.maxSpeed, useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)}",
-                "Distance" to UnitFormatter.formatDistance(currentMetrics.totalDistance.toDouble(), useMetric)
+                stringResource(R.string.hud_runs) to "${currentMetrics.runCount}",
+                stringResource(R.string.car_top_speed) to "${UnitFormatter.formatSpeed(currentMetrics.maxSpeed, useMetric)} ${UnitFormatter.speedUnitLabel(useMetric)}",
+                stringResource(R.string.drag_distance) to UnitFormatter.formatDistance(currentMetrics.totalDistance.toDouble(), useMetric)
             ),
             saveFailed = saveError,
             onKeep = { recorder.clearLastRun(); onBack() },
@@ -165,11 +173,10 @@ fun DragRaceScreen(
 
     if (confirmStop) {
         ConfirmDeleteDialog(
-            title = "Stop recording?",
-            message = "The run is written to the archive. You can void it on the next " +
-                "screen if it should not count.",
-            confirmLabel = "Stop",
-            dismissLabel = "Keep recording",
+            title = stringResource(R.string.drag_stop_title),
+            message = stringResource(R.string.drag_stop_msg),
+            confirmLabel = stringResource(R.string.drag_stop),
+            dismissLabel = stringResource(R.string.drag_keep_recording),
             onConfirm = { confirmStop = false; recorder.stop() },
             onDismiss = { confirmStop = false }
         )
@@ -183,7 +190,7 @@ fun DragRaceScreen(
 
         // 1. TOP STATUS BAR
         AppTopBar(
-            title = "Drag Mode",
+            title = stringResource(R.string.mode_drag),
             // Guarded while live: Stop is a commit, and this arrow sits where a hand lands
             // adjusting a mount.
             onBack = { if (isSessionActive) confirmStop = true else onBack() },
@@ -198,7 +205,7 @@ fun DragRaceScreen(
                         // comes back to a standstill, and this is what tells the driver it
                         // did - the next launch is measured too.
                         Text(
-                            "RUN ${currentMetrics.runCount}",
+                            stringResource(R.string.drag_run_n, currentMetrics.runCount),
                             style = TrackProType.label,
                             color = TrackProTheme.colors.markingDim
                         )
@@ -206,15 +213,16 @@ fun DragRaceScreen(
                     // The elapsed clock used to be here AND in the readout below. One is
                     // enough, and the readout is where the eye already is.
                     Text(
-                        if (isConnected) "GPS LOCKED" else "NO SIGNAL",
+                        if (isConnected) stringResource(R.string.drag_gps_locked) else stringResource(R.string.drive_no_signal),
                         style = TrackProType.label,
                         // A fault is never dimmer than health.
                         color = if (isConnected) TrackProTheme.colors.deltaGood
-                        else TrackProTheme.colors.deltaBad
+                        else TrackProTheme.colors.danger
                     )
                     Spacer(Modifier.width(Spacing.sm))
+                    val dataState = if (showData) stringResource(R.string.drag_shown) else stringResource(R.string.drag_hidden)
                     Text(
-                        "DATA",
+                        stringResource(R.string.drag_data),
                         style = TrackProType.label,
                         color = if (showData) TrackProTheme.colors.marking
                         else TrackProTheme.colors.markingDim,
@@ -227,7 +235,7 @@ fun DragRaceScreen(
                                 role = Role.Switch
                             )
                             .semantics {
-                                stateDescription = if (showData) "Shown" else "Hidden"
+                                stateDescription = dataState
                             }
                             .heightIn(min = 48.dp)
                             .wrapContentHeight(Alignment.CenterVertically)
@@ -253,7 +261,7 @@ fun DragRaceScreen(
                 AppCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(Spacing.md)
+                        .padding(horizontal = Spacing.gutter, vertical = Spacing.sm)
                         .pressable(onClick = { showVehicleDropdown = true })
                 ) {
                     Row(
@@ -262,11 +270,11 @@ fun DragRaceScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Vehicle", style = TrackProType.label, color = TrackProTheme.colors.textMuted)
+                            Text(stringResource(R.string.car_title), style = TrackProType.label, color = TrackProTheme.colors.textMuted)
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 selectedVehicle?.let { "${it.manufacturer} ${it.model}" }
-                                    ?: "Select Vehicle",
+                                    ?: stringResource(R.string.drag_select_car),
                                 style = TrackProType.titleMedium,
                                 color = selectedVehicle?.let { TrackProTheme.colors.textPrimary }
                                     ?: TrackProTheme.colors.textMuted.copy(alpha = 0.5f),
@@ -322,12 +330,9 @@ fun DragRaceScreen(
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Spacing.md, vertical = Spacing.sm)
-                        .background(
-                            TrackProTheme.colors.bgCard.copy(alpha = 0.5f),
-                            TrackProShapes.control
-                        )
-                        .padding(Spacing.sm)
+                        .padding(horizontal = Spacing.gutter, vertical = Spacing.sm)
+                        .background(TrackProTheme.colors.bgCard, TrackProShapes.control)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md)
                 ) {
                     selectedVehicle?.let {
                         Text(
@@ -349,8 +354,8 @@ fun DragRaceScreen(
                 currentMetrics.standing.mapNotNull { split ->
                     split.seconds?.let { split.label to it }
                 } + listOfNotNull(
-                    currentMetrics.quarterMileTime?.let { "1/4 MILE" to it },
-                    currentMetrics.halfMileTime?.let { "1/2 MILE" to it }
+                    currentMetrics.quarterMileTime?.let { stringResource(R.string.drag_quarter_upper) to it },
+                    currentMetrics.halfMileTime?.let { stringResource(R.string.drag_half_upper) to it }
                 )
             val latestSplit: Pair<String, String>? = reachedSplits.lastOrNull()
                 ?.let { (label, seconds) -> label to formatTime(seconds) }
@@ -365,25 +370,31 @@ fun DragRaceScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(TrackProTheme.colors.field)
-                        .padding(horizontal = 14.dp, vertical = 14.dp)
+                        .padding(horizontal = Spacing.gutter)
+                        .paddockCard()
+                        .padding(Spacing.lg)
                 ) {
                     Readout(
                         value = latestSplit?.second
                             ?: (gpsData?.speed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "0"),
-                        caption = latestSplit?.let { "${it.first}  \u00b7  SEC" }
-                            ?: "Live speed \u00b7 ${UnitFormatter.speedUnitLabel(useMetric)}",
+                        caption = latestSplit?.let { stringResource(R.string.drag_split_seconds, it.first) }
+                            ?: stringResource(R.string.drag_live_speed, UnitFormatter.speedUnitLabel(useMetric)),
                         valueColor = if (latestSplit != null) TrackProTheme.colors.accent
                         else TrackProTheme.colors.marking,
                         valueSize = 72.sp,
                         trailing = {
                             Column(horizontalAlignment = Alignment.End) {
+                                val recTone = if (isSessionActive) TrackProTheme.colors.danger else TrackProTheme.colors.markingDim
                                 Text(
-                                    text = if (isSessionActive) "REC" else "IDLE",
-                                    style = TrackProType.label,
-                                    color = if (isSessionActive) TrackProTheme.colors.danger
-                                    else TrackProTheme.colors.markingDim
+                                    text = if (isSessionActive) stringResource(R.string.drag_recording) else stringResource(R.string.drag_idle),
+                                    style = TrackProType.label.copy(fontWeight = FontWeight.SemiBold),
+                                    color = recTone,
+                                    modifier = Modifier
+                                        .clip(TrackProShapes.pill)
+                                        .background(recTone.copy(alpha = 0.14f))
+                                        .padding(horizontal = Spacing.sm, vertical = 2.dp)
                                 )
+                                Spacer(Modifier.height(Spacing.xs))
                                 Text(
                                     text = elapsedTime,
                                     style = TrackProType.statValue.atSize(18.sp),
@@ -392,7 +403,7 @@ fun DragRaceScreen(
                             }
                         }
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(Spacing.md))
                     // How far through the run's split ladder you are. Discrete by nature, which
                     // is what a segment bar is for, and it pairs with the split held above it:
                     // big number is the last one reached, bar is where that sits in the run.
@@ -422,7 +433,7 @@ fun DragRaceScreen(
                 }
             )
 
-            Bezel()
+            Spacer(Modifier.height(Spacing.md))
 
             // Everything below is reference, not run material: hidden while recording
             // unless the driver asks for it with DATA. At the strip the panel is the split
@@ -441,16 +452,21 @@ fun DragRaceScreen(
                 split.label to split.seconds?.let { formatTime(it) }
             }
             val splitCells = speedCells + listOf(
-                "1/4 mile" to currentMetrics.quarterMileTime?.let { formatTime(it) },
+                stringResource(R.string.drag_quarter_lower) to currentMetrics.quarterMileTime?.let { formatTime(it) },
                 // Trap speed is the one cell here holding a speed rather than a time, so it
                 // carries its unit in the placard - every other cell is seconds.
-                "1/4 trap ${UnitFormatter.speedUnitLabel(useMetric)}" to
+                stringResource(R.string.drag_quarter_trap, UnitFormatter.speedUnitLabel(useMetric)) to
                         currentMetrics.quarterMileSpeed?.let {
                             UnitFormatter.formatSpeed(it, useMetric)
                         },
-                "1/2 mile" to currentMetrics.halfMileTime?.let { formatTime(it) }
+                stringResource(R.string.drag_half_lower) to currentMetrics.halfMileTime?.let { formatTime(it) }
             )
 
+            Column(
+                Modifier
+                    .padding(horizontal = Spacing.gutter)
+                    .paddockCard()
+            ) {
             splitCells.chunked(3).forEachIndexed { rowIndex, row ->
                 Row(modifier = Modifier.fillMaxWidth()) {
                     row.forEachIndexed { i, (label, value) ->
@@ -467,21 +483,21 @@ fun DragRaceScreen(
                         }
                     }
                 }
-                if (rowIndex < (splitCells.size - 1) / 3) Bezel()
+                if (rowIndex < (splitCells.size - 1) / 3) Bezel(Modifier.padding(horizontal = Spacing.lg))
+            }
             }
 
-            Bezel()
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Spacing.md))
 
             // 5. SPEED CHART (LARGE)
             AppCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
-                    .padding(horizontal = Spacing.md)
+                    .padding(horizontal = Spacing.gutter)
             ) {
                 Column {
-                    SectionLabel("Speed Profile")
+                    SectionLabel(stringResource(R.string.drag_speed_profile))
                     Spacer(Modifier.height(8.dp))
 
                     AndroidView(
@@ -502,6 +518,10 @@ fun DragRaceScreen(
                                 setPinchZoom(true)
                                 setDrawBorders(false)
                                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                // The library's default is a yellow sentence that reads as
+                                // a warning. An empty chart before a run is not one.
+                                setNoDataText(ctx.getString(R.string.drag_chart_empty))
+                                setNoDataTextColor(DataVizColors.chartAxisText.toColorInt())
                             }
                         },
                         modifier = Modifier.fillMaxSize(),
@@ -542,7 +562,7 @@ fun DragRaceScreen(
             Modifier
                 .fillMaxWidth()
                 .background(TrackProTheme.colors.bgDeep)
-                .padding(Spacing.md),
+                .padding(horizontal = Spacing.gutter, vertical = Spacing.md),
             horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             DashAction(
@@ -550,14 +570,14 @@ fun DragRaceScreen(
                 // doing: it reloads asynchronously after the screen is recreated, and
                 // resolving the name first left Stop disabled mid-run until it arrived.
                 label = when {
-                    isSessionActive -> "Stop"
-                    selectedVehicleId == null -> "Select a vehicle"
-                    else -> "Start drag"
+                    isSessionActive -> stringResource(R.string.drag_stop)
+                    selectedVehicleId == null -> stringResource(R.string.drag_select_vehicle)
+                    else -> stringResource(R.string.drag_start)
                 },
                 detail = when {
-                    isSessionActive -> "Recording \u00b7 ${currentMetrics.runCount} run(s)"
-                    selectedVehicleId == null -> "Every run is recorded against a car"
-                    else -> "Arm the timer and launch"
+                    isSessionActive -> pluralResource(R.plurals.drag_recording_runs, currentMetrics.runCount)
+                    selectedVehicleId == null -> stringResource(R.string.drag_every_run_car)
+                    else -> stringResource(R.string.drag_arm)
                 },
                 onClick = {
                     // Both sides open and close the session, write the trace and manage the
@@ -576,8 +596,9 @@ fun DragRaceScreen(
                 haptic = Haptic.Confirm,
                 // Recording takes the danger accent: it is the one state that must be
                 // unmistakable at a glance from outside the car.
-                accent = if (isSessionActive) TrackProTheme.colors.danger
-                else TrackProTheme.colors.accent,
+                accent = if (isSessionActive) TrackProTheme.colors.danger else null,
+                primary = true,
+                icon = if (isSessionActive) Icons.Default.Stop else Icons.Default.PlayArrow,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -605,7 +626,7 @@ fun DragMetricCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    metric.label.uppercase(),
+                    metric.label,
                     style = TrackProType.label,
                     // Unreached splits stay quieter than reached ones, but both clear AA;
                     // textFaint measured 3.35:1 and this is a 10sp placard.
@@ -665,14 +686,12 @@ private fun AdaptiveSplit(
                 .height(IntrinsicSize.Min)
         ) {
             Box(Modifier.weight(0.58f)) { primary() }
-            Bezel(vertical = true, modifier = Modifier.fillMaxHeight())
-            Box(Modifier.weight(0.42f)) { secondary() }
+            Box(Modifier.weight(0.42f).padding(end = Spacing.gutter)) { secondary() }
         }
     } else {
-        Column(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             primary()
-            Bezel()
-            secondary()
+            Box(Modifier.padding(horizontal = Spacing.gutter)) { secondary() }
         }
     }
 }
@@ -688,12 +707,12 @@ private fun DragLiveInstruments(
     distanceText: String
 ) {
     val cells: List<Triple<String, String, Trend?>> = listOf(
-        Triple("Speed \u00b7 $speedUnit", speedText, speedTrend),
-        Triple("Max", maxText, null),
-        Triple("Distance", distanceText, null)
+        Triple(stringResource(R.string.drag_speed_unit, speedUnit), speedText, speedTrend),
+        Triple(stringResource(R.string.drag_max), maxText, null),
+        Triple(stringResource(R.string.drag_distance), distanceText, null)
     )
     if (landscape) {
-        Column(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().paddockCard()) {
             cells.forEachIndexed { i, (label, value, trend) ->
                 Instrument(
                     label = label,
@@ -706,7 +725,7 @@ private fun DragLiveInstruments(
             }
         }
     } else {
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth().paddockCard()) {
             cells.forEachIndexed { i, (label, value, trend) ->
                 Instrument(
                     label = label,

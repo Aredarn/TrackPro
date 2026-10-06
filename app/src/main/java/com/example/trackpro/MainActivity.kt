@@ -15,6 +15,7 @@ import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.VehicleInformationData
 import com.example.trackpro.managerClasses.utilities.timed
+import com.example.trackpro.managerClasses.utilities.AppLanguage
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
@@ -70,6 +71,7 @@ import com.example.trackpro.screens.profile.ProfileScreen
 import com.example.trackpro.screens.profile.EditProfileScreen
 import com.example.trackpro.screens.profile.AccountScreen
 import com.example.trackpro.screens.history.HistorySection
+import com.example.trackpro.screens.drive.DriveScreen
 import com.example.trackpro.screens.history.HistoryScreen
 import com.example.trackpro.screens.garage.GarageScreen
 import com.example.trackpro.dao.VehicleUsage
@@ -103,6 +105,9 @@ import com.example.trackpro.managerClasses.SessionManager
 import com.example.trackpro.online.OnlineServices
 import com.example.trackpro.online.SyncScheduler
 import com.example.trackpro.online.ui.LeaderboardScreen
+import com.example.trackpro.online.ui.EventsScreen
+import com.example.trackpro.online.ui.EventBoardScreen
+import androidx.compose.material.icons.filled.Flag
 import com.example.trackpro.managerClasses.gpsDataManagers.GpsManager
 import com.example.trackpro.managerClasses.gpsDataManagers.PhoneGpsProvider
 import com.example.trackpro.models.GpsProviderType
@@ -252,6 +257,15 @@ class TrackProApp : Application() {
         useDarkTheme.value = enabled
     }
 
+    // Paddock night's high-contrast variant, for a phone on a mount in direct sun.
+    // A separate key: the old dark/light value meant something else and is not carried over.
+    val useSunlightContrast by lazy { MutableStateFlow(themePrefs.getBoolean("sunlight_contrast", false)) }
+
+    fun setSunlightContrast(enabled: Boolean) {
+        themePrefs.edit().putBoolean("sunlight_contrast", enabled).apply()
+        useSunlightContrast.value = enabled
+    }
+
     // What the live delta is measured against. Remembered, and switchable from the HUD as
     // well as Settings - reaching Settings from a running session means leaving it.
     private val deltaPrefs by lazy { getSharedPreferences("delta_prefs", MODE_PRIVATE) }
@@ -265,6 +279,22 @@ class TrackProApp : Application() {
     fun setDeltaReference(reference: DeltaReference) {
         deltaPrefs.edit().putString("reference", reference.name).apply()
         deltaReference.value = reference
+    }
+
+    /** System, English or Hungarian; see [AppLanguage]. */
+    val appLanguage by lazy { MutableStateFlow(AppLanguage.stored(this)) }
+
+    fun setAppLanguage(tag: String) {
+        AppLanguage.store(this, tag)
+        appLanguage.value = tag
+        AppLanguage.applyTo(this)
+    }
+
+    // A system language change resets the application's resources to the phone's
+    // language; a forced choice has to be laid back over it.
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        AppLanguage.applyTo(this)
     }
 
     private val unitPrefs by lazy { getSharedPreferences("unit_prefs", MODE_PRIVATE) }
@@ -287,6 +317,7 @@ class TrackProApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AppLanguage.applyTo(this)
         MapLibre.getInstance(this)
         // Apply a persisted test-server redirect (if any) before the first
         // connection attempt, so a restart doesn't briefly dial the real ESP32
@@ -318,6 +349,10 @@ class TrackProApp : Application() {
 }
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
 
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -384,12 +419,12 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
-            val useDarkTheme by (application as TrackProApp).useDarkTheme.collectAsState()
-            TrackProTheme(darkTheme = useDarkTheme) {
+            val sunlight by (application as TrackProApp).useSunlightContrast.collectAsState()
+            TrackProTheme(sunlight = sunlight) {
                 val navController = rememberNavController()
                 val backStack by navController.currentBackStackEntryAsState()
                 val currentRoute = backStack?.destination?.route
-                // The bar belongs to the four tab roots only. Every screen reached from a tab
+                // The bar belongs to the tab roots only. Every screen reached from a tab
                 // is a step down with its own back, and the HUDs must never carry it.
                 val selectedTab = MainTabs.firstOrNull { tab -> currentRoute?.substringBefore('?') == tab.route }
 
@@ -408,10 +443,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.weight(1f)
                 ) {
                     composable("main") {
-                        DashBoard(
-                            onNavigateToDragRace = { navController.navigate("drag") },
-                            onNavigateToTrackVehicleSelector = { navController.navigate("trackandvehicle") },
-                            onNavigateToESPTestScreen = { navController.navigate("esptest") },
+                        DriveScreen(
+                            onStartTrack = { navController.navigate("trackandvehicle") },
+                            onStartDrag = { navController.navigate("drag") },
+                            onOpenRig = { navController.navigate("esptest") },
                             onOpenHistory = { section -> openTab("history?section=$section") },
                             onOpenCar = { id -> navController.navigate("vehicle/$id") },
                             onAddCar = { navController.navigate("createvehicle") }
@@ -435,6 +470,21 @@ class MainActivity : ComponentActivity() {
                             navController = navController,
                             vehicleViewModel = vehicleFULLViewModel,
                             trackViewModel = trackViewModel
+                        )
+                    }
+                    composable("events") {
+                        EventsScreen(
+                            onOpenEvent = { id -> navController.navigate("event/$id") },
+                            onSignIn = { navController.navigate("account") }
+                        )
+                    }
+                    composable(
+                        "event/{eventId}",
+                        arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+                    ) { entry ->
+                        EventBoardScreen(
+                            eventId = entry.arguments?.getString("eventId").orEmpty(),
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable("profile") {
@@ -547,231 +597,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** The four places the app has. Everything else is reached from one of them. */
+/** The places the app has. Everything else is reached from one of them. */
 private val MainTabs = listOf(
-    DashTab("main", "Drive", Icons.Default.Speed),
-    DashTab("history", "History", Icons.Default.History),
-    DashTab("garage", "Garage", Icons.Default.DirectionsCar),
-    DashTab("profile", "Profile", Icons.Default.Person),
+    DashTab("main", R.string.tab_drive, Icons.Default.Speed),
+    DashTab("history", R.string.tab_history, Icons.Default.History),
+    DashTab("events", R.string.tab_events, Icons.Default.Flag),
+    DashTab("garage", R.string.tab_garage, Icons.Default.DirectionsCar),
+    DashTab("profile", R.string.tab_profile, Icons.Default.Person),
 )
-
-// ── Action card ────────────────────────────────────────────
-
-// ── Status board ────────────────────────────────────
-
-/**
- * The dash at rest.
- *
- * This screen is read parked, never at speed, so it carries no at-speed legibility tax -
- * that constraint belongs to the two HUDs alone. What it owes instead is that you learn
- * something every time you open it: what the rig is doing right now, and what the last
- * session did.
- *
- * Only two things earned a place here, and both are live from the database. There is no
- * lifetime-totals wall and no per-track record table; they were considered and cut,
- * because a number you never act on is decoration with a value in it.
- *
- * A fresh install renders the identical panel with dashes on every face. That is the
- * whole empty state - no separate onboarding screen to design, maintain, or drift.
- */
-@Composable
-private fun DashBoard(
-    onNavigateToDragRace: () -> Unit,
-    onNavigateToTrackVehicleSelector: () -> Unit,
-    onNavigateToESPTestScreen: () -> Unit,
-    onOpenHistory: (section: String) -> Unit,
-    onOpenCar: (Long) -> Unit,
-    onAddCar: () -> Unit,
-) {
-    val context = LocalContext.current
-    val app = context.applicationContext as TrackProApp
-
-    val isConnected by app.gpsManager.connectionStatus.collectAsState(initial = false)
-    val vehicles by app.database.vehicleInformationDAO().getAllVehicles().collectAsState(initial = emptyList())
-    val usage by remember { app.database.vehicleInformationDAO().observeUsage() }.collectAsState(initial = emptyList())
-    val sessions by app.database.sessionDataDao().getAllSessions().collectAsState(initial = emptyList())
-
-    // The most recent session and its best lap. Resolved off the main thread; until it
-    // lands every face shows a dash, which is also the honest empty state.
-    var lastSession by remember { mutableStateOf<SessionData?>(null) }
-    var lastBestLap by remember { mutableStateOf<LapTimeData?>(null) }
-    var lastLapCount by remember { mutableStateOf(0) }
-    var lastTrackName by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(sessions) {
-        // The most recent session that still counts. A voided run stays in the archive
-        // and stays openable, but the panel does not report it as what you last did.
-        val recent = sessions.filter { !it.voided }.maxByOrNull { it.startTime }
-        lastSession = recent
-        if (recent == null) return@LaunchedEffect
-        withContext(Dispatchers.IO) {
-            // timed() rather than filtering on the IN PROGRESS string: that filter missed
-            // INVALID laps, which then parsed as 00:00.00 and showed up here as the best lap.
-            val done = app.database.lapTimeDataDAO().getLapsForSession(recent.id).timed()
-            lastLapCount = done.size
-            lastBestLap = done.minByOrNull { it.millis }?.lap
-            lastTrackName = recent.trackId?.let { id ->
-                runCatching { app.database.trackMainDao().getTrack(id).first().trackName }.getOrNull()
-            }
-        }
-    }
-
-    // The car you drive most, not whichever row happens to be first in the table.
-    val mainId = usage.maxWithOrNull(compareBy<VehicleUsage>({ it.sessions }, { it.lastUsed ?: 0L }))?.vehicleId
-    val vehicle: VehicleInformationData? = vehicles.firstOrNull { it.vehicleId == mainId } ?: vehicles.firstOrNull()
-    val dash = "\u2014"
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(TrackProTheme.colors.panel)
-            .verticalScroll(rememberScrollState())
-    ) {
-
-        // ── Link bar ───────────────────────────────────
-        // The rig's state as the panel's top edge, the way a dash puts its shift lights
-        // there: a strip you catch without looking at it directly.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                // The whole strip opens the rig page: it is the rig's lamp, so it is the way in.
-                .pressableRow(onClick = onNavigateToESPTestScreen)
-                .padding(horizontal = 14.dp, vertical = 17.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            SegmentBar(
-                signedFraction = if (isConnected) 1f else 0f,
-                activeColor = if (isConnected) TrackProTheme.colors.deltaGood
-                else TrackProTheme.colors.segmentOff,
-                bidirectional = false,
-                segments = 16,
-                height = 10.dp,
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = if (isConnected) "LINKED" else "NO SIGNAL",
-                style = TrackProType.label,
-                // Fault Is Never Dimmer, and the same word the HUD uses - the board said
-                // NO LINK in markingDim while the HUD said NO SIGNAL in textFaint, a third
-                // treatment of one concept.
-                color = if (isConnected) TrackProTheme.colors.deltaGood
-                else TrackProTheme.colors.danger
-            )
-        }
-
-        Bezel()
-
-        // ── Mode entry ─────────────────────────────────
-        // The two things this app exists to do, first on the panel and the only elements
-        // carrying a lit ground and an accent hairline. Everything below is a readout.
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(TrackProTheme.colors.panel)
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            DashAction(
-                label = "Track",
-                detail = "Circuit · sprint · live delta",
-                onClick = onNavigateToTrackVehicleSelector
-            )
-            DashAction(
-                label = "Drag",
-                detail = "0–100 · quarter mile · splits",
-                onClick = onNavigateToDragRace
-            )
-        }
-
-        Bezel()
-
-        // ── Car placard ────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .pressableRow(onClick = { if (vehicle != null) onOpenCar(vehicle.vehicleId) else onAddCar() })
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            PhotoFrame(
-                file = app.online.photos.file(vehicle?.photoFile),
-                contentDescription = vehicle?.let { "${it.manufacturer} ${it.model}" },
-                modifier = Modifier.size(width = 80.dp, height = 60.dp)
-            )
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (vehicle != null) "${vehicle.manufacturer} ${vehicle.model}".uppercase()
-                    else "NO VEHICLE",
-                    style = TrackProType.titleLarge.atSize(20.sp),
-                    color = TrackProTheme.colors.marking
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    text = if (vehicle != null) listOfNotNull(
-                        vehicle.year.takeIf { it > 0 }?.toString(),
-                        vehicle.horsepower.takeIf { it > 0 }?.let { "$it HP" },
-                        vehicle.drivetrain.takeIf { it.isNotBlank() },
-                        vehicle.weight.takeIf { it > 0.0 }?.let { "${it.toInt()} KG" }
-                    ).joinToString("  ·  ") else "Add one to record a session",
-                    style = TrackProType.label,
-                    color = TrackProTheme.colors.markingDim
-                )
-            }
-        }
-
-        Bezel()
-
-        // ── Last session ───────────────────────────────
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(TrackProTheme.colors.field)
-                .padding(horizontal = 12.dp, vertical = 14.dp)
-        ) {
-            Readout(
-                value = lastBestLap?.laptime ?: dash,
-                caption = "Best lap · last session",
-                valueColor = if (lastBestLap != null) TrackProTheme.colors.accent
-                else TrackProTheme.colors.markingDim,
-                valueSize = 46.sp
-            )
-            Spacer(Modifier.height(10.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = (lastTrackName ?: lastSession?.eventType ?: "No sessions recorded").uppercase(),
-                    style = TrackProType.label,
-                    color = TrackProTheme.colors.markingDim,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = if (lastSession != null) "$lastLapCount LAPS" else dash,
-                    style = TrackProType.label,
-                    color = TrackProTheme.colors.markingDim
-                )
-            }
-        }
-
-        Bezel()
-
-        // ── Secondary ──────────────────────────────────
-        // Counts that open the History tab. Tracks, the builder and Setup used to share
-        // this row; they now live in Garage and Profile, with the rest of their kind.
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Instrument(
-                label = "Track sessions",
-                value = "${sessions.count { it.trackId != null && it.trackId != -1L && !it.voided }}",
-                modifier = Modifier.weight(1f).pressableRow(onClick = { onOpenHistory("track") })
-            )
-            Bezel(vertical = true, modifier = Modifier.height(58.dp))
-            Instrument(
-                label = "Drag runs",
-                value = "${sessions.count { (it.trackId == null || it.trackId == -1L) && !it.voided }}",
-                modifier = Modifier.weight(1f).pressableRow(onClick = { onOpenHistory("drag") })
-            )
-        }
-        Bezel()
-        Spacer(Modifier.height(20.dp))
-    }
-}

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -16,19 +17,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trackpro.extrasForUI.TrackProTheme
-import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.TrackProType
+import com.example.trackpro.theme.atSize
 import com.example.trackpro.theme.bezel
 import com.example.trackpro.theme.marking
 import com.example.trackpro.theme.markingDim
 
 enum class StatCellSize { Small, Regular, Large }
 
-/**
- * The "muted label over a bold value" readout used everywhere (power/torque/weight,
- * GPS signal rows, lap stats, session metrics). One component instead of the ~9
- * near-identical ones that used to exist per-screen.
- */
+/** A caption over a value, with an optional unit. The value is always the louder of the two. */
 @Composable
 fun StatCell(
     label: String,
@@ -39,39 +36,29 @@ fun StatCell(
     size: StatCellSize = StatCellSize.Regular,
     horizontalAlignment: Alignment.Horizontal = Alignment.Start
 ) {
-    // Placard caps sized to stay legible rather than to disappear: at 8sp the old Small
-    // tier was decoration. The value keeps a clear step above it at every tier so a cell
-    // always has a hierarchy of two, never one grey block.
-    val (labelSize, valueSize) = when (size) {
-        StatCellSize.Small -> 9.sp to 15.sp
-        StatCellSize.Regular -> 10.sp to 18.sp
-        StatCellSize.Large -> 10.sp to 24.sp
+    val valueSize = when (size) {
+        StatCellSize.Small -> 15.sp
+        StatCellSize.Regular -> 20.sp
+        StatCellSize.Large -> 20.sp
     }
     Column(horizontalAlignment = horizontalAlignment, modifier = modifier) {
-        Text(
-            text = label.uppercase(),
-            style = TrackProType.label.atSize(labelSize),
-            color = TrackProTheme.colors.markingDim
-        )
+        Text(text = label, style = TrackProType.label, color = TrackProTheme.colors.markingDim, maxLines = 1)
+        Spacer(Modifier.height(2.dp))
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                text = value,
-                style = TrackProType.statValue.atSize(valueSize),
-                color = valueColor
-            )
+            Text(text = value, style = TrackProType.statValue.atSize(valueSize), color = valueColor, maxLines = 1)
             if (unit != null) {
                 Text(
                     text = unit,
-                    style = TrackProType.body.atSize(10.sp),
+                    style = TrackProType.label,
                     color = TrackProTheme.colors.markingDim,
-                    modifier = Modifier.padding(start = 2.dp, bottom = 1.dp)
+                    modifier = Modifier.padding(start = 3.dp, bottom = 3.dp)
                 )
             }
         }
     }
 }
 
-/** A 1dp vertical hairline for separating StatCells laid out in a Row. */
+/** A short vertical hairline between StatCells in a Row. */
 @Composable
 fun StatCellDivider(modifier: Modifier = Modifier, height: Dp = 28.dp) {
     Box(

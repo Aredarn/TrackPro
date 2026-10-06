@@ -12,7 +12,7 @@ object UnitFormatter {
     private const val METERS_TO_FEET = 3.28084
     private const val FEET_PER_MILE = 5280.0
 
-    fun speedUnitLabel(metric: Boolean) = if (metric) "KM/H" else "MPH"
+    fun speedUnitLabel(metric: Boolean) = if (metric) "km/h" else "mph"
 
     /** Converts a km/h speed value to the display unit (no formatting). */
     fun convertSpeed(kmh: Double, metric: Boolean): Double =
