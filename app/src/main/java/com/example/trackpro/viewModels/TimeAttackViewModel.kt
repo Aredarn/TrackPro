@@ -208,7 +208,12 @@ class TimeAttackViewModel(
                                 val (start, finish) = TrackGeometry.calculateSprintLines(coords)
                                 _startLine.value = start
                                 _finishLine.value = finish
-                                val manager = SprintTimingManager(start, finish)
+                                val (extraStarts, extraFinishes) = TrackGeometry.calculateSprintBackupGates(coords)
+                                val manager = SprintTimingManager(
+                                    start, finish,
+                                    extraStartLines = extraStarts,
+                                    extraFinishLines = extraFinishes
+                                )
                                 timingManager = manager
                                 viewModelScope.launch {
                                     manager.sprintCompletedChannel.consumeAsFlow().collect { run ->

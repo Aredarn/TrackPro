@@ -384,6 +384,7 @@
     <string name="drag_speed">Sebesség</string>
     <string name="drag_chart">Grafikon</string>
     <string name="drag_map">Térkép</string>
+    <string name="map_follow">Követés</string>
     <string name="drag_no_gps">Nincs GPS-adat</string>
     <string name="drag_loading_trace">Nyomvonal betöltése</string>
     <string name="drag_no_trace">Ehhez a futamhoz nincs rögzített GPS-nyomvonal</string>

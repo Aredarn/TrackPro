@@ -98,6 +98,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
@@ -1175,14 +1176,53 @@ fun MapLibreTrackView(
         src.setGeoJson(geojson)
     }
 
-    // 2. Separate Effect to fit the camera to the track whenever the track data changes
-    LaunchedEffect(gpsPoints) {
+    // Follow mode: a top-down chase view that stays on the car and turns with its heading, like
+    // a game minimap. Off, the camera frames the whole track. Saved so a rotation keeps it.
+    var follow by rememberSaveable { mutableStateOf(false) }
+    var heading by remember { mutableStateOf(0.0) }
+    var lastFix by remember { mutableStateOf<LatLonOffset?>(null) }
+
+    // 2. Separate Effect to fit the camera to the track whenever the track data changes,
+    // and again when follow is switched off (which also squares the view back to north-up).
+    LaunchedEffect(gpsPoints, follow) {
+        if (follow) return@LaunchedEffect
         val map = mapReady.value ?: return@LaunchedEffect
         if (gpsPoints.isNotEmpty()) {
             fitCameraToTrack(map, gpsPoints)
         }
     }
 
+    // 3. Follow the car. Heading comes from where it has actually moved: a few metres of
+    // travel between fixes, since standing GPS jitter would otherwise spin the map.
+    LaunchedEffect(driverPosition, follow) {
+        if (driverPosition.lat == 0.0 && driverPosition.lon == 0.0) return@LaunchedEffect
+        lastFix?.let { from ->
+            val out = FloatArray(2)
+            android.location.Location.distanceBetween(
+                from.lat, from.lon, driverPosition.lat, driverPosition.lon, out
+            )
+            if (out[0] >= FOLLOW_MIN_MOVE_M) {
+                heading = (out[1].toDouble() + 360.0) % 360.0
+                lastFix = driverPosition
+            }
+        } ?: run { lastFix = driverPosition }
+
+        if (!follow) return@LaunchedEffect
+        val map = mapReady.value ?: return@LaunchedEffect
+        map.easeCamera(
+            CameraUpdateFactory.newCameraPosition(
+                CameraPosition.Builder()
+                    .target(LatLng(driverPosition.lat, driverPosition.lon))
+                    .zoom(FOLLOW_ZOOM)
+                    .tilt(0.0)
+                    .bearing(heading)
+                    .build()
+            ),
+            FOLLOW_EASE_MS
+        )
+    }
+
+    Box(modifier = modifier) {
     AndroidView(
         factory = { ctx ->
             MapLibre.getInstance(ctx)
@@ -1220,9 +1260,47 @@ fun MapLibreTrackView(
                 }
             }
         },
-        modifier = modifier
+        modifier = Modifier.fillMaxSize()
     )
+
+    val haptics = rememberHaptics()
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .align(Alignment.TopEnd)
+            .padding(Spacing.sm)
+            .clip(TrackProShapes.pill)
+            .background(TrackProTheme.colors.bgCard.copy(alpha = 0.85f))
+            .padding(start = Spacing.md)
+    ) {
+        Text(
+            text = stringResource(R.string.map_follow),
+            style = TrackProType.label,
+            color = if (follow) TrackProTheme.colors.marking else TrackProTheme.colors.markingDim
+        )
+        Spacer(Modifier.width(4.dp))
+        Switch(
+            checked = follow,
+            onCheckedChange = {
+                haptics.perform(Haptic.Selection)
+                follow = it
+            },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = TrackProTheme.colors.onAccent,
+                checkedTrackColor = TrackProTheme.colors.accent,
+                checkedBorderColor = TrackProTheme.colors.accent,
+                uncheckedThumbColor = TrackProTheme.colors.textMuted,
+                uncheckedTrackColor = TrackProTheme.colors.bgElevated,
+                uncheckedBorderColor = TrackProTheme.colors.sectorLine
+            )
+        )
+    }
+    }
 }
+
+private const val FOLLOW_ZOOM = 17.5
+private const val FOLLOW_EASE_MS = 400
+private const val FOLLOW_MIN_MOVE_M = 3f
 
 private fun fitCameraToTrack(map: MapLibreMap, points: List<TrackCoordinatesData>) {
     if (points.isEmpty()) return
@@ -1235,6 +1313,7 @@ private fun fitCameraToTrack(map: MapLibreMap, points: List<TrackCoordinatesData
     map.easeCamera(
         CameraUpdateFactory.newLatLngBounds(
             boundsBuilder.build(),
+            0.0, 0.0, // north-up and flat, undoing any follow-mode rotation
             100 // Padding in pixels from the edges of the view
         ), 1000 // Animation duration
     )

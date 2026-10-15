@@ -11,6 +11,8 @@ object TrackGeometry {
     private const val TAG = "TrackGeometry"
     private const val FINISH_LINE_WIDTH_METERS = 12.0
     private const val METERS_PER_DEGREE_LATITUDE = 111320.0
+    private const val SPRINT_GATE_WIDTH_METERS = 30.0
+    private const val SPRINT_BACKUP_MAX_GAP_M = 80.0
 
     data class Vector(val x: Double, val y: Double) {
         operator fun plus(v: Vector) = Vector(x + v.x, y + v.y)
@@ -205,6 +207,39 @@ object TrackGeometry {
         )
 
         return startLine to finishLine
+    }
+
+    /**
+     * Extra gates for a sprint: on the route's second point (start) and second-to-last point
+     * (finish), each [SPRINT_GATE_WIDTH_METERS] wide. The first and last points are where the
+     * driver stood while building the track, often off the road, so a car driving the route
+     * never crosses a gate there. Only added when that point is close to its neighbour, so the
+     * extra gate cannot shift the timing by more than a few car lengths.
+     */
+    fun calculateSprintBackupGates(
+        track: List<TrackCoordinatesData>
+    ): Pair<List<List<TrackCoordinatesData>>, List<List<TrackCoordinatesData>>> {
+        if (track.size < 4) return emptyList<List<TrackCoordinatesData>>() to emptyList()
+
+        fun gate(at: TrackCoordinatesData, toward: TrackCoordinatesData, id: Long): List<TrackCoordinatesData> {
+            val d = calculateDirection(at, toward)
+            val perp = Vector(-d.y, d.x).normalized()
+            val half = SPRINT_GATE_WIDTH_METERS / METERS_PER_DEGREE_LATITUDE / 2
+            return listOf(
+                at.copy(id = id, latitude = at.latitude - perp.y * half, longitude = at.longitude - perp.x * half),
+                at.copy(id = id - 1, latitude = at.latitude + perp.y * half, longitude = at.longitude + perp.x * half)
+            )
+        }
+
+        fun near(a: TrackCoordinatesData, b: TrackCoordinatesData) =
+            haversineDistance(a.latitude, a.longitude, b.latitude, b.longitude) <= SPRINT_BACKUP_MAX_GAP_M
+
+        val n = track.size
+        val starts = mutableListOf<List<TrackCoordinatesData>>()
+        val finishes = mutableListOf<List<TrackCoordinatesData>>()
+        if (near(track[0], track[1])) starts += gate(track[1], track[2], -30)
+        if (near(track[n - 2], track[n - 1])) finishes += gate(track[n - 2], track[n - 1], -40)
+        return starts to finishes
     }
 
     private fun calculateDirection(

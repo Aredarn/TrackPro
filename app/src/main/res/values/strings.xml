@@ -384,6 +384,7 @@
     <string name="drag_speed">Speed</string>
     <string name="drag_chart">Chart</string>
     <string name="drag_map">Map</string>
+    <string name="map_follow">Follow</string>
     <string name="drag_no_gps">No GPS data</string>
     <string name="drag_loading_trace">Loading trace</string>
     <string name="drag_no_trace">No GPS trace recorded for this run</string>
