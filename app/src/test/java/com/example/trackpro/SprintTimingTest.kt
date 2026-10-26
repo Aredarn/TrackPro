@@ -135,6 +135,58 @@ class SprintTimingTest {
     }
 
     @Test
+    fun `a reverse run is timed from the finish gate back to the start gate`() {
+        // West across the finish gate, then west across the start gate.
+        feed(FINISH_LON + 0.0004, 0)
+        feed(FINISH_LON - 0.0004, 1_000)
+        assertTrue(timing.currentTime.value != "00:00.00")
+        assertEquals(0, timing.eventCount.value)
+
+        var t = 2_000L
+        var lon = FINISH_LON - 0.0004
+        while (lon > START_LON - 0.0004) {
+            lon -= 0.0005
+            feed(lon, t)
+            t += 1_000
+        }
+
+        assertEquals(1, timing.eventCount.value)
+        val ms = timing.completedLaps.value.single().timeMs
+        // About (0.0100 deg at 0.0005 deg/s) = 20 s.
+        assertEquals(20_000.0, ms.toDouble(), 1_500.0)
+    }
+
+    @Test
+    fun `reverse and forward runs keep separate bests`() {
+        // Forward run, 20 s.
+        feed(START_LON - 0.0004, 0)
+        var t = 1_000L
+        var lon = START_LON - 0.0004
+        while (lon < FINISH_LON + 0.0004) { lon += 0.0005; feed(lon, t); t += 1_000 }
+        assertEquals(1, timing.eventCount.value)
+
+        // Then straight back, slower: must not be compared against the forward time.
+        t += 10_000
+        while (lon > START_LON - 0.0004) { lon -= 0.00025; feed(lon, t); t += 1_000 }
+        assertEquals(2, timing.eventCount.value)
+        assertEquals(0.0, timing.delta.value, 0.0)
+    }
+
+    @Test
+    fun `rolling back over the finish gate right after finishing does not start a reverse run`() {
+        feed(START_LON - 0.0004, 0)
+        feed(START_LON + 0.0004, 1_000)
+        feed(FINISH_LON - 0.0004, 20_000)
+        feed(FINISH_LON + 0.0004, 21_000)   // finish
+        assertEquals(1, timing.eventCount.value)
+        feed(FINISH_LON - 0.0001, 22_000)   // rolls back over the gate
+        // If that had started a reverse run, driving west over the start gate would close it.
+        feed(START_LON + 0.0004, 40_000)
+        feed(START_LON - 0.0004, 41_000)
+        assertEquals(1, timing.eventCount.value)
+    }
+
+    @Test
     fun `driving across the start gate still starts timing`() {
         feed(START_LON - 0.0004, 0)
         feed(START_LON + 0.0004, 1_000)

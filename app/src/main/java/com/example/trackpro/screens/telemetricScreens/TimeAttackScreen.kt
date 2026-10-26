@@ -109,6 +109,7 @@ import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import kotlin.math.asin
 import kotlin.math.atan2
@@ -1332,8 +1333,8 @@ private fun drawTrackOnStyle(
     val isSprint = timingLines.size > 2
 
     val displayPath = if (isSprint) {
-        val start = timingLines.first()
-        val finish = timingLines.last()
+        val start = gateCentre(timingLines.take(2))
+        val finish = gateCentre(timingLines.takeLast(2))
         extractSprintSegment(trackPath, start, finish)
     } else {
         // It's a Circuit: Draw the full path from the DB
@@ -1412,28 +1413,74 @@ private fun drawBoundaries(style: Style, path: List<TrackCoordinatesData>) {
     }
 }
 
+/** Sprint: both gates. Circuit: the one start/finish gate. Each is a pair of points. */
 private fun drawMarkers(style: Style, timingLines: List<TrackCoordinatesData>) {
-    val markers = if (timingLines.size >= 4) {
-        listOf(timingLines[0], timingLines.last()) // Sprint: Show both
-    } else if (timingLines.isNotEmpty()) {
-        listOf(timingLines.first()) // Circuit: Show just the finish line
-    } else emptyList()
+    val gates = timingLines.chunked(2).filter { it.size == 2 }
 
-    markers.forEachIndexed { i, pt ->
+    style.addImage(CHECKER_IMAGE, checkerBitmap())
+
+    gates.forEachIndexed { i, gate ->
         val id = "marker-$i"
-        val geojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${pt.longitude},${pt.latitude}]}}"""
+        val centre = gateCentre(gate)
+        val geojson = """{"type":"Feature","geometry":{"type":"Point","coordinates":[${centre.longitude},${centre.latitude}]}}"""
 
         style.getSource(id)?.let { style.removeSource(it) }
+        style.getLayer("$id-layer")?.let { style.removeLayer(it) }
         style.addSource(GeoJsonSource(id, geojson))
-        style.addLayer(CircleLayer("$id-layer", id).apply {
+        style.addLayer(SymbolLayer("$id-layer", id).apply {
             setProperties(
-                PropertyFactory.circleColor(DataVizColors.boundaryLine),
-                PropertyFactory.circleRadius(6f),
-                PropertyFactory.circleStrokeWidth(2f),
-                PropertyFactory.circleStrokeColor(DataVizColors.trackLine)
+                PropertyFactory.iconImage(CHECKER_IMAGE),
+                // The bar is drawn east-west, so turning it to the gate's bearing lays it
+                // across the road. Map-aligned so it stays across the road as the map turns.
+                PropertyFactory.iconRotate((gateBearing(gate) - 90.0).toFloat()),
+                PropertyFactory.iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
+                PropertyFactory.iconAllowOverlap(true),
+                PropertyFactory.iconIgnorePlacement(true)
             )
         })
     }
+}
+
+private const val CHECKER_IMAGE = "checkered-gate"
+
+/** A black-and-white chequered bar, two rows of squares - the start/finish line. */
+private fun checkerBitmap(): android.graphics.Bitmap {
+    val square = 12
+    val cols = 8
+    val rows = 2
+    val bmp = android.graphics.Bitmap.createBitmap(
+        square * cols, square * rows, android.graphics.Bitmap.Config.ARGB_8888
+    )
+    val canvas = android.graphics.Canvas(bmp)
+    val paint = android.graphics.Paint()
+    for (r in 0 until rows) for (c in 0 until cols) {
+        paint.color = if ((r + c) % 2 == 0) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+        canvas.drawRect(
+            (c * square).toFloat(), (r * square).toFloat(),
+            ((c + 1) * square).toFloat(), ((r + 1) * square).toFloat(), paint
+        )
+    }
+    // A thin edge so the white squares still read against a light map.
+    paint.style = android.graphics.Paint.Style.STROKE
+    paint.strokeWidth = 2f
+    paint.color = android.graphics.Color.BLACK
+    canvas.drawRect(1f, 1f, bmp.width - 1f, bmp.height - 1f, paint)
+    return bmp
+}
+
+private fun gateCentre(gate: List<TrackCoordinatesData>): TrackCoordinatesData =
+    gate.first().copy(
+        latitude = gate.map { it.latitude }.average(),
+        longitude = gate.map { it.longitude }.average()
+    )
+
+/** Compass bearing of the gate line from its first to its second point, in degrees. */
+private fun gateBearing(gate: List<TrackCoordinatesData>): Double {
+    val a = gate.first()
+    val b = gate.last()
+    val dLat = b.latitude - a.latitude
+    val dLon = (b.longitude - a.longitude) * cos(Math.toRadians(a.latitude))
+    return (Math.toDegrees(atan2(dLon, dLat)) + 360.0) % 360.0
 }
 
 private fun findClosestIndex(

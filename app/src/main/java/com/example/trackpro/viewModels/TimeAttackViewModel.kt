@@ -206,9 +206,12 @@ class TimeAttackViewModel(
                             }
                             TimingMode.Sprint -> {
                                 val (start, finish) = TrackGeometry.calculateSprintLines(coords)
-                                _startLine.value = start
-                                _finishLine.value = finish
                                 val (extraStarts, extraFinishes) = TrackGeometry.calculateSprintBackupGates(coords)
+                                // The map shows the gates that sit on the road. The recorded
+                                // end points are wherever the driver stood while building the
+                                // track, often beside it.
+                                _startLine.value = extraStarts.firstOrNull() ?: start
+                                _finishLine.value = extraFinishes.firstOrNull() ?: finish
                                 val manager = SprintTimingManager(
                                     start, finish,
                                     extraStartLines = extraStarts,
@@ -230,14 +233,20 @@ class TimeAttackViewModel(
     internal fun handleGpsUpdate(current: RawGPSData) {
         Log.d("TimeAttackViewModel", "handleGpsUpdate START - lat=${current.latitude}, lon=${current.longitude}")
 
+        val sprint = timingManager as? SprintTimingManager
+        val wasRunning = sprint?.isRunning ?: true
         timingManager?.handleGpsUpdate(previousGPSData, current)
+        val isRunning = sprint?.isRunning ?: true
 
         Log.d("TimeAttackViewModel", "Setting driver position to lat=${current.latitude}, lon=${current.longitude}")
         _driverPosition.value = LatLonOffset(lat = current.latitude, lon = current.longitude)
         Log.d("TimeAttackViewModel", "Driver position set. Current value: ${_driverPosition.value}")
 
         previousGPSData = current
-        processLapData(current)
+        // A circuit lap is continuous, so every fix belongs to it. A sprint run is only the
+        // stretch between its start and finish: the approach before and the roll-out after
+        // are not part of it. The fix that starts the run and the one that finishes it are.
+        if (wasRunning || isRunning) processLapData(current)
 
         Log.d("TimeAttackViewModel", "handleGpsUpdate END")
     }
@@ -338,7 +347,10 @@ class TimeAttackViewModel(
                 Log.d("TimeAttack", "Sprint $_lapId COMPLETED with time $sprintTimeStr")
                 app.online.onLapCompleted(_sessionId, app.applicationScope)
 
-                // Don't create a new lap for sprints - user manually starts each run
+                // Ready the next run's lap now. Nothing is recorded into it until that run
+                // starts, and one never started is deleted when the session ends. Without
+                // this, a second run would overwrite the first run's lap and trace.
+                startNewLap(eventCount.value + 1)
             } catch (e: Exception) {
                 Log.e("TimeAttack", "Error completing sprint: ${e.message}", e)
             }
