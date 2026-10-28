@@ -81,6 +81,8 @@ abstract class LineStreamGpsProvider(
     override val connectionStatus: StateFlow<Boolean> = _connectionStatus.asStateFlow()
     private val _gpsFlow = MutableStateFlow<RawGPSData?>(null)
     override val gpsFlow: StateFlow<RawGPSData?> = _gpsFlow.asStateFlow()
+    private val _hasFix = MutableStateFlow(false)
+    override val hasFix: StateFlow<Boolean> = _hasFix.asStateFlow()
     private val _confirmedRateHz = MutableStateFlow<Int?>(null)
     override val confirmedRateHz: StateFlow<Int?> = _confirmedRateHz.asStateFlow()
 
@@ -133,6 +135,7 @@ abstract class LineStreamGpsProvider(
         }
         outputStream = null
         _connectionStatus.value = false
+        _hasFix.value = false
     }
 
     /**
@@ -245,6 +248,7 @@ abstract class LineStreamGpsProvider(
             // or a reconnect that has already moved on, this is someone else's status to set.
             if (currentLink.compareAndSet(link, null)) {
                 _connectionStatus.value = false
+                _hasFix.value = false
             }
         }
         return delivered.get()
@@ -278,6 +282,11 @@ abstract class LineStreamGpsProvider(
             _confirmedRateHz.value = ackedHz
             return
         }
+        if (message == "NOFIX") {
+            // The module is alive but has no position: not a GPS sample, only fix state.
+            _hasFix.value = false
+            return
+        }
         if (message == "RATE_ERR") {
             Log.w(tag, "GPS module rejected rate change")
             return
@@ -298,6 +307,7 @@ abstract class LineStreamGpsProvider(
                     fix.latitude == last.latitude &&
                     fix.longitude == last.longitude &&
                     fix.speed == last.speed
+                _hasFix.value = true
                 if (stale) return@withContext
                 _gpsFlow.value = fix
             } catch (e: Exception) {

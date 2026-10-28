@@ -28,6 +28,8 @@ class PhoneGpsProvider(
     private val _isConnected = MutableStateFlow(false)
     override val connectionStatus = _isConnected.asStateFlow()
 
+    override val hasFix = MutableStateFlow(false).asStateFlow()
+
     private var lastStamp = 0L
 
     private fun fixWallTime(loc: android.location.Location): Long {
