@@ -84,6 +84,7 @@ fun ESPConnectionTestScreen(
     // connected, and null for phone GPS, which is not a stream link.
     val lastFailure     by app.gpsManager.lastFailure.collectAsState(initial = null)
     val gpsData         by app.gpsManager.activeGpsFlow.collectAsState(initial = null)
+    val hasFix          by app.gpsManager.hasFix.collectAsState(initial = false)
     val gpsSource       by app.gpsSource.collectAsState()
     val selectedRateHz  by app.selectedRateHz.collectAsState()
     val confirmedRateHz by app.gpsManager.confirmedRateHz.collectAsState(initial = null)
@@ -109,7 +110,7 @@ fun ESPConnectionTestScreen(
     // "valid" is the GPS module's own fix status (gps.location.isValid() in the
     // firmware) - fixQuality is actually a satellite *count*, not a fix indicator,
     // and could read 0 (or just not correlate) even with a real fix locked in.
-    val fix = gpsData?.valid == true
+    val fix = hasFix
 
 
     Box(

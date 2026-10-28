@@ -38,6 +38,9 @@ class GpsManager(
     @OptIn(ExperimentalCoroutinesApi::class)
     val connectionStatus = gpsSource.flatMapLatest { providerFor(it).connectionStatus }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val hasFix = gpsSource.flatMapLatest { providerFor(it).hasFix }
+
     // ESP32-confirmed rate for the active provider; null for phone GPS (not
     // commandable) or before any RATE_OK reply has been seen yet.
     @OptIn(ExperimentalCoroutinesApi::class)

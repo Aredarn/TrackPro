@@ -3,6 +3,7 @@ package com.example.trackpro.managerClasses.gpsDataManagers
 import com.example.trackpro.dataClasses.RawGPSData
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 
@@ -114,9 +115,14 @@ internal fun parseRateAck(line: String): Int? {
 }
 
 class DelimitedInputStreamReader(
-    private val input: InputStream,
-    private val delimiter: ByteArray
+    input: InputStream,
+    delimiter: ByteArray
 ) {
+    // Single-byte delimiter only (the protocol is newline-terminated).
+    private val delimiter: Byte = delimiter.single()
+    // The raw socket stream returns data per read() call; buffering turns the per-byte
+    // reads below into array lookups instead of one system call each.
+    private val input = BufferedInputStream(input)
     private val buffer = ByteArrayOutputStream()
 
     fun read(target: ByteArray): Int {
@@ -125,11 +131,9 @@ class DelimitedInputStreamReader(
                 val byte = input.read()
                 if (byte == -1) return -1
 
-                buffer.write(byte)
-
-                if (endsWithDelimiter()) {
+                if (byte.toByte() == delimiter) {
                     val fullData = buffer.toByteArray()
-                    val length = fullData.size - delimiter.size
+                    val length = fullData.size
 
                     // Ensure we don't overflow the target buffer
                     val finalSize = if (length > target.size) target.size else length
@@ -139,21 +143,14 @@ class DelimitedInputStreamReader(
                     return finalSize
                 }
 
+                buffer.write(byte)
+
                 // Emergency flush if buffer gets too large (corrupt stream protection)
                 if (buffer.size() > 2048) buffer.reset()
             }
         } catch (_: Exception) {
             return -1
         }
-    }
-
-    private fun endsWithDelimiter(): Boolean {
-        val data = buffer.toByteArray()
-        if (data.size < delimiter.size) return false
-        for (i in delimiter.indices) {
-            if (data[data.size - delimiter.size + i] != delimiter[i]) return false
-        }
-        return true
     }
 }
 
