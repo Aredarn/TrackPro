@@ -19,6 +19,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -309,13 +315,22 @@ private fun EspTargetRow(
 
         if (useTestServer) {
             Spacer(Modifier.height(Spacing.sm))
+            // Edited locally and applied on Done / focus loss: applying per keystroke would
+            // reconnect to every partial address ("192.168.1.") and write prefs each time.
+            var draft by remember(testServerAddress) { mutableStateOf(testServerAddress) }
+            val apply = {
+                val address = draft.trim()
+                if (address.isNotEmpty() && address != testServerAddress) onAddressChange(address)
+            }
             OutlinedTextField(
-                value = testServerAddress,
-                onValueChange = onAddressChange,
+                value = draft,
+                onValueChange = { draft = it },
                 label = { Text(stringResource(R.string.settings_sim_ip), color = TrackProTheme.colors.textMuted) },
                 placeholder = { Text(stringResource(R.string.settings_sim_ip_hint), color = TrackProTheme.colors.markingDim) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { apply() }),
+                modifier = Modifier.fillMaxWidth().onFocusChanged { if (!it.isFocused) apply() },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = TrackProTheme.colors.textPrimary,
                     unfocusedTextColor = TrackProTheme.colors.textPrimary,
