@@ -10,12 +10,15 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
 
@@ -65,24 +68,26 @@ class BluetoothClassicClient(private val context: Context) :
 
     // BluetoothSocket.connect() is a blocking call with no built-in timeout
     // (unlike Socket.connect(addr, timeoutMs)) and can hang well past 5s on
-    // some OEMs. withTimeoutOrNull alone only stops *waiting* on it - the
-    // underlying blocking call keeps running until it returns on its own - so
-    // on timeout we also force-close the socket, which unblocks a hung
-    // connect() by making its file descriptor invalid.
+    // some OEMs. withTimeoutOrNull cannot interrupt it: structured concurrency
+    // waits for the blocking call inside withContext to return on its own. So a
+    // separate timer closes the socket instead, which unblocks a hung connect()
+    // by making its file descriptor invalid.
     @SuppressLint("MissingPermission")
-    private suspend fun connectSocketWithTimeout(socket: BluetoothSocket, timeoutMs: Long) {
-        val connected = try {
-            withTimeoutOrNull(timeoutMs) {
-                withContext(Dispatchers.IO) { socket.connect() }
-                true
-            }
+    private suspend fun connectSocketWithTimeout(socket: BluetoothSocket, timeoutMs: Long) = coroutineScope {
+        val timedOut = AtomicBoolean(false)
+        val timer = launch {
+            delay(timeoutMs)
+            timedOut.set(true)
+            runCatching { socket.close() }
+        }
+        try {
+            withContext(Dispatchers.IO) { socket.connect() }
         } catch (e: Exception) {
             runCatching { socket.close() }
+            if (timedOut.get()) throw IOException("Bluetooth connect timed out after ${timeoutMs}ms")
             throw e
-        }
-        if (connected == null) {
-            runCatching { socket.close() }
-            throw IOException("Bluetooth connect timed out after ${timeoutMs}ms")
+        } finally {
+            timer.cancel()
         }
     }
 
