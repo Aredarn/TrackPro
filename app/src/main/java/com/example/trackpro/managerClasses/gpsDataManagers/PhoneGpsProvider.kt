@@ -28,7 +28,8 @@ class PhoneGpsProvider(
     private val _isConnected = MutableStateFlow(false)
     override val connectionStatus = _isConnected.asStateFlow()
 
-    override val hasFix = MutableStateFlow(false).asStateFlow()
+    private val _hasFix = MutableStateFlow(false)
+    override val hasFix = _hasFix.asStateFlow()
 
     private var lastStamp = 0L
 
@@ -54,6 +55,7 @@ class PhoneGpsProvider(
                 // in every split; the fix carries its own monotonic time, so its age is known.
                 timestamp = fixWallTime(loc)
             )
+            _hasFix.value = true
         }
     }
 
@@ -79,5 +81,6 @@ class PhoneGpsProvider(
     override fun stop() {
         client.removeLocationUpdates(callback)
         _isConnected.value = false
+        _hasFix.value = false
     }
 }
