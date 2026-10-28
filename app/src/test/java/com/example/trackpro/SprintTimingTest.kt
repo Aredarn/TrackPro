@@ -42,9 +42,9 @@ class SprintTimingTest {
         )
     }
 
-    private fun feed(lon: Double, at: Long) {
+    private fun feed(lon: Double, at: Long, lat: Double = LAT) {
         val fix = RawGPSData(
-            sessionid = 1, latitude = LAT, longitude = lon, altitude = 0.0,
+            sessionid = 1, latitude = lat, longitude = lon, altitude = 0.0,
             timestamp = WALL_ZERO + at, speed = 0f, fixQuality = 1
         )
         elapsed = 500_000L + at
@@ -184,6 +184,26 @@ class SprintTimingTest {
         feed(START_LON + 0.0004, 40_000)
         feed(START_LON - 0.0004, 41_000)
         assertEquals(1, timing.eventCount.value)
+    }
+
+    @Test
+    fun `a run that passes beside the finish without touching the gate still ends`() {
+        // The finish gate only reaches 11 m either side; this line of travel is 33 m to the north,
+        // as happens when the recorded end point lies off the GPS-traced road.
+        val passLat = LAT + 0.0003
+        feed(START_LON - 0.0004, 0)
+        feed(START_LON + 0.0004, 1_000)
+        var t = 2_000L
+        var lon = START_LON + 0.0004
+        while (lon < FINISH_LON + 0.0020) {
+            lon += 0.0005
+            feed(lon, t, lat = passLat)
+            t += 1_000
+        }
+        assertEquals(1, timing.eventCount.value)
+        // Ended at the closest approach, not when it was later noticed to be leaving.
+        val ms = timing.completedLaps.value.single().timeMs
+        assertTrue("took $ms ms", ms in 18_000..22_000)
     }
 
     @Test

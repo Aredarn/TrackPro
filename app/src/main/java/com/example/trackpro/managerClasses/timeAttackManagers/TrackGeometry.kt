@@ -11,7 +11,7 @@ object TrackGeometry {
     private const val TAG = "TrackGeometry"
     private const val FINISH_LINE_WIDTH_METERS = 12.0
     private const val METERS_PER_DEGREE_LATITUDE = 111320.0
-    private const val SPRINT_GATE_WIDTH_METERS = 30.0
+    private const val SPRINT_GATE_WIDTH_METERS = 80.0
     private const val SPRINT_BACKUP_MAX_GAP_M = 80.0
 
     data class Vector(val x: Double, val y: Double) {

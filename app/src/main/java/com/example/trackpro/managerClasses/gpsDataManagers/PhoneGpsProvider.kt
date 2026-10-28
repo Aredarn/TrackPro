@@ -28,6 +28,15 @@ class PhoneGpsProvider(
     private val _isConnected = MutableStateFlow(false)
     override val connectionStatus = _isConnected.asStateFlow()
 
+    private var lastStamp = 0L
+
+    private fun fixWallTime(loc: android.location.Location): Long {
+        val ageMs = (android.os.SystemClock.elapsedRealtime() - loc.elapsedRealtimeNanos / 1_000_000L)
+            .coerceIn(0L, 2_000L)
+        // Never earlier than the previous fix, so a clock adjustment cannot run time backwards.
+        return (System.currentTimeMillis() - ageMs).coerceAtLeast(lastStamp + 1).also { lastStamp = it }
+    }
+
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             val loc = result.lastLocation ?: return
@@ -38,10 +47,10 @@ class PhoneGpsProvider(
                 altitude = loc.altitude,
                 speed = loc.speed * 3.6f, // CRITICAL: Convert m/s to km/h
                 fixQuality = if (loc.accuracy < 10) 3 else 1,
-                // Stamped on receipt rather than using loc.time: elapsed-time math (0-60,
-                // quarter mile, etc.) needs consistent relative precision between samples,
-                // and this is the same clock the live view already uses for that math.
-                timestamp = System.currentTimeMillis()
+                // The moment the fix was taken, on the wall clock the rest of the app uses.
+                // Receipt time lags the fix by a variable delivery delay, which lands directly
+                // in every split; the fix carries its own monotonic time, so its age is known.
+                timestamp = fixWallTime(loc)
             )
         }
     }

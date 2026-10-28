@@ -112,6 +112,7 @@ abstract class LineStreamGpsProvider(
     @Volatile private var outputStream: OutputStream? = null
     private val writeMutex = Mutex()
     private val bufferPool = BufferPool(512, 10)
+    private val gpsClock = GpsClock()
 
     // start() and stop() arrive from more than one thread - the GpsManager source collector
     // on IO, Settings on main - so both take the lock rather than just the flag.
@@ -195,6 +196,7 @@ abstract class LineStreamGpsProvider(
             return false
         }
         outputStream = link.output
+        gpsClock.reset()
         _connectionStatus.value = true
         _lastFailure.value = null
 
@@ -267,6 +269,7 @@ abstract class LineStreamGpsProvider(
     }
 
     private suspend fun processChunk(buffer: ByteArray, length: Int) {
+        val receivedAt = System.currentTimeMillis()
         val message = buffer.decodeToString(0, length).trim()
         if (message.isEmpty()) return
 
@@ -283,7 +286,20 @@ abstract class LineStreamGpsProvider(
         withContext(Dispatchers.Default) {
             try {
                 val raw = gpsJsonParser.decodeFromString<RawGPSDataRaw>(message)
-                _gpsFlow.value = raw.toEntity()
+                val fix = raw.toEntity(gpsClock.stamp(raw.timestamp, receivedAt))
+                // The module can repeat its last fix when it is asked for fixes faster than its
+                // receiver produces them. A repeat with a newer time reads as "same place, a
+                // moment later", which skews every interpolated crossing and split. While
+                // moving that can only be stale, so keep the first copy - it is the one that
+                // arrived when the fix was fresh. Standing still repeats are legitimate and kept.
+                val last = _gpsFlow.value
+                val stale = last != null &&
+                    (fix.speed ?: 0f) > STALE_REPEAT_MIN_KMH &&
+                    fix.latitude == last.latitude &&
+                    fix.longitude == last.longitude &&
+                    fix.speed == last.speed
+                if (stale) return@withContext
+                _gpsFlow.value = fix
             } catch (e: Exception) {
                 Log.e(tag, "JSON Parse Error: ${e.message} for input: $message")
             }
@@ -292,5 +308,8 @@ abstract class LineStreamGpsProvider(
 
     private companion object {
         val LINE_DELIMITER = "\n".toByteArray()
+
+        /** Below this speed an identical consecutive fix is just a car that is not moving. */
+        const val STALE_REPEAT_MIN_KMH = 3f
     }
 }

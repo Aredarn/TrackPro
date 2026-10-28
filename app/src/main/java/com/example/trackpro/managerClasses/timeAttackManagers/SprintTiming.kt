@@ -47,6 +47,10 @@ class SprintTimingManager(
     private var hasFinished = false
     private var lastFinishTimestamp = NEVER
 
+    /** Closest fix to the run's target end so far, for the passed-by finish; see tryFinish. */
+    private var closestApproach: RawGPSData? = null
+    private var closestApproachM = Double.MAX_VALUE
+
     val sprintCompletedChannel = Channel<CompletedLap>(Channel.UNLIMITED)
 
     /** True from the start of a run until it finishes. */
@@ -189,10 +193,32 @@ class SprintTimingManager(
             return
         }
 
-        // Standing finish: the car stopped at the end without driving across the gate
-        // (parked short of it, or GPS drifted to one side). Timed to when it stopped.
         val rest = if (forward) restAtFinish else restAtStart
         val centre = if (forward) finishCentre else startCentre
+
+        // Passed by: the car came close to the end but never crossed a gate - the track's end
+        // points sit wherever the driver stood while building it, and a gate there can lie
+        // to one side of the road the GPS actually traces. Once the car is clearly heading
+        // away again, the run ended at the point of closest approach.
+        if (centre != null) {
+            val d = distance(current, centre)
+            if (d <= PASS_ZONE_M && d < closestApproachM) {
+                closestApproach = current
+                closestApproachM = d
+            }
+            val closest = closestApproach
+            if (closest != null && d > closestApproachM + PASS_LEAVE_M) {
+                val ms = (mapped(closest.timestamp) - sprintStartTime).roundToLong()
+                if (ms >= MIN_RUN_MS) {
+                    finishRun(ms, closest.timestamp)
+                    Log.d("SprintManager", "PASSED FINISH AREA")
+                    return
+                }
+            }
+        }
+
+        // Standing finish: the car stopped at the end without driving across the gate
+        // (parked short of it, or GPS drifted to one side). Timed to when it stopped.
         if (centre != null && distance(current, centre) <= LINE_ZONE_M) {
             rest.feed(current)
             val stoppedAt = rest.anchor?.timestamp
@@ -216,6 +242,12 @@ class SprintTimingManager(
         runHadGap = false
         restAtStart.clear()
         restAtFinish.clear()
+        clearApproach()
+    }
+
+    private fun clearApproach() {
+        closestApproach = null
+        closestApproachM = Double.MAX_VALUE
     }
 
     private fun finishRun(sprintMs: Long, finishedAtTimestamp: Long) {
@@ -234,6 +266,7 @@ class SprintTimingManager(
         lastFinishTimestamp = finishedAtTimestamp
         restAtStart.clear()
         restAtFinish.clear()
+        clearApproach()
         Log.d("SprintManager", "RUN FINISHED ($way): $sprintMs ms")
     }
 
@@ -286,6 +319,12 @@ class SprintTimingManager(
 
         /** A "run" shorter than this is the car shuffling about, not a run. */
         const val MIN_RUN_MS = 3_000L
+
+        /** Within this of the end counts as having been at it, for the passed-by finish. */
+        const val PASS_ZONE_M = 45.0
+
+        /** How much farther than its closest approach the car must get to be "leaving". */
+        const val PASS_LEAVE_M = 40.0
 
         /** After a finish, how long a crossing is ignored as the car settling past the line. */
         const val ROLLBACK_GUARD_MS = 5_000L

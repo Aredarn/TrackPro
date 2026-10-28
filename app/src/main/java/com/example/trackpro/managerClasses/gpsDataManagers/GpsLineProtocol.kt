@@ -27,7 +27,7 @@ data class RawGPSDataRaw(
     val timestamp: String
 )
 
-internal fun RawGPSDataRaw.toEntity(): RawGPSData = RawGPSData(
+internal fun RawGPSDataRaw.toEntity(timestamp: Long): RawGPSData = RawGPSData(
     sessionid = 0L,
     latitude = latitude,
     longitude = longitude,
@@ -35,11 +35,76 @@ internal fun RawGPSDataRaw.toEntity(): RawGPSData = RawGPSData(
     speed = speed,
     fixQuality = satellites,
     valid = valid,
-    // Stamped on receipt rather than the ESP32-reported timestamp string:
-    // elapsed-time math (0-60, quarter mile, etc.) needs consistent relative
-    // precision between samples, not the module's own timestamp.
-    timestamp = System.currentTimeMillis()
+    timestamp = timestamp
 )
+
+/**
+ * Turns the module's own fix time into a phone-scale timestamp.
+ *
+ * The firmware sends the GPS receiver's UTC time of day as "H:M:S.cc" - fields not zero-padded,
+ * so the last one is centiseconds as a plain integer ("5" is 50 ms, not 500). Stamping a fix when
+ * it *arrives* instead folds Bluetooth/Wi-Fi latency into every timing: fixes come in bursts a
+ * few ms apart and then not at all for 300 ms, which is far more than a sprint's resolution.
+ *
+ * Time of day has no date and wraps at midnight, and the phone's clock is not the GPS clock, so
+ * the module's time is shifted onto the phone's clock. Only the intervals between fixes matter
+ * for timing; the shift just keeps stored values near wall-clock time. It starts at the first
+ * fix's receipt-minus-fix gap and may only fall, by at most [SLEW_MS] per fix, towards the
+ * smallest gap seen (the least-delayed fix). Letting it fall freely would squeeze the intervals
+ * around a burst; slewing bounds the error in any one interval to [SLEW_MS]. Timestamps are
+ * forced strictly increasing.
+ */
+internal class GpsClock {
+    private var dayShiftMs = 0L
+    private var lastTimeOfDay = -1L
+    private var shiftToPhone = Long.MAX_VALUE
+    private var lastStamp = Long.MIN_VALUE
+
+    /** Forget the link; the next fix starts a fresh offset. Call when a connection is (re)opened. */
+    fun reset() {
+        dayShiftMs = 0L
+        lastTimeOfDay = -1L
+        shiftToPhone = Long.MAX_VALUE
+        lastStamp = Long.MIN_VALUE
+    }
+
+    /** [receivedAt] is returned unchanged when the module's time is missing or not yet valid. */
+    fun stamp(moduleTime: String, receivedAt: Long): Long {
+        val timeOfDay = parseTimeOfDayMs(moduleTime) ?: return receivedAt
+
+        if (lastTimeOfDay >= 0 && timeOfDay < lastTimeOfDay - HALF_DAY_MS) dayShiftMs += DAY_MS
+        lastTimeOfDay = timeOfDay
+
+        val moduleMs = timeOfDay + dayShiftMs
+        val gap = receivedAt - moduleMs
+        shiftToPhone = if (shiftToPhone == Long.MAX_VALUE) gap else maxOf(gap, shiftToPhone - SLEW_MS).coerceAtMost(shiftToPhone)
+        val stamped = maxOf(moduleMs + shiftToPhone, lastStamp + 1)
+        lastStamp = stamped
+        return stamped
+    }
+
+    private companion object {
+        const val DAY_MS = 86_400_000L
+        const val HALF_DAY_MS = DAY_MS / 2
+        const val SLEW_MS = 1L
+    }
+}
+
+/**
+ * "H:M:S.cc" to milliseconds since midnight, or null if it does not parse or is the firmware's
+ * "no valid time" placeholder (0:0:0.0).
+ */
+internal fun parseTimeOfDayMs(text: String): Long? {
+    val clock = text.substringBefore('.').split(':')
+    if (clock.size != 3) return null
+    val h = clock[0].trim().toIntOrNull() ?: return null
+    val m = clock[1].trim().toIntOrNull() ?: return null
+    val s = clock[2].trim().toIntOrNull() ?: return null
+    val cs = if ('.' in text) text.substringAfter('.').trim().toIntOrNull() ?: return null else 0
+    if (h !in 0..23 || m !in 0..59 || s !in 0..60 || cs !in 0..99) return null
+    if (h == 0 && m == 0 && s == 0 && cs == 0) return null
+    return ((h * 60L + m) * 60 + s) * 1000 + cs * 10L
+}
 
 // A command reply line looks like "RATE_OK:20" — returns the confirmed Hz, or
 // null if this line isn't a rate acknowledgement (i.e. it's GPS JSON instead).
