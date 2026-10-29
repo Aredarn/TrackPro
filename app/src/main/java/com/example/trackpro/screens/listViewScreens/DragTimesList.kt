@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
@@ -19,10 +22,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.trackpro.components.ConfirmDeleteDialog
+import com.example.trackpro.components.Haptic
+import com.example.trackpro.components.pressable
 import com.example.trackpro.components.DataGate
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.ExpandableGroup
@@ -65,6 +71,8 @@ fun DragTimesListView(
     filter: SessionFilter = SessionFilter(),
     /** Null hides the filter bar. */
     onFilterChange: ((SessionFilter) -> Unit)? = null,
+    /** Opens the car-against-car comparison; null hides its entry. */
+    onCompare: (() -> Unit)? = null,
 ) {
     val dragSessions by viewModel.dragSessions.collectAsState()
     val loadState by viewModel.loadState.collectAsState()
@@ -120,15 +128,31 @@ fun DragTimesListView(
         headerHeight = headerHeight,
         accent = TrackProTheme.colors.accent,
         trailing = {
-            Text(
-                text = if (effective.narrows) {
-                    stringResource(R.string.history_shown_of, shown.size, countLabel(dragSessions.size, R.plurals.count_runs))
-                } else {
-                    countLabel(dragSessions.size, R.plurals.count_runs)
-                },
-                style = TrackProType.label,
-                color = TrackProTheme.colors.textMuted
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                if (onCompare != null && dragSessions.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.compare_entry),
+                        style = TrackProType.titleMedium,
+                        color = TrackProTheme.colors.accent,
+                        modifier = Modifier
+                            .pressable(onClick = onCompare, haptic = Haptic.Selection)
+                            .heightIn(min = 48.dp)
+                            .wrapContentHeight(Alignment.CenterVertically)
+                    )
+                }
+                Text(
+                    text = if (effective.narrows) {
+                        stringResource(R.string.history_shown_of, shown.size, countLabel(dragSessions.size, R.plurals.count_runs))
+                    } else {
+                        countLabel(dragSessions.size, R.plurals.count_runs)
+                    },
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.textMuted
+                )
+            }
         },
         contentScrolled = scrolled
     ) { contentPadding ->

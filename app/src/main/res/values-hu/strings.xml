@@ -677,4 +677,37 @@
     <string name="profile_rig">GPS-egység kapcsolata</string>
     <string name="profile_rig_hint">ESP32-kapcsolat és hibakeresés</string>
     <string name="hud_no_geometry">Nincs pálya-nyomvonal</string>
+
+    <!-- Drag comparison -->
+    <string name="compare_entry">Összehasonlítás</string>
+    <string name="compare_title">Autók összehasonlítása</string>
+    <string name="compare_cars">Autók</string>
+    <string name="compare_cars_hint">Válassz egy autót a számaihoz, vagy kettőt-hármat az összehasonlításhoz. Egyszerre legfeljebb %1$d.</string>
+    <string name="compare_pick_one">Válassz egy autót</string>
+    <string name="compare_people">Utasok száma, a vezetővel együtt</string>
+    <string name="compare_people_note">Fejenként 80 kg, az autó súlyához adva. A kilogrammonkénti teljesítményhez kell.</string>
+    <string name="compare_mean">Átlag</string>
+    <string name="compare_best">Legjobb</string>
+    <string name="compare_vs">A különbségek %1$s-hoz képestiek. A mínusz gyorsabb.</string>
+    <string name="compare_working">Számolás</string>
+    <string name="compare_splits">Gyorsulási idők</string>
+    <string name="compare_splits_note">Másodperc az indulástól.</string>
+    <string name="compare_segments">Hol megy el az idő</string>
+    <string name="compare_segments_note">Az egyes sebességtartományokban eltöltött idő, másodpercben.</string>
+    <string name="compare_bands">Minden 10 %1$s</string>
+    <string name="compare_bands_note">Másodperc minden 10 %1$s-os szakaszra. A váltás valamelyikbe beleesik.</string>
+    <string name="compare_theory">Elméleti legjobb 0–100</string>
+    <string name="compare_theory_note">A futam minden szakaszának legjobb ideje, a váltások köré húzott határokkal. Becslés: azt feltételezi, hogy egyetlen futamban minden szakasz sikerülhetne.</string>
+    <string name="compare_theory_row">Elméleti</string>
+    <string name="compare_actual_row">Legjobb futam</string>
+    <string name="compare_gain_row">Nyerhető</string>
+    <string name="compare_shifts">Váltások</string>
+    <string name="compare_shifts_note">Váltásonként elvesztett idő, legalább két futamban, a GPS-sebességből megtalálva. A nagyon rövid váltásokat kihagyhatja.</string>
+    <string name="compare_shifts_none">Nem találtam váltást</string>
+    <string name="compare_shift_detail">%1$d %2$s · %3$d futam</string>
+    <string name="compare_power">Teljesítmény kilogrammonként</string>
+    <string name="compare_power_note">Kerékteljesítmény a gyorsulásból, a terhelt autó kilogrammjára. Kb. ±10–15%.</string>
+    <string name="compare_mass_row">Tömeg utasokkal</string>
+    <string name="compare_hp_row">Névleges LE tonnánként</string>
+    <string name="compare_no_weight">A garázsban add meg az autó súlyát, hogy lásd a kilogrammonkénti teljesítményt.</string>
 </resources>
