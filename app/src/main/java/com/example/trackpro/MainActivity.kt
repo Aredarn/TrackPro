@@ -72,6 +72,7 @@ import com.example.trackpro.screens.profile.EditProfileScreen
 import com.example.trackpro.screens.profile.AccountScreen
 import com.example.trackpro.screens.history.HistorySection
 import com.example.trackpro.screens.drive.DriveScreen
+import com.example.trackpro.screens.history.DragCompareScreen
 import com.example.trackpro.screens.history.HistoryScreen
 import com.example.trackpro.screens.garage.GarageScreen
 import com.example.trackpro.dao.VehicleUsage
@@ -124,6 +125,8 @@ import com.example.trackpro.screens.listViewScreens.lapDetail.LapDetailScreen
 import com.example.trackpro.screens.listViewScreens.listItems.CarViewScreen
 import com.example.trackpro.screens.listViewScreens.listItems.GraphScreen
 import com.example.trackpro.screens.listViewScreens.listItems.TimeAttackListItemScreen
+import com.example.trackpro.viewModels.DragCompareViewModel
+import com.example.trackpro.viewModels.DragCompareViewModelFactory
 import com.example.trackpro.viewModels.DragSessionViewModel
 import com.example.trackpro.viewModels.DragSessionViewModelFactory
 import com.example.trackpro.viewModels.SessionViewModel
@@ -416,6 +419,7 @@ class MainActivity : ComponentActivity() {
         val vehicleFULLViewModel = VehicleFULLViewModelFactory(context).create(VehicleFULLViewModel::class.java)
         val sessionViewModel = SessionViewModelFactory(context).create(SessionViewModel::class.java)
         val dragSessionViewModel = DragSessionViewModelFactory(context).create(DragSessionViewModel::class.java)
+        val dragCompareViewModel = DragCompareViewModelFactory(context).create(DragCompareViewModel::class.java)
 
 
         setContent {
@@ -498,6 +502,9 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("drag") {
                         DragRaceScreen(vehicleFULLViewModel, onBack = { navController.popBackStack() })
+                    }
+                    composable("dragcompare") {
+                        DragCompareScreen(dragCompareViewModel, onBack = { navController.popBackStack() })
                     }
                     composable("esptest") {
                         ESPConnectionTestScreen(

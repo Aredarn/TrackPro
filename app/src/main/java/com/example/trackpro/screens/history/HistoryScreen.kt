@@ -63,6 +63,7 @@ fun HistoryScreen(
             title = stringResource(R.string.history_title),
             filter = dragFilter,
             onFilterChange = { dragFilter = it },
+            onCompare = { navController.navigate("dragcompare") },
         )
     }
 }

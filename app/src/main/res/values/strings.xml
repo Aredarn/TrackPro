@@ -677,4 +677,37 @@
     <string name="profile_rig">Rig connection</string>
     <string name="profile_rig_hint">ESP32 link and diagnostics</string>
     <string name="hud_no_geometry">No track geometry</string>
+
+    <!-- Drag comparison -->
+    <string name="compare_entry_hint">Times, gear changes and power, car against car</string>
+    <string name="compare_title">Compare cars</string>
+    <string name="compare_cars">Cars</string>
+    <string name="compare_cars_hint">Pick a car to see its numbers, or two or more to compare them. Up to %1$d at a time.</string>
+    <string name="compare_pick_one">Pick a car</string>
+    <string name="compare_people">People in the car, driver included</string>
+    <string name="compare_people_note">80 kg each, added to the car weight. Needed for power per kg.</string>
+    <string name="compare_mean">Average</string>
+    <string name="compare_best">Best</string>
+    <string name="compare_vs">Differences are against %1$s. A minus is faster.</string>
+    <string name="compare_working">Calculating</string>
+    <string name="compare_splits">Acceleration times</string>
+    <string name="compare_splits_note">Seconds from launch.</string>
+    <string name="compare_segments">Where the time goes</string>
+    <string name="compare_segments_note">Seconds spent in each speed range.</string>
+    <string name="compare_bands">Every 10 %1$s</string>
+    <string name="compare_bands_note">Seconds to climb each 10 %1$s. A gear change lands in one of them.</string>
+    <string name="compare_theory">Theoretical best 0–100</string>
+    <string name="compare_theory_note">The best of every part of the run, split around the gear changes. An estimate: it assumes one run could get every part right.</string>
+    <string name="compare_theory_row">Theoretical</string>
+    <string name="compare_actual_row">Best run</string>
+    <string name="compare_gain_row">Room to gain</string>
+    <string name="compare_shifts">Gear changes</string>
+    <string name="compare_shifts_note">Time lost around each change, found in at least two runs from the GPS speed. Very short changes can be missed.</string>
+    <string name="compare_shifts_none">No gear changes found</string>
+    <string name="compare_shift_detail">%1$d %2$s · %3$d runs</string>
+    <string name="compare_power">Power per kg</string>
+    <string name="compare_power_note">Wheel power estimated from the acceleration, per kg of the loaded car. About ±10–15%.</string>
+    <string name="compare_mass_row">Weight with people</string>
+    <string name="compare_hp_row">Rated hp per tonne</string>
+    <string name="compare_no_weight">Add the car weight in the garage to see power per kg.</string>
 </resources>

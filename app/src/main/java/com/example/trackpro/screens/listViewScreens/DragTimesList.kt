@@ -7,9 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
@@ -19,10 +24,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.trackpro.components.ConfirmDeleteDialog
+import com.example.trackpro.components.IconCircle
+import com.example.trackpro.components.PaddockCard
 import com.example.trackpro.components.DataGate
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.ExpandableGroup
@@ -65,6 +73,8 @@ fun DragTimesListView(
     filter: SessionFilter = SessionFilter(),
     /** Null hides the filter bar. */
     onFilterChange: ((SessionFilter) -> Unit)? = null,
+    /** Opens the car-against-car comparison; null hides its entry. */
+    onCompare: (() -> Unit)? = null,
 ) {
     val dragSessions by viewModel.dragSessions.collectAsState()
     val loadState by viewModel.loadState.collectAsState()
@@ -163,6 +173,11 @@ fun DragTimesListView(
                     ),
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
+                    // First thing on the list, not a link in the header: it is a whole screen of
+                    // its own, and it stayed unseen in the title bar.
+                    if (onCompare != null) {
+                        item(key = "compare") { CompareEntryCard(onClick = onCompare) }
+                    }
                     // A lone group opens by itself; see TimeAttackListViewScreen.
                     val alone = groups.size == 1
                     groups.forEach { (groupKey, sessions) ->
@@ -178,6 +193,36 @@ fun DragTimesListView(
                     }
                 }
             }
+        }
+    }
+}
+
+/** The way into the car-against-car comparison: a card at the head of the drag list. */
+@Composable
+private fun CompareEntryCard(onClick: () -> Unit) {
+    PaddockCard(onClick = onClick, padding = Spacing.md) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+        ) {
+            IconCircle(icon = Icons.Outlined.BarChart, size = 44.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.compare_title),
+                    style = TrackProType.titleMedium,
+                    color = TrackProTheme.colors.textPrimary
+                )
+                Text(
+                    text = stringResource(R.string.compare_entry_hint),
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.textMuted
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = TrackProTheme.colors.textMuted
+            )
         }
     }
 }
