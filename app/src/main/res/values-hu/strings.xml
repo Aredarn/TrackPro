@@ -679,7 +679,7 @@
     <string name="hud_no_geometry">Nincs pálya-nyomvonal</string>
 
     <!-- Drag comparison -->
-    <string name="compare_entry">Összehasonlítás</string>
+    <string name="compare_entry_hint">Idők, váltások és teljesítmény, autó az autó ellen</string>
     <string name="compare_title">Autók összehasonlítása</string>
     <string name="compare_cars">Autók</string>
     <string name="compare_cars_hint">Válassz egy autót a számaihoz, vagy kettőt-hármat az összehasonlításhoz. Egyszerre legfeljebb %1$d.</string>

@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
@@ -27,8 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.trackpro.components.ConfirmDeleteDialog
-import com.example.trackpro.components.Haptic
-import com.example.trackpro.components.pressable
+import com.example.trackpro.components.IconCircle
+import com.example.trackpro.components.PaddockCard
 import com.example.trackpro.components.DataGate
 import com.example.trackpro.components.EmptyState
 import com.example.trackpro.components.ExpandableGroup
@@ -128,31 +130,15 @@ fun DragTimesListView(
         headerHeight = headerHeight,
         accent = TrackProTheme.colors.accent,
         trailing = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
-            ) {
-                if (onCompare != null && dragSessions.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.compare_entry),
-                        style = TrackProType.titleMedium,
-                        color = TrackProTheme.colors.accent,
-                        modifier = Modifier
-                            .pressable(onClick = onCompare, haptic = Haptic.Selection)
-                            .heightIn(min = 48.dp)
-                            .wrapContentHeight(Alignment.CenterVertically)
-                    )
-                }
-                Text(
-                    text = if (effective.narrows) {
-                        stringResource(R.string.history_shown_of, shown.size, countLabel(dragSessions.size, R.plurals.count_runs))
-                    } else {
-                        countLabel(dragSessions.size, R.plurals.count_runs)
-                    },
-                    style = TrackProType.label,
-                    color = TrackProTheme.colors.textMuted
-                )
-            }
+            Text(
+                text = if (effective.narrows) {
+                    stringResource(R.string.history_shown_of, shown.size, countLabel(dragSessions.size, R.plurals.count_runs))
+                } else {
+                    countLabel(dragSessions.size, R.plurals.count_runs)
+                },
+                style = TrackProType.label,
+                color = TrackProTheme.colors.textMuted
+            )
         },
         contentScrolled = scrolled
     ) { contentPadding ->
@@ -187,6 +173,11 @@ fun DragTimesListView(
                     ),
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
+                    // First thing on the list, not a link in the header: it is a whole screen of
+                    // its own, and it stayed unseen in the title bar.
+                    if (onCompare != null) {
+                        item(key = "compare") { CompareEntryCard(onClick = onCompare) }
+                    }
                     // A lone group opens by itself; see TimeAttackListViewScreen.
                     val alone = groups.size == 1
                     groups.forEach { (groupKey, sessions) ->
@@ -202,6 +193,36 @@ fun DragTimesListView(
                     }
                 }
             }
+        }
+    }
+}
+
+/** The way into the car-against-car comparison: a card at the head of the drag list. */
+@Composable
+private fun CompareEntryCard(onClick: () -> Unit) {
+    PaddockCard(onClick = onClick, padding = Spacing.md) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+        ) {
+            IconCircle(icon = Icons.Outlined.BarChart, size = 44.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.compare_title),
+                    style = TrackProType.titleMedium,
+                    color = TrackProTheme.colors.textPrimary
+                )
+                Text(
+                    text = stringResource(R.string.compare_entry_hint),
+                    style = TrackProType.label,
+                    color = TrackProTheme.colors.textMuted
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = TrackProTheme.colors.textMuted
+            )
         }
     }
 }

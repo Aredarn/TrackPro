@@ -679,7 +679,7 @@
     <string name="hud_no_geometry">No track geometry</string>
 
     <!-- Drag comparison -->
-    <string name="compare_entry">Compare</string>
+    <string name="compare_entry_hint">Times, gear changes and power, car against car</string>
     <string name="compare_title">Compare cars</string>
     <string name="compare_cars">Cars</string>
     <string name="compare_cars_hint">Pick a car to see its numbers, or two or more to compare them. Up to %1$d at a time.</string>
