@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.trackpro.components.CompareEntryCard
 import com.example.trackpro.components.ConfirmDeleteDialog
 import com.example.trackpro.components.DataGate
 import com.example.trackpro.components.EmptyState
@@ -65,6 +66,8 @@ fun DragTimesListView(
     filter: SessionFilter = SessionFilter(),
     /** Null hides the filter bar. */
     onFilterChange: ((SessionFilter) -> Unit)? = null,
+    /** Opens the car-against-car comparison; null hides its entry. */
+    onCompare: (() -> Unit)? = null,
 ) {
     val dragSessions by viewModel.dragSessions.collectAsState()
     val loadState by viewModel.loadState.collectAsState()
@@ -163,6 +166,17 @@ fun DragTimesListView(
                     ),
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
+                    // First thing on the list, not a link in the header: it is a whole screen of
+                    // its own, and it stayed unseen in the title bar.
+                    if (onCompare != null) {
+                        item(key = "compare") {
+                            CompareEntryCard(
+                                title = stringResource(R.string.compare_title),
+                                hint = stringResource(R.string.compare_entry_hint),
+                                onClick = onCompare
+                            )
+                        }
+                    }
                     // A lone group opens by itself; see TimeAttackListViewScreen.
                     val alone = groups.size == 1
                     groups.forEach { (groupKey, sessions) ->
