@@ -25,8 +25,8 @@ android {
         applicationId = "com.example.trackpro"
         minSdk = 26
         targetSdk = 34 // intentionally behind compileSdk 35, not yet verified against Android 15 behavior changes
-        versionCode = 3
-        versionName = "1.3"
+        versionCode = 4
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
