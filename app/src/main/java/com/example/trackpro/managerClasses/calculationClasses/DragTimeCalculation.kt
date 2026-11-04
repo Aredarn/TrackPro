@@ -45,7 +45,7 @@ data class DragMetrics(
  */
 class DragTimeCalculation(
     val session: Long? = null,
-    private val database: ESPDatabase,
+    private val database: ESPDatabase? = null,
     private val scale: DragSpeedScale = DragSpeedScale.Metric
 ) {
     companion object {

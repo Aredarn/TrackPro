@@ -269,7 +269,7 @@ class EspDatabaseMigrationTest {
         const val TEST_DB = "migration-test.db"
 
         /** ESPDatabase's current version. Bump with it, alongside the new schemas/N.json. */
-        const val LATEST_VERSION = 10
+        const val LATEST_VERSION = 11
 
         /**
          * The v1 schema as Room generated it: the v5 export minus the four migrations - no

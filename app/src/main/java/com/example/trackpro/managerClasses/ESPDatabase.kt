@@ -22,6 +22,7 @@ import com.example.trackpro.dataClasses.DerivedData
 import com.example.trackpro.dataClasses.LapInfoData
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.RawGPSData
+import com.example.trackpro.dataClasses.DragPublication
 import com.example.trackpro.dataClasses.RemoteLink
 import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.dataClasses.SessionData
@@ -44,8 +45,9 @@ import com.example.trackpro.dataClasses.VehicleInformationData
     LapInfoData::class,
     SectorTimeData::class,
     RemoteLink::class,
-    TrackPublication::class
-], version = 10, exportSchema = true)
+    TrackPublication::class,
+    DragPublication::class
+], version = 11, exportSchema = true)
 abstract class ESPDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun rawGPSDataDao(): RawGPSDataDao
@@ -253,6 +255,22 @@ abstract class ESPDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `drag_publication` (
+                        `sessionId` INTEGER NOT NULL,
+                        `publishedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`sessionId`),
+                        FOREIGN KEY(`sessionId`) REFERENCES `session_data`(`id`)
+                            ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         /**
          * Every migration, in order. This is the single list the production database is
          * built with; the instrumented migration tests run exactly the same array so a
@@ -267,7 +285,8 @@ abstract class ESPDatabase : RoomDatabase() {
             MIGRATION_6_7,
             MIGRATION_7_8,
             MIGRATION_8_9,
-            MIGRATION_9_10
+            MIGRATION_9_10,
+            MIGRATION_10_11
         )
 
         fun getInstance(context: Context): ESPDatabase {

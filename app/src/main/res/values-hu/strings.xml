@@ -553,7 +553,7 @@
     <string name="profile_share">Körök megosztása a ranglistákon</string>
     <string name="profile_sharing_on">A köreid fent vannak a ranglistákon</string>
     <string name="profile_sharing_off">A köreid privátak maradnak</string>
-    <string name="profile_share_detail">Megosztásra kerül: a neved, a kör- és szektoridők, a menet dátuma, az autó gyártója, modellje és évjárata, valamint hogy melyik GPS mérte. Csak előre megadott vagy közzétett pályákon futott menetek. Kikapcsolva le is kerülnek.</string>
+    <string name="profile_share_detail">Megosztásra kerül: a neved, a kör- és szektoridők, a menet dátuma, az autó gyártója, modellje és évjárata, valamint hogy melyik GPS mérte. Csak előre megadott vagy közzétett pályákon futott menetek, valamint az általad közzétett gyorsulási futamok az időikkel. Kikapcsolva le is kerülnek.</string>
     <string name="profile_sync">Szinkronizálás</string>
     <string name="profile_syncing">Szinkronizálás…</string>
     <string name="profile_sync_now">Szinkron most</string>
@@ -750,4 +750,11 @@
     <string name="track_compare_gap_note">Másodperc az első autóhoz képest a kör mentén. A vonal fölött lemaradás.</string>
     <string name="track_compare_speed">Sebesség</string>
     <string name="track_compare_speed_note">A kör mentén, a távolság méterben.</string>
+    <string name="drag_strip_title">Gyorsulási ranglista</string>
+    <string name="drag_strip_sign_in">Jelentkezz be a Beállításokban a futam közzétételéhez</string>
+    <string name="drag_strip_sharing_off">Kapcsold be a megosztást a Beállításokban a futam közzétételéhez</string>
+    <string name="drag_strip_posted">Közzétéve · a legjobb tiszta idői felkerülnek a listára</string>
+    <string name="drag_strip_not_posted">Nincs közzétéve · ezt a futamot csak te látod</string>
+    <string name="drag_strip_post">Közzététel</string>
+    <string name="drag_strip_withdraw">Visszavonás</string>
 </resources>

@@ -1,5 +1,7 @@
 package com.example.trackpro.online
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -34,6 +36,13 @@ enum class ApiTrackVisibility {
 enum class ApiSessionVisibility {
     @SerialName("Private") Private,
     @SerialName("Ranked") Ranked,
+}
+
+@Serializable
+enum class ApiDragMetric {
+    @SerialName("ZeroToHundred") ZeroToHundred,
+    @SerialName("HundredToTwoHundred") HundredToTwoHundred,
+    @SerialName("QuarterMile") QuarterMile,
 }
 
 // ── Auth ──
@@ -210,6 +219,14 @@ data class LapWrite(
 )
 
 @Serializable
+data class DragResultWrite(
+    val metric: ApiDragMetric,
+    val timeMs: Int,
+    val trapSpeedKmh: Double? = null,
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
 data class SessionWrite(
     val name: String,
     val startedAt: String,
@@ -222,6 +239,12 @@ data class SessionWrite(
     val weather: WeatherWrite? = null,
     val appVersion: String? = null,
     val laps: List<LapWrite>,
+    /**
+     * Left out when empty, unlike the rest: the upload hash covers the encoded body, so writing
+     * it on every lap session would make each one look changed and send them all again.
+     */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val dragResults: List<DragResultWrite> = emptyList(),
 )
 
 /** A session in the caller's list (`GET /sessions`): enough to decide whether to fetch it. */
