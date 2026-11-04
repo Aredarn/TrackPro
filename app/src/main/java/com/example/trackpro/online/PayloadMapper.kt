@@ -6,12 +6,15 @@ import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
 import com.example.trackpro.dataClasses.VehicleInformationData
+import com.example.trackpro.managerClasses.calculationClasses.DragBoardMetric
+import com.example.trackpro.managerClasses.calculationClasses.DragBoardResult
 import com.example.trackpro.managerClasses.utilities.toLapTimeMillisOrNull
 import com.example.trackpro.models.GpsProviderType
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.Locale
 import java.util.UUID
+import kotlin.math.roundToInt
 
 /**
  * Turns Room rows into TrackBoard payloads. Pure: no Android, no I/O, so every rule here is
@@ -166,6 +169,51 @@ object PayloadMapper {
             weather = weather(session),
             appVersion = appVersion?.take(40),
             laps = lapWrites,
+        )
+    }
+
+    /**
+     * A drag session: no track, no laps, just its results. Null when there is nothing to post:
+     * no recorded GPS source, or no result inside what the server accepts. A time quicker than
+     * its floor is a bad trace, and sending it would cost the session its other results.
+     */
+    fun dragSession(
+        session: SessionData,
+        results: List<DragBoardResult>,
+        remoteVehicleId: String?,
+        appVersion: String?,
+    ): SessionWrite? {
+        val source = gpsSource(session.gpsSource) ?: return null
+        val writes = results.mapNotNull(::dragResult)
+        if (writes.isEmpty()) return null
+
+        return SessionWrite(
+            name = session.eventType.trim().take(200).ifBlank { "Drag session" },
+            startedAt = iso(session.startTime),
+            endedAt = session.endTime?.takeIf { it >= session.startTime }?.let(::iso),
+            vehicleId = remoteVehicleId,
+            gpsSource = source,
+            visibility = ApiSessionVisibility.Ranked,
+            voided = session.voided,
+            weather = weather(session),
+            appVersion = appVersion?.take(40),
+            laps = emptyList(),
+            dragResults = writes,
+        )
+    }
+
+    private fun dragResult(result: DragBoardResult): DragResultWrite? {
+        val ms = (result.seconds * 1000).roundToInt()
+        val (metric, floorMs) = when (result.metric) {
+            DragBoardMetric.ZeroToHundred -> ApiDragMetric.ZeroToHundred to 1_000
+            DragBoardMetric.HundredToTwoHundred -> ApiDragMetric.HundredToTwoHundred to 1_500
+            DragBoardMetric.QuarterMile -> ApiDragMetric.QuarterMile to 5_000
+        }
+        if (ms !in floorMs..120_000) return null
+        return DragResultWrite(
+            metric = metric,
+            timeMs = ms,
+            trapSpeedKmh = result.trapSpeedKmh?.let { (it * 10).roundToInt() / 10.0 }.inRange(1.0, 700.0),
         )
     }
 

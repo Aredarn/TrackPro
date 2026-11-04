@@ -50,6 +50,7 @@ import com.example.trackpro.TrackProApp
 import com.example.trackpro.managerClasses.utilities.SpeedColorUtils
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import com.example.trackpro.managerClasses.utilities.WeatherService
+import com.example.trackpro.online.ui.DragOnlineStrip
 import com.example.trackpro.screens.telemetricScreens.DragMetricCard
 import com.example.trackpro.screens.telemetricScreens.DragMetricDisplay
 import com.example.trackpro.components.Haptic
@@ -364,6 +365,11 @@ fun GraphScreen(onBack: () -> Unit, sessionId: Long) {
                 DragMetricCard(DragMetricDisplay(stringResource(R.string.drag_trap_speed), metrics.quarterMileSpeed?.let { UnitFormatter.formatSpeed(it, useMetric) } ?: "\u2014", UnitFormatter.speedUnitLabel(useMetric), metrics.quarterMileSpeed != null), modifier = Modifier.weight(1f))
             }
         }
+
+        DragOnlineStrip(
+            sessionId = sessionId,
+            modifier = Modifier.padding(start = Spacing.gutter, end = Spacing.gutter, top = Spacing.md)
+        )
 
         // ── Chart card ─────────────────────────────────────
         Column(

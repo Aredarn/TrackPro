@@ -10,6 +10,8 @@ import com.example.trackpro.dataClasses.RemoteLink.Companion.KIND_VEHICLE
 import com.example.trackpro.dataClasses.SessionData
 import com.example.trackpro.dataClasses.TrackCoordinatesData
 import com.example.trackpro.dataClasses.TrackMainData
+import com.example.trackpro.managerClasses.calculationClasses.DragBoardResult
+import com.example.trackpro.managerClasses.calculationClasses.DragBoardRuns
 import java.util.UUID
 
 /** A reason one record could not be synced, already phrased for the driver. */
@@ -28,6 +30,8 @@ class SyncProblem(message: String) : Exception(message)
  * - A session driven during a joined event, on the event's track, is posted too - joining is
  *   the consent - as Private when sharing is off, so it reaches the event board but not the
  *   public leaderboard. While it is still running, [pushLive] sends it after every lap.
+ * - A drag session is posted when sharing is on, the driver chose to post it, it has a car, and
+ *   it holds a clean result (see [DragBoardRuns]).
  * - Premade tracks are linked to the one shared server track every install derives the same
  *   id for; the first driver to post on one creates it.
  * - Anything online that no longer qualifies is withdrawn.
@@ -70,6 +74,8 @@ class SyncEngine(
         val visibility: ApiSessionVisibility,
     )
 
+    private class DragPlan(val session: SessionData, val results: List<DragBoardResult>)
+
     private class Tally {
         var uploaded = 0
         var unchanged = 0
@@ -98,6 +104,8 @@ class SyncEngine(
 
             val sharing = sharingEnabled()
             val wanted = planSessions(published, ::track, sharing).mapTo(mutableSetOf()) { it.session.id }
+            val dragPlans = planDragSessions(sharing)
+            dragPlans.mapTo(wanted) { it.session.id }
             // A session still recording may have gone up live for an event. It is not finished,
             // so it is not planned, but it must not be withdrawn from under the event board.
             val running = dao.getRunningSessionIds().toSet()
@@ -125,6 +133,7 @@ class SyncEngine(
             // upload from the earlier snapshot would post the session without it.
             val plans = planSessions(published, ::track, sharing)
             for (plan in plans) attempt(tally) { uploadSession(plan, tally) }
+            for (plan in dragPlans) attempt(tally) { uploadDragSession(plan, tally) }
         } catch (e: NetworkException) {
             return tally.report(garageTally, restoreTally, offline = true, problem = e.message)
         } catch (e: ApiException) {
@@ -166,6 +175,20 @@ class SyncEngine(
         if (!sendable) return null
         val visibility = if (ranked) ApiSessionVisibility.Ranked else ApiSessionVisibility.Private
         return Plan(session, info, laps, visibility)
+    }
+
+    /** Timed from the GPS trace on every sync: nothing else stores a run's result. */
+    private suspend fun planDragSessions(sharing: Boolean): List<DragPlan> {
+        if (!sharing) return emptyList()
+        return dao.getPublishedDragSessions().mapNotNull { session ->
+            val source = PayloadMapper.gpsSource(session.gpsSource) ?: return@mapNotNull null
+            if (session.vehicleId == null) return@mapNotNull null
+
+            val maxGap = DragBoardRuns.maxGapSeconds(phoneGps = source == ApiGpsSource.PhoneGps)
+            val results = DragBoardRuns.bestResults(dao.getRawGps(session.id), maxGap)
+            val sendable = PayloadMapper.dragSession(session, results, null, null) != null
+            if (sendable) DragPlan(session, results) else null
+        }
     }
 
     /** The track's server id when it has one: shared or premade, or the driver's own once published and sent. */
@@ -217,8 +240,21 @@ class SyncEngine(
         val body = PayloadMapper.session(
             plan.session, plan.laps, sectors, trackRemoteId, vehicleRemoteId, appVersion, plan.visibility
         ) ?: return
+        sendSession(plan.session.id, body, tally)
+    }
+
+    private suspend fun uploadDragSession(plan: DragPlan, tally: Tally) {
+        // Unlike a lap, a drag result cannot rank without its car, so there is no sending it bare.
+        val vehicleRemoteId = plan.session.vehicleId?.let { ensureVehicle(it) }
+            ?: throw SyncProblem("A drag run's car couldn't be sent to TrackBoard.")
+
+        val body = PayloadMapper.dragSession(plan.session, plan.results, vehicleRemoteId, appVersion) ?: return
+        sendSession(plan.session.id, body, tally)
+    }
+
+    private suspend fun sendSession(localId: Long, body: SessionWrite, tally: Tally) {
         val hash = PayloadMapper.hash(body)
-        val link = dao.getLink(KIND_SESSION, plan.session.id)
+        val link = dao.getLink(KIND_SESSION, localId)
 
         if (link != null && link.uploadedHash == hash) {
             link.lastError?.let { throw SyncProblem(it) }
@@ -227,7 +263,7 @@ class SyncEngine(
         }
 
         val remoteId = link?.remoteId ?: newId()
-        put(KIND_SESSION, plan.session.id, remoteId, hash) { token -> api.putSession(token, remoteId, body) }
+        put(KIND_SESSION, localId, remoteId, hash) { token -> api.putSession(token, remoteId, body) }
         tally.uploaded++
     }
 

@@ -553,7 +553,7 @@
     <string name="profile_share">Share laps on leaderboards</string>
     <string name="profile_sharing_on">Your laps are on the leaderboards</string>
     <string name="profile_sharing_off">Your laps stay private</string>
-    <string name="profile_share_detail">Shared: your name, lap and sector times, session date, car make, model and year, and which GPS timed it. Only sessions on premade or published tracks. Turning it off takes them back down.</string>
+    <string name="profile_share_detail">Shared: your name, lap and sector times, session date, car make, model and year, and which GPS timed it. Only sessions on premade or published tracks, and drag runs you post yourself, with their times. Turning it off takes them back down.</string>
     <string name="profile_sync">Sync</string>
     <string name="profile_syncing">Syncing…</string>
     <string name="profile_sync_now">Sync now</string>
@@ -750,4 +750,11 @@
     <string name="track_compare_gap_note">Seconds against the first car along the lap. Above the line is behind it.</string>
     <string name="track_compare_speed">Speed</string>
     <string name="track_compare_speed_note">Along the lap, the distance in metres.</string>
+    <string name="drag_strip_title">Drag leaderboard</string>
+    <string name="drag_strip_sign_in">Sign in under Settings to post this run</string>
+    <string name="drag_strip_sharing_off">Turn on sharing under Settings to post this run</string>
+    <string name="drag_strip_posted">Posted · its best clean times go on the board</string>
+    <string name="drag_strip_not_posted">Not posted · only you can see this run</string>
+    <string name="drag_strip_post">Post</string>
+    <string name="drag_strip_withdraw">Withdraw</string>
 </resources>

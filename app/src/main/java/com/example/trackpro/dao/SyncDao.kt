@@ -5,7 +5,9 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.example.trackpro.dataClasses.DragPublication
 import com.example.trackpro.dataClasses.LapTimeData
+import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.dataClasses.RemoteLink
 import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.dataClasses.SessionData
@@ -56,6 +58,17 @@ interface SyncDao {
     @Query("DELETE FROM track_publication WHERE trackId = :trackId")
     suspend fun unpublish(trackId: Long)
 
+    // ── Drag publication ──
+
+    @Query("SELECT EXISTS(SELECT 1 FROM drag_publication WHERE sessionId = :sessionId)")
+    fun observeIsDragPublished(sessionId: Long): Flow<Boolean>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun publishDrag(publication: DragPublication)
+
+    @Query("DELETE FROM drag_publication WHERE sessionId = :sessionId")
+    suspend fun unpublishDrag(sessionId: Long)
+
     // ── Snapshots of local data ──
 
     /**
@@ -69,6 +82,19 @@ interface SyncDao {
         """
     )
     suspend fun getFinishedTrackSessions(): List<SessionData>
+
+    /** Finished drag sessions the driver chose to post. See [getFinishedTrackSessions] for "drag". */
+    @Query(
+        """
+        SELECT s.* FROM session_data s
+        INNER JOIN drag_publication p ON p.sessionId = s.id
+        WHERE (s.trackId IS NULL OR s.trackId = -1) AND s.endTime IS NOT NULL
+        """
+    )
+    suspend fun getPublishedDragSessions(): List<SessionData>
+
+    @Query("SELECT * FROM raw_gps_data WHERE sessionid = :sessionId ORDER BY timestamp ASC")
+    suspend fun getRawGps(sessionId: Long): List<RawGPSData>
 
     @Query("SELECT * FROM session_data WHERE id = :id")
     suspend fun getSession(id: Long): SessionData?

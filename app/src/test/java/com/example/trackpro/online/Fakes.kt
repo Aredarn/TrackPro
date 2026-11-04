@@ -1,7 +1,9 @@
 package com.example.trackpro.online
 
 import com.example.trackpro.dao.SyncDao
+import com.example.trackpro.dataClasses.DragPublication
 import com.example.trackpro.dataClasses.LapTimeData
+import com.example.trackpro.dataClasses.RawGPSData
 import com.example.trackpro.dataClasses.RemoteLink
 import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.dataClasses.SessionData
@@ -144,6 +146,8 @@ class FakeSyncDao : SyncDao {
     val points = mutableListOf<TrackCoordinatesData>()
     val vehicles = mutableListOf<VehicleInformationData>()
     val published = mutableSetOf<Long>()
+    val publishedDrags = mutableSetOf<Long>()
+    val rawGps = mutableListOf<RawGPSData>()
     val links = mutableMapOf<Pair<String, Long>, RemoteLink>()
 
     override suspend fun getLink(kind: String, localId: Long) = links[kind to localId]
@@ -155,6 +159,15 @@ class FakeSyncDao : SyncDao {
     override suspend fun getPublishedTrackIds() = published.toList()
     override suspend fun publish(publication: TrackPublication) { published += publication.trackId }
     override suspend fun unpublish(trackId: Long) { published -= trackId }
+
+    override fun observeIsDragPublished(sessionId: Long): Flow<Boolean> = flowOf(sessionId in publishedDrags)
+    override suspend fun publishDrag(publication: DragPublication) { publishedDrags += publication.sessionId }
+    override suspend fun unpublishDrag(sessionId: Long) { publishedDrags -= sessionId }
+    override suspend fun getPublishedDragSessions() = sessions.filter {
+        it.id in publishedDrags && (it.trackId == null || it.trackId == -1L) && it.endTime != null
+    }
+    override suspend fun getRawGps(sessionId: Long) =
+        rawGps.filter { it.sessionid == sessionId }.sortedBy { it.timestamp }
 
     override suspend fun getFinishedTrackSessions() =
         sessions.filter { it.trackId != null && it.trackId != -1L && it.endTime != null }
