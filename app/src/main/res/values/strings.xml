@@ -710,4 +710,44 @@
     <string name="compare_mass_row">Weight with people</string>
     <string name="compare_hp_row">Rated hp per tonne</string>
     <string name="compare_no_weight">Add the car weight in the garage to see power per kg.</string>
+
+    <!-- Track comparison -->
+    <string name="track_compare_title">Compare on a track</string>
+    <string name="track_compare_entry_hint">Lap times, sectors, lines and corners, car against car</string>
+    <string name="track_compare_track">Track</string>
+    <string name="track_compare_cars">Cars</string>
+    <string name="track_compare_cars_hint">Each car\'s best laps. Pick up to %1$d; the first is what the rest are measured against.</string>
+    <string name="track_compare_runs">Single laps and runs</string>
+    <string name="track_compare_empty">No track sessions yet</string>
+    <string name="track_compare_empty_hint">Drive a lap or a sprint and you can compare it here</string>
+    <string name="track_compare_pick">Pick a car or a run</string>
+    <string name="track_compare_no_laps">No usable laps on this track</string>
+    <string name="track_compare_mode_lap">Best lap</string>
+    <string name="track_compare_mode_sectors">Best sectors</string>
+    <string name="track_compare_vs">Differences are against %1$s.</string>
+    <string name="track_compare_skipped">%1$d left out: driven the other way round or off the first line.</string>
+    <string name="track_compare_times">Times</string>
+    <string name="track_compare_times_note">Only laps that follow the first car\'s line the same way round are counted. The theoretical time is the best sectors added up.</string>
+    <string name="track_compare_row_best">Best</string>
+    <string name="track_compare_row_average">Average</string>
+    <string name="track_compare_row_theory">Theoretical</string>
+    <string name="track_compare_row_laps">Laps counted</string>
+    <string name="track_compare_sectors">Sectors</string>
+    <string name="track_compare_sectors_gates">From the sector points of the track.</string>
+    <string name="track_compare_sectors_equal">No sector point falls on this lap, so it is cut into equal parts.</string>
+    <string name="track_compare_sector_row">Sector %1$d</string>
+    <string name="track_compare_corners">Corners and lines</string>
+    <string name="track_compare_corners_note">Speed at the slowest point of each corner. Under it: the tightest radius of the car\'s own line, and how far inside (+) or outside (-) the first car\'s line it ran.</string>
+    <string name="track_compare_corner_row">C%1$d %2$s</string>
+    <string name="track_compare_left">left</string>
+    <string name="track_compare_right">right</string>
+    <string name="track_compare_corner_cell">R %1$s m · %2$s m</string>
+    <string name="track_compare_corner_none">No corners found</string>
+    <string name="track_compare_line">Line</string>
+    <string name="track_compare_line_note">The best lap of each car. Pick a corner to zoom into its arc.</string>
+    <string name="track_compare_whole">Whole track</string>
+    <string name="track_compare_gap">Time gap</string>
+    <string name="track_compare_gap_note">Seconds against the first car along the lap. Above the line is behind it.</string>
+    <string name="track_compare_speed">Speed</string>
+    <string name="track_compare_speed_note">Along the lap, the distance in metres.</string>
 </resources>

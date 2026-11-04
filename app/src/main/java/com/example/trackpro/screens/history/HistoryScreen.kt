@@ -54,6 +54,7 @@ fun HistoryScreen(
             title = stringResource(R.string.history_title),
             filter = trackFilter,
             onFilterChange = { trackFilter = it },
+            onCompare = { navController.navigate("trackcompare") },
         )
         HistorySection.Drag -> DragTimesListView(
             viewModel = dragSessionViewModel,

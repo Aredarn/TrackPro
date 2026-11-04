@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.trackpro.components.CompareEntryCard
 import com.example.trackpro.components.ConfirmDeleteDialog
 import com.example.trackpro.components.DataGate
 import com.example.trackpro.components.EmptyState
@@ -70,6 +71,8 @@ fun TimeAttackListViewScreen(
     filter: SessionFilter = SessionFilter(),
     /** Null hides the filter bar. */
     onFilterChange: ((SessionFilter) -> Unit)? = null,
+    /** Opens the lap-against-lap comparison; null hides its entry. */
+    onCompare: (() -> Unit)? = null,
 ) {
     val allSessions by viewModel.sessions.collectAsState()
     val loadState by viewModel.loadState.collectAsState()
@@ -176,6 +179,15 @@ fun TimeAttackListViewScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
+                    if (onCompare != null) {
+                        item(key = "compare") {
+                            CompareEntryCard(
+                                title = stringResource(R.string.track_compare_title),
+                                hint = stringResource(R.string.track_compare_entry_hint),
+                                onClick = onCompare
+                            )
+                        }
+                    }
                     // A single group - one track picked, or only one driven - opens by itself;
                     // collapsed, the filter would seem to have produced an empty card. The key
                     // carries that, so the group resets when it becomes or stops being alone.
