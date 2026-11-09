@@ -200,7 +200,7 @@ class OkHttpTrackBoardApi(
         }
 
     override suspend fun getLeaderboard(accessToken: String?, trackId: String, limit: Int): Leaderboard? =
-        call("GET", "tracks/$trackId/leaderboard?limit=$limit", accessToken, null).use { response ->
+        call("GET", "tracks/$trackId/leaderboard?limit=$limit&perCar=true", accessToken, null).use { response ->
             if (response.code == 404) return@use null
             response.requireSuccess()
             json.decodeFromString(Leaderboard.serializer(), response.bodyText())

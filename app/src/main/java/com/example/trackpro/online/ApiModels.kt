@@ -287,6 +287,7 @@ data class LeaderboardVehicle(val manufacturer: String, val model: String, val y
 
 @Serializable
 data class LeaderboardEntry(
+    val lapId: String,
     val rank: Int,
     val userId: String,
     val displayName: String,
