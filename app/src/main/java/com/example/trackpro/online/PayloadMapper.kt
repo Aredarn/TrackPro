@@ -1,5 +1,6 @@
 package com.example.trackpro.online
 
+import com.example.trackpro.dao.LapSpeedSample
 import com.example.trackpro.dataClasses.LapTimeData
 import com.example.trackpro.dataClasses.SectorTimeData
 import com.example.trackpro.dataClasses.SessionData
@@ -131,6 +132,8 @@ object PayloadMapper {
         appVersion: String?,
         /** Ranked for the public leaderboard; Private when it goes up only for an event board. */
         visibility: ApiSessionVisibility = ApiSessionVisibility.Ranked,
+        /** Local lap id to its top speed, from [topSpeeds]. */
+        topSpeeds: Map<Long, Double> = emptyMap(),
     ): SessionWrite? {
         val source = gpsSource(session.gpsSource) ?: return null
         val sectorsByLap = sectors.groupBy { it.lapid }
@@ -143,6 +146,7 @@ object PayloadMapper {
                     lapNumber = lap.lapnumber,
                     timeMs = ms.toInt(),
                     signalGap = lap.signalGap,
+                    topSpeedKmh = topSpeeds[lap.id],
                     sectors = sectorsByLap[lap.id].orEmpty()
                         .filter { it.sectorIndex in 0..49 && it.splitTimeMs in 1..3_600_000L }
                         .distinctBy { it.sectorIndex }
@@ -171,6 +175,21 @@ object PayloadMapper {
             laps = lapWrites,
         )
     }
+
+    /**
+     * Each lap's top speed, km/h, from its fixes in recorded order. A lone fix can spike when
+     * the GPS jumps, so this is the peak of a three-fix rolling median: a speed has to hold for
+     * two fixes in a row to count. Laps with fewer than three speeds, or a peak the server
+     * would refuse, get none.
+     */
+    fun topSpeeds(samples: List<LapSpeedSample>): Map<Long, Double> =
+        samples.groupBy { it.lapid }.mapNotNull { (lapId, fixes) ->
+            val speeds = fixes.mapNotNull { it.spd?.toDouble() }
+            if (speeds.size < 3) return@mapNotNull null
+            val peak = speeds.windowed(3).maxOf { it.sorted()[1] }
+            if (peak !in 1.0..500.0) return@mapNotNull null
+            lapId to Math.round(peak * 10) / 10.0
+        }.toMap()
 
     /**
      * A drag session: no track, no laps, just its results. Null when there is nothing to post:

@@ -108,7 +108,7 @@ class TrackBoardApiTest {
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 """{"trackId":"t-1","trackName":"Hungaroring","someFutureField":true,
-                   "entries":[{"rank":1,"userId":"u-1","displayName":"Alice","lapTimeMs":91500,"gapToLeaderMs":0,
+                   "entries":[{"lapId":"l-1","rank":1,"userId":"u-1","displayName":"Alice","lapTimeMs":91500,"gapToLeaderMs":0,
                      "sectors":[{"sectorIndex":0,"splitMs":42000}],
                      "vehicle":{"manufacturer":"Porsche","model":"911 GT3","year":2023},
                      "setAt":"2026-09-28T10:00:00+00:00","gpsSource":"Bluetooth"}],
@@ -116,7 +116,7 @@ class TrackBoardApiTest {
             )
         )
         val board = api.getLeaderboard("t", "t-1", 10)!!
-        assertEquals("/api/v1/tracks/t-1/leaderboard?limit=10", server.takeRequest().path)
+        assertEquals("/api/v1/tracks/t-1/leaderboard?limit=10&perCar=true", server.takeRequest().path)
         assertEquals("Hungaroring", board.trackName)
         assertEquals(ApiGpsSource.Bluetooth, board.entries.single().gpsSource)
         assertEquals(42_000, board.entries.single().sectors.single().splitMs)

@@ -236,9 +236,10 @@ class SyncEngine(
         // A vehicle that cannot be sent costs the session its vehicle, not the session itself.
         val vehicleRemoteId = plan.session.vehicleId?.let { ensureVehicle(it) }
 
-        val sectors = dao.getSectors(plan.laps.map { it.id })
+        val lapIds = plan.laps.map { it.id }
         val body = PayloadMapper.session(
-            plan.session, plan.laps, sectors, trackRemoteId, vehicleRemoteId, appVersion, plan.visibility
+            plan.session, plan.laps, dao.getSectors(lapIds), trackRemoteId, vehicleRemoteId, appVersion, plan.visibility,
+            PayloadMapper.topSpeeds(dao.getLapSpeeds(lapIds)),
         ) ?: return
         sendSession(plan.session.id, body, tally)
     }

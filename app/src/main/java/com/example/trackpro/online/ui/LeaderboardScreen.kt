@@ -106,7 +106,8 @@ fun LeaderboardScreen(trackId: Long, onBack: () -> Unit) {
             LazyColumn(
                 contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = Spacing.xl)
             ) {
-                items(rows, key = { it.userId }) { entry ->
+                // By lap, not driver: a driver has a line for each car, and a repeated key crashes.
+                items(rows, key = { it.lapId }) { entry ->
                     EntryRow(entry, isMe = entry.userId == myId)
                 }
                 if (myPinned != null) {

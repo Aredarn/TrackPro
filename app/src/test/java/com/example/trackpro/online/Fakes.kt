@@ -1,5 +1,6 @@
 package com.example.trackpro.online
 
+import com.example.trackpro.dao.LapSpeedSample
 import com.example.trackpro.dao.SyncDao
 import com.example.trackpro.dataClasses.DragPublication
 import com.example.trackpro.dataClasses.LapTimeData
@@ -148,6 +149,7 @@ class FakeSyncDao : SyncDao {
     val published = mutableSetOf<Long>()
     val publishedDrags = mutableSetOf<Long>()
     val rawGps = mutableListOf<RawGPSData>()
+    val lapSpeeds = mutableListOf<LapSpeedSample>()
     val links = mutableMapOf<Pair<String, Long>, RemoteLink>()
 
     override suspend fun getLink(kind: String, localId: Long) = links[kind to localId]
@@ -175,6 +177,7 @@ class FakeSyncDao : SyncDao {
     override suspend fun getRunningSessionIds() = sessions.filter { it.endTime == null }.map { it.id }
     override suspend fun getLaps(sessionId: Long) = laps.filter { it.sessionid == sessionId }.sortedBy { it.lapnumber }
     override suspend fun getSectors(lapIds: List<Long>) = sectors.filter { it.lapid in lapIds }
+    override suspend fun getLapSpeeds(lapIds: List<Long>) = lapSpeeds.filter { it.lapid in lapIds }
     override suspend fun getTrack(trackId: Long) = tracks.find { it.trackId == trackId }
     override suspend fun getTrackPoints(trackId: Long) = points.filter { it.trackId == trackId }.sortedBy { it.id }
     override suspend fun getVehicle(vehicleId: Long) = vehicles.find { it.vehicleId == vehicleId }
