@@ -1,0 +1,35 @@
+{
+ "about": "A lap's top speed sent to TrackBoard: the peak of a three-fix rolling median over its speeds in recorded order, rounded to 0.1 km/h. Null when fewer than three speeds, or a peak outside 1-500 km/h.",
+ "laps": [
+  {
+   "name": "a single-fix spike is ignored",
+   "speeds": [150, 182, 184.24, 183, 420, 181, null, 120],
+   "top": 184.2
+  },
+  {
+   "name": "too few speeds",
+   "speeds": [150, null, 160],
+   "top": null
+  },
+  {
+   "name": "impossible peak",
+   "speeds": [600, 610, 620],
+   "top": null
+  },
+  {
+   "name": "the peak has to hold for two fixes",
+   "speeds": [90, 200, 90, 91],
+   "top": 91
+  },
+  {
+   "name": "a standstill lap",
+   "speeds": [0, 0, 0, 0],
+   "top": null
+  },
+  {
+   "name": "rounds half up",
+   "speeds": [100.25, 100.25, 100.25],
+   "top": 100.3
+  }
+ ]
+}

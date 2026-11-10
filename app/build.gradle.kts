@@ -89,6 +89,8 @@ android {
     // this any test reaching a log call failed before its assertions ran.
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // Cases the web app runs too; see PARITY.md.
+        unitTests.all { it.systemProperty("trackpro.fixtures", rootProject.file("shared/fixtures").absolutePath) }
     }
 
 }
