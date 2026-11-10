@@ -1,0 +1,97 @@
+{
+ "about": "Stored lap times are \"MM:SS.hh\" text. Anything else, including the IN PROGRESS and INVALID markers, is not a time and parses to null.",
+ "parse": [
+  {
+   "text": "01:42.35",
+   "millis": 102350
+  },
+  {
+   "text": "1:2.3",
+   "millis": 62030
+  },
+  {
+   "text": "00:00.00",
+   "millis": 0
+  },
+  {
+   "text": "61:00.99",
+   "millis": 3660990
+  },
+  {
+   "text": "IN PROGRESS",
+   "millis": null
+  },
+  {
+   "text": "INVALID",
+   "millis": null
+  },
+  {
+   "text": "",
+   "millis": null
+  },
+  {
+   "text": "01:02",
+   "millis": null
+  },
+  {
+   "text": "01:02:03",
+   "millis": null
+  },
+  {
+   "text": "01.02.03",
+   "millis": null
+  },
+  {
+   "text": "-1:00.00",
+   "millis": null
+  },
+  {
+   "text": " 01:02.03",
+   "millis": null
+  },
+  {
+   "text": "a1:02.03",
+   "millis": null
+  }
+ ],
+ "format": [
+  {
+   "millis": 0,
+   "text": "00:00.00"
+  },
+  {
+   "millis": 102350,
+   "text": "01:42.35"
+  },
+  {
+   "millis": 62039,
+   "text": "01:02.03"
+  },
+  {
+   "millis": 3660990,
+   "text": "61:00.99"
+  },
+  {
+   "millis": -1200,
+   "text": "00:01.20"
+  }
+ ],
+ "delta": [
+  {
+   "millis": -1200,
+   "text": "-00:01.20"
+  },
+  {
+   "millis": 1200,
+   "text": "+00:01.20"
+  },
+  {
+   "millis": 0,
+   "text": "00:00.00"
+  },
+  {
+   "millis": 5,
+   "text": "+00:00.00"
+  }
+ ]
+}

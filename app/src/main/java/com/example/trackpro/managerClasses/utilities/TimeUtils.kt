@@ -27,13 +27,12 @@ object LapStatus {
  * easiest way to do that.
  */
 fun String.toLapTimeMillisOrNull(): Long? {
-    val parts = this.split(":", ".", limit = 3)
-    if (parts.size != 3) return null
-    val minutes = parts[0].toLongOrNull() ?: return null
-    val seconds = parts[1].toLongOrNull() ?: return null
-    val hundredths = parts[2].toLongOrNull() ?: return null
-    return minutes * 60_000 + seconds * 1_000 + hundredths * 10
+    // Exactly digits, a colon, digits, a dot, digits: "01:02:03" or "-1:00.00" is not a time.
+    val (minutes, seconds, hundredths) = LAP_TIME.matchEntire(this)?.destructured ?: return null
+    return minutes.toLong() * 60_000 + seconds.toLong() * 1_000 + hundredths.toLong() * 10
 }
+
+private val LAP_TIME = Regex("""(\d+):(\d+)\.(\d+)""")
 
 /** A lap that has actually been timed, with its time already parsed. */
 data class TimedLap(val lap: LapTimeData, val millis: Long)
