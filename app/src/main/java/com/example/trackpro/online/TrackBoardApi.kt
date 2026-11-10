@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -128,7 +129,7 @@ class OkHttpTrackBoardApi(
     /** Read on every call, so a changed server address in Settings applies immediately. */
     private val baseUrl: () -> String?,
     private val client: OkHttpClient = defaultClient(),
-) : TrackBoardApi, TrackBoardAccountApi, TrackBoardEventsApi {
+) : TrackBoardApi, TrackBoardAccountApi, TrackBoardEventsApi, TrackBoardVehicleSpecsApi {
 
     override suspend fun register(request: RegisterRequest): AuthResponse =
         send("POST", "auth/register", null, request, RegisterRequest.serializer(), AuthResponse.serializer())
@@ -313,6 +314,32 @@ class OkHttpTrackBoardApi(
             response.requireSuccess()
             json.decodeFromString(TrackDetail.serializer(), response.bodyText())
         }
+
+    // ── Vehicle catalogue ──
+
+    override suspend fun carMakes(accessToken: String): List<VehicleCatalogOption> =
+        get("vehicle-specs/cars/makes", accessToken, ListSerializer(VehicleCatalogOption.serializer()))
+
+    override suspend fun carModels(accessToken: String, make: String): List<VehicleCatalogOption> =
+        get("vehicle-specs/cars/models?make=${q(make)}", accessToken, ListSerializer(VehicleCatalogOption.serializer()))
+
+    override suspend fun carYears(accessToken: String, make: String, model: String): List<Int> =
+        get("vehicle-specs/cars/years?make=${q(make)}&model=${q(model)}", accessToken, ListSerializer(Int.serializer()))
+
+    override suspend fun carVariants(accessToken: String, make: String, model: String, year: Int): List<VehicleSpecVariant> =
+        get(
+            "vehicle-specs/cars/variants?make=${q(make)}&model=${q(model)}&year=$year",
+            accessToken, ListSerializer(VehicleSpecVariant.serializer())
+        )
+
+    override suspend fun motorcycles(accessToken: String, make: String, model: String, year: Int?): List<VehicleSpecVariant> =
+        get(
+            "vehicle-specs/motorcycles?make=${q(make)}&model=${q(model)}" + (year?.let { "&year=$it" } ?: ""),
+            accessToken, ListSerializer(VehicleSpecVariant.serializer())
+        )
+
+    /** A query value: the path is joined as a string in [resolve], so it is escaped here. */
+    private fun q(value: String): String = java.net.URLEncoder.encode(value.trim(), "UTF-8")
 
     // ── Plumbing ──
 

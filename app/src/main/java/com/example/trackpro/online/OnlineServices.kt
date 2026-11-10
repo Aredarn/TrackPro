@@ -42,6 +42,9 @@ class OnlineServices(private val context: Context, private val database: ESPData
     /** Same client again: the track-day endpoints. */
     val eventsApi: TrackBoardEventsApi = api as TrackBoardEventsApi
 
+    /** Same client again: the make/model/year lookup behind the car form. */
+    val vehicleCatalog: VehicleCatalog by lazy { VehicleCatalog(api as TrackBoardVehicleSpecsApi, auth) }
+
     val events: EventRepository by lazy {
         EventRepository(
             context = context,
