@@ -38,6 +38,34 @@ class PayloadMapperTest {
 
     // ── Sessions ──
 
+    private fun fixes(lapId: Long, vararg kmh: Float?) = kmh.map { com.example.trackpro.dao.LapSpeedSample(lapId, it) }
+
+    @Test
+    fun `a lap's top speed ignores a single-fix spike`() {
+        val speeds = PayloadMapper.topSpeeds(fixes(1, 150f, 182f, 184.24f, 183f, 420f, 181f, null, 120f))
+        assertEquals(mapOf(1L to 184.2), speeds)
+    }
+
+    @Test
+    fun `a lap with too few speeds, or an impossible peak, gets no top speed`() {
+        assertEquals(emptyMap<Long, Double>(), PayloadMapper.topSpeeds(fixes(1, 150f, null, 160f)))
+        assertEquals(emptyMap<Long, Double>(), PayloadMapper.topSpeeds(fixes(2, 600f, 610f, 620f)))
+    }
+
+    @Test
+    fun `top speed goes on its lap, and a lap without one keeps its old upload`() {
+        val laps = listOf(lap(1, 1, "01:42.35"), lap(2, 2, "01:41.10"))
+        val plain = PayloadMapper.session(session(), laps, emptyList(), "track-id", "veh-id", "1.1")!!
+        val withSpeed = PayloadMapper.session(session(), laps, emptyList(), "track-id", "veh-id", "1.1", topSpeeds = mapOf(2L to 201.4))!!
+
+        assertEquals(listOf(null, 201.4), withSpeed.laps.map { it.topSpeedKmh })
+        assertEquals(
+            PayloadMapper.hash(plain),
+            PayloadMapper.hash(PayloadMapper.session(session(), laps, emptyList(), "track-id", "veh-id", "1.1", topSpeeds = emptyMap())!!),
+        )
+        assertNotEquals(PayloadMapper.hash(plain), PayloadMapper.hash(withSpeed))
+    }
+
     @Test
     fun `stored lap times become milliseconds`() {
         val body = map()!!

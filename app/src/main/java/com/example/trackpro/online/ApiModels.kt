@@ -210,11 +210,18 @@ data class WeatherWrite(
 @Serializable
 data class SectorSplit(val sectorIndex: Int, val splitMs: Int)
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class LapWrite(
     val lapNumber: Int,
     val timeMs: Int,
     val signalGap: Boolean = false,
+    /**
+     * The lap's highest GPS speed, km/h. Left out when there is none, so a lap recorded without
+     * speed keeps the upload hash it always had.
+     */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val topSpeedKmh: Double? = null,
     val sectors: List<SectorSplit> = emptyList(),
 )
 

@@ -301,9 +301,11 @@ class AccountRestore(
             val session = dao.getSession(sessionId)
             val storedLaps = dao.getLaps(sessionId)
             val stored = session?.let {
+                val lapIds = storedLaps.map { lap -> lap.id }
                 PayloadMapper.session(
-                    it, storedLaps, dao.getSectors(storedLaps.map { lap -> lap.id }),
+                    it, storedLaps, dao.getSectors(lapIds),
                     remoteTrackId, detail.vehicleId.takeIf { vehicleId != null }, appVersion,
+                    topSpeeds = PayloadMapper.topSpeeds(dao.getLapSpeeds(lapIds)),
                 )
             }
             dao.putLink(RemoteLink(KIND_SESSION, sessionId, detail.id, stored?.let(PayloadMapper::hash), clock()))
@@ -385,14 +387,17 @@ class AccountRestore(
                 val carId = carFor(remoteCar, cars, tally) ?: return@attempt
                 val laps = dao.getLaps(session.id)
                 val sectors = dao.getSectors(laps.map { it.id })
-                val withoutCar = PayloadMapper.session(session, laps, sectors, remoteTrack, null, appVersion)
+                val speeds = PayloadMapper.topSpeeds(dao.getLapSpeeds(laps.map { it.id }))
+                val withoutCar = PayloadMapper.session(session, laps, sectors, remoteTrack, null, appVersion, topSpeeds = speeds)
                 transaction {
                     dao.setSessionVehicle(session.id, carId)
                     // In step with the account before, so in step now: the account had the car
                     // all along. A change made here and not yet sent keeps its old fingerprint,
                     // and goes up at the next upload - now with its car.
                     if (withoutCar != null && PayloadMapper.hash(withoutCar) == link.uploadedHash) {
-                        val withCar = PayloadMapper.session(session.copy(vehicleId = carId), laps, sectors, remoteTrack, remoteCar, appVersion)
+                        val withCar = PayloadMapper.session(
+                            session.copy(vehicleId = carId), laps, sectors, remoteTrack, remoteCar, appVersion, topSpeeds = speeds,
+                        )
                         dao.putLink(link.copy(uploadedHash = withCar?.let(PayloadMapper::hash)))
                     }
                 }

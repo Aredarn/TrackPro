@@ -17,6 +17,9 @@ import com.example.trackpro.dataClasses.TrackPublication
 import com.example.trackpro.dataClasses.VehicleInformationData
 import kotlinx.coroutines.flow.Flow
 
+/** One recorded fix's speed, km/h, for working out a lap's top speed. */
+data class LapSpeedSample(val lapid: Long, val spd: Float?)
+
 /**
  * Everything TrackBoard sync reads and writes, in one place.
  *
@@ -108,6 +111,10 @@ interface SyncDao {
 
     @Query("SELECT * FROM sector_time_data WHERE lapid IN (:lapIds) ORDER BY lapid, sectorIndex")
     suspend fun getSectors(lapIds: List<Long>): List<SectorTimeData>
+
+    /** Each lap's fix speeds in recorded order, which is id order. */
+    @Query("SELECT lapid, spd FROM lap_info_data WHERE lapid IN (:lapIds) ORDER BY lapid, id")
+    suspend fun getLapSpeeds(lapIds: List<Long>): List<LapSpeedSample>
 
     @Query("SELECT * FROM track_main_data WHERE trackId = :trackId")
     suspend fun getTrack(trackId: Long): TrackMainData?
