@@ -99,6 +99,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.trackpro.managerClasses.ESPDatabase
+import com.example.trackpro.managerClasses.InterruptedSessions
 import com.example.trackpro.managerClasses.TrackSeeder
 import com.example.trackpro.managerClasses.gpsDataManagers.ESPTcpClient
 import com.example.trackpro.managerClasses.gpsDataManagers.BluetoothClassicClient
@@ -332,9 +333,17 @@ class TrackProApp : Application() {
         // Start the active provider immediately at app launch
         gpsManager.startActiveProvider()
 
+        // Taken before anything can start recording: every session that is still open and
+        // started before this moment belongs to a process that died mid-recording.
+        val processStartedAt = System.currentTimeMillis()
+
         // Sync bundled premade tracks on every launch (not just first install) so existing
         // users pick up newly-added ones too; name-deduped, so this is always safe to re-run.
         applicationScope.launch(Dispatchers.IO) {
+            // Before the sync below, so a session cut off last time is posted with this one.
+            runCatching { InterruptedSessions(database).closeAll(startedBefore = processStartedAt) }
+                .onFailure { Log.e("TrackProApp", "Could not close interrupted sessions", it) }
+
             TrackSeeder.syncPremadeTracks(this@TrackProApp, database)
             // No default car any more. The seeder re-added a Lexus IS200 on every launch, so a
             // driver could never delete it, and with the garage backed up to an account it

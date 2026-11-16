@@ -127,6 +127,11 @@ interface LapTimeDataDAO {
     @Query("UPDATE lap_time_data SET laptime = :time, signalGap = :signalGap WHERE id = :lapId")
     suspend fun completeLap(lapId: Long, time: String, signalGap: Boolean)
 
+    // Removes a session's laps that carry [time] as their status, e.g. the lap still in
+    // progress when a recording was cut off. Their GPS points and sectors go with them.
+    @Query("DELETE FROM lap_time_data WHERE sessionid = :sessionId AND laptime = :time")
+    suspend fun deleteLapsWithTime(sessionId: Long, time: String): Int
+
 
     @Query("""
     SELECT * FROM lap_time_data 

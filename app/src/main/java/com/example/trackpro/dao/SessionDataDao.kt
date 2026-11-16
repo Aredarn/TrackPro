@@ -46,6 +46,25 @@ interface SessionDataDao {
     @Query("UPDATE session_data SET endTime = :endTime WHERE id = :sessionId")
     suspend fun markSessionEnded(sessionId: Long, endTime: Long)
 
+    /** Sessions with no endTime that started before [before]; see InterruptedSessions. */
+    @Query("SELECT * FROM session_data WHERE endTime IS NULL AND startTime < :before")
+    suspend fun getOpenSessionsStartedBefore(before: Long): List<SessionData>
+
+    /**
+     * The newest timestamp recorded for a session: its raw GPS fixes (drag runs) or the
+     * points of its laps (circuit and sprint). Null when nothing was stored.
+     */
+    @Query("""
+        SELECT MAX(t) FROM (
+            SELECT MAX(timestamp) AS t FROM raw_gps_data WHERE sessionid = :sessionId
+            UNION ALL
+            SELECT MAX(i.timestamp) AS t FROM lap_info_data i
+            INNER JOIN lap_time_data l ON i.lapid = l.id
+            WHERE l.sessionid = :sessionId
+        )
+    """)
+    suspend fun lastRecordedAt(sessionId: Long): Long?
+
     /**
      * Backfills only the weather columns. Deliberately a targeted UPDATE rather than a
      * read-modify-write via [updateSession]: weather arrives asynchronously a second or two
