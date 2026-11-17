@@ -47,6 +47,7 @@ import com.example.trackpro.theme.Spacing
 import com.example.trackpro.managerClasses.JsonReader.loadJsonOptions
 import com.example.trackpro.managerClasses.utilities.UnitFormatter
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 @Composable
 fun CarCreationScreen(
@@ -76,6 +77,28 @@ fun CarCreationScreen(
     var selectedTransmission by remember { mutableStateOf(jsonOptions.transmissions.firstOrNull() ?: "") }
     var selectedSuspensionType by remember { mutableStateOf(jsonOptions.suspensionTypes.firstOrNull() ?: "") }
 
+    val catalog = remember { app.online.vehicleCatalog }
+
+    /** Writes what a catalogue sheet knows into the form; fields it does not know keep their value. */
+    fun applyPrefill(fill: SpecPrefill) {
+        fill.manufacturer?.let { manufacturer = it }
+        fill.model?.let { model = it }
+        fill.year?.let { year = it.toString() }
+        fill.horsepower?.let { horsepower = it.toString() }
+        fill.torqueNm?.let { torque = it.toString() }
+        fill.weightKg?.let { weight = plainNumber(it) }
+        // The field takes the user's unit; the sheet is in km/h.
+        fill.topSpeedKmh?.let { topSpeed = plainNumber(UnitFormatter.convertSpeed(it, useMetric)) }
+        // A 0-100 km/h time is not a 0-60 mph time, so it only goes into the metric field.
+        fill.zeroToHundredSeconds?.takeIf { useMetric }?.let { acceleration = plainNumber(it) }
+        fill.fuelCapacityLitres?.let { fuelCapacity = plainNumber(it) }
+        fill.engineType?.let { selectedEngineType = it }
+        fill.drivetrain?.let { selectedDrivetrain = it }
+        fill.fuelType?.let { selectedFuelType = it }
+        fill.transmission?.let { selectedTransmission = it }
+        fill.suspensionType?.let { selectedSuspensionType = it }
+    }
+
     val scrollState = rememberScrollState()
 
     val scrolled by scrollState.isScrolledUnderChrome()
@@ -98,6 +121,15 @@ fun CarCreationScreen(
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+            VehicleLookupCard(
+                catalog = catalog,
+                onPicked = { variant, motorcycle, pickedYear ->
+                    applyPrefill(SpecPrefill.from(variant, jsonOptions, motorcycle, pickedYear))
+                }
+            )
+
+            Spacer(modifier = Modifier.height(Spacing.md))
+
             AppCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
 
                 SectionLabel(stringResource(R.string.creator_basics), modifier = Modifier.padding(vertical = Spacing.sm))
@@ -168,3 +200,7 @@ fun CarCreationScreen(
         }
     }
 }
+
+/** 1520.0 -> "1520", 8.3 -> "8.3": what a person would have typed. */
+private fun plainNumber(value: Double): String =
+    if (value % 1.0 == 0.0) value.toLong().toString() else String.format(Locale.US, "%.1f", value)

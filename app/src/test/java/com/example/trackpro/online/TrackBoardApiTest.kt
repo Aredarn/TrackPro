@@ -246,4 +246,36 @@ class TrackBoardApiTest {
             assertEquals("Could not reach the TrackBoard server.", e.message)
         }
     }
+
+    @Test
+    fun `a catalogue search escapes its query and reads the sheets`() = runBlocking {
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """[{"name":"FZ8","make":"Yamaha","model":"FZ8","generation":null,"yearFrom":2012,"yearTo":2012,
+                    "engine":"In-line four, four-stroke","cylinders":4,"powerHp":106,"torqueNm":82,"weightKg":211.0,
+                    "fuelCapacityLitres":17.0,"drivetrain":"RWD","fuel":"Petrol","transmission":"Sequential",
+                    "frontSuspension":"43 mm upside-down telescopic fork","partial":false,"somethingNew":1}]"""
+            )
+        )
+
+        val bikes = api.motorcycles("t", "Yamaha", "FZ8 S", 2012)
+
+        assertEquals("/api/v1/vehicle-specs/motorcycles?make=Yamaha&model=FZ8+S&year=2012", server.takeRequest().path)
+        val fz8 = bikes.single()
+        assertEquals(106, fz8.powerHp)
+        assertEquals(211.0, fz8.weightKg!!, 0.0)
+        assertNull(fz8.topSpeedKmh)
+        assertFalse(fz8.partial)
+    }
+
+    @Test
+    fun `a catalogue the server has not configured is a 503`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(503).setBody("""{"status":503,"detail":"Vehicle lookup is not configured on this server."}"""))
+        try {
+            api.carMakes("t")
+            fail("expected ApiException")
+        } catch (e: ApiException) {
+            assertEquals(503, e.status)
+        }
+    }
 }
